@@ -6,10 +6,10 @@ interface ThreeTextAnimationProps {
 }
 
 const textVariations = [
-  'REMIX ANY SONG',
-  'TO AMAPIANO',
-  'TO TRAP',
-  'TO COUNTRY MUSIC'
+  'remix any song you can imagine',
+  'remix any song to amapiano',
+  'remix any song to trap',
+  'remix any song to country music',
 ];
 
 export const ThreeTextAnimation = ({ text }: ThreeTextAnimationProps) => {
@@ -185,7 +185,7 @@ export const ThreeTextAnimation = ({ text }: ThreeTextAnimationProps) => {
         className="absolute inset-0"
       />
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <h2 className="text-4xl md:text-6xl font-bold text-foreground/20 tracking-wider animate-pulse">
+        <h2 className="text-4xl md:text-6xl font-bold text-foreground/40 tracking-wider animate-pulse">
           {displayText}
         </h2>
       </div>
