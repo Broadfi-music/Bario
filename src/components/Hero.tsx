@@ -13,17 +13,17 @@ export const Hero = () => {
 
       {/* Floating Album Cards */}
       <FloatingAlbumCard
-        image="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop"
-        title="Neon Dreams"
-        artist="SynthWave Master"
+        image="/src/assets/album-1.jpeg"
+        title="Aqua Dreams"
+        artist="Visual Artist"
         position="left"
         delay={0}
       />
       
       <FloatingAlbumCard
-        image="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&h=400&fit=crop"
-        title="Jazz Fusion"
-        artist="RetroGroove"
+        image="/src/assets/album-2.jpeg"
+        title="Shadow Light"
+        artist="Dark Aesthetics"
         position="right"
         delay={0.5}
       />

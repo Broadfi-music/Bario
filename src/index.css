@@ -103,4 +103,14 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  .mask-gradient-left {
+    mask-image: linear-gradient(to left, transparent 0%, black 30%, black 100%);
+    -webkit-mask-image: linear-gradient(to left, transparent 0%, black 30%, black 100%);
+  }
+
+  .mask-gradient-right {
+    mask-image: linear-gradient(to right, transparent 0%, black 30%, black 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 30%, black 100%);
+  }
 }
