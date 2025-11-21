@@ -12,6 +12,10 @@ export const FloatingAlbumCard = ({ image, title, artist, position, delay = 0 }:
   const positionClasses = position === 'left' 
     ? 'left-4 md:left-8 lg:left-16' 
     : 'right-4 md:right-8 lg:right-16';
+  
+  const fadeClasses = position === 'left'
+    ? 'mask-gradient-left'
+    : 'mask-gradient-right';
 
   return (
     <div 
@@ -19,7 +23,7 @@ export const FloatingAlbumCard = ({ image, title, artist, position, delay = 0 }:
       style={{ animationDelay: `${delay}s` }}
     >
       <div className="relative group cursor-pointer">
-        <div className="w-48 h-48 rounded-xl overflow-hidden border border-foreground/10 bg-card shadow-2xl transition-transform duration-300 group-hover:scale-105">
+        <div className={`w-72 h-72 rounded-2xl overflow-hidden border border-foreground/10 bg-card shadow-2xl transition-transform duration-300 group-hover:scale-105 ${fadeClasses}`}>
           <img 
             src={image} 
             alt={title}
