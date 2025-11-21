@@ -3,10 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Music, Sparkles } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+
 
 const Advanced = () => {
-  const navigate = useNavigate();
+  
   const [songDescription, setSongDescription] = useState('');
   const [lyrics, setLyrics] = useState('');
 
@@ -17,7 +17,7 @@ const Advanced = () => {
       <div className="container mx-auto px-6 py-12 max-w-4xl">
         {/* Back Button */}
         <Button 
-          onClick={() => navigate('/')}
+          onClick={() => (window.location.href = '/')}
           variant="ghost"
           className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors mb-8 p-0"
         >

@@ -38,11 +38,11 @@ export const Hero = () => {
   };
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Three.js Animation Background */}
-      <div className="absolute inset-0 opacity-40">
-        <ThreeTextAnimation text="BARIO" />
-      </div>
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* Three.js Animation Background */}
+        <div className="absolute inset-0 opacity-60">
+          <ThreeTextAnimation text="BARIO" />
+        </div>
 
       {/* Floating Album Cards */}
       <FloatingAlbumCard
