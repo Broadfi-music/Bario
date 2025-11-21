@@ -3,6 +3,9 @@ import { FloatingAlbumCard } from './FloatingAlbumCard';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Plus } from 'lucide-react';
 import { useRef } from 'react';
+import album1 from '@/assets/album-1.jpeg';
+import album2 from '@/assets/album-2.jpeg';
+import album3 from '@/assets/album-3.jpeg';
 
 export const Hero = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -28,7 +31,7 @@ export const Hero = () => {
 
       {/* Floating Album Cards */}
       <FloatingAlbumCard
-        image="/src/assets/album-1.jpeg"
+        image={album1}
         title="Aqua Dreams"
         artist="Visual Artist"
         position="left"
@@ -36,7 +39,7 @@ export const Hero = () => {
       />
       
       <FloatingAlbumCard
-        image="/src/assets/album-2.jpeg"
+        image={album2}
         title="Shadow Light"
         artist="Dark Aesthetics"
         position="right"
@@ -44,7 +47,7 @@ export const Hero = () => {
       />
 
       <FloatingAlbumCard
-        image="/src/assets/album-3.jpeg"
+        image={album3}
         title="Dark Portrait"
         artist="Visual Noir"
         position="left"
