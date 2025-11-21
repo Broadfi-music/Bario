@@ -23,16 +23,6 @@ const Advanced = () => {
         </button>
 
         <div className="space-y-8">
-          {/* Header */}
-          <div className="text-center space-y-3">
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground">
-              Advanced Mode
-            </h1>
-            <p className="text-foreground/60 text-lg">
-              Take full control of your music creation
-            </p>
-          </div>
-
           {/* Song Description */}
           <div className="space-y-4">
             <div className="space-y-2">
@@ -98,7 +88,7 @@ const Advanced = () => {
 
           {/* Generate Button */}
           <div className="flex justify-center pt-4">
-            <Button className="bg-accent hover:bg-accent/90 text-foreground rounded-full px-12 py-6 text-lg">
+            <Button className="bg-background hover:bg-background/80 text-foreground rounded-full px-12 py-6 text-lg border border-foreground/20">
               <Sparkles className="mr-2 h-5 w-5" />
               Generate Song
             </Button>
