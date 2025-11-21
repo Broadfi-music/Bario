@@ -1,11 +1,20 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 interface ThreeTextAnimationProps {
   text: string;
 }
 
+const textVariations = [
+  'REMIX ANY SONG',
+  'TO AMAPIANO',
+  'TO TRAP',
+  'TO COUNTRY MUSIC'
+];
+
 export const ThreeTextAnimation = ({ text }: ThreeTextAnimationProps) => {
+  const [currentTextIndex, setCurrentTextIndex] = useState(0);
+  const [displayText, setDisplayText] = useState(textVariations[0]);
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<{
     scene?: THREE.Scene;
@@ -14,6 +23,19 @@ export const ThreeTextAnimation = ({ text }: ThreeTextAnimationProps) => {
     particles?: THREE.Points;
     animationId?: number;
   }>({});
+
+  // Cycle through text variations
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTextIndex((prev) => (prev + 1) % textVariations.length);
+    }, 3000); // Change text every 3 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    setDisplayText(textVariations[currentTextIndex]);
+  }, [currentTextIndex]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -48,8 +70,8 @@ export const ThreeTextAnimation = ({ text }: ThreeTextAnimationProps) => {
       const i3 = i * 3;
       
       // Create letter-shaped clusters
-      const letterIndex = Math.floor(Math.random() * text.length);
-      const x = (letterIndex - text.length / 2) * 0.8 + (Math.random() - 0.5) * 0.5;
+      const letterIndex = Math.floor(Math.random() * displayText.length);
+      const x = (letterIndex - displayText.length / 2) * 0.8 + (Math.random() - 0.5) * 0.5;
       const y = (Math.random() - 0.5) * 2;
       const z = (Math.random() - 0.5) * 0.5;
       
@@ -107,8 +129,8 @@ export const ThreeTextAnimation = ({ text }: ThreeTextAnimationProps) => {
         
         // Reset particles that drift too far
         if (Math.abs(positions[i3]) > 10) {
-          const letterIndex = Math.floor(Math.random() * text.length);
-          positions[i3] = (letterIndex - text.length / 2) * 0.8;
+          const letterIndex = Math.floor(Math.random() * displayText.length);
+          positions[i3] = (letterIndex - displayText.length / 2) * 0.8;
         }
         if (Math.abs(positions[i3 + 1]) > 5) {
           positions[i3 + 1] = (Math.random() - 0.5) * 2;
@@ -154,7 +176,7 @@ export const ThreeTextAnimation = ({ text }: ThreeTextAnimationProps) => {
       material.dispose();
       renderer.dispose();
     };
-  }, [text]);
+  }, [displayText]);
 
   return (
     <div 

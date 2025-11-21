@@ -1,17 +1,23 @@
 import { ThreeTextAnimation } from './ThreeTextAnimation';
 import { FloatingAlbumCard } from './FloatingAlbumCard';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Plus } from 'lucide-react';
-import { useRef } from 'react';
+import { Sparkles, Plus, Link as LinkIcon } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import album1 from '@/assets/album-1.jpeg';
 import album2 from '@/assets/album-2.jpeg';
 import album3 from '@/assets/album-3.jpeg';
 
 export const Hero = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [songUrl, setSongUrl] = useState('');
 
   const handleFileUpload = () => {
     fileInputRef.current?.click();
+    setIsUploadDialogOpen(false);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -19,6 +25,15 @@ export const Hero = () => {
     if (file) {
       console.log('File uploaded:', file.name);
       // Handle file upload logic here
+    }
+  };
+
+  const handleUrlSubmit = () => {
+    if (songUrl) {
+      console.log('Song URL:', songUrl);
+      // Handle URL submission logic here
+      setSongUrl('');
+      setIsUploadDialogOpen(false);
     }
   };
 
@@ -59,7 +74,7 @@ export const Hero = () => {
         <div className="max-w-4xl mx-auto space-y-6 animate-fade-in-up">
           {/* Main Heading */}
           <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-foreground leading-tight">
-            Make any song you can imagine
+            Remix any song you can imagine
           </h1>
           
           {/* Subtitle */}
@@ -71,7 +86,7 @@ export const Hero = () => {
           <div className="pt-6">
             <div className="max-w-3xl mx-auto bg-background/40 backdrop-blur-sm border border-foreground/10 rounded-2xl p-4 flex items-center gap-3">
               <button 
-                onClick={handleFileUpload}
+                onClick={() => setIsUploadDialogOpen(true)}
                 className="text-foreground/60 hover:text-foreground transition-colors"
               >
                 <Plus className="h-5 w-5" />
@@ -102,6 +117,56 @@ export const Hero = () => {
           </div>
         </div>
       </div>
+
+      {/* Upload Dialog */}
+      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+        <DialogContent className="bg-background border-foreground/20">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Add Music</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 pt-4">
+            <div className="space-y-3">
+              <Label className="text-foreground">Upload from device</Label>
+              <Button 
+                onClick={handleFileUpload}
+                variant="outline" 
+                className="w-full border-foreground/20 text-foreground hover:bg-foreground/10"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Upload Music File
+              </Button>
+            </div>
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-foreground/10" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-foreground/60">Or</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-foreground">Add from URL</Label>
+              <div className="flex gap-2">
+                <Input 
+                  type="url"
+                  placeholder="https://example.com/song.mp3"
+                  value={songUrl}
+                  onChange={(e) => setSongUrl(e.target.value)}
+                  className="bg-background/40 border-foreground/10 text-foreground placeholder:text-foreground/40"
+                />
+                <Button 
+                  onClick={handleUrlSubmit}
+                  className="bg-background hover:bg-background/80 text-foreground border border-foreground/20"
+                >
+                  <LinkIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Bottom fade */}
       <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-background to-transparent pointer-events-none" />

@@ -17,15 +17,14 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 py-20 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center px-6 py-20 relative overflow-hidden bg-background">
       {/* Background effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-pink-500/10" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,107,107,0.1),transparent_50%)]" />
+      <div className="absolute inset-0 bg-background" />
 
       <Card className="w-full max-w-md relative z-10 bg-card/80 backdrop-blur-xl border-border/50">
         <CardHeader className="space-y-2 text-center">
           <Link to="/" className="inline-block">
-            <div className="text-3xl font-bold bg-gradient-to-r from-accent via-pink-500 to-accent bg-clip-text text-transparent mb-2">
+            <div className="text-3xl font-bold text-foreground mb-2">
               BARIO
             </div>
           </Link>
@@ -66,7 +65,7 @@ const Auth = () => {
                 </div>
                 <Button 
                   type="submit" 
-                  className="w-full bg-gradient-to-r from-accent to-pink-500 hover:opacity-90 text-foreground"
+                  className="w-full bg-background hover:bg-background/80 text-foreground border border-foreground/20"
                   disabled={isLoading}
                 >
                   {isLoading ? "Signing In..." : "Sign In"}
@@ -118,7 +117,7 @@ const Auth = () => {
                 </div>
                 <Button 
                   type="submit" 
-                  className="w-full bg-gradient-to-r from-accent to-pink-500 hover:opacity-90 text-foreground"
+                  className="w-full bg-background hover:bg-background/80 text-foreground border border-foreground/20"
                   disabled={isLoading}
                 >
                   {isLoading ? "Creating Account..." : "Sign Up"}
