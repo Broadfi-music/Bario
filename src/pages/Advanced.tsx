@@ -3,8 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Music, Sparkles } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const Advanced = () => {
+  const navigate = useNavigate();
   const [songDescription, setSongDescription] = useState('');
   const [lyrics, setLyrics] = useState('');
 
@@ -15,7 +17,7 @@ const Advanced = () => {
       <div className="container mx-auto px-6 py-12 max-w-4xl">
         {/* Back Button */}
         <button 
-          onClick={() => window.location.href = '/'}
+          onClick={() => navigate('/')}
           className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors mb-8"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -77,11 +79,11 @@ const Advanced = () => {
               <label className="text-foreground font-medium text-sm">
                 Duration
               </label>
-              <select className="w-full bg-background/40 backdrop-blur-sm border border-foreground/10 rounded-lg px-4 py-3 text-foreground outline-none focus:border-foreground/20 transition-colors">
-                <option>30 seconds</option>
-                <option>1 minute</option>
-                <option>2 minutes</option>
-                <option>3 minutes</option>
+              <select className="w-full bg-background backdrop-blur-sm border border-foreground/10 rounded-lg px-4 py-3 text-foreground outline-none focus:border-foreground/20 transition-colors">
+                <option className="bg-background text-foreground">30 seconds</option>
+                <option className="bg-background text-foreground">1 minute</option>
+                <option className="bg-background text-foreground">2 minutes</option>
+                <option className="bg-background text-foreground">3 minutes</option>
               </select>
             </div>
           </div>
