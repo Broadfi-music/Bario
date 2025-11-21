@@ -103,6 +103,23 @@ export const Hero = () => {
                 onChange={handleFileChange}
                 className="hidden"
               />
+              <select className="text-foreground/60 hover:text-foreground transition-colors text-sm px-3 py-2 border border-foreground/10 rounded-lg bg-background">
+                <option value="">Genre</option>
+                <option value="amapiano">Amapiano</option>
+                <option value="trap">Trap</option>
+                <option value="funk">Funk</option>
+                <option value="hiphop">Hip Hop</option>
+                <option value="country">Country</option>
+                <option value="80s">80s</option>
+                <option value="rnb">R&B</option>
+                <option value="soul">Soul</option>
+                <option value="pop">Pop</option>
+                <option value="genz">Gen Z</option>
+                <option value="jazz">Jazz</option>
+                <option value="reggae">Reggae</option>
+                <option value="gospel">Gospel</option>
+                <option value="instrumental">Instrumental</option>
+              </select>
               <button 
                 onClick={() => window.location.href = '/advanced'}
                 className="text-foreground/60 hover:text-foreground transition-colors text-sm px-3 py-2 border border-foreground/10 rounded-lg"
@@ -160,7 +177,7 @@ export const Hero = () => {
                   onClick={handleUrlSubmit}
                   className="bg-background hover:bg-background/80 text-foreground border border-foreground/20"
                 >
-                  <LinkIcon className="h-4 w-4" />
+                  Add
                 </Button>
               </div>
             </div>

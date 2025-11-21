@@ -16,13 +16,14 @@ const Advanced = () => {
       
       <div className="container mx-auto px-6 py-12 max-w-4xl">
         {/* Back Button */}
-        <button 
+        <Button 
           onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors mb-8"
+          variant="ghost"
+          className="flex items-center gap-2 text-foreground/60 hover:text-foreground transition-colors mb-8 p-0"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Back to Home</span>
-        </button>
+        </Button>
 
         <div className="space-y-8">
           {/* Song Description */}
