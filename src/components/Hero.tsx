@@ -1,9 +1,24 @@
 import { ThreeTextAnimation } from './ThreeTextAnimation';
 import { FloatingAlbumCard } from './FloatingAlbumCard';
 import { Button } from '@/components/ui/button';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Plus } from 'lucide-react';
+import { useRef } from 'react';
 
 export const Hero = () => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      console.log('File uploaded:', file.name);
+      // Handle file upload logic here
+    }
+  };
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Three.js Animation Background */}
@@ -28,6 +43,14 @@ export const Hero = () => {
         delay={0.5}
       />
 
+      <FloatingAlbumCard
+        image="/src/assets/album-3.jpeg"
+        title="Dark Portrait"
+        artist="Visual Noir"
+        position="left"
+        delay={1}
+      />
+
       {/* Content */}
       <div className="relative z-10 container mx-auto px-6 text-center">
         <div className="max-w-4xl mx-auto space-y-6 animate-fade-in-up">
@@ -44,15 +67,31 @@ export const Hero = () => {
           {/* Input Area */}
           <div className="pt-6">
             <div className="max-w-3xl mx-auto bg-background/40 backdrop-blur-sm border border-foreground/10 rounded-2xl p-4 flex items-center gap-3">
+              <button 
+                onClick={handleFileUpload}
+                className="text-foreground/60 hover:text-foreground transition-colors"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
               <input 
                 type="text" 
                 placeholder="Chat to make music"
                 className="flex-1 bg-transparent text-foreground placeholder:text-foreground/40 outline-none text-base md:text-lg"
               />
-              <button className="text-foreground/60 hover:text-foreground transition-colors text-sm px-3 py-2 border border-foreground/10 rounded-lg">
+              <input 
+                ref={fileInputRef}
+                type="file"
+                accept="audio/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <button 
+                onClick={() => window.location.href = '/advanced'}
+                className="text-foreground/60 hover:text-foreground transition-colors text-sm px-3 py-2 border border-foreground/10 rounded-lg"
+              >
                 Advanced
               </button>
-              <Button className="bg-accent hover:bg-accent/90 text-foreground rounded-full px-6">
+              <Button className="bg-background hover:bg-background/80 text-foreground rounded-full px-6 border border-foreground/20">
                 <Sparkles className="mr-2 h-4 w-4" />
                 Create
               </Button>
