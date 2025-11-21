@@ -1,6 +1,7 @@
 import { ThreeTextAnimation } from './ThreeTextAnimation';
+import { FloatingAlbumCard } from './FloatingAlbumCard';
 import { Button } from '@/components/ui/button';
-import { Upload, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 export const Hero = () => {
   return (
@@ -9,6 +10,23 @@ export const Hero = () => {
       <div className="absolute inset-0 opacity-40">
         <ThreeTextAnimation text="BARIO" />
       </div>
+
+      {/* Floating Album Cards */}
+      <FloatingAlbumCard
+        image="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop"
+        title="Neon Dreams"
+        artist="SynthWave Master"
+        position="left"
+        delay={0}
+      />
+      
+      <FloatingAlbumCard
+        image="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&h=400&fit=crop"
+        title="Jazz Fusion"
+        artist="RetroGroove"
+        position="right"
+        delay={0.5}
+      />
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-6 text-center">
