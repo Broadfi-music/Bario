@@ -179,10 +179,16 @@ export const ThreeTextAnimation = ({ text }: ThreeTextAnimationProps) => {
   }, [displayText]);
 
   return (
-    <div 
-      ref={containerRef} 
-      className="w-full h-full"
-      style={{ minHeight: '400px' }}
-    />
+    <div className="w-full h-full relative" style={{ minHeight: '400px' }}>
+      <div 
+        ref={containerRef} 
+        className="absolute inset-0"
+      />
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <h2 className="text-4xl md:text-6xl font-bold text-foreground/20 tracking-wider animate-pulse">
+          {displayText}
+        </h2>
+      </div>
+    </div>
   );
 };
