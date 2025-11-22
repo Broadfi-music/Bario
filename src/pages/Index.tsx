@@ -1,7 +1,7 @@
 import { Navbar } from '@/components/Navbar';
 import { Hero } from '@/components/Hero';
-import { Play } from 'lucide-react';
-import { useState } from 'react';
+import { Play, Pause } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 import track1 from '@/assets/track-1.jpeg';
 import track2 from '@/assets/track-2.jpeg';
 import track3 from '@/assets/track-3.jpeg';
@@ -10,28 +10,100 @@ import track5 from '@/assets/track-5.jpeg';
 import track6 from '@/assets/track-6.jpeg';
 import track7 from '@/assets/track-7.jpeg';
 import track8 from '@/assets/track-8.jpeg';
+import card1 from '@/assets/card-1.png';
+import card2 from '@/assets/card-2.png';
+import card3 from '@/assets/card-3.png';
+import card4 from '@/assets/card-4.png';
+import card5 from '@/assets/card-5.png';
 
 const Index = () => {
   const [playingTrack, setPlayingTrack] = useState<number | null>(null);
+  const audioRefs = useRef<{ [key: number]: HTMLAudioElement | null }>({});
 
   const tracks = [
-    { id: 1, image: track1 },
-    { id: 2, image: track2 },
-    { id: 3, image: track3 },
-    { id: 4, image: track4 },
-    { id: 5, image: track5 },
-    { id: 6, image: track6 },
-    { id: 7, image: track7 },
-    { id: 8, image: track8 },
+    { id: 1, image: track1, audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
+    { id: 2, image: track2, audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
+    { id: 3, image: track3, audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
+    { id: 4, image: track4, audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' },
+    { id: 5, image: track5, audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3' },
+    { id: 6, image: track6, audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3' },
+    { id: 7, image: track7, audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3' },
+    { id: 8, image: track8, audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3' },
   ];
 
+  const featureCards = [
+    {
+      id: 1,
+      title: "AI-Powered Remixing",
+      description: "Transform any song into multiple genres instantly with our advanced AI technology. From amapiano to trap, your music adapts to any style.",
+      image: card1
+    },
+    {
+      id: 2,
+      title: "Lightning Speed Processing",
+      description: "Get your remixed tracks in seconds, not hours. Our powerful processing engine delivers studio-quality results instantly.",
+      image: card2
+    },
+    {
+      id: 3,
+      title: "Professional Quality Output",
+      description: "Experience high-fidelity audio that rivals professional studio productions. Every remix maintains the original's clarity and depth.",
+      image: card3
+    },
+    {
+      id: 4,
+      title: "Unlimited Creative Freedom",
+      description: "Experiment with countless genres and styles. Create unlimited variations until you find the perfect sound for your vision.",
+      image: card4
+    },
+    {
+      id: 5,
+      title: "Easy Export & Share",
+      description: "Download your remixes in high-quality formats and share them directly to your favorite platforms. Your music, your way.",
+      image: card5
+    }
+  ];
+
+  useEffect(() => {
+    // Cleanup audio on unmount
+    return () => {
+      Object.values(audioRefs.current).forEach(audio => {
+        if (audio) {
+          audio.pause();
+          audio.src = '';
+        }
+      });
+    };
+  }, []);
+
   const handleTrackClick = (trackId: number) => {
+    const audio = audioRefs.current[trackId];
+    
     if (playingTrack === trackId) {
+      // Pause current track
+      if (audio) {
+        audio.pause();
+      }
       setPlayingTrack(null);
     } else {
-      setPlayingTrack(trackId);
-      console.log(`Playing track ${trackId}`);
+      // Pause all other tracks
+      Object.entries(audioRefs.current).forEach(([id, audioElement]) => {
+        if (audioElement && Number(id) !== trackId) {
+          audioElement.pause();
+          audioElement.currentTime = 0;
+        }
+      });
+      
+      // Play selected track
+      if (audio) {
+        audio.play();
+        setPlayingTrack(trackId);
+      }
     }
+  };
+
+  const handleAudioEnded = (trackId: number) => {
+    setPlayingTrack(null);
   };
 
   return (
@@ -47,33 +119,77 @@ const Index = () => {
               Instant processing
             </h2>
             <p className="text-lg text-foreground/70 max-w-3xl mx-auto">
-              Advanced AI processing delivers your remix in seconds, not hours. Lightning-fast transformation.
+              Advanced AI processing delivers your remix in seconds, not hours, giving you studio-quality transformation without delay. Your audio is analyzed, reconstructed, styled, and rendered at high speed, so you can experiment freely, create multiple versions instantly, and keep your creative flow going without ever waiting.
             </p>
           </div>
 
           {/* Track Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {tracks.map((track) => (
-              <button
-                key={track.id}
-                onClick={() => handleTrackClick(track.id)}
-                className="group relative aspect-[3/4] overflow-hidden rounded-lg bg-foreground/5 hover:scale-[1.02] transition-transform duration-200"
-              >
-                <img 
-                  src={track.image} 
-                  alt={`Track ${track.id}`}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                  <div className={`rounded-full p-4 transition-all duration-200 ${
-                    playingTrack === track.id 
-                      ? 'bg-foreground/90 scale-110' 
-                      : 'bg-foreground/80'
-                  }`}>
-                    <Play className="h-8 w-8 text-background fill-background" />
+              <div key={track.id} className="relative">
+                <button
+                  onClick={() => handleTrackClick(track.id)}
+                  className="group relative aspect-[3/4] overflow-hidden rounded-lg bg-foreground/5 hover:scale-[1.02] transition-transform duration-200 w-full"
+                >
+                  <img 
+                    src={track.image} 
+                    alt={`Track ${track.id}`}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+                    <div className={`rounded-full p-4 transition-all duration-200 ${
+                      playingTrack === track.id 
+                        ? 'bg-foreground/90 scale-110' 
+                        : 'bg-foreground/80'
+                    }`}>
+                      {playingTrack === track.id ? (
+                        <Pause className="h-8 w-8 text-background fill-background" />
+                      ) : (
+                        <Play className="h-8 w-8 text-background fill-background" />
+                      )}
+                    </div>
                   </div>
+                </button>
+                <audio
+                  ref={(el) => { audioRefs.current[track.id] = el; }}
+                  src={track.audio}
+                  onEnded={() => handleAudioEnded(track.id)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Everything You Need Section */}
+      <section className="py-20 px-6">
+        <div className="container mx-auto max-w-6xl">
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground text-center mb-16">
+            Everything you need to elevate and make music your career
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {featureCards.map((card) => (
+              <div 
+                key={card.id} 
+                className="bg-black rounded-2xl p-8 flex flex-col items-start space-y-6 hover:scale-[1.02] transition-transform duration-200"
+              >
+                <div className="w-full aspect-square flex items-center justify-center">
+                  <img 
+                    src={card.image} 
+                    alt={card.title}
+                    className="w-3/4 h-3/4 object-contain"
+                  />
                 </div>
-              </button>
+                <div className="space-y-3">
+                  <h3 className="text-xl font-semibold text-foreground">
+                    {card.title}
+                  </h3>
+                  <p className="text-foreground/70 text-sm leading-relaxed">
+                    {card.description}
+                  </p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
