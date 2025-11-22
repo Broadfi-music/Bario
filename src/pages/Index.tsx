@@ -200,7 +200,7 @@ const Index = () => {
       </section>
 
       {/* BeatPulse Waveform Matcher Section */}
-      <section className="py-20 px-6 border-t border-foreground/5">
+      <section className="py-12 px-6 border-t border-foreground/5">
         <div className="container mx-auto max-w-7xl">
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1 space-y-6">
@@ -208,7 +208,7 @@ const Index = () => {
                 BeatPulse Waveform Matcher
               </h2>
               <p className="text-lg text-foreground/70 leading-relaxed">
-                A waveform matching protocol that helps artists find beat that perfectly match their vocal energy by analysing pitch and Cadence with AI.
+                A waveform matching protocol that helps artists find beat that perfectly match their vocal energy by analysing pitch and Cadence with AI. It creates a frictionless experience where every uploaded vocal is matched with the ideal beat structure, tempo pocket, and dynamic mood using AI-powered waveform alignment.
               </p>
             </div>
             <div className="flex-1 flex justify-center">
@@ -219,7 +219,7 @@ const Index = () => {
       </section>
 
       {/* MEGASHUFFLE Section */}
-      <section className="py-20 px-6 border-t border-foreground/5">
+      <section className="py-12 px-6 border-t border-foreground/5">
         <div className="container mx-auto max-w-7xl">
           <div className="flex flex-col lg:flex-row-reverse items-center gap-12">
             <div className="flex-1 space-y-6">
@@ -238,7 +238,7 @@ const Index = () => {
       </section>
 
       {/* MUSICWARP Section */}
-      <section className="py-20 px-6 border-t border-foreground/5">
+      <section className="py-12 px-6 border-t border-foreground/5">
         <div className="container mx-auto max-w-7xl">
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1 space-y-6">
@@ -246,7 +246,7 @@ const Index = () => {
                 MUSICWARP (Artist Teleportation)
               </h2>
               <p className="text-lg text-foreground/70 leading-relaxed">
-                Artists shift their music into world regions through sound filters. Regional Virality boost global charts.
+                Artists shift their music into world regions through sound filters. Regional Virality boost global charts. This "regional virality booster" helps artists test, expand, and accelerate their reach across global charts by adapting their music to cultural sound identities. Instead of being limited to their local genre, artists can teleport their sound into any region's dominant style and grow worldwide.
               </p>
             </div>
             <div className="flex-1 flex justify-center">
