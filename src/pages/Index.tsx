@@ -15,6 +15,9 @@ import card2 from '@/assets/card-2.png';
 import card3 from '@/assets/card-3.png';
 import card4 from '@/assets/card-4.png';
 import card5 from '@/assets/card-5.png';
+import AnimatedCD from '@/components/AnimatedCD';
+import AnimatedDice from '@/components/AnimatedDice';
+import AnimatedSaturn from '@/components/AnimatedSaturn';
 
 const Index = () => {
   const [playingTrack, setPlayingTrack] = useState<number | null>(null);
@@ -165,7 +168,8 @@ const Index = () => {
       <section className="py-20 px-6">
         <div className="container mx-auto max-w-6xl">
           <h2 className="text-4xl md:text-5xl font-bold text-foreground text-center mb-16">
-            Everything you need to elevate and make music your career
+            Everything you need to elevate<br />
+            and make music your career
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -191,6 +195,63 @@ const Index = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* BeatPulse Waveform Matcher Section */}
+      <section className="py-20 px-6 border-t border-foreground/5">
+        <div className="container mx-auto max-w-7xl">
+          <div className="flex flex-col lg:flex-row items-center gap-12">
+            <div className="flex-1 space-y-6">
+              <h2 className="text-4xl md:text-5xl font-bold text-foreground">
+                BeatPulse Waveform Matcher
+              </h2>
+              <p className="text-lg text-foreground/70 leading-relaxed">
+                A waveform matching protocol that helps artists find beat that perfectly match their vocal energy by analysing pitch and Cadence with AI.
+              </p>
+            </div>
+            <div className="flex-1 flex justify-center">
+              <AnimatedCD />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* MEGASHUFFLE Section */}
+      <section className="py-20 px-6 border-t border-foreground/5">
+        <div className="container mx-auto max-w-7xl">
+          <div className="flex flex-col lg:flex-row-reverse items-center gap-12">
+            <div className="flex-1 space-y-6">
+              <h2 className="text-4xl md:text-5xl font-bold text-foreground">
+                MEGASHUFFLE
+              </h2>
+              <p className="text-lg text-foreground/70 leading-relaxed">
+                World's Largest Randomized Music discovery Engine that every shuffle introduces an artist the listener has never heard before. Artist get exposure instantly.
+              </p>
+            </div>
+            <div className="flex-1 flex justify-center">
+              <AnimatedDice />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* MUSICWARP Section */}
+      <section className="py-20 px-6 border-t border-foreground/5">
+        <div className="container mx-auto max-w-7xl">
+          <div className="flex flex-col lg:flex-row items-center gap-12">
+            <div className="flex-1 space-y-6">
+              <h2 className="text-4xl md:text-5xl font-bold text-foreground">
+                MUSICWARP (Artist Teleportation)
+              </h2>
+              <p className="text-lg text-foreground/70 leading-relaxed">
+                Artists shift their music into world regions through sound filters. Regional Virality boost global charts.
+              </p>
+            </div>
+            <div className="flex-1 flex justify-center">
+              <AnimatedSaturn />
+            </div>
           </div>
         </div>
       </section>
