@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import saturnImage from '@/assets/saturn.png';
+import globeImage from '@/assets/globe.png';
 
 const AnimatedSaturn = () => {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -17,7 +17,7 @@ const AnimatedSaturn = () => {
     mountRef.current.appendChild(renderer.domElement);
 
     const textureLoader = new THREE.TextureLoader();
-    const texture = textureLoader.load(saturnImage);
+    const texture = textureLoader.load(globeImage);
 
     const geometry = new THREE.PlaneGeometry(4, 3);
     const material = new THREE.MeshBasicMaterial({ 
