@@ -19,55 +19,70 @@ import AnimatedCD from '@/components/AnimatedCD';
 import AnimatedDice from '@/components/AnimatedDice';
 import globe from '@/assets/globe.png';
 import wavegrower from '@/assets/wavegrower.gif';
-
 const Index = () => {
   const [playingTrack, setPlayingTrack] = useState<number | null>(null);
-  const audioRefs = useRef<{ [key: number]: HTMLAudioElement | null }>({});
-
-  const tracks = [
-    { id: 1, image: track1, audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
-    { id: 2, image: track2, audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
-    { id: 3, image: track3, audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
-    { id: 4, image: track4, audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' },
-    { id: 5, image: track5, audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3' },
-    { id: 6, image: track6, audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3' },
-    { id: 7, image: track7, audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3' },
-    { id: 8, image: track8, audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3' },
-  ];
-
-  const featureCards = [
-    {
-      id: 1,
-      title: "AI-Powered Remixing",
-      description: "Transform any song into multiple genres instantly with our advanced AI technology. From amapiano to trap, your music adapts to any style.",
-      image: card1
-    },
-    {
-      id: 2,
-      title: "Lightning Speed Processing",
-      description: "Get your remixed tracks in seconds, not hours. Our powerful processing engine delivers studio-quality results instantly.",
-      image: card2
-    },
-    {
-      id: 3,
-      title: "Professional Quality Output",
-      description: "Experience high-fidelity audio that rivals professional studio productions. Every remix maintains the original's clarity and depth.",
-      image: card3
-    },
-    {
-      id: 4,
-      title: "Unlimited Creative Freedom",
-      description: "Experiment with countless genres and styles. Create unlimited variations until you find the perfect sound for your vision.",
-      image: card4
-    },
-    {
-      id: 5,
-      title: "Easy Export & Share",
-      description: "Download your remixes in high-quality formats and share them directly to your favorite platforms. Your music, your way.",
-      image: card5
-    }
-  ];
-
+  const audioRefs = useRef<{
+    [key: number]: HTMLAudioElement | null;
+  }>({});
+  const tracks = [{
+    id: 1,
+    image: track1,
+    audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'
+  }, {
+    id: 2,
+    image: track2,
+    audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3'
+  }, {
+    id: 3,
+    image: track3,
+    audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3'
+  }, {
+    id: 4,
+    image: track4,
+    audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3'
+  }, {
+    id: 5,
+    image: track5,
+    audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3'
+  }, {
+    id: 6,
+    image: track6,
+    audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3'
+  }, {
+    id: 7,
+    image: track7,
+    audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3'
+  }, {
+    id: 8,
+    image: track8,
+    audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3'
+  }];
+  const featureCards = [{
+    id: 1,
+    title: "AI-Powered Remixing",
+    description: "Transform any song into multiple genres instantly with our advanced AI technology. From amapiano to trap, your music adapts to any style.",
+    image: card1
+  }, {
+    id: 2,
+    title: "Lightning Speed Processing",
+    description: "Get your remixed tracks in seconds, not hours. Our powerful processing engine delivers studio-quality results instantly.",
+    image: card2
+  }, {
+    id: 3,
+    title: "Professional Quality Output",
+    description: "Experience high-fidelity audio that rivals professional studio productions. Every remix maintains the original's clarity and depth.",
+    image: card3
+  }, {
+    id: 4,
+    title: "Unlimited Creative Freedom",
+    description: "Experiment with countless genres and styles. Create unlimited variations until you find the perfect sound for your vision.",
+    image: card4
+  }, {
+    id: 5,
+    title: "Easy Export & Share",
+    description: "Download your remixes in high-quality formats and share them directly to your favorite platforms. Your music, your way.",
+    image: card5
+  }];
   useEffect(() => {
     // Cleanup audio on unmount
     return () => {
@@ -79,10 +94,8 @@ const Index = () => {
       });
     };
   }, []);
-
   const handleTrackClick = (trackId: number) => {
     const audio = audioRefs.current[trackId];
-    
     if (playingTrack === trackId) {
       // Pause current track
       if (audio) {
@@ -97,7 +110,7 @@ const Index = () => {
           audioElement.currentTime = 0;
         }
       });
-      
+
       // Play selected track
       if (audio) {
         audio.play();
@@ -105,13 +118,10 @@ const Index = () => {
       }
     }
   };
-
   const handleAudioEnded = (trackId: number) => {
     setPlayingTrack(null);
   };
-
-  return (
-    <div className="min-h-screen bg-background text-foreground">
+  return <div className="min-h-screen bg-background text-foreground">
       <Navbar />
       <Hero />
       
@@ -129,38 +139,19 @@ const Index = () => {
 
           {/* Track Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {tracks.map((track) => (
-              <div key={track.id} className="relative">
-                <button
-                  onClick={() => handleTrackClick(track.id)}
-                  className="group relative aspect-[3/4] overflow-hidden rounded-lg bg-foreground/5 hover:scale-[1.02] transition-transform duration-200 w-full"
-                >
-                  <img 
-                    src={track.image} 
-                    alt={`Track ${track.id}`}
-                    className="w-full h-full object-cover"
-                  />
+            {tracks.map(track => <div key={track.id} className="relative">
+                <button onClick={() => handleTrackClick(track.id)} className="group relative aspect-[3/4] overflow-hidden rounded-lg bg-foreground/5 hover:scale-[1.02] transition-transform duration-200 w-full">
+                  <img src={track.image} alt={`Track ${track.id}`} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                    <div className={`rounded-full p-4 transition-all duration-200 ${
-                      playingTrack === track.id 
-                        ? 'bg-foreground/90 scale-110' 
-                        : 'bg-foreground/80'
-                    }`}>
-                      {playingTrack === track.id ? (
-                        <Pause className="h-8 w-8 text-background fill-background" />
-                      ) : (
-                        <Play className="h-8 w-8 text-background fill-background" />
-                      )}
+                    <div className={`rounded-full p-4 transition-all duration-200 ${playingTrack === track.id ? 'bg-foreground/90 scale-110' : 'bg-foreground/80'}`}>
+                      {playingTrack === track.id ? <Pause className="h-8 w-8 text-background fill-background" /> : <Play className="h-8 w-8 text-background fill-background" />}
                     </div>
                   </div>
                 </button>
-                <audio
-                  ref={(el) => { audioRefs.current[track.id] = el; }}
-                  src={track.audio}
-                  onEnded={() => handleAudioEnded(track.id)}
-                />
-              </div>
-            ))}
+                <audio ref={el => {
+              audioRefs.current[track.id] = el;
+            }} src={track.audio} onEnded={() => handleAudioEnded(track.id)} />
+              </div>)}
           </div>
         </div>
       </section>
@@ -174,17 +165,9 @@ const Index = () => {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featureCards.map((card) => (
-              <div 
-                key={card.id} 
-                className="bg-black rounded-2xl p-8 flex flex-col items-start space-y-6 hover:scale-[1.02] transition-transform duration-200"
-              >
+            {featureCards.map(card => <div key={card.id} className="bg-black rounded-2xl p-8 flex flex-col items-start space-y-6 hover:scale-[1.02] transition-transform duration-200">
                 <div className="w-full aspect-square flex items-center justify-center">
-                  <img 
-                    src={card.image} 
-                    alt={card.title}
-                    className="w-3/4 h-3/4 object-contain"
-                  />
+                  <img src={card.image} alt={card.title} className="w-3/4 h-3/4 object-contain" />
                 </div>
                 <div className="space-y-3">
                   <h3 className="text-xl font-semibold text-foreground">
@@ -194,17 +177,12 @@ const Index = () => {
                     {card.description}
                   </p>
                 </div>
-              </div>
-            ))}
+              </div>)}
           </div>
 
           {/* Wavegrower GIF beside Easy Export & Share */}
           <div className="mt-12 flex justify-center">
-            <img 
-              src={wavegrower} 
-              alt="Waveform animation" 
-              className="w-full max-w-2xl h-auto"
-            />
+            
           </div>
         </div>
       </section>
@@ -260,11 +238,7 @@ const Index = () => {
               </p>
             </div>
             <div className="flex-1 flex justify-center">
-              <img 
-                src={globe} 
-                alt="Global music distribution" 
-                className="w-full max-w-md h-auto object-contain"
-              />
+              <img src={globe} alt="Global music distribution" className="w-full max-w-md h-auto object-contain" />
             </div>
           </div>
         </div>
@@ -446,8 +420,6 @@ const Index = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
