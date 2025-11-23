@@ -272,7 +272,7 @@ const Index = () => {
       </section>
 
       {/* Explore and Get Inspired Section */}
-      <section className="relative w-full">
+      <section className="relative w-full -mt-12">
         <div className="relative w-full">
           <img 
             src={exploreInspire} 
@@ -573,7 +573,7 @@ const Index = () => {
               <ul className="space-y-3">
                 <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-sm">About</a></li>
                 <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-sm">Blog</a></li>
-                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-sm">Pricing</a></li>
+                <li><a href="/pricing" className="text-foreground/60 hover:text-foreground transition-colors text-sm">Pricing</a></li>
                 <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-sm">Hub</a></li>
               </ul>
             </div>
