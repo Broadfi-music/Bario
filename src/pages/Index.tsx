@@ -20,6 +20,8 @@ import AnimatedDice from '@/components/AnimatedDice';
 import globe from '@/assets/globe.png';
 import wavegrower from '@/assets/wavegrower.gif';
 import download4 from '@/assets/download_4.gif';
+import beatpulseBg from '@/assets/beatpulse-bg.gif';
+import exploreInspire from '@/assets/explore-inspire.gif';
 const Index = () => {
   const [playingTrack, setPlayingTrack] = useState<number | null>(null);
   const audioRefs = useRef<{
@@ -204,8 +206,17 @@ const Index = () => {
       </section>
 
       {/* BeatPulse Waveform Matcher Section */}
-      <section className="py-12 px-6 border-t border-foreground/5">
-        <div className="container mx-auto max-w-7xl">
+      <section className="py-12 px-6 border-t border-foreground/5 relative overflow-hidden">
+        <div 
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: `url(${beatpulseBg})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat'
+          }}
+        />
+        <div className="container mx-auto max-w-7xl relative z-10">
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1 space-y-6">
               <h2 className="text-4xl md:text-5xl font-bold text-foreground">
@@ -256,6 +267,22 @@ const Index = () => {
             <div className="flex-1 flex justify-center">
               <img src={globe} alt="Global music distribution" className="w-full max-w-md h-auto object-contain" />
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Explore and Get Inspired Section */}
+      <section className="relative w-full">
+        <div className="relative w-full">
+          <img 
+            src={exploreInspire} 
+            alt="Explore and Get Inspired" 
+            className="w-full h-auto object-cover"
+          />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <h2 className="text-4xl md:text-6xl font-bold text-white tracking-wider">
+              EXPLORE AND GET INSPIRED
+            </h2>
           </div>
         </div>
       </section>
