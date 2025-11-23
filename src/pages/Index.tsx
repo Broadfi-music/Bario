@@ -267,136 +267,270 @@ const Index = () => {
             Choose your plan
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Creator Basic */}
-            <div className="bg-foreground/5 rounded-2xl p-8 flex flex-col">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+            {/* Creator Free */}
+            <div className="bg-foreground/5 rounded-2xl p-6 flex flex-col">
               <div className="mb-6">
-                <h3 className="text-2xl font-bold text-foreground mb-2">Creator Basic</h3>
-                <p className="text-foreground/60 text-sm mb-6">Our starter plan.</p>
-                <div className="flex items-baseline mb-2">
-                  <span className="text-5xl font-bold text-foreground">$5</span>
+                <h3 className="text-xl font-bold text-foreground mb-2">Creator Free</h3>
+                <div className="flex items-baseline mb-4">
+                  <span className="text-4xl font-bold text-foreground">$0</span>
                   <span className="text-foreground/60 ml-2">/month</span>
                 </div>
               </div>
               
-              <button className="w-full bg-foreground text-background py-3 rounded-full font-semibold mb-8 hover:bg-foreground/90 transition-colors">
+              <button className="w-full bg-foreground text-background py-3 rounded-full font-semibold mb-6 hover:bg-foreground/90 transition-colors text-sm">
+                Get Started
+              </button>
+              
+              <ul className="space-y-2 flex-1 text-xs">
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>10 SongTime Machine transformations/month</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>3 MusicWarp regional filters</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Lite BeatPulse matching</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Basic MEGASHUFFLE discovery</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Limited ViralPath daily missions</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Low-priority exports</span>
+                </li>
+              </ul>
+              <p className="text-foreground/50 text-xs mt-4 italic">
+                Perfect for exploring before you upgrade.
+              </p>
+            </div>
+
+            {/* Creator Basic */}
+            <div className="bg-foreground/5 rounded-2xl p-6 flex flex-col">
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-foreground mb-2">Creator Basic</h3>
+                <p className="text-foreground/60 text-xs mb-4">For artists and everyday creators.</p>
+                <div className="flex items-baseline mb-2">
+                  <span className="text-4xl font-bold text-foreground">$5</span>
+                  <span className="text-foreground/60 ml-2">/month</span>
+                </div>
+              </div>
+              
+              <button className="w-full bg-foreground text-background py-3 rounded-full font-semibold mb-6 hover:bg-foreground/90 transition-colors text-sm">
                 Subscribe
               </button>
               
-              <ul className="space-y-3 flex-1">
-                <li className="text-foreground/70 text-sm flex items-start">
+              <ul className="space-y-2 flex-1 text-xs">
+                <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>30 transformations</span>
+                  <span>30 SongTime Machine transformations</span>
                 </li>
-                <li className="text-foreground/70 text-sm flex items-start">
+                <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
                   <span>10 MusicWarp filters</span>
                 </li>
-                <li className="text-foreground/70 text-sm flex items-start">
+                <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Basic BeatPulse matching</span>
+                  <span>Basic BeatPulse waveform matching</span>
                 </li>
-                <li className="text-foreground/70 text-sm flex items-start">
+                <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>ViralPath missions</span>
+                  <span>Full ViralPath missions</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Access to global discovery challenges</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Standard export quality</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Community badge for visibility</span>
                 </li>
               </ul>
+              <p className="text-foreground/50 text-xs mt-4 italic">
+                A powerful entry point for fast growth.
+              </p>
             </div>
 
             {/* Creator Pro */}
-            <div className="bg-foreground/5 rounded-2xl p-8 flex flex-col border-2 border-foreground relative">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-foreground text-background px-4 py-1 rounded-full text-sm font-semibold">
+            <div className="bg-foreground/5 rounded-2xl p-6 flex flex-col border-2 border-foreground relative">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-foreground text-background px-4 py-1 rounded-full text-xs font-semibold">
                 Most Popular
               </div>
               
               <div className="mb-6">
-                <h3 className="text-2xl font-bold text-foreground mb-2">Creator Pro</h3>
-                <p className="text-foreground/60 text-sm mb-6">Access to our best models and editing tools.</p>
+                <h3 className="text-xl font-bold text-foreground mb-2">Creator Pro</h3>
+                <p className="text-foreground/60 text-xs mb-4">For serious artists ready to accelerate.</p>
                 <div className="flex items-baseline mb-2">
-                  <span className="text-5xl font-bold text-foreground">$12</span>
+                  <span className="text-4xl font-bold text-foreground">$12</span>
                   <span className="text-foreground/60 ml-2">/month</span>
                 </div>
               </div>
               
-              <button className="w-full bg-foreground text-background py-3 rounded-full font-semibold mb-8 hover:bg-foreground/90 transition-colors">
+              <button className="w-full bg-foreground text-background py-3 rounded-full font-semibold mb-6 hover:bg-foreground/90 transition-colors text-sm">
                 Subscribe
               </button>
               
-              <ul className="space-y-3 flex-1">
-                <li className="text-foreground/70 text-sm flex items-start">
+              <ul className="space-y-2 flex-1 text-xs">
+                <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Unlimited time jumps</span>
+                  <span>Unlimited SongTime Machine time jumps</span>
                 </li>
-                <li className="text-foreground/70 text-sm flex items-start">
+                <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Unlimited region filters</span>
+                  <span>Unlimited MusicWarp regional filters</span>
                 </li>
-                <li className="text-foreground/70 text-sm flex items-start">
+                <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Full BeatPulse access</span>
+                  <span>Full BeatPulse access (deep energy analysis)</span>
                 </li>
-                <li className="text-foreground/70 text-sm flex items-start">
+                <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Detailed SceneVibe analytics</span>
+                  <span>Detailed SceneVibe performance analytics</span>
                 </li>
-                <li className="text-foreground/70 text-sm flex items-start">
+                <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Higher ViralPath ranking</span>
+                  <span>Higher ViralPath ranking priority</span>
                 </li>
-                <li className="text-foreground/70 text-sm flex items-start">
+                <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Priority export (HQ WAV)</span>
+                  <span>Priority HQ WAV exports</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Creator spotlight boosts in MEGASHUFFLE</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Smart creative recommendations</span>
                 </li>
               </ul>
+              <p className="text-foreground/50 text-xs mt-4 italic">
+                Turn your creativity into global momentum.
+              </p>
             </div>
 
-            {/* Label Pro Max */}
-            <div className="bg-foreground/5 rounded-2xl p-8 flex flex-col relative">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-foreground/20 text-foreground px-4 py-1 rounded-full text-sm font-semibold">
+            {/* Label Basic */}
+            <div className="bg-foreground/5 rounded-2xl p-6 flex flex-col">
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-foreground mb-2">Label Basic</h3>
+                <p className="text-foreground/60 text-xs mb-4">For small teams, managers, and multi-artist accounts.</p>
+                <div className="flex items-baseline mb-2">
+                  <span className="text-4xl font-bold text-foreground">$29</span>
+                  <span className="text-foreground/60 ml-2">/month</span>
+                </div>
+              </div>
+              
+              <button className="w-full bg-foreground text-background py-3 rounded-full font-semibold mb-6 hover:bg-foreground/90 transition-colors text-sm">
+                Subscribe
+              </button>
+              
+              <ul className="space-y-2 flex-1 text-xs">
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Everything in Creator Pro</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Manage up to 5 artists</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Artist growth dashboard</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Weekly audience insights</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Release timing suggestions</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Basic heat-map data for regions</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Early access to new filters/features</span>
+                </li>
+              </ul>
+              <p className="text-foreground/50 text-xs mt-4 italic">
+                Perfect for managers building new stars.
+              </p>
+            </div>
+
+            {/* Label Pro */}
+            <div className="bg-foreground/5 rounded-2xl p-6 flex flex-col relative">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-foreground/20 text-foreground px-4 py-1 rounded-full text-xs font-semibold">
                 Best Value
               </div>
               
               <div className="mb-6">
-                <h3 className="text-2xl font-bold text-foreground mb-2">Label Pro Max</h3>
-                <p className="text-foreground/60 text-sm mb-4">Best for:</p>
-                <ul className="text-foreground/70 text-sm space-y-1 mb-4">
-                  <li>• Managers</li>
-                  <li>• Labels</li>
-                  <li>• Influencers</li>
-                  <li>• TikTok music creators</li>
-                </ul>
+                <h3 className="text-xl font-bold text-foreground mb-2">Label Pro</h3>
+                <p className="text-foreground/60 text-xs mb-4">For professional labels, influencers, and music businesses.</p>
                 <div className="flex items-baseline mb-2">
-                  <span className="text-5xl font-bold text-foreground">$29–49</span>
+                  <span className="text-4xl font-bold text-foreground">$49</span>
                   <span className="text-foreground/60 ml-2">/month</span>
                 </div>
               </div>
               
-              <button className="w-full bg-foreground text-background py-3 rounded-full font-semibold mb-8 hover:bg-foreground/90 transition-colors">
+              <button className="w-full bg-foreground text-background py-3 rounded-full font-semibold mb-6 hover:bg-foreground/90 transition-colors text-sm">
                 Subscribe
               </button>
               
-              <ul className="space-y-3 flex-1">
-                <li className="text-foreground/70 text-sm flex items-start">
+              <ul className="space-y-2 flex-1 text-xs">
+                <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>All features +</span>
+                  <span>All tools in Label Basic</span>
                 </li>
-                <li className="text-foreground/70 text-sm flex items-start">
+                <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Artist growth dashboard</span>
+                  <span>Up to 20 artist profiles</span>
                 </li>
-                <li className="text-foreground/70 text-sm flex items-start">
+                <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Audience heat-map</span>
+                  <span>Advanced audience heat-map intelligence</span>
                 </li>
-                <li className="text-foreground/70 text-sm flex items-start">
+                <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Release strategy AI</span>
+                  <span>AI-powered release strategy generator</span>
                 </li>
-                <li className="text-foreground/70 text-sm flex items-start">
+                <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Smart distribution tools</span>
+                  <span>Smart distribution support tools</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Data-driven TikTok/YouTube challenge planner</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Priority in global discovery engines</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>VIP early feature access</span>
+                </li>
+                <li className="text-foreground/70 flex items-start">
+                  <span className="mr-2">•</span>
+                  <span>Dedicated support</span>
                 </li>
               </ul>
+              <p className="text-foreground/50 text-xs mt-4 italic">
+                Your full-scale, AI-powered music operations suite.
+              </p>
             </div>
           </div>
         </div>
