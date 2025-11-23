@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import album1 from '@/assets/album-1.jpeg';
 import album2 from '@/assets/album-2.jpeg';
 import album3 from '@/assets/album-3.jpeg';
+import wavegrower from '@/assets/wavegrower.gif';
 
 export const Hero = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -68,6 +69,15 @@ export const Hero = () => {
         position="left"
         delay={1}
       />
+
+      {/* Wavegrower GIF under album cards */}
+      <div className="absolute left-0 right-0 top-[60%] z-5 flex justify-center">
+        <img 
+          src={wavegrower} 
+          alt="Waveform animation" 
+          className="w-full max-w-2xl h-auto"
+        />
+      </div>
 
       {/* Content */}
       <div className="relative z-10 container mx-auto px-6 text-center">
