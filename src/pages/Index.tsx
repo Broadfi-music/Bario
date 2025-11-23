@@ -19,6 +19,7 @@ import AnimatedCD from '@/components/AnimatedCD';
 import AnimatedDice from '@/components/AnimatedDice';
 import globe from '@/assets/globe.png';
 import wavegrower from '@/assets/wavegrower.gif';
+import download4 from '@/assets/download_4.gif';
 const Index = () => {
   const [playingTrack, setPlayingTrack] = useState<number | null>(null);
   const audioRefs = useRef<{
@@ -165,7 +166,7 @@ const Index = () => {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featureCards.map(card => <div key={card.id} className="bg-black rounded-2xl p-8 flex flex-col items-start space-y-6 hover:scale-[1.02] transition-transform duration-200">
+            {featureCards.slice(0, 4).map(card => <div key={card.id} className="bg-black rounded-2xl p-8 flex flex-col items-start space-y-6 hover:scale-[1.02] transition-transform duration-200">
                 <div className="w-full aspect-square flex items-center justify-center">
                   <img src={card.image} alt={card.title} className="w-3/4 h-3/4 object-contain" />
                 </div>
@@ -180,9 +181,24 @@ const Index = () => {
               </div>)}
           </div>
 
-          {/* Wavegrower GIF beside Easy Export & Share */}
-          <div className="mt-12 flex justify-center">
-            
+          {/* Easy Export & Share with GIF */}
+          <div className="mt-12 flex flex-col lg:flex-row items-center gap-8">
+            <div className="flex-1 bg-black rounded-2xl p-8 flex flex-col items-start space-y-6">
+              <div className="w-full aspect-square flex items-center justify-center">
+                <img src={card5} alt="Easy Export & Share" className="w-3/4 h-3/4 object-contain" />
+              </div>
+              <div className="space-y-3">
+                <h3 className="text-xl font-semibold text-foreground">
+                  Easy Export & Share
+                </h3>
+                <p className="text-foreground/70 text-sm leading-relaxed">
+                  Download your remixes in high-quality formats and share them directly to your favorite platforms. Your music, your way.
+                </p>
+              </div>
+            </div>
+            <div className="flex-1 flex items-center justify-center">
+              <img src={download4} alt="Animation" className="w-full h-auto rounded-2xl" />
+            </div>
           </div>
         </div>
       </section>
