@@ -18,6 +18,7 @@ import card5 from '@/assets/card-5.png';
 import AnimatedCD from '@/components/AnimatedCD';
 import AnimatedDice from '@/components/AnimatedDice';
 import globe from '@/assets/globe.png';
+import wavegrower from '@/assets/wavegrower.gif';
 
 const Index = () => {
   const [playingTrack, setPlayingTrack] = useState<number | null>(null);
@@ -195,6 +196,15 @@ const Index = () => {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Wavegrower GIF beside Easy Export & Share */}
+          <div className="mt-12 flex justify-center">
+            <img 
+              src={wavegrower} 
+              alt="Waveform animation" 
+              className="w-full max-w-2xl h-auto"
+            />
           </div>
         </div>
       </section>
