@@ -12,7 +12,7 @@ const Pricing = () => {
       description: '',
       tagline: 'Perfect for exploring before you upgrade.',
       features: [
-        '10 SongTime Machine transformations/month',
+        '4 SongTime Machine transformations/month',
         '3 MusicWarp regional filters',
         'Lite BeatPulse matching',
         'Basic MEGASHUFFLE discovery',
@@ -27,7 +27,7 @@ const Pricing = () => {
       description: 'For artists and everyday creators.',
       tagline: 'A powerful entry point for fast growth.',
       features: [
-        '30 SongTime Machine transformations',
+        '15 SongTime Machine transformations',
         '10 MusicWarp filters',
         'Basic BeatPulse waveform matching',
         'Full ViralPath missions',
@@ -44,8 +44,8 @@ const Pricing = () => {
       tagline: 'Turn your creativity into global momentum.',
       popular: true,
       features: [
-        'Unlimited SongTime Machine time jumps',
-        'Unlimited MusicWarp regional filters',
+        '100 SongTime Machine time jumps',
+        '100 MusicWarp regional filters',
         'Full BeatPulse access (deep energy analysis)',
         'Detailed SceneVibe performance analytics',
         'Higher ViralPath ranking priority',
