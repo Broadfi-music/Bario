@@ -272,7 +272,7 @@ const Index = () => {
       </section>
 
       {/* Explore and Get Inspired Section */}
-      <section className="relative w-full -mt-12">
+      <section className="relative w-full -mt-32">
         <div className="relative w-full">
           <img 
             src={exploreInspire} 
