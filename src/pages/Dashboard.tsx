@@ -8,14 +8,68 @@ const Dashboard = () => {
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Library, label: 'Library', path: '/dashboard/library' },
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
-    { icon: Compass, label: 'Explore', path: '/dashboard/explore' },
+    { icon: Sparkles, label: 'Beatpulse', path: '/dashboard/beatpulse' },
+    { icon: Sparkles, label: 'Virapath', path: '/dashboard/virapath' },
+    { icon: Sparkles, label: 'Megashuffle', path: '/dashboard/megashuffle' },
+    { icon: Compass, label: 'Global discover', path: '/dashboard/global-discover' },
+    { icon: Compass, label: 'Billboard', path: '/dashboard/billboard' },
   ];
 
-  const recentTracks = [
-    { id: 1, title: 'Summer Vibes', genre: 'Amapiano', duration: '3:24' },
-    { id: 2, title: 'Night Drive', genre: 'Trap', duration: '2:58' },
-    { id: 3, title: 'Country Road', genre: 'Country', duration: '4:12' },
-    { id: 4, title: 'Jazz Club', genre: 'Jazz', duration: '5:03' },
+  const sections = [
+    {
+      title: 'Recent Remixes',
+      tracks: [
+        { id: 1, title: 'Summer Vibes', genre: 'Amapiano', duration: '3:24' },
+        { id: 2, title: 'Night Drive', genre: 'Trap', duration: '2:58' },
+        { id: 3, title: 'Country Road', genre: 'Country', duration: '4:12' },
+        { id: 4, title: 'Jazz Club', genre: 'Jazz', duration: '5:03' },
+      ]
+    },
+    {
+      title: 'For You',
+      tracks: [
+        { id: 5, title: 'Midnight Echo', genre: 'R&B', duration: '3:45' },
+        { id: 6, title: 'Urban Flow', genre: 'Hip Hop', duration: '3:12' },
+        { id: 7, title: 'Sunset Dreams', genre: 'Pop', duration: '3:33' },
+        { id: 8, title: 'Electric Soul', genre: 'Funk', duration: '4:01' },
+      ]
+    },
+    {
+      title: 'New Songs',
+      tracks: [
+        { id: 9, title: 'Fresh Start', genre: 'Gospel', duration: '3:58' },
+        { id: 10, title: 'City Lights', genre: 'Jazz', duration: '4:22' },
+        { id: 11, title: 'Ocean Wave', genre: 'Soul', duration: '3:41' },
+        { id: 12, title: 'Desert Rose', genre: '80s', duration: '4:15' },
+      ]
+    },
+    {
+      title: 'Global Trends',
+      tracks: [
+        { id: 13, title: 'Tokyo Nights', genre: 'GenZ', duration: '3:29' },
+        { id: 14, title: 'Lagos Groove', genre: 'Amapiano', duration: '3:51' },
+        { id: 15, title: 'Berlin Beat', genre: 'Trap', duration: '3:36' },
+        { id: 16, title: 'Rio Rhythm', genre: 'Reggae', duration: '4:08' },
+      ]
+    },
+    {
+      title: 'Trending Songs',
+      tracks: [
+        { id: 17, title: 'Viral Melody', genre: 'Pop', duration: '3:18' },
+        { id: 18, title: 'Chart Topper', genre: 'Hip Hop', duration: '3:44' },
+        { id: 19, title: 'Hit Parade', genre: 'Country', duration: '3:52' },
+        { id: 20, title: 'Rising Star', genre: 'R&B', duration: '4:03' },
+      ]
+    },
+    {
+      title: 'Trending Remixes',
+      tracks: [
+        { id: 21, title: 'Classic Reimagined', genre: 'Jazz', duration: '4:28' },
+        { id: 22, title: 'Modern Twist', genre: 'Funk', duration: '3:39' },
+        { id: 23, title: 'Genre Fusion', genre: 'Soul', duration: '3:47' },
+        { id: 24, title: 'Remix Revolution', genre: 'Instrumental', duration: '4:11' },
+      ]
+    },
   ];
 
   return (
@@ -63,12 +117,8 @@ const Dashboard = () => {
       <main className="flex-1 overflow-y-auto">
         <div className="p-8">
           {/* Header */}
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">Welcome back</h1>
-              <p className="text-muted-foreground">Ready to create your next remix?</p>
-            </div>
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+          <div className="flex justify-end items-center mb-8">
+            <Button className="bg-black text-white hover:bg-black/90">
               <Plus className="h-5 w-5 mr-2" />
               New Remix
             </Button>
@@ -79,7 +129,7 @@ const Dashboard = () => {
             <Card className="p-6 bg-card hover:bg-accent/50 transition-colors cursor-pointer">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-primary/10 rounded-lg">
-                  <Sparkles className="h-6 w-6 text-primary" />
+                  <Sparkles className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground">Quick Create</h3>
@@ -91,7 +141,7 @@ const Dashboard = () => {
             <Card className="p-6 bg-card hover:bg-accent/50 transition-colors cursor-pointer">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-primary/10 rounded-lg">
-                  <Library className="h-6 w-6 text-primary" />
+                  <Library className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground">My Library</h3>
@@ -103,7 +153,7 @@ const Dashboard = () => {
             <Card className="p-6 bg-card hover:bg-accent/50 transition-colors cursor-pointer">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-primary/10 rounded-lg">
-                  <Compass className="h-6 w-6 text-primary" />
+                  <Compass className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground">Explore</h3>
@@ -113,29 +163,36 @@ const Dashboard = () => {
             </Card>
           </div>
 
-          {/* Recent Tracks */}
-          <div>
-            <h2 className="text-2xl font-bold text-foreground mb-4">Recent Remixes</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {recentTracks.map((track) => (
-                <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors cursor-pointer overflow-hidden group">
-                  <div className="aspect-square bg-muted relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5" />
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button size="icon" variant="secondary" className="rounded-full h-12 w-12">
-                        <Play className="h-6 w-6" />
-                      </Button>
+          {/* Track Sections */}
+          {sections.map((section, sectionIndex) => (
+            <div key={sectionIndex} className="mb-12">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-foreground">{section.title}</h2>
+                <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
+                  Show more
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {section.tracks.map((track) => (
+                  <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors cursor-pointer overflow-hidden group">
+                    <div className="aspect-square bg-muted relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button size="icon" variant="secondary" className="rounded-full h-12 w-12">
+                          <Play className="h-6 w-6" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-foreground mb-1">{track.title}</h3>
-                    <p className="text-sm text-muted-foreground">{track.genre}</p>
-                    <p className="text-xs text-muted-foreground mt-2">{track.duration}</p>
-                  </div>
-                </Card>
-              ))}
+                    <div className="p-4">
+                      <h3 className="font-semibold text-foreground mb-1">{track.title}</h3>
+                      <p className="text-sm text-muted-foreground">{track.genre}</p>
+                      <p className="text-xs text-muted-foreground mt-2">{track.duration}</p>
+                    </div>
+                  </Card>
+                ))}
+              </div>
             </div>
-          </div>
+          ))}
         </div>
       </main>
     </div>
