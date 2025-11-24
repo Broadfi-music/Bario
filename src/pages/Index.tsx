@@ -207,15 +207,12 @@ const Index = () => {
 
       {/* BeatPulse Waveform Matcher Section */}
       <section className="py-12 px-6 border-t border-foreground/5 relative overflow-hidden">
-        <div 
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: `url(${beatpulseBg})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat'
-          }}
-        />
+        <div className="absolute inset-0 opacity-20" style={{
+        backgroundImage: `url(${beatpulseBg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }} />
         <div className="container mx-auto max-w-7xl relative z-10">
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="flex-1 space-y-6">
@@ -274,11 +271,7 @@ const Index = () => {
       {/* Explore and Get Inspired Section */}
       <section className="relative w-full -mt-32">
         <div className="relative w-full">
-          <img 
-            src={exploreInspire} 
-            alt="Explore and Get Inspired" 
-            className="w-full h-auto object-cover"
-          />
+          <img src={exploreInspire} alt="Explore and Get Inspired" className="w-full h-auto object-cover" />
           <div className="absolute inset-0 flex items-center justify-center">
             <h2 className="text-4xl md:text-6xl font-bold text-white tracking-wider">
               EXPLORE AND GET INSPIRED
@@ -312,7 +305,7 @@ const Index = () => {
               <ul className="space-y-2 flex-1 text-xs">
                 <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>10 SongTime Machine transformations/month</span>
+                  <span>  4 SongTime Machine transformations/month</span>
                 </li>
                 <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
@@ -358,7 +351,7 @@ const Index = () => {
               <ul className="space-y-2 flex-1 text-xs">
                 <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>30 SongTime Machine transformations</span>
+                  <span> 20 SongTime Machine transformations</span>
                 </li>
                 <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
@@ -412,11 +405,11 @@ const Index = () => {
               <ul className="space-y-2 flex-1 text-xs">
                 <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Unlimited SongTime Machine time jumps</span>
+                  <span> 100 SongTime Machine time jumps</span>
                 </li>
                 <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
-                  <span>Unlimited MusicWarp regional filters</span>
+                  <span> 100 MusicWarp regional filters</span>
                 </li>
                 <li className="text-foreground/70 flex items-start">
                   <span className="mr-2">•</span>
