@@ -1,9 +1,14 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, TrendingUp, Users, Play, Download } from 'lucide-react';
+import { ArrowLeft, Zap, TrendingUp, Users, Play, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 
 const Analytics = () => {
+  const totalCredits = 100;
+  const usedCredits = 45;
+  const remainingCredits = totalCredits - usedCredits;
+
   const topTracks = [
     { id: 1, title: 'Summer Vibes Remix', plays: 1245, downloads: 89, shares: 34 },
     { id: 2, title: 'Night Drive Trap', plays: 987, downloads: 67, shares: 28 },
@@ -34,6 +39,32 @@ const Analytics = () => {
             <p className="text-muted-foreground mt-1">Track your music performance</p>
           </div>
         </div>
+
+        {/* Credits Section */}
+        <Card className="p-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Zap className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-foreground">Credits</h2>
+                <p className="text-sm text-muted-foreground">Your generation credits</p>
+              </div>
+            </div>
+            <Link to="/dashboard/settings">
+              <Button variant="outline">Manage Plan</Button>
+            </Link>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Used</span>
+              <span className="text-foreground font-medium">{usedCredits} / {totalCredits}</span>
+            </div>
+            <Progress value={(usedCredits / totalCredits) * 100} className="h-2" />
+            <p className="text-sm text-muted-foreground">{remainingCredits} credits remaining this month</p>
+          </div>
+        </Card>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
