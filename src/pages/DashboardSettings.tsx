@@ -1,176 +1,163 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, User, Bell, Shield, CreditCard, Palette } from 'lucide-react';
+import { ArrowLeft, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 const DashboardSettings = () => {
+  const currentPlan = 'Creator Pro';
+  
+  const plans = [
+    {
+      name: 'Creator Free',
+      price: '$0',
+      period: '/month',
+      features: [
+        '4 SongTime transformations',
+        '3 MusicWarp filters',
+        'Lite BeatPulse matching',
+        'Basic MEGASHUFFLE discovery',
+        'Limited ViralPath missions',
+        'Low-priority exports'
+      ],
+      current: false
+    },
+    {
+      name: 'Creator Basic',
+      price: '$5',
+      period: '/month',
+      features: [
+        '15 SongTime transformations',
+        '10 MusicWarp filters',
+        'Basic BeatPulse matching',
+        'Full ViralPath missions',
+        'Global discovery challenges',
+        'Standard exports',
+        'Community badge'
+      ],
+      current: false
+    },
+    {
+      name: 'Creator Pro',
+      price: '$12',
+      period: '/month',
+      popular: true,
+      features: [
+        '100 SongTime transformations',
+        '100 MusicWarp filters',
+        'Full BeatPulse access',
+        'Detailed SceneVibe analytics',
+        'Higher ViralPath ranking',
+        'Priority HQ WAV exports',
+        'Spotlight boosts',
+        'Smart recommendations'
+      ],
+      current: true
+    },
+    {
+      name: 'Label Basic',
+      price: '$29',
+      period: '/month',
+      features: [
+        'All Creator Pro features',
+        '5-artist management',
+        'Growth dashboard',
+        'Weekly insights',
+        'Release timing suggestions',
+        'Basic heat-map data',
+        'Early feature access'
+      ],
+      current: false
+    },
+    {
+      name: 'Label Pro',
+      price: '$49',
+      period: '/month',
+      features: [
+        'All Label Basic features',
+        '20-artist management',
+        'Advanced heat-map intelligence',
+        'AI-powered release strategy',
+        'Smart distribution tools',
+        'TikTok/YouTube challenge planner',
+        'Global discovery priority',
+        'VIP early access',
+        'Dedicated support'
+      ],
+      current: false
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/dashboard">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-              <p className="text-sm text-muted-foreground">Manage your account preferences</p>
-            </div>
-          </div>
-          <Link to="/" className="text-xl font-bold text-foreground">
-            BARIO
+      <div className="max-w-7xl mx-auto p-8">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-8">
+          <Link to="/dashboard">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
           </Link>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Manage Subscription</h1>
+            <p className="text-muted-foreground mt-1">Current plan: <span className="font-semibold">{currentPlan}</span></p>
+          </div>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-6 py-8">
-        <div className="max-w-4xl space-y-6">
-          {/* Account Settings */}
-          <Card className="bg-card">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <User className="h-5 w-5 text-primary" />
-                <div>
-                  <CardTitle>Account</CardTitle>
-                  <CardDescription>Manage your account information</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" placeholder="John Doe" className="bg-background" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="you@example.com" className="bg-background" />
-              </div>
-              <Button className="bg-background hover:bg-background/80 text-foreground border border-border">
-                Save Changes
-              </Button>
-            </CardContent>
-          </Card>
+        {/* Current Plan Info */}
+        <Card className="p-6 mb-8 border-primary">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-foreground mb-1">{currentPlan}</h2>
+              <p className="text-muted-foreground">Your subscription renews on January 15, 2025</p>
+            </div>
+            <Button variant="outline">Cancel Subscription</Button>
+          </div>
+        </Card>
 
-          {/* Notifications */}
-          <Card className="bg-card">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <Bell className="h-5 w-5 text-primary" />
+        {/* Plans */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {plans.map((plan) => (
+            <Card key={plan.name} className={`p-6 ${plan.current ? 'border-primary' : ''}`}>
+              <div className="space-y-4">
                 <div>
-                  <CardTitle>Notifications</CardTitle>
-                  <CardDescription>Configure how you receive updates</CardDescription>
+                  {plan.popular && (
+                    <Badge className="mb-2">Most Popular</Badge>
+                  )}
+                  {plan.current && (
+                    <Badge variant="secondary" className="mb-2">Current Plan</Badge>
+                  )}
+                  <h3 className="text-2xl font-bold text-foreground">{plan.name}</h3>
+                  <div className="flex items-baseline mt-2">
+                    <span className="text-4xl font-bold text-foreground">{plan.price}</span>
+                    <span className="text-muted-foreground ml-1">{plan.period}</span>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-foreground">Email Notifications</p>
-                  <p className="text-sm text-muted-foreground">Receive updates via email</p>
-                </div>
-                <Switch />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-foreground">Remix Completion</p>
-                  <p className="text-sm text-muted-foreground">Get notified when remixes are ready</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-foreground">Weekly Summary</p>
-                  <p className="text-sm text-muted-foreground">Receive your weekly activity report</p>
-                </div>
-                <Switch />
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Privacy & Security */}
-          <Card className="bg-card">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <Shield className="h-5 w-5 text-primary" />
-                <div>
-                  <CardTitle>Privacy & Security</CardTitle>
-                  <CardDescription>Control your privacy settings</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-foreground">Profile Visibility</p>
-                  <p className="text-sm text-muted-foreground">Make your profile visible to others</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-foreground">Show Activity</p>
-                  <p className="text-sm text-muted-foreground">Display your recent activity</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <Button variant="destructive" className="w-full">
-                Change Password
-              </Button>
-            </CardContent>
-          </Card>
+                <ul className="space-y-2">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm">
+                      <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                      <span className="text-muted-foreground">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
 
-          {/* Billing */}
-          <Card className="bg-card">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <CreditCard className="h-5 w-5 text-primary" />
-                <div>
-                  <CardTitle>Billing</CardTitle>
-                  <CardDescription>Manage your subscription and payment methods</CardDescription>
-                </div>
+                {plan.current ? (
+                  <Button disabled className="w-full">Current Plan</Button>
+                ) : (
+                  <Button 
+                    className={`w-full ${plan.popular ? 'bg-black text-white hover:bg-black/90' : ''}`}
+                    variant={plan.popular ? 'default' : 'outline'}
+                  >
+                    {plan.price === '$0' ? 'Downgrade' : 'Upgrade'}
+                  </Button>
+                )}
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="font-medium text-foreground mb-1">Free Plan</p>
-                <p className="text-sm text-muted-foreground">Upgrade to unlock more features</p>
-              </div>
-              <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                Upgrade to Pro
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Appearance */}
-          <Card className="bg-card">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <Palette className="h-5 w-5 text-primary" />
-                <div>
-                  <CardTitle>Appearance</CardTitle>
-                  <CardDescription>Customize how BARIO looks</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-foreground">Dark Mode</p>
-                  <p className="text-sm text-muted-foreground">Use dark theme</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-            </CardContent>
-          </Card>
+            </Card>
+          ))}
         </div>
-      </main>
+      </div>
     </div>
   );
 };
