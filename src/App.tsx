@@ -9,6 +9,10 @@ import Advanced from "./pages/Advanced";
 import Dashboard from "./pages/Dashboard";
 import DashboardSettings from "./pages/DashboardSettings";
 import DashboardProfile from "./pages/DashboardProfile";
+import NewRemix from "./pages/NewRemix";
+import Create from "./pages/Create";
+import Library from "./pages/Library";
+import Analytics from "./pages/Analytics";
 import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 
@@ -27,6 +31,10 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/settings" element={<DashboardSettings />} />
           <Route path="/dashboard/profile" element={<DashboardProfile />} />
+          <Route path="/dashboard/new-remix" element={<NewRemix />} />
+          <Route path="/dashboard/create" element={<Create />} />
+          <Route path="/dashboard/library" element={<Library />} />
+          <Route path="/dashboard/analytics" element={<Analytics />} />
           <Route path="/pricing" element={<Pricing />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

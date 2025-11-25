@@ -13,61 +13,53 @@ const Dashboard = () => {
     { icon: Sparkles, label: 'Megashuffle', path: '/dashboard/megashuffle' },
     { icon: Compass, label: 'Global discover', path: '/dashboard/global-discover' },
     { icon: Compass, label: 'Billboard', path: '/dashboard/billboard' },
+    { icon: Compass, label: 'Analytics', path: '/dashboard/analytics' },
   ];
 
   const sections = [
     {
       title: 'Recent Remixes',
       tracks: [
-        { id: 1, title: 'Summer Vibes', genre: 'Amapiano', duration: '3:24' },
-        { id: 2, title: 'Night Drive', genre: 'Trap', duration: '2:58' },
-        { id: 3, title: 'Country Road', genre: 'Country', duration: '4:12' },
-        { id: 4, title: 'Jazz Club', genre: 'Jazz', duration: '5:03' },
-      ]
-    },
-    {
-      title: 'For You',
-      tracks: [
-        { id: 5, title: 'Midnight Echo', genre: 'R&B', duration: '3:45' },
-        { id: 6, title: 'Urban Flow', genre: 'Hip Hop', duration: '3:12' },
-        { id: 7, title: 'Sunset Dreams', genre: 'Pop', duration: '3:33' },
-        { id: 8, title: 'Electric Soul', genre: 'Funk', duration: '4:01' },
+        { id: 1, title: 'Summer Vibes', genre: 'Amapiano', duration: '3:24', artwork: '/src/assets/track-1.jpeg' },
+        { id: 2, title: 'Night Drive', genre: 'Trap', duration: '2:58', artwork: '/src/assets/track-2.jpeg' },
+        { id: 3, title: 'Country Road', genre: 'Country', duration: '4:12', artwork: '/src/assets/track-3.jpeg' },
+        { id: 4, title: 'Jazz Club', genre: 'Jazz', duration: '5:03', artwork: '/src/assets/track-4.jpeg' },
       ]
     },
     {
       title: 'New Songs',
       tracks: [
-        { id: 9, title: 'Fresh Start', genre: 'Gospel', duration: '3:58' },
-        { id: 10, title: 'City Lights', genre: 'Jazz', duration: '4:22' },
-        { id: 11, title: 'Ocean Wave', genre: 'Soul', duration: '3:41' },
-        { id: 12, title: 'Desert Rose', genre: '80s', duration: '4:15' },
+        { id: 9, title: 'Fresh Start', genre: 'Gospel', duration: '3:58', artwork: '/src/assets/track-5.jpeg' },
+        { id: 10, title: 'City Lights', genre: 'Jazz', duration: '4:22', artwork: '/src/assets/track-6.jpeg' },
+        { id: 11, title: 'Ocean Wave', genre: 'Soul', duration: '3:41', artwork: '/src/assets/track-7.jpeg' },
+        { id: 12, title: 'Desert Rose', genre: '80s', duration: '4:15', artwork: '/src/assets/track-8.jpeg' },
       ]
     },
     {
       title: 'Global Trends',
       tracks: [
-        { id: 13, title: 'Tokyo Nights', genre: 'GenZ', duration: '3:29' },
-        { id: 14, title: 'Lagos Groove', genre: 'Amapiano', duration: '3:51' },
-        { id: 15, title: 'Berlin Beat', genre: 'Trap', duration: '3:36' },
-        { id: 16, title: 'Rio Rhythm', genre: 'Reggae', duration: '4:08' },
+        { id: 13, title: 'Tokyo Nights', genre: 'GenZ', duration: '3:29', artwork: '/src/assets/track-1.jpeg' },
+        { id: 14, title: 'Lagos Groove', genre: 'Amapiano', duration: '3:51', artwork: '/src/assets/track-2.jpeg' },
+        { id: 15, title: 'Berlin Beat', genre: 'Trap', duration: '3:36', artwork: '/src/assets/track-3.jpeg' },
+        { id: 16, title: 'Rio Rhythm', genre: 'Reggae', duration: '4:08', artwork: '/src/assets/track-4.jpeg' },
       ]
     },
     {
       title: 'Trending Songs',
       tracks: [
-        { id: 17, title: 'Viral Melody', genre: 'Pop', duration: '3:18' },
-        { id: 18, title: 'Chart Topper', genre: 'Hip Hop', duration: '3:44' },
-        { id: 19, title: 'Hit Parade', genre: 'Country', duration: '3:52' },
-        { id: 20, title: 'Rising Star', genre: 'R&B', duration: '4:03' },
+        { id: 17, title: 'Viral Melody', genre: 'Pop', duration: '3:18', artwork: '/src/assets/track-5.jpeg' },
+        { id: 18, title: 'Chart Topper', genre: 'Hip Hop', duration: '3:44', artwork: '/src/assets/track-6.jpeg' },
+        { id: 19, title: 'Hit Parade', genre: 'Country', duration: '3:52', artwork: '/src/assets/track-7.jpeg' },
+        { id: 20, title: 'Rising Star', genre: 'R&B', duration: '4:03', artwork: '/src/assets/track-8.jpeg' },
       ]
     },
     {
       title: 'Trending Remixes',
       tracks: [
-        { id: 21, title: 'Classic Reimagined', genre: 'Jazz', duration: '4:28' },
-        { id: 22, title: 'Modern Twist', genre: 'Funk', duration: '3:39' },
-        { id: 23, title: 'Genre Fusion', genre: 'Soul', duration: '3:47' },
-        { id: 24, title: 'Remix Revolution', genre: 'Instrumental', duration: '4:11' },
+        { id: 21, title: 'Classic Reimagined', genre: 'Jazz', duration: '4:28', artwork: '/src/assets/track-1.jpeg' },
+        { id: 22, title: 'Modern Twist', genre: 'Funk', duration: '3:39', artwork: '/src/assets/track-2.jpeg' },
+        { id: 23, title: 'Genre Fusion', genre: 'Soul', duration: '3:47', artwork: '/src/assets/track-3.jpeg' },
+        { id: 24, title: 'Remix Revolution', genre: 'Instrumental', duration: '4:11', artwork: '/src/assets/track-4.jpeg' },
       ]
     },
   ];
@@ -118,49 +110,43 @@ const Dashboard = () => {
         <div className="p-8">
           {/* Header */}
           <div className="flex justify-end items-center mb-8">
-            <Button className="bg-black text-white hover:bg-black/90">
-              <Plus className="h-5 w-5 mr-2" />
-              New Remix
-            </Button>
+            <Link to="/dashboard/new-remix">
+              <Button className="bg-black text-white hover:bg-black/90">
+                <Plus className="h-5 w-5 mr-2" />
+                New Remix
+              </Button>
+            </Link>
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card className="p-6 bg-card hover:bg-accent/50 transition-colors cursor-pointer">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <Sparkles className="h-6 w-6 text-white" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <Link to="/dashboard/create">
+              <Card className="p-6 bg-card hover:bg-accent/50 transition-colors cursor-pointer">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <Sparkles className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">Quick Create</h3>
+                    <p className="text-sm text-muted-foreground">Start a new remix</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-foreground">Quick Create</h3>
-                  <p className="text-sm text-muted-foreground">Start a new remix</p>
-                </div>
-              </div>
-            </Card>
+              </Card>
+            </Link>
 
-            <Card className="p-6 bg-card hover:bg-accent/50 transition-colors cursor-pointer">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <Library className="h-6 w-6 text-white" />
+            <Link to="/dashboard/library">
+              <Card className="p-6 bg-card hover:bg-accent/50 transition-colors cursor-pointer">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <Library className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">My Library</h3>
+                    <p className="text-sm text-muted-foreground">View all tracks</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-foreground">My Library</h3>
-                  <p className="text-sm text-muted-foreground">View all tracks</p>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6 bg-card hover:bg-accent/50 transition-colors cursor-pointer">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <Compass className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground">Explore</h3>
-                  <p className="text-sm text-muted-foreground">Discover new sounds</p>
-                </div>
-              </div>
-            </Card>
+              </Card>
+            </Link>
           </div>
 
           {/* Track Sections */}
@@ -176,8 +162,12 @@ const Dashboard = () => {
                 {section.tracks.map((track) => (
                   <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors cursor-pointer overflow-hidden group">
                     <div className="aspect-square bg-muted relative">
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5" />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <img 
+                        src={track.artwork} 
+                        alt={track.title}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
                         <Button size="icon" variant="secondary" className="rounded-full h-12 w-12">
                           <Play className="h-6 w-6" />
                         </Button>
