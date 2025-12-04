@@ -12,6 +12,19 @@ const Dashboard = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [likedTracks, setLikedTracks] = useState<Set<number>>(new Set());
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
+
+  const toggleSection = (sectionIndex: number) => {
+    setExpandedSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(sectionIndex)) {
+        newSet.delete(sectionIndex);
+      } else {
+        newSet.add(sectionIndex);
+      }
+      return newSet;
+    });
+  };
 
   const handleLike = (trackId: number) => {
     setLikedTracks(prev => {
@@ -242,17 +255,25 @@ const Dashboard = () => {
           </div>
 
           {/* Track Sections */}
-          {sections.map((section, sectionIndex) => (
+          {sections.map((section, sectionIndex) => {
+            const isExpanded = expandedSections.has(sectionIndex);
+            const displayTracks = isExpanded ? section.tracks : section.tracks.slice(0, 4);
+            
+            return (
             <div key={sectionIndex} className="mb-6 lg:mb-8">
               <div className="flex justify-between items-center mb-2 lg:mb-3">
                 <h2 className="text-sm lg:text-lg font-bold text-foreground">{section.title}</h2>
-                <Button variant="ghost" className="text-muted-foreground hover:text-foreground text-xs h-7 px-2">
-                  Show more
+                <Button 
+                  variant="ghost" 
+                  className="text-muted-foreground hover:text-foreground text-xs h-7 px-2"
+                  onClick={() => toggleSection(sectionIndex)}
+                >
+                  {isExpanded ? 'Show less' : 'Show more'}
                 </Button>
               </div>
               {section.layout === 'list' ? (
                 <div className="space-y-1.5">
-                  {section.tracks.map((track) => (
+                  {displayTracks.map((track) => (
                     <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors cursor-pointer overflow-hidden">
                       <div className="flex items-center gap-2 p-2">
                         <div className="relative w-9 h-9 flex-shrink-0">
@@ -316,7 +337,7 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 lg:gap-3">
-                  {section.tracks.map((track) => (
+                  {displayTracks.map((track) => (
                     <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors cursor-pointer overflow-hidden group">
                       <div className="aspect-square bg-muted relative">
                         <img 
@@ -379,7 +400,8 @@ const Dashboard = () => {
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
 
           {/* Audio Player */}
           {currentTrack && (
