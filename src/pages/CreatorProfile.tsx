@@ -3,7 +3,9 @@ import { ArrowLeft, Play, Pause, Share2, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 const CreatorProfile = () => {
   const { id } = useParams();
@@ -51,8 +53,33 @@ const CreatorProfile = () => {
     });
   };
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
+  const handleShare = (platform: string) => {
+    const shareUrl = window.location.href;
+    const shareText = `Check out ${creator.name} on Bario!`;
+    
+    switch (platform) {
+      case 'instagram':
+        navigator.clipboard.writeText(shareUrl);
+        toast.success('Link copied! Share on Instagram');
+        break;
+      case 'tiktok':
+        navigator.clipboard.writeText(shareUrl);
+        toast.success('Link copied! Share on TikTok');
+        break;
+      case 'whatsapp':
+        window.open(`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`, '_blank');
+        break;
+      case 'x':
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
+        break;
+      case 'copy':
+        navigator.clipboard.writeText(shareUrl);
+        toast.success('Link copied to clipboard!');
+        break;
+      default:
+        navigator.clipboard.writeText(shareUrl);
+        toast.success('Link copied!');
+    }
   };
 
   return (
@@ -99,13 +126,55 @@ const CreatorProfile = () => {
               >
                 <Play className="h-4 w-4" />
               </Button>
-              <Button 
-                size="icon" 
-                variant="outline"
-                onClick={handleShare}
-              >
-                <Share2 className="h-4 w-4" />
-              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button size="icon" variant="outline">
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Share Profile</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-2 mt-4">
+                    <Button 
+                      onClick={() => handleShare('copy')}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Copy Link
+                    </Button>
+                    <Button 
+                      onClick={() => handleShare('instagram')}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Share to Instagram
+                    </Button>
+                    <Button 
+                      onClick={() => handleShare('tiktok')}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Share to TikTok
+                    </Button>
+                    <Button 
+                      onClick={() => handleShare('whatsapp')}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Share to WhatsApp
+                    </Button>
+                    <Button 
+                      onClick={() => handleShare('x')}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Share to X
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
               <Button 
                 onClick={() => setIsFollowing(!isFollowing)}
                 className={isFollowing ? "bg-muted text-foreground" : "bg-black text-white hover:bg-black/90"}

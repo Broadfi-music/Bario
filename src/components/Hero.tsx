@@ -130,12 +130,6 @@ export const Hero = () => {
                     <option value="gospel">Gospel</option>
                     <option value="instrumental">Instrumental</option>
                   </select>
-                  <button 
-                    onClick={() => window.location.href = '/advanced'}
-                    className="text-foreground/60 text-xs px-3 py-2 border border-foreground/10 rounded-lg"
-                  >
-                    Advanced
-                  </button>
                   <Button className="bg-background hover:bg-background/80 text-foreground rounded-full px-4 text-xs border border-foreground/20">
                     <Sparkles className="h-3 w-3 mr-1" />
                     Create
@@ -180,12 +174,6 @@ export const Hero = () => {
                   <option value="gospel">Gospel</option>
                   <option value="instrumental">Instrumental</option>
                 </select>
-                <button 
-                  onClick={() => window.location.href = '/advanced'}
-                  className="text-foreground/60 hover:text-foreground transition-colors text-sm px-3 py-2 border border-foreground/10 rounded-lg"
-                >
-                  Advanced
-                </button>
                 <Button className="bg-background hover:bg-background/80 text-foreground rounded-full px-6 border border-foreground/20">
                   <Sparkles className="mr-2 h-4 w-4" />
                   Create

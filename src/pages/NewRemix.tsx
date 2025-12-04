@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
@@ -12,16 +13,12 @@ const NewRemix = () => {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioUrl, setAudioUrl] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('');
-  const [selectedStyle, setSelectedStyle] = useState('');
+  const [chatPrompt, setChatPrompt] = useState('');
   const [generatedTrack, setGeneratedTrack] = useState(false);
 
   const genres = [
     'amapiano', 'trap', 'funk', 'hiphop', 'country', '80s', 
     'R&B', 'soul', 'pop', 'genz', 'jazz', 'reggae', 'gospel', 'instrumental'
-  ];
-
-  const styles = [
-    'Classic', 'Modern', 'Minimal', 'Heavy', 'Smooth', 'Energetic'
   ];
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,7 +28,7 @@ const NewRemix = () => {
   };
 
   const handleGenerate = () => {
-    if ((audioFile || audioUrl) && selectedGenre && selectedStyle) {
+    if ((audioFile || audioUrl) && selectedGenre) {
       setGeneratedTrack(true);
     }
   };
@@ -106,11 +103,11 @@ const NewRemix = () => {
           </div>
         </Card>
 
-        {/* Style Selection */}
+        {/* Conversion Settings */}
         <Card className="p-6 mb-6">
           <h2 className="text-xl font-semibold text-foreground mb-4">Conversion Settings</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
             {/* Genre Selection */}
             <div>
               <Label htmlFor="genre" className="text-foreground">Select Genre</Label>
@@ -128,21 +125,16 @@ const NewRemix = () => {
               </Select>
             </div>
 
-            {/* Style Selection */}
+            {/* Chat to make music */}
             <div>
-              <Label htmlFor="style" className="text-foreground">Select Style</Label>
-              <Select value={selectedStyle} onValueChange={setSelectedStyle}>
-                <SelectTrigger id="style" className="mt-2">
-                  <SelectValue placeholder="Choose style" />
-                </SelectTrigger>
-                <SelectContent>
-                  {styles.map((style) => (
-                    <SelectItem key={style} value={style}>
-                      {style}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="chat-prompt" className="text-foreground">Chat to make music</Label>
+              <Textarea
+                id="chat-prompt"
+                placeholder="Describe how you want your remix to sound... e.g., 'Make it more upbeat with heavy bass and tropical vibes'"
+                value={chatPrompt}
+                onChange={(e) => setChatPrompt(e.target.value)}
+                className="mt-2 min-h-[100px]"
+              />
             </div>
           </div>
         </Card>
@@ -150,7 +142,7 @@ const NewRemix = () => {
         {/* Generate Button */}
         <Button 
           onClick={handleGenerate}
-          disabled={!((audioFile || audioUrl) && selectedGenre && selectedStyle)}
+          disabled={!((audioFile || audioUrl) && selectedGenre)}
           className="w-full bg-black text-white hover:bg-black/90 h-12 text-lg"
         >
           Generate Remix
@@ -164,7 +156,7 @@ const NewRemix = () => {
             <div className="bg-muted rounded-lg p-8 mb-4 text-center">
               <p className="text-muted-foreground">Audio Player Placeholder</p>
               <p className="text-sm text-muted-foreground mt-2">
-                {selectedGenre} • {selectedStyle} Style
+                {selectedGenre}
               </p>
             </div>
 
