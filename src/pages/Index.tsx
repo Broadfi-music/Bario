@@ -124,30 +124,30 @@ const Index = () => {
   const handleAudioEnded = (trackId: number) => {
     setPlayingTrack(null);
   };
-  return <div className="min-h-screen bg-background text-foreground">
+  return <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <Navbar />
       <Hero />
       
       {/* Instant Processing Section */}
-      <section className="py-20 px-6 border-t border-foreground/5">
+      <section className="py-12 lg:py-20 px-4 sm:px-6 border-t border-foreground/5">
         <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+          <div className="text-center mb-8 lg:mb-12">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
               Instant processing
             </h2>
-            <p className="text-lg text-foreground/70 max-w-3xl mx-auto">
+            <p className="text-sm sm:text-base lg:text-lg text-foreground/70 max-w-3xl mx-auto px-2">
               Advanced AI processing delivers your remix in seconds, not hours, giving you studio-quality transformation without delay. Your audio is analyzed, reconstructed, styled, and rendered at high speed, so you can experiment freely, create multiple versions instantly, and keep your creative flow going without ever waiting.
             </p>
           </div>
 
           {/* Track Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {tracks.map(track => <div key={track.id} className="relative">
                 <button onClick={() => handleTrackClick(track.id)} className="group relative aspect-[3/4] overflow-hidden rounded-lg bg-foreground/5 hover:scale-[1.02] transition-transform duration-200 w-full">
                   <img src={track.image} alt={`Track ${track.id}`} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-                    <div className={`rounded-full p-4 transition-all duration-200 ${playingTrack === track.id ? 'bg-foreground/90 scale-110' : 'bg-foreground/80'}`}>
-                      {playingTrack === track.id ? <Pause className="h-8 w-8 text-background fill-background" /> : <Play className="h-8 w-8 text-background fill-background" />}
+                    <div className={`rounded-full p-3 sm:p-4 transition-all duration-200 ${playingTrack === track.id ? 'bg-foreground/90 scale-110' : 'bg-foreground/80'}`}>
+                      {playingTrack === track.id ? <Pause className="h-6 w-6 sm:h-8 sm:w-8 text-background fill-background" /> : <Play className="h-6 w-6 sm:h-8 sm:w-8 text-background fill-background" />}
                     </div>
                   </div>
                 </button>
@@ -160,23 +160,23 @@ const Index = () => {
       </section>
 
       {/* Everything You Need Section */}
-      <section className="py-20 px-6">
+      <section className="py-12 lg:py-20 px-4 sm:px-6">
         <div className="container mx-auto max-w-6xl">
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground text-center mb-16">
-            Everything you need to elevate<br />
-            and make music your career
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground text-center mb-8 lg:mb-16 px-2">
+            Everything you need to elevate<br className="hidden sm:block" />
+            <span className="sm:hidden"> </span>and make music your career
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featureCards.slice(0, 4).map(card => <div key={card.id} className="bg-black rounded-2xl p-8 flex flex-col items-start space-y-6 hover:scale-[1.02] transition-transform duration-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
+            {featureCards.slice(0, 4).map(card => <div key={card.id} className="bg-black rounded-2xl p-4 sm:p-6 lg:p-8 flex flex-col items-start space-y-4 lg:space-y-6 hover:scale-[1.02] transition-transform duration-200">
                 <div className="w-full aspect-square flex items-center justify-center">
-                  <img src={card.image} alt={card.title} className="w-3/4 h-3/4 object-contain" />
+                  <img src={card.image} alt={card.title} className="w-2/3 sm:w-3/4 h-2/3 sm:h-3/4 object-contain" />
                 </div>
-                <div className="space-y-3">
-                  <h3 className="text-xl font-semibold text-foreground">
+                <div className="space-y-2 lg:space-y-3">
+                  <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-foreground">
                     {card.title}
                   </h3>
-                  <p className="text-foreground/70 text-sm leading-relaxed">
+                  <p className="text-foreground/70 text-xs sm:text-sm leading-relaxed">
                     {card.description}
                   </p>
                 </div>
@@ -184,21 +184,21 @@ const Index = () => {
           </div>
 
           {/* Easy Export & Share with GIF */}
-          <div className="mt-12 flex flex-col lg:flex-row items-center gap-8">
-            <div className="flex-1 bg-black rounded-2xl p-8 flex flex-col items-start space-y-6">
+          <div className="mt-8 lg:mt-12 flex flex-col lg:flex-row items-center gap-4 lg:gap-8">
+            <div className="flex-1 w-full bg-black rounded-2xl p-4 sm:p-6 lg:p-8 flex flex-col items-start space-y-4 lg:space-y-6">
               <div className="w-full aspect-square flex items-center justify-center">
-                <img src={card5} alt="Easy Export & Share" className="w-3/4 h-3/4 object-contain" />
+                <img src={card5} alt="Easy Export & Share" className="w-2/3 sm:w-3/4 h-2/3 sm:h-3/4 object-contain" />
               </div>
-              <div className="space-y-3">
-                <h3 className="text-xl font-semibold text-foreground">
+              <div className="space-y-2 lg:space-y-3">
+                <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-foreground">
                   Easy Export & Share
                 </h3>
-                <p className="text-foreground/70 text-sm leading-relaxed">
+                <p className="text-foreground/70 text-xs sm:text-sm leading-relaxed">
                   Download your remixes in high-quality formats and share them directly to your favorite platforms. Your music, your way.
                 </p>
               </div>
             </div>
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 w-full flex items-center justify-center">
               <img src={download4} alt="Animation" className="w-full h-auto rounded-2xl" />
             </div>
           </div>
@@ -206,7 +206,7 @@ const Index = () => {
       </section>
 
       {/* BeatPulse Waveform Matcher Section */}
-      <section className="py-12 px-6 border-t border-foreground/5 relative overflow-hidden">
+      <section className="py-8 lg:py-12 px-4 sm:px-6 border-t border-foreground/5 relative overflow-hidden">
         <div className="absolute inset-0 opacity-20" style={{
         backgroundImage: `url(${beatpulseBg})`,
         backgroundSize: 'cover',
@@ -214,16 +214,16 @@ const Index = () => {
         backgroundRepeat: 'no-repeat'
       }} />
         <div className="container mx-auto max-w-7xl relative z-10">
-          <div className="flex flex-col lg:flex-row items-center gap-12">
-            <div className="flex-1 space-y-6">
-              <h2 className="text-4xl md:text-5xl font-bold text-foreground">
+          <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-12">
+            <div className="flex-1 space-y-4 lg:space-y-6 text-center lg:text-left">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
                 BeatPulse Waveform Matcher
               </h2>
-              <p className="text-lg text-foreground/70 leading-relaxed">
+              <p className="text-sm sm:text-base lg:text-lg text-foreground/70 leading-relaxed">
                 A waveform matching protocol that helps artists find beat that perfectly match their vocal energy by analysing pitch and Cadence with AI. It creates a frictionless experience where every uploaded vocal is matched with the ideal beat structure, tempo pocket, and dynamic mood using AI-powered waveform alignment.
               </p>
             </div>
-            <div className="flex-1 flex justify-center">
+            <div className="flex-1 flex justify-center w-full max-w-sm lg:max-w-none">
               <AnimatedCD />
             </div>
           </div>
@@ -231,18 +231,18 @@ const Index = () => {
       </section>
 
       {/* MEGASHUFFLE Section */}
-      <section className="py-12 px-6 border-t border-foreground/5">
+      <section className="py-8 lg:py-12 px-4 sm:px-6 border-t border-foreground/5">
         <div className="container mx-auto max-w-7xl">
-          <div className="flex flex-col lg:flex-row-reverse items-center gap-12">
-            <div className="flex-1 space-y-6">
-              <h2 className="text-4xl md:text-5xl font-bold text-foreground">
+          <div className="flex flex-col lg:flex-row-reverse items-center gap-6 lg:gap-12">
+            <div className="flex-1 space-y-4 lg:space-y-6 text-center lg:text-left">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
                 MEGASHUFFLE
               </h2>
-              <p className="text-lg text-foreground/70 leading-relaxed">
+              <p className="text-sm sm:text-base lg:text-lg text-foreground/70 leading-relaxed">
                 World's Largest Randomized Music discovery Engine that every shuffle introduces an artist the listener has never heard before. Artist get exposure instantly.
               </p>
             </div>
-            <div className="flex-1 flex justify-center">
+            <div className="flex-1 flex justify-center w-full max-w-sm lg:max-w-none">
               <AnimatedDice />
             </div>
           </div>
@@ -250,30 +250,30 @@ const Index = () => {
       </section>
 
       {/* MUSICWARP Section */}
-      <section className="py-12 px-6 border-t border-foreground/5">
+      <section className="py-8 lg:py-12 px-4 sm:px-6 border-t border-foreground/5">
         <div className="container mx-auto max-w-7xl">
-          <div className="flex flex-col lg:flex-row items-center gap-12">
-            <div className="flex-1 space-y-6">
-              <h2 className="text-4xl md:text-5xl font-bold text-foreground">
+          <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-12">
+            <div className="flex-1 space-y-4 lg:space-y-6 text-center lg:text-left">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
                 MUSICWARP (Artist Teleportation)
               </h2>
-              <p className="text-lg text-foreground/70 leading-relaxed">
+              <p className="text-sm sm:text-base lg:text-lg text-foreground/70 leading-relaxed">
                 Artists shift their music into world regions through sound filters. Regional Virality boost global charts. This "regional virality booster" helps artists test, expand, and accelerate their reach across global charts by adapting their music to cultural sound identities. Instead of being limited to their local genre, artists can teleport their sound into any region's dominant style and grow worldwide.
               </p>
             </div>
-            <div className="flex-1 flex justify-center">
-              <img src={globe} alt="Global music distribution" className="w-full max-w-md h-auto object-contain" />
+            <div className="flex-1 flex justify-center w-full">
+              <img src={globe} alt="Global music distribution" className="w-full max-w-xs sm:max-w-sm lg:max-w-md h-auto object-contain" />
             </div>
           </div>
         </div>
       </section>
 
       {/* Explore and Get Inspired Section */}
-      <section className="relative w-full -mt-32">
+      <section className="relative w-full -mt-16 lg:-mt-32">
         <div className="relative w-full">
           <img src={exploreInspire} alt="Explore and Get Inspired" className="w-full h-auto object-cover" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <h2 className="text-4xl md:text-6xl font-bold text-white tracking-wider">
+          <div className="absolute inset-0 flex items-center justify-center px-4">
+            <h2 className="text-xl sm:text-2xl md:text-4xl lg:text-6xl font-bold text-white tracking-wider text-center">
               EXPLORE AND GET INSPIRED
             </h2>
           </div>
@@ -281,13 +281,13 @@ const Index = () => {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-20 px-6 border-t border-foreground/5">
+      <section className="py-12 lg:py-20 px-4 sm:px-6 border-t border-foreground/5">
         <div className="container mx-auto max-w-7xl">
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground text-center mb-16">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground text-center mb-8 lg:mb-16">
             Choose your plan
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 lg:gap-6">
             {/* Creator Free */}
             <div className="bg-foreground/5 rounded-2xl p-6 flex flex-col">
               <div className="mb-6">
@@ -557,36 +557,36 @@ const Index = () => {
       </section>
       
       {/* Footer */}
-      <footer className="border-t border-foreground/5 py-16 px-6">
+      <footer className="border-t border-foreground/5 py-8 lg:py-16 px-4 sm:px-6">
         <div className="container mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 lg:gap-12 mb-8 lg:mb-12">
             {/* Brand Section */}
             <div>
-              <h3 className="text-foreground font-semibold text-lg mb-4">Brand</h3>
-              <ul className="space-y-3">
-                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-sm">About</a></li>
-                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-sm">Blog</a></li>
-                <li><a href="/pricing" className="text-foreground/60 hover:text-foreground transition-colors text-sm">Pricing</a></li>
-                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-sm">Hub</a></li>
+              <h3 className="text-foreground font-semibold text-base lg:text-lg mb-3 lg:mb-4">Brand</h3>
+              <ul className="space-y-2 lg:space-y-3">
+                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-xs sm:text-sm">About</a></li>
+                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-xs sm:text-sm">Blog</a></li>
+                <li><a href="/pricing" className="text-foreground/60 hover:text-foreground transition-colors text-xs sm:text-sm">Pricing</a></li>
+                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-xs sm:text-sm">Hub</a></li>
               </ul>
             </div>
 
             {/* Support Section */}
-            <div>
-              <h3 className="text-foreground font-semibold text-lg mb-4">Support</h3>
-              <ul className="space-y-3">
-                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-sm">Help</a></li>
-                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-sm">Contact us</a></li>
-                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-sm">Community guidelines</a></li>
-                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-sm">FAQ</a></li>
-                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-sm">Terms of service</a></li>
-                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-sm">Privacy policy</a></li>
+            <div className="col-span-1 md:col-span-2 lg:col-span-1">
+              <h3 className="text-foreground font-semibold text-base lg:text-lg mb-3 lg:mb-4">Support</h3>
+              <ul className="space-y-2 lg:space-y-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-x-4">
+                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-xs sm:text-sm">Help</a></li>
+                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-xs sm:text-sm">Contact us</a></li>
+                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-xs sm:text-sm">Community guidelines</a></li>
+                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-xs sm:text-sm">FAQ</a></li>
+                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-xs sm:text-sm">Terms of service</a></li>
+                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-xs sm:text-sm">Privacy policy</a></li>
               </ul>
             </div>
           </div>
 
-          <div className="text-center text-foreground/60 pt-8 border-t border-foreground/5">
-            <p className="text-sm">© 2025 Bario. Transforming music with AI.</p>
+          <div className="text-center text-foreground/60 pt-6 lg:pt-8 border-t border-foreground/5">
+            <p className="text-xs sm:text-sm">© 2025 Bario. Transforming music with AI.</p>
           </div>
         </div>
       </footer>

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Library, Sparkles, Compass, User, Settings, Plus, Play, Heart, Pause } from 'lucide-react';
+import { Home, Library, Sparkles, Compass, User, Settings, Plus, Play, Heart, Pause, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,6 +11,7 @@ const Dashboard = () => {
   const [currentTrack, setCurrentTrack] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [likedTracks, setLikedTracks] = useState<Set<number>>(new Set());
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLike = (trackId: number) => {
     setLikedTracks(prev => {
@@ -111,20 +112,37 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex overflow-x-hidden">
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-card border-r border-border flex flex-col">
-        <div className="p-6">
-          <Link to="/" className="text-2xl font-bold text-foreground">
+      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-card border-r border-border flex flex-col transform transition-transform duration-300 lg:transform-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="p-4 lg:p-6 flex items-center justify-between">
+          <Link to="/" className="text-xl lg:text-2xl font-bold text-foreground">
             BARIO
           </Link>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
 
-        <nav className="flex-1 px-3">
+        <nav className="flex-1 px-3 overflow-y-auto">
           {sidebarItems.map((item) => (
             <Link
               key={item.label}
               to={item.path}
+              onClick={() => setSidebarOpen(false)}
               className="flex items-center gap-3 px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors mb-1"
             >
               <item.icon className="h-5 w-5" />
@@ -136,6 +154,7 @@ const Dashboard = () => {
         <div className="p-4 border-t border-border space-y-2">
           <Link
             to="/dashboard/settings"
+            onClick={() => setSidebarOpen(false)}
             className="flex items-center gap-3 px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
           >
             <Settings className="h-5 w-5" />
@@ -143,6 +162,7 @@ const Dashboard = () => {
           </Link>
           <Link
             to="/dashboard/profile"
+            onClick={() => setSidebarOpen(false)}
             className="flex items-center gap-3 px-4 py-3 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
           >
             <User className="h-5 w-5" />
@@ -152,16 +172,25 @@ const Dashboard = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
+      <main className="flex-1 overflow-y-auto w-full lg:w-auto">
+        <div className="p-4 lg:p-8">
           {/* Header */}
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex justify-between items-center mb-6 lg:mb-8">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="lg:hidden"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="h-6 w-6" />
+            </Button>
             <div className="flex-1" />
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 lg:gap-4">
               <Link to="/dashboard/new-remix">
-                <Button className="bg-black text-white hover:bg-black/90">
-                  <Plus className="h-5 w-5 mr-2" />
-                  New Remix
+                <Button className="bg-black text-white hover:bg-black/90 text-sm lg:text-base px-3 lg:px-4">
+                  <Plus className="h-4 w-4 lg:h-5 lg:w-5 mr-1 lg:mr-2" />
+                  <span className="hidden sm:inline">New Remix</span>
+                  <span className="sm:hidden">New</span>
                 </Button>
               </Link>
               <DropdownMenu>
@@ -193,7 +222,7 @@ const Dashboard = () => {
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 mb-6 lg:mb-8">
             <Link to="/dashboard/create">
               <Card className="p-6 bg-card hover:bg-accent/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-4">
@@ -225,10 +254,10 @@ const Dashboard = () => {
 
           {/* Track Sections */}
           {sections.map((section, sectionIndex) => (
-            <div key={sectionIndex} className="mb-12">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-foreground">{section.title}</h2>
-                <Button variant="ghost" className="text-muted-foreground hover:text-foreground">
+            <div key={sectionIndex} className="mb-8 lg:mb-12">
+              <div className="flex justify-between items-center mb-3 lg:mb-4">
+                <h2 className="text-lg lg:text-2xl font-bold text-foreground">{section.title}</h2>
+                <Button variant="ghost" className="text-muted-foreground hover:text-foreground text-sm">
                   Show more
                 </Button>
               </div>
@@ -236,8 +265,8 @@ const Dashboard = () => {
                 <div className="space-y-2">
                   {section.tracks.map((track) => (
                     <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors cursor-pointer overflow-hidden">
-                      <div className="flex items-center gap-4 p-4">
-                        <div className="relative w-16 h-16 flex-shrink-0">
+                      <div className="flex items-center gap-2 sm:gap-4 p-3 sm:p-4">
+                        <div className="relative w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0">
                           <img 
                             src={track.artwork} 
                             alt={track.title}
@@ -247,37 +276,37 @@ const Dashboard = () => {
                             <Button 
                               size="icon" 
                               variant="secondary" 
-                              className="rounded-full h-8 w-8"
+                              className="rounded-full h-6 w-6 sm:h-8 sm:w-8"
                               onClick={() => handlePlay(track)}
                             >
                               {isPlaying && currentTrack?.id === track.id ? (
-                                <Pause className="h-4 w-4" />
+                                <Pause className="h-3 w-3 sm:h-4 sm:w-4" />
                               ) : (
-                                <Play className="h-4 w-4" />
+                                <Play className="h-3 w-3 sm:h-4 sm:w-4" />
                               )}
                             </Button>
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-foreground truncate">{track.title}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Avatar className="h-5 w-5">
+                          <h3 className="font-semibold text-foreground truncate text-sm sm:text-base">{track.title}</h3>
+                          <div className="flex items-center gap-1 sm:gap-2 mt-1">
+                            <Avatar className="h-4 w-4 sm:h-5 sm:w-5">
                               <AvatarImage src={track.creator.avatar} />
                               <AvatarFallback>{track.creator.name[0]}</AvatarFallback>
                             </Avatar>
-                            <p className="text-sm text-muted-foreground truncate">{track.creator.name}</p>
+                            <p className="text-xs sm:text-sm text-muted-foreground truncate">{track.creator.name}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <span className="text-sm text-muted-foreground">{track.plays}</span>
-                          <span className="text-sm text-muted-foreground">{track.duration}</span>
+                        <div className="flex items-center gap-2 sm:gap-4">
+                          <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">{track.plays}</span>
+                          <span className="text-xs sm:text-sm text-muted-foreground">{track.duration}</span>
                           <Button
                             size="icon"
                             variant="ghost"
                             onClick={() => handleLike(track.id)}
-                            className={likedTracks.has(track.id) ? "text-red-500" : "text-muted-foreground"}
+                            className={`h-8 w-8 ${likedTracks.has(track.id) ? "text-red-500" : "text-muted-foreground"}`}
                           >
-                            <Heart className={`h-5 w-5 ${likedTracks.has(track.id) ? "fill-current" : ""}`} />
+                            <Heart className={`h-4 w-4 sm:h-5 sm:w-5 ${likedTracks.has(track.id) ? "fill-current" : ""}`} />
                           </Button>
                         </div>
                       </div>
@@ -285,7 +314,7 @@ const Dashboard = () => {
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
                   {section.tracks.map((track) => (
                     <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors cursor-pointer overflow-hidden group">
                       <div className="aspect-square bg-muted relative">
@@ -340,31 +369,31 @@ const Dashboard = () => {
 
           {/* Audio Player */}
           {currentTrack && (
-            <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-4 z-50">
-              <div className="max-w-7xl mx-auto flex items-center gap-4">
-                <Avatar className="h-12 w-12">
+            <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-3 sm:p-4 z-50">
+              <div className="max-w-7xl mx-auto flex items-center gap-2 sm:gap-4">
+                <Avatar className="h-10 w-10 sm:h-12 sm:w-12">
                   <AvatarImage src={currentTrack.artwork} />
                   <AvatarFallback>{currentTrack.title[0]}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-foreground truncate">{currentTrack.title}</h4>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-4 w-4">
+                  <h4 className="font-semibold text-foreground truncate text-sm sm:text-base">{currentTrack.title}</h4>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <Avatar className="h-3 w-3 sm:h-4 sm:w-4">
                       <AvatarImage src={currentTrack.creator.avatar} />
                       <AvatarFallback>{currentTrack.creator.name[0]}</AvatarFallback>
                     </Avatar>
-                    <p className="text-sm text-muted-foreground truncate">{currentTrack.creator.name}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">{currentTrack.creator.name}</p>
                   </div>
                 </div>
                 <Button
                   size="icon"
                   variant="secondary"
                   onClick={() => setIsPlaying(!isPlaying)}
-                  className="rounded-full"
+                  className="rounded-full h-10 w-10 sm:h-12 sm:w-12"
                 >
-                  {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                  {isPlaying ? <Pause className="h-4 w-4 sm:h-5 sm:w-5" /> : <Play className="h-4 w-4 sm:h-5 sm:w-5" />}
                 </Button>
-                <span className="text-sm text-muted-foreground">{currentTrack.duration}</span>
+                <span className="text-xs sm:text-sm text-muted-foreground hidden sm:inline">{currentTrack.duration}</span>
               </div>
             </div>
           )}
