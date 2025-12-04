@@ -4,20 +4,20 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Advanced from "./pages/Advanced";
-import Dashboard from "./pages/Dashboard";
-import DashboardSettings from "./pages/DashboardSettings";
-import DashboardProfile from "./pages/DashboardProfile";
-import NewRemix from "./pages/NewRemix";
-import Create from "./pages/Create";
-import Library from "./pages/Library";
-import Analytics from "./pages/Analytics";
-import Pricing from "./pages/Pricing";
-import CreatorProfile from "./pages/CreatorProfile";
-import MusicResultPage from "./pages/MusicResultPage";
-import NotFound from "./pages/NotFound";
+import Index from "@/pages/Index";
+import Auth from "@/pages/Auth";
+import Advanced from "@/pages/Advanced";
+import Dashboard from "@/pages/Dashboard";
+import DashboardSettings from "@/pages/DashboardSettings";
+import DashboardProfile from "@/pages/DashboardProfile";
+import NewRemix from "@/pages/NewRemix";
+import Create from "@/pages/Create";
+import Library from "@/pages/Library";
+import Analytics from "@/pages/Analytics";
+import Pricing from "@/pages/Pricing";
+import CreatorProfile from "@/pages/CreatorProfile";
+import MusicResultPage from "@/pages/MusicResultPage";
+import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
