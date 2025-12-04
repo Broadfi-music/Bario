@@ -14,7 +14,152 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          following_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      likes: {
+        Row: {
+          created_at: string
+          id: string
+          remix_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          remix_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          remix_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "likes_remix_id_fkey"
+            columns: ["remix_id"]
+            isOneToOne: false
+            referencedRelation: "remixes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          instagram_url: string | null
+          soundcloud_url: string | null
+          spotify_url: string | null
+          twitter_url: string | null
+          updated_at: string
+          user_id: string
+          username: string | null
+          youtube_url: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          instagram_url?: string | null
+          soundcloud_url?: string | null
+          spotify_url?: string | null
+          twitter_url?: string | null
+          updated_at?: string
+          user_id: string
+          username?: string | null
+          youtube_url?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          instagram_url?: string | null
+          soundcloud_url?: string | null
+          spotify_url?: string | null
+          twitter_url?: string | null
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
+      remixes: {
+        Row: {
+          album_art_url: string | null
+          created_at: string
+          genre: string | null
+          id: string
+          is_published: boolean | null
+          like_count: number | null
+          original_file_url: string | null
+          play_count: number | null
+          prompt: string | null
+          remix_file_url: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          album_art_url?: string | null
+          created_at?: string
+          genre?: string | null
+          id?: string
+          is_published?: boolean | null
+          like_count?: number | null
+          original_file_url?: string | null
+          play_count?: number | null
+          prompt?: string | null
+          remix_file_url?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          album_art_url?: string | null
+          created_at?: string
+          genre?: string | null
+          id?: string
+          is_published?: boolean | null
+          like_count?: number | null
+          original_file_url?: string | null
+          play_count?: number | null
+          prompt?: string | null
+          remix_file_url?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

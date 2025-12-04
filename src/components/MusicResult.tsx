@@ -20,8 +20,10 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface MusicResultProps {
   trackTitle?: string;
@@ -52,12 +54,15 @@ export const MusicResult = ({
   albumArt
 }: MusicResultProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState([30]);
   const [volume, setVolume] = useState([75]);
   const [isDownloadOpen, setIsDownloadOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
   
   const albumGradient = useState(generateAlbumArt())[0];
 
@@ -69,13 +74,26 @@ export const MusicResult = ({
     }
   };
 
+  const requireAuth = (action: string, callback: () => void) => {
+    if (!user) {
+      setPendingAction(action);
+      setIsAuthPromptOpen(true);
+      return;
+    }
+    callback();
+  };
+
   const handleDownload = (format: 'mp3' | 'wav') => {
-    toast.success(`Downloading as ${format.toUpperCase()}...`);
-    setIsDownloadOpen(false);
+    requireAuth('download', () => {
+      toast.success(`Downloading as ${format.toUpperCase()}...`);
+      setIsDownloadOpen(false);
+    });
   };
 
   const handleDownloadStems = () => {
-    toast.success('Downloading stems...');
+    requireAuth('download stems', () => {
+      toast.success('Downloading stems...');
+    });
   };
 
   const handleCopyLink = () => {
@@ -84,28 +102,64 @@ export const MusicResult = ({
   };
 
   const handleShare = (platform: string) => {
-    const shareUrl = encodeURIComponent(window.location.href);
-    const shareText = encodeURIComponent(`Check out my remix: ${trackTitle}`);
-    
-    const urls: Record<string, string> = {
-      tiktok: `https://www.tiktok.com/upload`,
-      instagram: `https://www.instagram.com/`,
-      whatsapp: `https://wa.me/?text=${shareText}%20${shareUrl}`,
-      x: `https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`,
-    };
+    requireAuth('share', () => {
+      const shareUrl = encodeURIComponent(window.location.href);
+      const shareText = encodeURIComponent(`Check out my remix: ${trackTitle}`);
+      
+      const urls: Record<string, string> = {
+        tiktok: `https://www.tiktok.com/upload`,
+        instagram: `https://www.instagram.com/`,
+        whatsapp: `https://wa.me/?text=${shareText}%20${shareUrl}`,
+        x: `https://twitter.com/intent/tweet?text=${shareText}&url=${shareUrl}`,
+      };
 
-    if (urls[platform]) {
-      window.open(urls[platform], '_blank');
-    }
-    setIsShareOpen(false);
+      if (urls[platform]) {
+        window.open(urls[platform], '_blank');
+      }
+      setIsShareOpen(false);
+    });
   };
 
   const handlePublish = () => {
-    toast.success('Track published successfully!');
+    requireAuth('publish', () => {
+      toast.success('Track published successfully!');
+    });
   };
 
   const handleAddToPlaylist = () => {
-    toast.success('Added to playlist!');
+    requireAuth('add to playlist', () => {
+      toast.success('Added to playlist!');
+    });
+  };
+
+  const handleLike = () => {
+    requireAuth('like', () => {
+      setIsLiked(!isLiked);
+      toast.success(isLiked ? 'Removed from likes' : 'Added to likes!');
+    });
+  };
+
+  const openDownloadDialog = () => {
+    if (!user) {
+      setPendingAction('download');
+      setIsAuthPromptOpen(true);
+      return;
+    }
+    setIsDownloadOpen(true);
+  };
+
+  const openShareDialog = () => {
+    if (!user) {
+      setPendingAction('share');
+      setIsAuthPromptOpen(true);
+      return;
+    }
+    setIsShareOpen(true);
+  };
+
+  const goToAuth = () => {
+    setIsAuthPromptOpen(false);
+    navigate('/auth');
   };
 
   return (
@@ -198,7 +252,7 @@ export const MusicResult = ({
               <Button 
                 variant="outline" 
                 className="flex-1"
-                onClick={() => setIsLiked(!isLiked)}
+                onClick={handleLike}
               >
                 <Heart className={`h-4 w-4 mr-2 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
                 {isLiked ? 'Liked' : 'Like'}
@@ -207,7 +261,7 @@ export const MusicResult = ({
               <Button 
                 variant="outline" 
                 className="flex-1"
-                onClick={() => setIsDownloadOpen(true)}
+                onClick={openDownloadDialog}
               >
                 <Download className="h-4 w-4 mr-2" />
                 Download
@@ -216,7 +270,7 @@ export const MusicResult = ({
               <Button 
                 variant="outline" 
                 className="flex-1"
-                onClick={() => setIsShareOpen(true)}
+                onClick={openShareDialog}
               >
                 <Share2 className="h-4 w-4 mr-2" />
                 Share
@@ -230,7 +284,7 @@ export const MusicResult = ({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => setIsShareOpen(true)}>
+                  <DropdownMenuItem onClick={openShareDialog}>
                     <Share2 className="h-4 w-4 mr-2" />
                     Share
                   </DropdownMenuItem>
@@ -239,7 +293,7 @@ export const MusicResult = ({
                     Copy Link
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setIsDownloadOpen(true)}>
+                  <DropdownMenuItem onClick={openDownloadDialog}>
                     <Download className="h-4 w-4 mr-2" />
                     Download Music
                   </DropdownMenuItem>
@@ -261,6 +315,33 @@ export const MusicResult = ({
             </div>
           </div>
         </div>
+
+        {/* Auth Required Dialog */}
+        <Dialog open={isAuthPromptOpen} onOpenChange={setIsAuthPromptOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Sign in required</DialogTitle>
+              <DialogDescription>
+                You need to sign in or create an account to {pendingAction}. It only takes a moment!
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 mt-4">
+              <Button 
+                onClick={goToAuth}
+                className="w-full bg-foreground text-background hover:bg-foreground/90"
+              >
+                Sign In / Sign Up
+              </Button>
+              <Button 
+                onClick={() => setIsAuthPromptOpen(false)}
+                variant="outline"
+                className="w-full"
+              >
+                Cancel
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Download Dialog */}
         <Dialog open={isDownloadOpen} onOpenChange={setIsDownloadOpen}>
