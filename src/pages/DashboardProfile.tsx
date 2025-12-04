@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -6,14 +6,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const DashboardProfile = () => {
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
+  const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState({
-    username: 'musiclover',
-    displayName: 'Music Lover',
-    bio: 'Creating amazing remixes and exploring new sounds',
-    email: 'user@example.com',
+    username: '',
+    displayName: '',
+    bio: '',
+    email: '',
     avatar: '/src/assets/track-1.jpeg',
     spotify: '',
     soundcloud: '',
@@ -22,9 +28,87 @@ const DashboardProfile = () => {
     youtube: ''
   });
 
-  const handleSave = () => {
-    console.log('Saving profile:', profile);
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      setProfile(prev => ({
+        ...prev,
+        email: user.email || '',
+        displayName: user.user_metadata?.full_name || ''
+      }));
+      fetchProfile();
+    }
+  }, [user]);
+
+  const fetchProfile = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    
+    if (data) {
+      setProfile(prev => ({
+        ...prev,
+        username: data.username || '',
+        displayName: data.full_name || prev.displayName,
+        bio: data.bio || '',
+        avatar: data.avatar_url || prev.avatar,
+        spotify: data.spotify_url || '',
+        soundcloud: data.soundcloud_url || '',
+        twitter: data.twitter_url || '',
+        instagram: data.instagram_url || '',
+        youtube: data.youtube_url || ''
+      }));
+    }
   };
+
+  const handleSave = async () => {
+    if (!user) return;
+    
+    setSaving(true);
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        username: profile.username,
+        full_name: profile.displayName,
+        bio: profile.bio,
+        avatar_url: profile.avatar,
+        spotify_url: profile.spotify,
+        soundcloud_url: profile.soundcloud,
+        twitter_url: profile.twitter,
+        instagram_url: profile.instagram,
+        youtube_url: profile.youtube
+      })
+      .eq('user_id', user.id);
+    
+    setSaving(false);
+    
+    if (error) {
+      toast.error('Failed to save profile');
+    } else {
+      toast.success('Profile saved successfully!');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -212,8 +296,8 @@ const DashboardProfile = () => {
               <Link to="/dashboard">
                 <Button variant="outline" size="sm">Cancel</Button>
               </Link>
-              <Button onClick={handleSave} className="bg-black text-white hover:bg-black/90" size="sm">
-                Save Changes
+              <Button onClick={handleSave} disabled={saving} className="bg-black text-white hover:bg-black/90" size="sm">
+                {saving ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           </div>
