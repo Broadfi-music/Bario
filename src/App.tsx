@@ -15,6 +15,7 @@ import Library from "./pages/Library";
 import Analytics from "./pages/Analytics";
 import Pricing from "./pages/Pricing";
 import CreatorProfile from "./pages/CreatorProfile";
+import MusicResultPage from "./pages/MusicResultPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,8 @@ const App = () => (
           <Route path="/dashboard/library" element={<Library />} />
           <Route path="/dashboard/analytics" element={<Analytics />} />
           <Route path="/dashboard/creator/:id" element={<CreatorProfile />} />
+          <Route path="/dashboard/music-result" element={<MusicResultPage />} />
+          <Route path="/music-result" element={<MusicResultPage />} />
           <Route path="/pricing" element={<Pricing />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
