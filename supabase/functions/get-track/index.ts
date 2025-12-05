@@ -35,8 +35,16 @@ serve(async (req) => {
       });
     }
 
-    const url = new URL(req.url);
-    const trackId = url.searchParams.get('trackId');
+    // Support both GET query params and POST body
+    let trackId: string | null = null;
+    
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      trackId = url.searchParams.get('trackId');
+    } else if (req.method === 'POST') {
+      const body = await req.json();
+      trackId = body.trackId;
+    }
 
     if (!trackId) {
       return new Response(JSON.stringify({ error: 'Track ID is required' }), {
@@ -44,6 +52,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log('Fetching track:', trackId, 'for user:', user.id);
 
     const { data: track, error: fetchError } = await supabase
       .from('tracks')

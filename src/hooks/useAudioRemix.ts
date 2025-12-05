@@ -51,19 +51,20 @@ export function useAudioRemix() {
         throw new Error('Please sign in to create remixes');
       }
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/remix`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify(request),
+      console.log('Calling remix function with:', request);
+
+      const { data, error: fnError } = await supabase.functions.invoke('remix', {
+        body: request,
       });
 
-      const data = await response.json();
+      console.log('Remix response:', data, 'Error:', fnError);
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate remix');
+      if (fnError) {
+        throw new Error(fnError.message || 'Failed to generate remix');
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to generate remix');
       }
 
       setFxConfig(data.fxConfig);
@@ -77,6 +78,7 @@ export function useAudioRemix() {
       return data as RemixResponse;
 
     } catch (err) {
+      console.error('Remix error:', err);
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(message);
       
@@ -100,22 +102,15 @@ export function useAudioRemix() {
         throw new Error('Please sign in');
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-track?trackId=${id}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-        }
-      );
+      const { data, error: fnError } = await supabase.functions.invoke('get-track', {
+        body: { trackId: id },
+      });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch track');
+      if (fnError) {
+        throw new Error(fnError.message || 'Failed to fetch track');
       }
 
-      return data.track;
+      return data?.track;
     } catch (err) {
       console.error('Get track error:', err);
       return null;

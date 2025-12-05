@@ -36,10 +36,29 @@ export class AudioProcessor {
       throw new Error('AudioContext not available');
     }
 
-    const response = await fetch(url);
-    const arrayBuffer = await response.arrayBuffer();
-    this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-    return this.audioBuffer;
+    console.log('Loading audio from URL:', url);
+    
+    try {
+      const response = await fetch(url, {
+        mode: 'cors',
+        credentials: 'omit',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch audio: ${response.status} ${response.statusText}`);
+      }
+      
+      const arrayBuffer = await response.arrayBuffer();
+      console.log('Audio downloaded, size:', arrayBuffer.byteLength);
+      
+      this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+      console.log('Audio decoded successfully, duration:', this.audioBuffer.duration);
+      
+      return this.audioBuffer;
+    } catch (error) {
+      console.error('Error loading audio URL:', error);
+      throw error;
+    }
   }
 
   private createDistortionCurve(amount: number): Float32Array | null {
@@ -130,9 +149,11 @@ export class AudioProcessor {
 
   async processAndExport(fxConfig: FxConfig): Promise<Blob | null> {
     if (!this.audioContext || !this.audioBuffer) {
-      console.error('No audio loaded');
+      console.error('No audio loaded for processing');
       return null;
     }
+
+    console.log('Processing audio with FX config:', fxConfig);
 
     // Create offline context for rendering
     const offlineContext = new OfflineAudioContext(
@@ -200,10 +221,21 @@ export class AudioProcessor {
 
     // Start and render
     source.start(0);
-    const renderedBuffer = await offlineContext.startRendering();
+    
+    try {
+      console.log('Rendering audio...');
+      const renderedBuffer = await offlineContext.startRendering();
+      console.log('Audio rendered, converting to WAV...');
 
-    // Convert to WAV blob
-    return this.audioBufferToWav(renderedBuffer);
+      // Convert to WAV blob
+      const wavBlob = this.audioBufferToWav(renderedBuffer);
+      console.log('WAV blob created, size:', wavBlob.size);
+      
+      return wavBlob;
+    } catch (err) {
+      console.error('Error rendering audio:', err);
+      return null;
+    }
   }
 
   private audioBufferToWav(buffer: AudioBuffer): Blob {
