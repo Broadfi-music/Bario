@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, Plus, X, FileAudio, Link as LinkIcon, Music } from 'lucide-react';
+import { ArrowLeft, Upload, Plus, X, FileAudio, Link as LinkIcon, Music, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,21 +8,29 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAudioRemix } from '@/hooks/useAudioRemix';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface UploadedMusic {
   type: 'file' | 'url';
   name: string;
   url?: string;
+  file?: File;
 }
 
 const NewRemix = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const { generateRemix, isProcessing } = useAudioRemix();
+  const { toast } = useToast();
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioUrl, setAudioUrl] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('');
+  const [selectedEra, setSelectedEra] = useState('2025');
   const [chatPrompt, setChatPrompt] = useState('');
   const [uploadedMusic, setUploadedMusic] = useState<UploadedMusic | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -32,17 +40,56 @@ const NewRemix = () => {
 
   const genres = [
     'amapiano', 'trap', 'funk', 'hiphop', 'country', '80s', 
-    'R&B', 'soul', 'pop', 'genz', 'jazz', 'reggae', 'gospel', 'instrumental'
+    'R&B', 'soul', 'pop', 'genz', 'jazz', 'reggae', 'gospel', 'instrumental',
+    'afrobeats', 'fuji', 'k-pop'
   ];
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const eras = ['1970', '1990', '2025', '2050'];
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setAudioFile(file);
       setUploadedMusic({
         type: 'file',
-        name: file.name
+        name: file.name,
+        file: file
       });
+    }
+  };
+
+  const uploadAudioToStorage = async (file: File): Promise<string | null> => {
+    if (!user) return null;
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from('original-audio')
+        .upload(fileName, file);
+
+      if (error) {
+        console.error('Upload error:', error);
+        toast({
+          title: 'Upload Failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return null;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('original-audio')
+        .getPublicUrl(data.path);
+
+      return publicUrl;
+    } catch (err) {
+      console.error('Upload error:', err);
+      return null;
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -80,18 +127,45 @@ const NewRemix = () => {
     setAudioFile(null);
   };
 
-  const handleGenerate = () => {
-    if ((uploadedMusic || chatPrompt) && selectedGenre) {
+  const handleGenerate = async () => {
+    if ((!uploadedMusic && !chatPrompt) || !selectedGenre) return;
+
+    let audioStorageUrl: string | undefined;
+
+    // Upload file to storage if it's a file upload
+    if (uploadedMusic?.type === 'file' && uploadedMusic.file) {
+      audioStorageUrl = (await uploadAudioToStorage(uploadedMusic.file)) || undefined;
+    } else if (uploadedMusic?.type === 'url') {
+      audioStorageUrl = uploadedMusic.url;
+    }
+
+    // Generate remix with AI
+    const result = await generateRemix({
+      genre: selectedGenre,
+      era: selectedEra,
+      description: chatPrompt,
+      audioUrl: audioStorageUrl,
+      trackTitle: uploadedMusic?.name || 'My Remix',
+    });
+
+    if (result) {
+      // Navigate to music result page with the FX config
       navigate('/dashboard/music-result', {
         state: {
           trackTitle: uploadedMusic?.name || 'My Remix',
           genre: selectedGenre,
+          era: selectedEra,
           prompt: chatPrompt,
-          uploadedMusic
+          uploadedMusic,
+          trackId: result.trackId,
+          fxConfig: result.fxConfig,
+          audioUrl: audioStorageUrl,
         }
       });
     }
   };
+
+  const isGenerating = isProcessing || isUploading;
 
   return (
     <div className="min-h-screen bg-background">
@@ -129,6 +203,7 @@ const NewRemix = () => {
                     accept="audio/*"
                     className="hidden"
                     onChange={handleFileUpload}
+                    disabled={isGenerating}
                   />
                 </label>
               </div>
@@ -145,11 +220,13 @@ const NewRemix = () => {
                   placeholder="https://open.spotify.com/track/..."
                   value={audioUrl}
                   onChange={(e) => setAudioUrl(e.target.value)}
+                  disabled={isGenerating}
                 />
               </div>
               <Button 
                 onClick={handleAddUrl}
                 className="bg-black text-white hover:bg-black/90"
+                disabled={isGenerating || !audioUrl}
               >
                 <Plus className="h-4 w-4 mr-1" />
                 Add
@@ -174,6 +251,7 @@ const NewRemix = () => {
                   variant="ghost"
                   size="icon"
                   onClick={removeUploadedMusic}
+                  disabled={isGenerating}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -187,10 +265,27 @@ const NewRemix = () => {
           <h2 className="text-xl font-semibold text-foreground mb-4">Conversion Settings</h2>
           
           <div className="space-y-4">
+            {/* Era Selection */}
+            <div>
+              <Label htmlFor="era" className="text-foreground">Select Era</Label>
+              <Select value={selectedEra} onValueChange={setSelectedEra} disabled={isGenerating}>
+                <SelectTrigger id="era" className="mt-2">
+                  <SelectValue placeholder="Choose era" />
+                </SelectTrigger>
+                <SelectContent>
+                  {eras.map((era) => (
+                    <SelectItem key={era} value={era}>
+                      {era}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Genre Selection */}
             <div>
               <Label htmlFor="genre" className="text-foreground">Select Genre</Label>
-              <Select value={selectedGenre} onValueChange={setSelectedGenre}>
+              <Select value={selectedGenre} onValueChange={setSelectedGenre} disabled={isGenerating}>
                 <SelectTrigger id="genre" className="mt-2">
                   <SelectValue placeholder="Choose genre" />
                 </SelectTrigger>
@@ -213,6 +308,7 @@ const NewRemix = () => {
                 value={chatPrompt}
                 onChange={(e) => setChatPrompt(e.target.value)}
                 className="mt-2 min-h-[100px]"
+                disabled={isGenerating}
               />
             </div>
           </div>
@@ -221,11 +317,20 @@ const NewRemix = () => {
         {/* Generate Button */}
         <Button 
           onClick={handleGenerate}
-          disabled={!((uploadedMusic || chatPrompt) && selectedGenre)}
+          disabled={!((uploadedMusic || chatPrompt) && selectedGenre) || isGenerating}
           className="w-full bg-black text-white hover:bg-black/90 h-12 text-lg"
         >
-          <Music className="h-5 w-5 mr-2" />
-          Generate Remix
+          {isGenerating ? (
+            <>
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              {isUploading ? 'Uploading...' : 'Generating...'}
+            </>
+          ) : (
+            <>
+              <Music className="h-5 w-5 mr-2" />
+              Generate Remix
+            </>
+          )}
         </Button>
       </div>
     </div>

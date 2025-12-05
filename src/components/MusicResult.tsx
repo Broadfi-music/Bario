@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Play, Pause, Download, Share2, MoreVertical, 
   Copy, Music, ListMusic, Globe, Heart, SkipBack, SkipForward,
-  Volume2
+  Volume2, Loader2, Settings2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -24,13 +24,19 @@ import {
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { AudioProcessor } from '@/lib/audioProcessor';
+import type { FxConfig } from '@/hooks/useAudioRemix';
 
 interface MusicResultProps {
   trackTitle?: string;
   genre?: string;
+  era?: string;
   prompt?: string;
   onBack?: () => void;
   albumArt?: string;
+  trackId?: string;
+  fxConfig?: FxConfig;
+  audioUrl?: string;
 }
 
 // Generate random album art colors
@@ -49,22 +55,89 @@ const generateAlbumArt = () => {
 export const MusicResult = ({ 
   trackTitle = "My Remix", 
   genre = "Amapiano",
+  era = "2025",
   prompt = "",
   onBack,
-  albumArt
+  albumArt,
+  trackId,
+  fxConfig,
+  audioUrl
 }: MusicResultProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState([30]);
+  const [progress, setProgress] = useState([0]);
   const [volume, setVolume] = useState([75]);
   const [isDownloadOpen, setIsDownloadOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
+  const [isFxConfigOpen, setIsFxConfigOpen] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
   
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioProcessorRef = useRef<AudioProcessor | null>(null);
   const albumGradient = useState(generateAlbumArt())[0];
+
+  // Initialize audio processor
+  useEffect(() => {
+    audioProcessorRef.current = new AudioProcessor();
+    
+    return () => {
+      if (audioProcessorRef.current) {
+        audioProcessorRef.current.destroy();
+      }
+    };
+  }, []);
+
+  // Load audio if URL is provided
+  useEffect(() => {
+    if (audioUrl && audioProcessorRef.current) {
+      const loadAudio = async () => {
+        try {
+          setIsProcessing(true);
+          // Create a basic audio element for playback
+          if (!audioRef.current) {
+            audioRef.current = new Audio(audioUrl);
+            audioRef.current.addEventListener('loadedmetadata', () => {
+              setDuration(audioRef.current?.duration || 0);
+            });
+            audioRef.current.addEventListener('timeupdate', () => {
+              const current = audioRef.current?.currentTime || 0;
+              const total = audioRef.current?.duration || 1;
+              setCurrentTime(current);
+              setProgress([(current / total) * 100]);
+            });
+            audioRef.current.addEventListener('ended', () => {
+              setIsPlaying(false);
+              setProgress([0]);
+            });
+          }
+        } catch (err) {
+          console.error('Failed to load audio:', err);
+        } finally {
+          setIsProcessing(false);
+        }
+      };
+      loadAudio();
+    }
+    
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, [audioUrl]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const handleBack = () => {
     if (onBack) {
@@ -83,9 +156,55 @@ export const MusicResult = ({
     callback();
   };
 
-  const handleDownload = (format: 'mp3' | 'wav') => {
-    requireAuth('download', () => {
-      toast.success(`Downloading as ${format.toUpperCase()}...`);
+  const togglePlayPause = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    } else {
+      // Demo mode - no actual audio
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const handleProgressChange = (newProgress: number[]) => {
+    setProgress(newProgress);
+    if (audioRef.current && duration > 0) {
+      audioRef.current.currentTime = (newProgress[0] / 100) * duration;
+    }
+  };
+
+  const handleVolumeChange = (newVolume: number[]) => {
+    setVolume(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume[0] / 100;
+    }
+  };
+
+  const handleDownload = async (format: 'mp3' | 'wav') => {
+    requireAuth('download', async () => {
+      if (audioUrl) {
+        try {
+          const response = await fetch(audioUrl);
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${trackTitle}.${format}`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          toast.success(`Downloaded as ${format.toUpperCase()}`);
+        } catch (err) {
+          toast.error('Download failed');
+        }
+      } else {
+        toast.success(`Downloading as ${format.toUpperCase()}...`);
+      }
       setIsDownloadOpen(false);
     });
   };
@@ -176,7 +295,7 @@ export const MusicResult = ({
         {/* Main Content */}
         <div className="grid md:grid-cols-2 gap-8">
           {/* Album Art */}
-          <div className="aspect-square rounded-2xl overflow-hidden shadow-2xl">
+          <div className="aspect-square rounded-2xl overflow-hidden shadow-2xl relative">
             {albumArt ? (
               <img src={albumArt} alt="Album Art" className="w-full h-full object-cover" />
             ) : (
@@ -188,15 +307,31 @@ export const MusicResult = ({
                 </div>
               </div>
             )}
+            {isProcessing && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <Loader2 className="h-12 w-12 animate-spin text-white" />
+              </div>
+            )}
           </div>
 
           {/* Track Info & Controls */}
           <div className="flex flex-col justify-center space-y-6">
             <div>
               <h2 className="text-3xl font-bold text-foreground mb-2">{trackTitle}</h2>
-              <p className="text-lg text-muted-foreground">{genre} Remix</p>
+              <p className="text-lg text-muted-foreground">{genre} Remix • {era}</p>
               {prompt && (
                 <p className="text-sm text-muted-foreground mt-2 italic">"{prompt}"</p>
+              )}
+              {fxConfig && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 text-xs"
+                  onClick={() => setIsFxConfigOpen(true)}
+                >
+                  <Settings2 className="h-3 w-3 mr-1" />
+                  View FX Settings
+                </Button>
               )}
             </div>
 
@@ -206,14 +341,14 @@ export const MusicResult = ({
               <div className="mb-4">
                 <Slider
                   value={progress}
-                  onValueChange={setProgress}
+                  onValueChange={handleProgressChange}
                   max={100}
-                  step={1}
+                  step={0.1}
                   className="cursor-pointer"
                 />
                 <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                  <span>1:15</span>
-                  <span>3:42</span>
+                  <span>{formatTime(currentTime)}</span>
+                  <span>{duration > 0 ? formatTime(duration) : '3:42'}</span>
                 </div>
               </div>
 
@@ -225,7 +360,8 @@ export const MusicResult = ({
                 <Button 
                   size="icon" 
                   className="h-14 w-14 rounded-full bg-foreground text-background hover:bg-foreground/90"
-                  onClick={() => setIsPlaying(!isPlaying)}
+                  onClick={togglePlayPause}
+                  disabled={isProcessing}
                 >
                   {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-1" />}
                 </Button>
@@ -239,7 +375,7 @@ export const MusicResult = ({
                 <Volume2 className="h-4 w-4 text-muted-foreground" />
                 <Slider
                   value={volume}
-                  onValueChange={setVolume}
+                  onValueChange={handleVolumeChange}
                   max={100}
                   step={1}
                   className="flex-1"
@@ -417,6 +553,56 @@ export const MusicResult = ({
                 Share to X
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* FX Config Dialog */}
+        <Dialog open={isFxConfigOpen} onOpenChange={setIsFxConfigOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>AI-Generated FX Settings</DialogTitle>
+              <DialogDescription>
+                These audio effects were generated by AI based on your genre and description.
+              </DialogDescription>
+            </DialogHeader>
+            {fxConfig && (
+              <div className="space-y-3 mt-4 text-sm">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-muted p-3 rounded-lg">
+                    <p className="text-muted-foreground text-xs">Reverb</p>
+                    <p className="font-medium">{Math.round(fxConfig.reverb_amount * 100)}%</p>
+                  </div>
+                  <div className="bg-muted p-3 rounded-lg">
+                    <p className="text-muted-foreground text-xs">Distortion</p>
+                    <p className="font-medium">{Math.round(fxConfig.distortion_amount * 100)}%</p>
+                  </div>
+                  <div className="bg-muted p-3 rounded-lg">
+                    <p className="text-muted-foreground text-xs">EQ Low</p>
+                    <p className="font-medium">{fxConfig.eq_low > 0 ? '+' : ''}{fxConfig.eq_low}dB</p>
+                  </div>
+                  <div className="bg-muted p-3 rounded-lg">
+                    <p className="text-muted-foreground text-xs">EQ Mid</p>
+                    <p className="font-medium">{fxConfig.eq_mid > 0 ? '+' : ''}{fxConfig.eq_mid}dB</p>
+                  </div>
+                  <div className="bg-muted p-3 rounded-lg">
+                    <p className="text-muted-foreground text-xs">EQ High</p>
+                    <p className="font-medium">{fxConfig.eq_high > 0 ? '+' : ''}{fxConfig.eq_high}dB</p>
+                  </div>
+                  <div className="bg-muted p-3 rounded-lg">
+                    <p className="text-muted-foreground text-xs">Stereo Width</p>
+                    <p className="font-medium">{Math.round(fxConfig.stereo_width * 100)}%</p>
+                  </div>
+                  <div className="bg-muted p-3 rounded-lg">
+                    <p className="text-muted-foreground text-xs">Tempo Change</p>
+                    <p className="font-medium">{fxConfig.tempo_change_percent > 0 ? '+' : ''}{fxConfig.tempo_change_percent}%</p>
+                  </div>
+                  <div className="bg-muted p-3 rounded-lg">
+                    <p className="text-muted-foreground text-xs">Compression</p>
+                    <p className="font-medium">{fxConfig.compression_ratio}:1</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

@@ -160,6 +160,54 @@ export type Database = {
         }
         Relationships: []
       }
+      tracks: {
+        Row: {
+          created_at: string
+          description: string | null
+          era: string | null
+          error_message: string | null
+          fx_config: Json | null
+          genre: string
+          id: string
+          original_audio_url: string | null
+          remix_audio_url: string | null
+          status: string
+          stems_enabled: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          era?: string | null
+          error_message?: string | null
+          fx_config?: Json | null
+          genre: string
+          id?: string
+          original_audio_url?: string | null
+          remix_audio_url?: string | null
+          status?: string
+          stems_enabled?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          era?: string | null
+          error_message?: string | null
+          fx_config?: Json | null
+          genre?: string
+          id?: string
+          original_audio_url?: string | null
+          remix_audio_url?: string | null
+          status?: string
+          stems_enabled?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
