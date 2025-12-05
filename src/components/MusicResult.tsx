@@ -82,7 +82,11 @@ export const MusicResult = ({
   const audioProcessorRef = useRef<AudioProcessor | null>(null);
   const albumGradient = useState(generateAlbumArt())[0];
 
-  // Initialize audio processor
+  const [processedAudioUrl, setProcessedAudioUrl] = useState<string | null>(null);
+  const [audioLoaded, setAudioLoaded] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState('');
+
+  // Initialize audio processor and load audio
   useEffect(() => {
     audioProcessorRef.current = new AudioProcessor();
     
@@ -90,20 +94,42 @@ export const MusicResult = ({
       if (audioProcessorRef.current) {
         audioProcessorRef.current.destroy();
       }
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      if (processedAudioUrl) {
+        URL.revokeObjectURL(processedAudioUrl);
+      }
     };
   }, []);
 
-  // Load audio if URL is provided
+  // Process audio with FX when URL and config are available
   useEffect(() => {
-    if (audioUrl && audioProcessorRef.current) {
-      const loadAudio = async () => {
+    if (audioUrl && fxConfig && audioProcessorRef.current && !audioLoaded) {
+      const processAudio = async () => {
         try {
           setIsProcessing(true);
-          // Create a basic audio element for playback
-          if (!audioRef.current) {
-            audioRef.current = new Audio(audioUrl);
+          setProcessingStatus('Loading audio...');
+          
+          // Load the audio into the processor
+          await audioProcessorRef.current!.loadAudioUrl(audioUrl);
+          
+          setProcessingStatus('Applying effects...');
+          
+          // Process with FX and get the resulting blob
+          const processedBlob = await audioProcessorRef.current!.processAndExport(fxConfig);
+          
+          if (processedBlob) {
+            const url = URL.createObjectURL(processedBlob);
+            setProcessedAudioUrl(url);
+            
+            // Create audio element for the processed audio
+            audioRef.current = new Audio(url);
             audioRef.current.addEventListener('loadedmetadata', () => {
               setDuration(audioRef.current?.duration || 0);
+              setAudioLoaded(true);
+              setProcessingStatus('');
             });
             audioRef.current.addEventListener('timeupdate', () => {
               const current = audioRef.current?.currentTime || 0;
@@ -114,24 +140,66 @@ export const MusicResult = ({
             audioRef.current.addEventListener('ended', () => {
               setIsPlaying(false);
               setProgress([0]);
+              setCurrentTime(0);
             });
+            audioRef.current.addEventListener('error', (e) => {
+              console.error('Audio playback error:', e);
+              setProcessingStatus('Playback error');
+            });
+          } else {
+            setProcessingStatus('Processing failed');
           }
         } catch (err) {
-          console.error('Failed to load audio:', err);
+          console.error('Failed to process audio:', err);
+          setProcessingStatus('Failed to load audio');
+          
+          // Fallback: try to play original audio without FX
+          try {
+            audioRef.current = new Audio(audioUrl);
+            audioRef.current.addEventListener('loadedmetadata', () => {
+              setDuration(audioRef.current?.duration || 0);
+              setAudioLoaded(true);
+              setProcessingStatus('Playing original (effects not applied)');
+            });
+            audioRef.current.addEventListener('timeupdate', () => {
+              const current = audioRef.current?.currentTime || 0;
+              const total = audioRef.current?.duration || 1;
+              setCurrentTime(current);
+              setProgress([(current / total) * 100]);
+            });
+            audioRef.current.addEventListener('ended', () => {
+              setIsPlaying(false);
+              setProgress([0]);
+              setCurrentTime(0);
+            });
+          } catch (fallbackErr) {
+            console.error('Fallback audio also failed:', fallbackErr);
+          }
         } finally {
           setIsProcessing(false);
         }
       };
-      loadAudio();
+      processAudio();
+    } else if (audioUrl && !fxConfig && !audioLoaded) {
+      // No FX config, just play original
+      audioRef.current = new Audio(audioUrl);
+      audioRef.current.addEventListener('loadedmetadata', () => {
+        setDuration(audioRef.current?.duration || 0);
+        setAudioLoaded(true);
+      });
+      audioRef.current.addEventListener('timeupdate', () => {
+        const current = audioRef.current?.currentTime || 0;
+        const total = audioRef.current?.duration || 1;
+        setCurrentTime(current);
+        setProgress([(current / total) * 100]);
+      });
+      audioRef.current.addEventListener('ended', () => {
+        setIsPlaying(false);
+        setProgress([0]);
+        setCurrentTime(0);
+      });
     }
-    
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, [audioUrl]);
+  }, [audioUrl, fxConfig, audioLoaded]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -156,17 +224,23 @@ export const MusicResult = ({
     callback();
   };
 
-  const togglePlayPause = () => {
+  const togglePlayPause = async () => {
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
+        setIsPlaying(false);
       } else {
-        audioRef.current.play();
+        try {
+          await audioRef.current.play();
+          setIsPlaying(true);
+        } catch (err) {
+          console.error('Playback error:', err);
+          toast.error('Failed to play audio');
+        }
       }
-      setIsPlaying(!isPlaying);
-    } else {
+    } else if (!audioUrl) {
       // Demo mode - no actual audio
-      setIsPlaying(!isPlaying);
+      toast.info('No audio available to play');
     }
   };
 
@@ -308,8 +382,9 @@ export const MusicResult = ({
               </div>
             )}
             {isProcessing && (
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center flex-col gap-2">
                 <Loader2 className="h-12 w-12 animate-spin text-white" />
+                <p className="text-white text-sm">{processingStatus || 'Processing...'}</p>
               </div>
             )}
           </div>
