@@ -134,9 +134,28 @@ const NewRemix = () => {
 
     // Upload file to storage if it's a file upload
     if (uploadedMusic?.type === 'file' && uploadedMusic.file) {
-      audioStorageUrl = (await uploadAudioToStorage(uploadedMusic.file)) || undefined;
+      const uploadedUrl = await uploadAudioToStorage(uploadedMusic.file);
+      if (!uploadedUrl) {
+        toast({
+          title: 'Upload Failed',
+          description: 'Could not upload audio file. Please try again.',
+          variant: 'destructive',
+        });
+        return; // Stop if upload fails
+      }
+      audioStorageUrl = uploadedUrl;
     } else if (uploadedMusic?.type === 'url') {
       audioStorageUrl = uploadedMusic.url;
+    }
+
+    // Ensure we have audio to process
+    if (!audioStorageUrl && uploadedMusic) {
+      toast({
+        title: 'No Audio',
+        description: 'Please upload an audio file or provide a valid URL.',
+        variant: 'destructive',
+      });
+      return;
     }
 
     // Generate remix with AI
