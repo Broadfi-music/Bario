@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
-  Search, Star, TrendingUp, TrendingDown, ChevronRight, 
+  Search, Star, TrendingUp, TrendingDown, ChevronRight, ChevronLeft,
   Zap, Users, Trophy, Brain, Clock, Target, Flame, Sparkles, Filter
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -127,10 +127,9 @@ const MusicAlpha = () => {
   const [activeTab, setActiveTab] = useState('projects');
   const [viewMode, setViewMode] = useState<'simple' | 'pro'>('simple');
   const [horizon, setHorizon] = useState('7D');
-  const [gameMode, setGameMode] = useState('blended');
   const [watchlist, setWatchlist] = useState<number[]>([2, 4]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [showAllHotPredictions, setShowAllHotPredictions] = useState(false);
 
   const handleInteraction = (action: string, callback?: () => void) => {
     if (!user) {
@@ -155,7 +154,7 @@ const MusicAlpha = () => {
     });
   };
 
-  // Sentiment data
+  // Sentiment data - realtime
   const highProbability = mockMarkets.filter(m => m.probability >= 50).slice(0, 12);
   const lowProbability = mockMarkets.filter(m => m.probability < 50).slice(0, 12);
 
@@ -164,14 +163,13 @@ const MusicAlpha = () => {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-sm border-b border-white/5">
         <div className="flex items-center justify-between h-12 sm:h-14 px-3 sm:px-6">
-          <div className="flex items-center gap-3">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-purple-500 flex items-center justify-center">
-                <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
-              </div>
-              <span className="text-xs sm:text-sm font-semibold text-white">Alpha</span>
-            </Link>
-          </div>
+          <button 
+            onClick={() => navigate('/')} 
+            className="flex items-center gap-1.5 text-white/60 hover:text-white transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="text-[10px] sm:text-xs">Back</span>
+          </button>
           
           <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="relative hidden sm:block">
@@ -189,7 +187,7 @@ const MusicAlpha = () => {
                 <button
                   key={mode}
                   onClick={() => setViewMode(mode as 'simple' | 'pro')}
-                  className={`text-[9px] sm:text-[10px] px-2 py-1 rounded-md capitalize transition-colors ${
+                  className={`text-[8px] sm:text-[9px] px-2 py-1 rounded-md capitalize transition-colors ${
                     viewMode === mode ? 'bg-purple-500 text-white font-medium' : 'text-white/50'
                   }`}
                 >
@@ -215,13 +213,13 @@ const MusicAlpha = () => {
         </div>
 
         {/* Stats Bar */}
-        <div className="border-t border-white/5 px-3 sm:px-6 py-2 flex items-center gap-4 sm:gap-6 text-[10px] sm:text-xs overflow-x-auto">
-          <div className="flex items-center gap-1.5">
+        <div className="border-t border-white/5 px-3 sm:px-6 py-2 flex items-center gap-4 sm:gap-6 text-[9px] sm:text-[10px] overflow-x-auto">
+          <div className="flex items-center gap-1">
             <span className="text-white/50">Active markets:</span>
             <span className="font-semibold text-white">156</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-white/50">Total predictions:</span>
+          <div className="flex items-center gap-1">
+            <span className="text-white/50">Predictions:</span>
             <span className="font-semibold text-white">45.2K</span>
             <span className="text-purple-400">▲12%</span>
           </div>
@@ -230,80 +228,56 @@ const MusicAlpha = () => {
       
       {/* Main Content */}
       <main className="pt-24 sm:pt-28 pb-6 px-3 sm:px-6">
-        {/* Hot Predictions Campaigns */}
+        {/* Hot Predictions */}
         <section className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm sm:text-base font-semibold text-white">🔥 Hot Predictions</h2>
+              <h2 className="text-[11px] sm:text-sm font-semibold text-white">🔥 Hot Predictions</h2>
               <div className="hidden sm:flex items-center gap-1 px-2 py-1 bg-purple-500/10 rounded-full">
-                <span className="text-[10px] text-purple-400">AI + Crowd signals</span>
+                <span className="text-[9px] text-purple-400">AI + Crowd signals</span>
               </div>
             </div>
-            <Link to="#" className="text-[10px] sm:text-xs text-white/50 hover:text-white flex items-center gap-1">
-              View all <ChevronRight className="h-3 w-3" />
-            </Link>
+            <button 
+              onClick={() => setShowAllHotPredictions(!showAllHotPredictions)}
+              className="text-[9px] sm:text-[10px] text-white/50 hover:text-white flex items-center gap-1"
+            >
+              {showAllHotPredictions ? 'Show less' : 'View all'} <ChevronRight className="h-3 w-3" />
+            </button>
           </div>
           
-          <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            {mockMarkets.slice(0, 5).map((market) => (
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 ${!showAllHotPredictions ? 'max-h-[200px] overflow-hidden' : ''}`}>
+            {(showAllHotPredictions ? mockMarkets : mockMarkets.slice(0, 3)).map((market) => (
               <div
                 key={market.id}
                 onClick={() => navigate(`/music-alpha/${market.id}`)}
-                className="flex-shrink-0 flex items-center gap-2 sm:gap-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-xl p-2 sm:p-3 cursor-pointer transition-all min-w-[200px] sm:min-w-[240px]"
+                className="flex items-center gap-2 sm:gap-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-xl p-2 sm:p-3 cursor-pointer transition-all"
               >
                 <img src={market.artwork} alt={market.songTitle} className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] sm:text-xs font-medium text-white truncate">{market.songTitle}</p>
-                  <p className="text-[9px] sm:text-[10px] text-white/50 truncate">{market.outcome}</p>
+                  <p className="text-[9px] sm:text-[10px] font-medium text-white truncate">{market.songTitle}</p>
+                  <p className="text-[8px] sm:text-[9px] text-white/50 truncate">{market.outcome}</p>
                 </div>
                 <div className="text-right">
-                  <p className={`text-sm sm:text-base font-bold ${market.probability >= 50 ? 'text-[#4ade80]' : 'text-red-400'}`}>
+                  <p className={`text-[10px] sm:text-xs font-bold ${market.probability >= 50 ? 'text-[#4ade80]' : 'text-red-400'}`}>
                     {market.probability}%
                   </p>
-                  <p className="text-[8px] sm:text-[9px] text-white/40">probability</p>
+                  <p className="text-[7px] sm:text-[8px] text-white/40">probability</p>
                 </div>
               </div>
             ))}
           </div>
         </section>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-4 sm:gap-6 border-b border-white/10 mb-4">
-          {['Projects', 'Leaders', 'Your Plays'].map(tab => (
-            <button
-              key={tab}
-              onClick={() => {
-                if ((tab === 'Leaders' || tab === 'Your Plays') && !user) {
-                  toast.error('Please sign in to view ' + tab.toLowerCase());
-                  navigate('/auth');
-                  return;
-                }
-                setActiveTab(tab.toLowerCase().replace(' ', '-'));
-              }}
-              className={`pb-2 text-[11px] sm:text-xs font-medium transition-colors relative ${
-                activeTab === tab.toLowerCase().replace(' ', '-') 
-                  ? 'text-white' 
-                  : 'text-white/40 hover:text-white/60'
-              }`}
-            >
-              {tab}
-              {activeTab === tab.toLowerCase().replace(' ', '-') && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-500" />
-              )}
-            </button>
-          ))}
-        </div>
-
         {/* Market Events */}
         <section className="mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs sm:text-sm font-medium text-white">Prediction signals</h3>
+            <h3 className="text-[10px] sm:text-xs font-medium text-white">Prediction signals</h3>
             <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
               {horizons.map(t => (
                 <button
                   key={t}
                   onClick={() => setHorizon(t)}
-                  className={`text-[9px] sm:text-[10px] px-2 py-1 rounded-md transition-colors ${
+                  className={`text-[8px] sm:text-[9px] px-2 py-1 rounded-md transition-colors ${
                     horizon === t ? 'bg-purple-500 text-white font-medium' : 'text-white/50 hover:text-white'
                   }`}
                 >
@@ -324,39 +298,40 @@ const MusicAlpha = () => {
                   <img src={event.market.artwork} alt="" className="w-8 h-8 rounded-lg object-cover" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] sm:text-xs font-medium text-white truncate">{event.market.songTitle}</span>
-                      <span className={`text-[9px] font-medium ${event.change >= 0 ? 'text-purple-400' : 'text-red-400'}`}>
+                      <span className="text-[9px] sm:text-[10px] font-medium text-white truncate">{event.market.songTitle}</span>
+                      <span className={`text-[8px] font-medium ${event.change >= 0 ? 'text-purple-400' : 'text-red-400'}`}>
                         +{(event.change * 100).toFixed(0)}%
                       </span>
                     </div>
-                    <p className="text-[9px] text-white/40">{event.market.probability}% probability</p>
+                    <p className="text-[8px] text-white/40">{event.market.probability}% probability</p>
                   </div>
                 </div>
-                <p className="text-[10px] sm:text-xs text-white/70 line-clamp-2 mb-2">{event.event}</p>
+                <p className="text-[9px] sm:text-[10px] text-white/70 line-clamp-2 mb-2">{event.event}</p>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
                     <Brain className="h-3 w-3 text-purple-400" />
-                    <span className="text-[9px] text-purple-400">AI Signal</span>
+                    <span className="text-[8px] text-purple-400">AI Signal</span>
                   </div>
-                  <span className="text-[9px] text-white/30">{event.time}</span>
+                  <span className="text-[8px] text-white/30">{event.time}</span>
                 </div>
               </Card>
             ))}
           </div>
         </section>
 
-        {/* Probability Treemaps */}
+        {/* Probability Treemaps - Realtime */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
           {/* High Probability */}
           <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-[#4ade80]" />
-                <span className="text-xs sm:text-sm font-medium text-white">High probability</span>
+                <span className="text-[10px] sm:text-xs font-medium text-white">High probability</span>
+                <span className="text-[7px] text-[#4ade80] animate-pulse">● realtime</span>
               </div>
               <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
                 {['Now', '7D', '1M'].map(t => (
-                  <button key={t} className="text-[9px] px-2 py-0.5 rounded text-white/50 hover:text-white">{t}</button>
+                  <button key={t} className="text-[8px] px-2 py-0.5 rounded text-white/50 hover:text-white">{t}</button>
                 ))}
               </div>
             </div>
@@ -368,10 +343,10 @@ const MusicAlpha = () => {
                   className={`bg-[#4ade80]/20 hover:bg-[#4ade80]/30 rounded-lg p-2 cursor-pointer transition-all ${
                     i < 2 ? 'col-span-2 row-span-2' : i < 4 ? 'col-span-2' : ''
                   }`}
-                  style={{ minHeight: i < 2 ? '80px' : '40px' }}
+                  style={{ minHeight: i < 2 ? '70px' : '35px' }}
                 >
-                  <p className="text-[9px] sm:text-[10px] font-semibold text-white truncate">{market.songTitle.slice(0, 8)}</p>
-                  <p className="text-[8px] sm:text-[9px] text-[#4ade80]">{market.probability}%</p>
+                  <p className="text-[8px] sm:text-[9px] font-semibold text-white truncate">{market.songTitle.slice(0, 8)}</p>
+                  <p className="text-[7px] sm:text-[8px] text-[#4ade80]">{market.probability}%</p>
                 </div>
               ))}
             </div>
@@ -382,11 +357,12 @@ const MusicAlpha = () => {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <TrendingDown className="h-4 w-4 text-red-400" />
-                <span className="text-xs sm:text-sm font-medium text-white">Low probability</span>
+                <span className="text-[10px] sm:text-xs font-medium text-white">Low probability</span>
+                <span className="text-[7px] text-red-400 animate-pulse">● realtime</span>
               </div>
               <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
                 {['Now', '7D', '1M'].map(t => (
-                  <button key={t} className="text-[9px] px-2 py-0.5 rounded text-white/50 hover:text-white">{t}</button>
+                  <button key={t} className="text-[8px] px-2 py-0.5 rounded text-white/50 hover:text-white">{t}</button>
                 ))}
               </div>
             </div>
@@ -398,185 +374,119 @@ const MusicAlpha = () => {
                   className={`bg-red-500/20 hover:bg-red-500/30 rounded-lg p-2 cursor-pointer transition-all ${
                     i < 2 ? 'col-span-2 row-span-2' : i < 4 ? 'col-span-2' : ''
                   }`}
-                  style={{ minHeight: i < 2 ? '80px' : '40px' }}
+                  style={{ minHeight: i < 2 ? '70px' : '35px' }}
                 >
-                  <p className="text-[9px] sm:text-[10px] font-semibold text-white truncate">{market.songTitle.slice(0, 8)}</p>
-                  <p className="text-[8px] sm:text-[9px] text-red-400">{market.probability}%</p>
+                  <p className="text-[8px] sm:text-[9px] font-semibold text-white truncate">{market.songTitle.slice(0, 8)}</p>
+                  <p className="text-[7px] sm:text-[8px] text-red-400">{market.probability}%</p>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {activeTab === 'projects' && (
-          <>
-            {/* Prediction Markets List */}
-            <section>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm sm:text-base font-semibold text-white">🎯 Prediction Markets</h3>
-                <div className="flex items-center gap-2">
-                  <div className="hidden sm:flex items-center gap-1">
-                    {[
-                      { id: 'fan', label: 'Fans', icon: Users },
-                      { id: 'ai', label: 'AI', icon: Brain },
-                      { id: 'blended', label: 'Both', icon: Sparkles },
-                    ].map(mode => (
-                      <button
-                        key={mode.id}
-                        onClick={() => setGameMode(mode.id)}
-                        className={`text-[9px] px-2 py-1 rounded-lg flex items-center gap-1 transition-colors ${
-                          gameMode === mode.id ? 'bg-purple-500/20 text-purple-400' : 'text-white/40 hover:text-white/60'
-                        }`}
-                      >
-                        <mode.icon className="h-3 w-3" />
-                        {mode.label}
-                      </button>
-                    ))}
+        {/* Prediction Markets */}
+        <section className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[10px] sm:text-xs font-medium text-white">🎯 Prediction Markets</h3>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {mockMarkets.map((market) => (
+              <Card
+                key={market.id}
+                onClick={() => navigate(`/music-alpha/${market.id}`)}
+                className="bg-white/[0.02] hover:bg-white/[0.05] border-white/5 p-3 cursor-pointer transition-all"
+              >
+                <div className="flex items-start gap-3 mb-3">
+                  <img src={market.artwork} alt={market.songTitle} className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-[10px] sm:text-xs font-medium text-white truncate">{market.songTitle}</h4>
+                      <span className={`text-[7px] px-1.5 py-0.5 rounded-full ${
+                        market.status === 'surging' ? 'bg-[#4ade80]/20 text-[#4ade80]' : 
+                        market.status === 'underground' ? 'bg-purple-500/20 text-purple-400' : 
+                        'bg-yellow-500/20 text-yellow-400'
+                      }`}>
+                        {market.status}
+                      </span>
+                    </div>
+                    <p className="text-[8px] text-white/50">{market.artist}</p>
                   </div>
                 </div>
-              </div>
 
-              {/* Mobile Search */}
-              <div className="sm:hidden mb-3">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40" />
-                  <Input
-                    placeholder="Search markets..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8 h-8 w-full bg-white/5 border-white/10 text-xs placeholder:text-white/40 rounded-lg"
-                  />
-                </div>
-              </div>
+                <p className="text-[9px] text-white/70 mb-3">{market.outcome}</p>
 
-              <div className="space-y-2">
-                {mockMarkets.map((market) => (
-                  <div
-                    key={market.id}
-                    onClick={() => navigate(`/music-alpha/${market.id}`)}
-                    className="flex items-center gap-3 p-3 bg-white/[0.01] hover:bg-white/[0.04] rounded-xl cursor-pointer transition-all group border border-white/5"
-                  >
-                    {/* Artwork & Info */}
-                    <img src={market.artwork} alt="" className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="text-[11px] sm:text-xs font-medium text-white truncate">{market.songTitle}</p>
-                        <span className={`text-[8px] sm:text-[9px] px-1.5 py-0.5 rounded-full ${
-                          market.status === 'surging' ? 'bg-[#4ade80]/20 text-[#4ade80]' :
-                          market.status === 'underground' ? 'bg-purple-500/20 text-purple-400' :
-                          'bg-yellow-500/20 text-yellow-400'
-                        }`}>
-                          {market.status}
-                        </span>
-                      </div>
-                      <p className="text-[10px] sm:text-[11px] text-white/50 truncate">{market.outcome}</p>
-                      <div className="flex items-center gap-2 mt-1 text-[9px] text-white/40">
-                        <span>{market.horizon}</span>
-                        <span>•</span>
-                        <span>{(market.totalForecasts / 1000).toFixed(1)}k predictions</span>
-                      </div>
-                    </div>
-
-                    {/* Probability & Actions */}
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <p className={`text-lg sm:text-xl font-bold ${market.probability >= 50 ? 'text-[#4ade80]' : 'text-red-400'}`}>
-                          {market.probability}%
-                        </p>
-                        {viewMode === 'pro' && (
-                          <div className="flex items-center gap-2 text-[9px]">
-                            <span className="text-white/40">Fan: {market.fanProbability}%</span>
-                            <span className="text-purple-400">AI: {market.aiProbability}%</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="hidden sm:flex flex-col gap-1">
-                        <Button
-                          size="sm"
-                          onClick={(e) => { e.stopPropagation(); submitPrediction(market.id, 'will'); }}
-                          className="h-6 px-3 text-[9px] bg-[#4ade80]/20 text-[#4ade80] hover:bg-[#4ade80]/30"
-                        >
-                          YES
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={(e) => { e.stopPropagation(); submitPrediction(market.id, 'wont'); }}
-                          className="h-6 px-3 text-[9px] bg-red-500/20 text-red-400 hover:bg-red-500/30"
-                        >
-                          NO
-                        </Button>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-7 w-7 ${watchlist.includes(market.id) ? 'text-yellow-400' : 'text-white/20'}`}
-                        onClick={(e) => { e.stopPropagation(); toggleWatchlist(market.id); }}
-                      >
-                        <Star className={`h-4 w-4 ${watchlist.includes(market.id) ? 'fill-current' : ''}`} />
-                      </Button>
-                    </div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-3 w-3 text-white/40" />
+                    <span className="text-[8px] text-white/50">{market.fanProbability}%</span>
                   </div>
-                ))}
-              </div>
-            </section>
-          </>
-        )}
+                  <div className="flex items-center gap-2">
+                    <Brain className="h-3 w-3 text-purple-400" />
+                    <span className="text-[8px] text-purple-400">{market.aiProbability}%</span>
+                  </div>
+                  <span className={`text-[10px] font-bold ${market.probability >= 50 ? 'text-[#4ade80]' : 'text-red-400'}`}>
+                    {market.probability}%
+                  </span>
+                </div>
 
-        {activeTab === 'leaders' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-            {/* Top Fans */}
-            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[8px] text-white/40">{(market.totalForecasts / 1000).toFixed(1)}k forecasts</span>
+                  <span className="text-[8px] text-white/40">{market.horizon}</span>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* Leaderboard */}
+        <section>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Fan Leaderboard */}
+            <Card className="bg-white/[0.02] border-white/5 p-4">
               <div className="flex items-center gap-2 mb-4">
                 <Trophy className="h-4 w-4 text-yellow-400" />
-                <h3 className="text-sm font-medium text-white">Top Predictors</h3>
+                <h3 className="text-[10px] sm:text-xs font-medium text-white">Fan Forecasters</h3>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {mockLeaderboard.fans.map((fan, i) => (
                   <div key={i} className="flex items-center gap-3 p-2 bg-white/[0.02] rounded-lg">
+                    <span className="text-[9px] text-white/40 w-4">{i + 1}</span>
                     <span className="text-lg">{fan.avatar}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-white">{fan.name}</p>
-                      <div className="flex items-center gap-2 text-[9px] text-white/40">
-                        {fan.tags.map(tag => (
-                          <span key={tag} className="px-1.5 py-0.5 bg-purple-500/10 text-purple-400 rounded">{tag}</span>
-                        ))}
-                      </div>
+                      <p className="text-[9px] font-medium text-white">{fan.name}</p>
+                      <p className="text-[8px] text-white/40">{fan.predictions} predictions</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs font-bold text-[#4ade80]">{fan.winRate}%</p>
-                      <p className="text-[9px] text-white/40">{fan.predictions} plays</p>
-                    </div>
+                    <span className="text-[9px] font-bold text-[#4ade80]">{fan.winRate}%</span>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
 
-            {/* Top AIs */}
-            <div className="bg-white/[0.02] border border-white/5 rounded-xl p-4">
+            {/* AI Leaderboard */}
+            <Card className="bg-white/[0.02] border-white/5 p-4">
               <div className="flex items-center gap-2 mb-4">
                 <Brain className="h-4 w-4 text-purple-400" />
-                <h3 className="text-sm font-medium text-white">Top AI Strategies</h3>
+                <h3 className="text-[10px] sm:text-xs font-medium text-white">AI Models</h3>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {mockLeaderboard.ais.map((ai, i) => (
                   <div key={i} className="flex items-center gap-3 p-2 bg-white/[0.02] rounded-lg">
-                    <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                      <Brain className="h-4 w-4 text-purple-400" />
+                    <span className="text-[9px] text-white/40 w-4">{i + 1}</span>
+                    <div className="w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center">
+                      <Brain className="h-3.5 w-3.5 text-purple-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-white">{ai.name}</p>
-                      <p className="text-[9px] text-white/40">{ai.specialty}</p>
+                      <p className="text-[9px] font-medium text-white">{ai.name}</p>
+                      <p className="text-[8px] text-white/40">{ai.specialty}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs font-bold text-purple-400">{ai.accuracy}%</p>
-                      <p className="text-[9px] text-white/40">{ai.predictions} predictions</p>
-                    </div>
+                    <span className="text-[9px] font-bold text-purple-400">{ai.accuracy}%</span>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
           </div>
-        )}
+        </section>
       </main>
     </div>
   );
