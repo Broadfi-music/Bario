@@ -80,7 +80,6 @@ const Dashboard = () => {
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
     { icon: Globe, label: 'Heatmap', path: '/global-heatmap' },
     { icon: Zap, label: 'Alpha', path: '/music-alpha' },
-    { icon: Sparkles, label: 'Virapath', path: '/dashboard/virapath' },
     { icon: Sparkles, label: 'Megashuffle', path: '/dashboard/megashuffle' },
   ];
 

@@ -19,6 +19,9 @@ import CreatorProfile from "@/pages/CreatorProfile";
 import MusicResultPage from "@/pages/MusicResultPage";
 import GlobalHeatmap from "@/pages/GlobalHeatmap";
 import MusicAlpha from "@/pages/MusicAlpha";
+import HeatmapDetail from "@/pages/HeatmapDetail";
+import AlphaDetail from "@/pages/AlphaDetail";
+import Analytics from "@/pages/Analytics";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,13 +39,16 @@ const App = () => {
               <Route path="/auth" element={<Auth />} />
               <Route path="/advanced" element={<Advanced />} />
               <Route path="/global-heatmap" element={<GlobalHeatmap />} />
+              <Route path="/global-heatmap/:id" element={<HeatmapDetail />} />
               <Route path="/music-alpha" element={<MusicAlpha />} />
+              <Route path="/music-alpha/:id" element={<AlphaDetail />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/dashboard/settings" element={<DashboardSettings />} />
               <Route path="/dashboard/profile" element={<DashboardProfile />} />
               <Route path="/dashboard/new-remix" element={<NewRemix />} />
               <Route path="/dashboard/create" element={<Create />} />
               <Route path="/dashboard/library" element={<Library />} />
+              <Route path="/dashboard/analytics" element={<Analytics />} />
               <Route path="/dashboard/creator/:id" element={<CreatorProfile />} />
               <Route path="/dashboard/music-result" element={<MusicResultPage />} />
               <Route path="/music-result" element={<MusicResultPage />} />

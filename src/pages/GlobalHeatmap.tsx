@@ -235,7 +235,7 @@ const GlobalHeatmap = () => {
             {mockSongs.slice(0, 5).map((song) => (
               <div
                 key={song.id}
-                onClick={() => navigate(`/heatmap/${song.id}`)}
+                onClick={() => navigate(`/global-heatmap/${song.id}`)}
                 className="flex-shrink-0 flex items-center gap-2 sm:gap-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-xl p-2 sm:p-3 cursor-pointer transition-all min-w-[180px] sm:min-w-[220px]"
               >
                 <img src={song.artwork} alt={song.title} className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover" />
@@ -295,7 +295,7 @@ const GlobalHeatmap = () => {
             {marketEvents.map((event) => (
               <Card
                 key={event.id}
-                onClick={() => navigate(`/heatmap/${event.song.id}`)}
+                onClick={() => navigate(`/global-heatmap/${event.song.id}`)}
                 className="bg-white/[0.02] hover:bg-white/[0.05] border-white/5 p-3 cursor-pointer transition-all group"
               >
                 <div className="flex items-start gap-2 mb-2">
@@ -345,7 +345,7 @@ const GlobalHeatmap = () => {
               {goodSentiment.map((song, i) => (
                 <div
                   key={song.id}
-                  onClick={() => navigate(`/heatmap/${song.id}`)}
+                  onClick={() => navigate(`/global-heatmap/${song.id}`)}
                   className={`bg-[#4ade80]/20 hover:bg-[#4ade80]/30 rounded-lg p-2 cursor-pointer transition-all ${
                     i < 2 ? 'col-span-2 row-span-2' : i < 4 ? 'col-span-2' : ''
                   }`}
@@ -375,7 +375,7 @@ const GlobalHeatmap = () => {
               {badSentiment.length > 0 ? badSentiment.map((song, i) => (
                 <div
                   key={song.id}
-                  onClick={() => navigate(`/heatmap/${song.id}`)}
+                  onClick={() => navigate(`/global-heatmap/${song.id}`)}
                   className={`bg-red-500/20 hover:bg-red-500/30 rounded-lg p-2 cursor-pointer transition-all ${
                     i < 2 ? 'col-span-2 row-span-2' : i < 4 ? 'col-span-2' : ''
                   }`}
@@ -435,7 +435,7 @@ const GlobalHeatmap = () => {
             {mockSongs.map((song) => (
               <div
                 key={song.id}
-                onClick={() => navigate(`/heatmap/${song.id}`)}
+                onClick={() => navigate(`/global-heatmap/${song.id}`)}
                 className="grid grid-cols-12 gap-2 items-center p-2 sm:p-3 bg-white/[0.01] hover:bg-white/[0.04] rounded-lg cursor-pointer transition-all group"
               >
                 {/* Rank */}
