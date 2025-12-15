@@ -248,7 +248,7 @@ const MusicAlpha = () => {
             {mockMarkets.slice(0, 5).map((market) => (
               <div
                 key={market.id}
-                onClick={() => navigate(`/alpha/${market.id}`)}
+                onClick={() => navigate(`/music-alpha/${market.id}`)}
                 className="flex-shrink-0 flex items-center gap-2 sm:gap-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-xl p-2 sm:p-3 cursor-pointer transition-all min-w-[200px] sm:min-w-[240px]"
               >
                 <img src={market.artwork} alt={market.songTitle} className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover" />
@@ -317,7 +317,7 @@ const MusicAlpha = () => {
             {marketEvents.map((event) => (
               <Card
                 key={event.id}
-                onClick={() => navigate(`/alpha/${event.market.id}`)}
+                onClick={() => navigate(`/music-alpha/${event.market.id}`)}
                 className="bg-white/[0.02] hover:bg-white/[0.05] border-white/5 p-3 cursor-pointer transition-all group"
               >
                 <div className="flex items-start gap-2 mb-2">
@@ -364,7 +364,7 @@ const MusicAlpha = () => {
               {highProbability.map((market, i) => (
                 <div
                   key={market.id}
-                  onClick={() => navigate(`/alpha/${market.id}`)}
+                  onClick={() => navigate(`/music-alpha/${market.id}`)}
                   className={`bg-[#4ade80]/20 hover:bg-[#4ade80]/30 rounded-lg p-2 cursor-pointer transition-all ${
                     i < 2 ? 'col-span-2 row-span-2' : i < 4 ? 'col-span-2' : ''
                   }`}
@@ -394,7 +394,7 @@ const MusicAlpha = () => {
               {lowProbability.map((market, i) => (
                 <div
                   key={market.id}
-                  onClick={() => navigate(`/alpha/${market.id}`)}
+                  onClick={() => navigate(`/music-alpha/${market.id}`)}
                   className={`bg-red-500/20 hover:bg-red-500/30 rounded-lg p-2 cursor-pointer transition-all ${
                     i < 2 ? 'col-span-2 row-span-2' : i < 4 ? 'col-span-2' : ''
                   }`}
@@ -453,7 +453,7 @@ const MusicAlpha = () => {
                 {mockMarkets.map((market) => (
                   <div
                     key={market.id}
-                    onClick={() => navigate(`/alpha/${market.id}`)}
+                    onClick={() => navigate(`/music-alpha/${market.id}`)}
                     className="flex items-center gap-3 p-3 bg-white/[0.01] hover:bg-white/[0.04] rounded-xl cursor-pointer transition-all group border border-white/5"
                   >
                     {/* Artwork & Info */}
