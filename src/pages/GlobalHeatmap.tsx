@@ -362,12 +362,10 @@ const GlobalHeatmap = () => {
     <div className="min-h-screen bg-black text-white">
       {/* Top Navigation */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/95 border-b border-white/10 backdrop-blur-sm">
-        <div className="flex items-center justify-between h-14 px-4">
-          {/* Left: Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <Globe className="h-5 w-5 text-green-400" />
-            <span className="font-bold text-sm hidden sm:inline">Global Music Attention Exchange</span>
-            <span className="font-bold text-sm sm:hidden">GMAE</span>
+        <div className="flex items-center justify-between h-14 px-2 sm:px-4">
+          {/* Left: Back Button */}
+          <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-white transition-colors">
+            <span className="text-sm">← Back</span>
           </Link>
           
           {/* Center: Tabs */}
