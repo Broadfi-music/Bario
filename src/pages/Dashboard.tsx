@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Library, Sparkles, User, Settings, Plus, Play, Heart, Pause, Menu, X } from 'lucide-react';
+import { Home, Library, Sparkles, User, Settings, Plus, Play, Heart, Pause, Menu, X, Globe, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -78,6 +78,8 @@ const Dashboard = () => {
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Library, label: 'Library', path: '/dashboard/library' },
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
+    { icon: Globe, label: 'Heatmap', path: '/global-heatmap' },
+    { icon: Zap, label: 'Alpha', path: '/music-alpha' },
     { icon: Sparkles, label: 'Virapath', path: '/dashboard/virapath' },
     { icon: Sparkles, label: 'Megashuffle', path: '/dashboard/megashuffle' },
   ];
