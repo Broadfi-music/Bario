@@ -12,7 +12,25 @@ export const Navbar = () => {
             </div>
           </Link>
           
+          <div className="hidden md:flex items-center gap-1">
+            <Link to="/global-heatmap">
+              <Button variant="ghost" className="text-foreground hover:bg-foreground/10 text-sm px-3">
+                Global Heatmap
+              </Button>
+            </Link>
+            <Link to="/music-alpha">
+              <Button variant="ghost" className="text-foreground hover:bg-foreground/10 text-sm px-3">
+                Music Alpha
+              </Button>
+            </Link>
+          </div>
+          
           <div className="flex items-center gap-2 sm:gap-3">
+            <Link to="/global-heatmap" className="md:hidden">
+              <Button variant="ghost" className="text-foreground hover:bg-foreground/10 text-xs px-2">
+                Heatmap
+              </Button>
+            </Link>
             <Link to="/auth">
               <Button variant="ghost" className="text-foreground hover:bg-foreground/10 text-sm sm:text-base px-2 sm:px-4">
                 Sign In

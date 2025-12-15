@@ -78,10 +78,8 @@ const Dashboard = () => {
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Library, label: 'Library', path: '/dashboard/library' },
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
-    { icon: Sparkles, label: 'Beatpulse', path: '/dashboard/beatpulse' },
     { icon: Sparkles, label: 'Virapath', path: '/dashboard/virapath' },
     { icon: Sparkles, label: 'Megashuffle', path: '/dashboard/megashuffle' },
-    { icon: Sparkles, label: 'Analytics', path: '/dashboard/analytics' },
   ];
 
   const creators = [
