@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
-  Search, Star, TrendingUp, TrendingDown, Minus, X,
-  ChevronDown, Filter, Zap, Clock, ArrowUpRight, ExternalLink
+  Search, Star, TrendingUp, TrendingDown, ExternalLink, Filter, Clock,
+  Play, Users, ChevronRight, Sparkles, Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -25,108 +23,110 @@ interface Song {
   attentionScore: number;
   momentum: 'surging' | 'cooling' | 'stable';
   change24h: number;
+  listeners: string;
+  marketCap: string;
   platforms: { name: string; percentage: number }[];
   marketMoves: string[];
   isWatchlisted: boolean;
+  twitterHandle?: string;
+  description?: string;
 }
 
-// Mock data
+interface MarketEvent {
+  id: number;
+  song: Song;
+  event: string;
+  change: number;
+  time: string;
+  sources: string[];
+}
+
+// Mock data - Top 99 Leaderboard
 const mockSongs: Song[] = [
   {
     id: 1, rank: 1, trend: 'up', trendValue: 12, title: 'Midnight Rush', artist: 'Nova Echo',
-    artwork: '/src/assets/card-1.png', attentionScore: 9847, momentum: 'surging', change24h: 15.2,
-    platforms: [
-      { name: 'Spotify', percentage: 34 },
-      { name: 'TikTok', percentage: 28 },
-      { name: 'YouTube', percentage: 22 },
-      { name: 'Apple', percentage: 16 },
-    ],
-    marketMoves: ['Playlisted', 'UGC Spike'],
-    isWatchlisted: false,
+    artwork: '/src/assets/card-1.png', attentionScore: 98470, momentum: 'surging', change24h: 15.2,
+    listeners: '2.4M', marketCap: '41.7M',
+    platforms: [{ name: 'Spotify', percentage: 34 }, { name: 'TikTok', percentage: 28 }],
+    marketMoves: ['Playlisted', 'UGC Spike'], isWatchlisted: false,
+    twitterHandle: '@novaecho', description: 'Breakout synth-pop hit dominating charts globally'
   },
   {
     id: 2, rank: 2, trend: 'up', trendValue: 8, title: 'Electric Dreams', artist: 'Synthwave Kid',
-    artwork: '/src/assets/card-2.png', attentionScore: 8932, momentum: 'surging', change24h: 12.8,
-    platforms: [
-      { name: 'Spotify', percentage: 31 },
-      { name: 'TikTok', percentage: 35 },
-      { name: 'YouTube', percentage: 20 },
-      { name: 'Apple', percentage: 14 },
-    ],
-    marketMoves: ['Viral TikTok'],
-    isWatchlisted: true,
+    artwork: '/src/assets/card-2.png', attentionScore: 89320, momentum: 'surging', change24h: 12.8,
+    listeners: '1.8M', marketCap: '35.2M',
+    platforms: [{ name: 'Spotify', percentage: 31 }, { name: 'TikTok', percentage: 35 }],
+    marketMoves: ['Viral TikTok'], isWatchlisted: true,
+    twitterHandle: '@synthwavekid', description: 'Retro-futuristic anthem trending worldwide'
   },
   {
     id: 3, rank: 3, trend: 'down', trendValue: 2, title: 'Golden Hour', artist: 'Amber Waves',
-    artwork: '/src/assets/card-3.png', attentionScore: 7654, momentum: 'cooling', change24h: -3.4,
-    platforms: [
-      { name: 'Spotify', percentage: 42 },
-      { name: 'TikTok', percentage: 18 },
-      { name: 'YouTube', percentage: 25 },
-      { name: 'Apple', percentage: 15 },
-    ],
-    marketMoves: ['Radio Add'],
-    isWatchlisted: false,
+    artwork: '/src/assets/card-3.png', attentionScore: 76540, momentum: 'cooling', change24h: -3.4,
+    listeners: '1.5M', marketCap: '28.9M',
+    platforms: [{ name: 'Spotify', percentage: 42 }, { name: 'Radio', percentage: 25 }],
+    marketMoves: ['Radio Add'], isWatchlisted: false,
+    twitterHandle: '@amberwaves', description: 'Country crossover gaining radio momentum'
   },
   {
     id: 4, rank: 4, trend: 'stable', trendValue: 0, title: 'Neon Nights', artist: 'DJ Pulse',
-    artwork: '/src/assets/card-4.png', attentionScore: 6543, momentum: 'stable', change24h: 0.5,
-    platforms: [
-      { name: 'Spotify', percentage: 28 },
-      { name: 'TikTok', percentage: 32 },
-      { name: 'YouTube', percentage: 28 },
-      { name: 'Apple', percentage: 12 },
-    ],
-    marketMoves: ['Shazam Spike'],
-    isWatchlisted: false,
+    artwork: '/src/assets/card-4.png', attentionScore: 65430, momentum: 'stable', change24h: 0.5,
+    listeners: '1.2M', marketCap: '22.1M',
+    platforms: [{ name: 'Spotify', percentage: 28 }, { name: 'TikTok', percentage: 32 }],
+    marketMoves: ['Shazam Spike'], isWatchlisted: false,
+    twitterHandle: '@djpulse', description: 'Electronic banger holding steady'
   },
   {
     id: 5, rank: 5, trend: 'up', trendValue: 23, title: 'Afro Vibes', artist: 'Lagos Sound',
-    artwork: '/src/assets/card-5.png', attentionScore: 5987, momentum: 'surging', change24h: 28.5,
-    platforms: [
-      { name: 'Spotify', percentage: 25 },
-      { name: 'TikTok', percentage: 42 },
-      { name: 'YouTube', percentage: 20 },
-      { name: 'Apple', percentage: 13 },
-    ],
-    marketMoves: ['UGC Spike', 'Playlisted', 'Viral'],
-    isWatchlisted: true,
+    artwork: '/src/assets/card-5.png', attentionScore: 59870, momentum: 'surging', change24h: 28.5,
+    listeners: '980K', marketCap: '18.4M',
+    platforms: [{ name: 'Spotify', percentage: 25 }, { name: 'TikTok', percentage: 42 }],
+    marketMoves: ['UGC Spike', 'Viral'], isWatchlisted: true,
+    twitterHandle: '@lagossound', description: 'Afrobeats sensation breaking out globally'
   },
   {
     id: 6, rank: 6, trend: 'up', trendValue: 5, title: 'Summer Feels', artist: 'Beach House',
-    artwork: '/src/assets/track-1.jpeg', attentionScore: 5432, momentum: 'stable', change24h: 4.2,
-    platforms: [
-      { name: 'Spotify', percentage: 38 },
-      { name: 'TikTok', percentage: 22 },
-      { name: 'YouTube', percentage: 28 },
-      { name: 'Apple', percentage: 12 },
-    ],
-    marketMoves: ['Radio Add'],
-    isWatchlisted: false,
+    artwork: '/src/assets/track-1.jpeg', attentionScore: 54320, momentum: 'stable', change24h: 4.2,
+    listeners: '890K', marketCap: '15.7M',
+    platforms: [{ name: 'Spotify', percentage: 38 }, { name: 'YouTube', percentage: 28 }],
+    marketMoves: ['Radio Add'], isWatchlisted: false,
+    twitterHandle: '@beachhouseband', description: 'Dreamy indie vibes for summer'
+  },
+  {
+    id: 7, rank: 7, trend: 'down', trendValue: 4, title: 'Tokyo Drift', artist: 'Yuki Beats',
+    artwork: '/src/assets/track-2.jpeg', attentionScore: 48900, momentum: 'cooling', change24h: -5.1,
+    listeners: '780K', marketCap: '13.2M',
+    platforms: [{ name: 'Spotify', percentage: 35 }, { name: 'Apple', percentage: 22 }],
+    marketMoves: [], isWatchlisted: false,
+    twitterHandle: '@yukibeats', description: 'J-pop influenced electronic track'
+  },
+  {
+    id: 8, rank: 8, trend: 'up', trendValue: 15, title: 'K-Pop Fire', artist: 'Seoul Stars',
+    artwork: '/src/assets/track-3.jpeg', attentionScore: 45670, momentum: 'surging', change24h: 18.3,
+    listeners: '1.1M', marketCap: '24.5M',
+    platforms: [{ name: 'YouTube', percentage: 45 }, { name: 'Spotify', percentage: 28 }],
+    marketMoves: ['Music Video', 'Fan Army'], isWatchlisted: false,
+    twitterHandle: '@seoulstars', description: 'K-pop group dominating YouTube'
   },
 ];
 
-const timeFilters = ['Now', '24h', '7d', '30d'];
-const marketFilters = ['Global', 'Emerging', 'Viral', 'Radio'];
+const marketEvents: MarketEvent[] = [
+  { id: 1, song: mockSongs[0], event: 'Major playlist addition driving massive streams', change: 0.01, time: '36 min ago', sources: ['@spotify', '@apple'] },
+  { id: 2, song: mockSongs[1], event: 'Viral TikTok trend challenging streaming records', change: 0, time: '42 min ago', sources: ['@tiktok'] },
+  { id: 3, song: mockSongs[4], event: 'Afrobeats crossover gaining radio momentum', change: 0.17, time: '1 hr ago', sources: ['@billboard'] },
+  { id: 4, song: mockSongs[7], event: 'Music video breaks 10M views in 24 hours', change: 0.04, time: '2 hrs ago', sources: ['@youtube'] },
+];
+
+const timeFilters = ['Now', '24H', '7D', '30D'];
 
 const GlobalHeatmap = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('live-market');
-  const [timeWindow, setTimeWindow] = useState('24h');
-  const [marketFocus, setMarketFocus] = useState('Global');
+  const [activeTab, setActiveTab] = useState('projects');
+  const [timeWindow, setTimeWindow] = useState('24H');
   const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [watchlist, setWatchlist] = useState<number[]>([2, 5]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(12);
-  
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setLastUpdated(prev => (prev >= 60 ? 0 : prev + 1));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
   
   const handleInteraction = (action: string, callback?: () => void) => {
     if (!user) {
@@ -145,395 +145,351 @@ const GlobalHeatmap = () => {
       toast.success(watchlist.includes(id) ? 'Removed from watchlist' : 'Added to watchlist');
     });
   };
-  
-  const filteredSongs = mockSongs.filter(song => 
-    song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    song.artist.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  
-  const watchlistedSongs = mockSongs.filter(song => watchlist.includes(song.id));
 
-  const MomentumBadge = ({ momentum }: { momentum: 'surging' | 'cooling' | 'stable' }) => {
-    const styles = {
-      surging: 'bg-[#4ade80]/20 text-[#4ade80]',
-      cooling: 'bg-red-500/20 text-red-400',
-      stable: 'bg-yellow-500/20 text-yellow-400',
-    };
-    return (
-      <span className={`px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-medium capitalize ${styles[momentum]}`}>
-        {momentum}
-      </span>
-    );
+  // Good/Bad sentiment songs
+  const goodSentiment = mockSongs.filter(s => s.change24h > 0).slice(0, 12);
+  const badSentiment = mockSongs.filter(s => s.change24h <= 0).slice(0, 12);
+
+  // Calculate grid sizes based on attention score
+  const getGridSize = (score: number, max: number) => {
+    const ratio = score / max;
+    if (ratio > 0.8) return 'col-span-2 row-span-2';
+    if (ratio > 0.5) return 'col-span-2 row-span-1';
+    return 'col-span-1 row-span-1';
   };
 
-  const TrendIndicator = ({ trend, value }: { trend: 'up' | 'down' | 'stable'; value: number }) => {
-    if (trend === 'up') {
-      return (
-        <span className="flex items-center text-[#4ade80] text-[10px] sm:text-xs font-medium">
-          <TrendingUp className="h-3 w-3 mr-0.5" />
-          +{value}
-        </span>
-      );
-    }
-    if (trend === 'down') {
-      return (
-        <span className="flex items-center text-red-400 text-[10px] sm:text-xs font-medium">
-          <TrendingDown className="h-3 w-3 mr-0.5" />
-          -{value}
-        </span>
-      );
-    }
-    return (
-      <span className="flex items-center text-white/50 text-[10px] sm:text-xs">
-        <Minus className="h-3 w-3 mr-0.5" />0
-      </span>
-    );
-  };
+  const maxScore = Math.max(...mockSongs.map(s => s.attentionScore));
 
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-black border-b border-white/10">
-        <div className="flex items-center justify-between h-12 sm:h-14 px-3 sm:px-4">
-          <Link to="/" className="text-base sm:text-lg font-bold text-white">
-            BARIO
-          </Link>
+      <header className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-sm border-b border-white/5">
+        <div className="flex items-center justify-between h-12 sm:h-14 px-3 sm:px-6">
+          <div className="flex items-center gap-3">
+            <Link to="/" className="flex items-center gap-2">
+              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#4ade80] flex items-center justify-center">
+                <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-black" />
+              </div>
+              <span className="text-xs sm:text-sm font-semibold text-white">Heatmap</span>
+            </Link>
+          </div>
           
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="relative hidden sm:block">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40" />
               <Input
-                placeholder="Search..."
+                placeholder="Search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-8 w-36 sm:w-48 bg-white/5 border-white/10 text-xs placeholder:text-white/40"
+                className="pl-8 h-8 w-40 bg-white/5 border-white/10 text-xs placeholder:text-white/40 rounded-lg"
               />
             </div>
             
             {user ? (
               <Link to="/dashboard">
-                <Button size="sm" className="bg-[#4ade80] text-black hover:bg-[#4ade80]/90 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 rounded-full">
+                <Button size="sm" className="bg-white text-black hover:bg-white/90 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 rounded-lg font-medium">
                   Dashboard
                 </Button>
               </Link>
             ) : (
               <Link to="/auth">
-                <Button size="sm" className="bg-[#4ade80] text-black hover:bg-[#4ade80]/90 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 rounded-full">
-                  Sign In
+                <Button size="sm" className="bg-white text-black hover:bg-white/90 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 rounded-lg font-medium">
+                  Log In
                 </Button>
               </Link>
             )}
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              className="sm:hidden h-8 w-8 text-white/60"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <Filter className="h-4 w-4" />
-            </Button>
           </div>
         </div>
-        
-        {/* Sub Header - Stats & Tabs */}
-        <div className="border-t border-white/5 px-3 sm:px-4 py-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div>
-                <span className="text-white/50 text-[10px] sm:text-xs">Global sentiment</span>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm sm:text-lg font-bold text-white">73/100</span>
-                  <span className="text-[#4ade80] text-[10px] sm:text-xs">▲8.2%</span>
-                </div>
-              </div>
-              <div className="hidden sm:block">
-                <span className="text-white/50 text-xs">Tracks</span>
-                <div className="text-lg font-bold text-white">12.4k</div>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-1">
-              {['live-market', 'watchlist'].map(tab => (
-                <Button
-                  key={tab}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    if (tab === 'watchlist' && !user) {
-                      toast.error('Please sign in to view watchlist');
-                      navigate('/auth');
-                      return;
-                    }
-                    setActiveTab(tab);
-                  }}
-                  className={`text-[10px] sm:text-xs h-7 px-2 sm:px-3 rounded-full ${
-                    activeTab === tab ? 'bg-white/10 text-white' : 'text-white/60'
-                  }`}
-                >
-                  {tab === 'live-market' ? 'Live Market' : 'Watchlist'}
-                </Button>
-              ))}
-            </div>
+
+        {/* Global Stats Bar */}
+        <div className="border-t border-white/5 px-3 sm:px-6 py-2 flex items-center gap-4 sm:gap-6 text-[10px] sm:text-xs overflow-x-auto">
+          <div className="flex items-center gap-1.5">
+            <span className="text-white/50">Global sentiment:</span>
+            <span className="font-semibold text-white">73/100</span>
+            <span className="text-[#4ade80]">▲8.2%</span>
           </div>
-        </div>
-        
-        {/* Filters Row */}
-        <div className={`border-t border-white/5 px-3 sm:px-4 py-2 overflow-x-auto ${showFilters ? 'block' : 'hidden sm:block'}`}>
-          <div className="flex items-center gap-2 min-w-max">
-            <div className="flex items-center gap-1 bg-white/5 rounded-full p-0.5">
-              {timeFilters.map(t => (
-                <Button
-                  key={t}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setTimeWindow(t)}
-                  className={`text-[10px] h-6 px-2 rounded-full ${
-                    timeWindow === t ? 'bg-white/10 text-white' : 'text-white/50'
-                  }`}
-                >
-                  {t}
-                </Button>
-              ))}
-            </div>
-            
-            <div className="w-px h-4 bg-white/10" />
-            
-            <div className="flex items-center gap-1">
-              {marketFilters.map(m => (
-                <Button
-                  key={m}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setMarketFocus(m)}
-                  className={`text-[10px] h-6 px-2 rounded-full ${
-                    marketFocus === m ? 'bg-[#4ade80]/20 text-[#4ade80]' : 'text-white/50'
-                  }`}
-                >
-                  {m}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </div>
-        
-        {/* Mobile Search */}
-        <div className="sm:hidden border-t border-white/5 px-3 py-2">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40" />
-            <Input
-              placeholder="Search songs, artists..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 w-full bg-white/5 border-white/10 text-xs placeholder:text-white/40"
-            />
+          <div className="flex items-center gap-1.5">
+            <span className="text-white/50">Tracks:</span>
+            <span className="font-semibold text-white">14.4k</span>
           </div>
         </div>
       </header>
       
       {/* Main Content */}
-      <main className="pt-[180px] sm:pt-[160px] pb-6 px-3 sm:px-4">
-        {/* Live Update Indicator */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#4ade80] animate-pulse" />
-            <span className="text-[10px] sm:text-xs text-white/50">Updated {lastUpdated}s ago</span>
+      <main className="pt-24 sm:pt-28 pb-6 px-3 sm:px-6">
+        {/* Campaigns Section */}
+        <section className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm sm:text-base font-semibold text-white">🎵 SNAPS campaigns</h2>
+              <div className="hidden sm:flex items-center gap-1 px-2 py-1 bg-[#4ade80]/10 rounded-full">
+                <span className="text-[10px] text-[#4ade80]">Total plays: 18M</span>
+              </div>
+            </div>
+            <Link to="#" className="text-[10px] sm:text-xs text-white/50 hover:text-white flex items-center gap-1">
+              View all <ChevronRight className="h-3 w-3" />
+            </Link>
           </div>
+          
+          <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            {mockSongs.slice(0, 5).map((song) => (
+              <div
+                key={song.id}
+                onClick={() => navigate(`/heatmap/${song.id}`)}
+                className="flex-shrink-0 flex items-center gap-2 sm:gap-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-xl p-2 sm:p-3 cursor-pointer transition-all min-w-[180px] sm:min-w-[220px]"
+              >
+                <img src={song.artwork} alt={song.title} className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] sm:text-xs font-medium text-white truncate">{song.title}</p>
+                  <p className="text-[9px] sm:text-[10px] text-white/50 truncate">{song.twitterHandle}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] sm:text-xs font-bold text-[#4ade80]">{song.listeners}</p>
+                  <p className="text-[8px] sm:text-[9px] text-white/40">listeners</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Tabs */}
+        <div className="flex items-center gap-4 sm:gap-6 border-b border-white/10 mb-4">
+          {['Projects', 'Voices', 'Sectors'].map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab.toLowerCase())}
+              className={`pb-2 text-[11px] sm:text-xs font-medium transition-colors relative ${
+                activeTab === tab.toLowerCase() 
+                  ? 'text-white' 
+                  : 'text-white/40 hover:text-white/60'
+              }`}
+            >
+              {tab}
+              {activeTab === tab.toLowerCase() && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#4ade80]" />
+              )}
+            </button>
+          ))}
         </div>
 
-        {activeTab === 'live-market' ? (
-          <div className="space-y-2">
-            {filteredSongs.map((song) => (
+        {/* Market Events */}
+        <section className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs sm:text-sm font-medium text-white">Market events</h3>
+            <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
+              {timeFilters.map(t => (
+                <button
+                  key={t}
+                  onClick={() => setTimeWindow(t)}
+                  className={`text-[9px] sm:text-[10px] px-2 py-1 rounded-md transition-colors ${
+                    timeWindow === t ? 'bg-[#4ade80] text-black font-medium' : 'text-white/50 hover:text-white'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+            {marketEvents.map((event) => (
               <Card
-                key={song.id}
-                className="bg-white/[0.02] hover:bg-white/[0.05] border-white/5 transition-all cursor-pointer group"
-                onClick={() => setSelectedSong(song)}
+                key={event.id}
+                onClick={() => navigate(`/heatmap/${event.song.id}`)}
+                className="bg-white/[0.02] hover:bg-white/[0.05] border-white/5 p-3 cursor-pointer transition-all group"
               >
-                <div className="p-2 sm:p-3">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    {/* Rank */}
-                    <div className="flex flex-col items-center w-6 sm:w-8">
-                      <span className="text-sm sm:text-lg font-bold text-white">{song.rank}</span>
-                      <TrendIndicator trend={song.trend} value={song.trendValue} />
+                <div className="flex items-start gap-2 mb-2">
+                  <img src={event.song.artwork} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] sm:text-xs font-medium text-white truncate">{event.song.title}</span>
+                      <span className={`text-[9px] font-medium ${event.change >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
+                        {event.change >= 0 ? '▲' : '▼'}{Math.abs(event.change).toFixed(2)} (24h)
+                      </span>
                     </div>
-                    
-                    {/* Artwork */}
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden flex-shrink-0 ring-1 ring-white/10">
-                      <img src={song.artwork} alt={song.title} className="w-full h-full object-cover" />
-                    </div>
-                    
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-white text-xs sm:text-sm truncate">{song.title}</h3>
-                        <MomentumBadge momentum={song.momentum} />
-                      </div>
-                      <p className="text-white/50 text-[10px] sm:text-xs truncate">{song.artist}</p>
-                      
-                      {/* Market Moves */}
-                      <div className="flex items-center gap-1 mt-1 flex-wrap">
-                        {song.marketMoves.slice(0, 2).map((move, i) => (
-                          <span key={i} className="px-1.5 py-0.5 bg-white/5 rounded text-[8px] sm:text-[9px] text-white/60">
-                            {move}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {/* Score & Actions */}
-                    <div className="flex flex-col items-end gap-1">
-                      <div className="text-right">
-                        <div className="text-sm sm:text-lg font-bold text-white">{song.attentionScore.toLocaleString()}</div>
-                        <div className={`text-[10px] sm:text-xs ${song.change24h >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
-                          {song.change24h >= 0 ? '+' : ''}{song.change24h}%
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-6 w-6 ${watchlist.includes(song.id) ? 'text-yellow-400' : 'text-white/30'}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleWatchlist(song.id);
-                        }}
-                      >
-                        <Star className={`h-3.5 w-3.5 ${watchlist.includes(song.id) ? 'fill-current' : ''}`} />
-                      </Button>
-                    </div>
+                    <p className="text-[9px] text-white/40">{event.song.marketCap} cap</p>
                   </div>
+                </div>
+                <p className="text-[10px] sm:text-xs text-white/70 line-clamp-2 mb-2">{event.event}</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex -space-x-1">
+                    {event.sources.map((source, i) => (
+                      <div key={i} className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[8px]">
+                        {source.charAt(1).toUpperCase()}
+                      </div>
+                    ))}
+                  </div>
+                  <span className="text-[9px] text-white/30">{event.time}</span>
                 </div>
               </Card>
             ))}
           </div>
-        ) : (
-          <div className="space-y-2">
-            {watchlistedSongs.length === 0 ? (
-              <Card className="bg-white/[0.02] border-white/5 p-8 text-center">
-                <Star className="h-10 w-10 text-white/20 mx-auto mb-3" />
-                <p className="text-white/50 text-sm">No songs in your watchlist yet</p>
-                <p className="text-white/30 text-xs mt-1">Add songs to track their performance</p>
-              </Card>
-            ) : (
-              watchlistedSongs.map((song) => (
-                <Card
-                  key={song.id}
-                  className="bg-white/[0.02] hover:bg-white/[0.05] border-white/5 transition-all cursor-pointer"
-                  onClick={() => setSelectedSong(song)}
-                >
-                  <div className="p-2 sm:p-3">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden flex-shrink-0">
-                        <img src={song.artwork} alt={song.title} className="w-full h-full object-cover" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-white text-xs sm:text-sm truncate">{song.title}</h3>
-                        <p className="text-white/50 text-[10px] sm:text-xs">{song.artist}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-bold text-white">{song.attentionScore.toLocaleString()}</div>
-                        <MomentumBadge momentum={song.momentum} />
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))
-            )}
-          </div>
-        )}
-      </main>
+        </section>
 
-      {/* Song Detail Sheet */}
-      <Sheet open={!!selectedSong} onOpenChange={() => setSelectedSong(null)}>
-        <SheetContent className="bg-zinc-950 border-white/10 w-full sm:max-w-md overflow-y-auto">
-          {selectedSong && (
-            <>
-              <SheetHeader className="mb-4">
-                <div className="flex items-center gap-3">
-                  <img src={selectedSong.artwork} alt={selectedSong.title} className="w-16 h-16 rounded-lg" />
-                  <div>
-                    <SheetTitle className="text-white text-base">{selectedSong.title}</SheetTitle>
-                    <p className="text-white/60 text-sm">{selectedSong.artist}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <MomentumBadge momentum={selectedSong.momentum} />
-                      <span className="text-white/40 text-xs">Rank #{selectedSong.rank}</span>
-                    </div>
+        {/* Sentiment Treemaps */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
+          {/* Good Sentiment */}
+          <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 sm:p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-[#4ade80]" />
+                <span className="text-xs sm:text-sm font-medium text-white">Good sentiment</span>
+              </div>
+              <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
+                {['Now', '7D', '1M'].map(t => (
+                  <button key={t} className="text-[9px] px-2 py-0.5 rounded text-white/50 hover:text-white">{t}</button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-1">
+              {goodSentiment.map((song, i) => (
+                <div
+                  key={song.id}
+                  onClick={() => navigate(`/heatmap/${song.id}`)}
+                  className={`bg-[#4ade80]/20 hover:bg-[#4ade80]/30 rounded-lg p-2 cursor-pointer transition-all ${
+                    i < 2 ? 'col-span-2 row-span-2' : i < 4 ? 'col-span-2' : ''
+                  }`}
+                  style={{ minHeight: i < 2 ? '80px' : '40px' }}
+                >
+                  <p className="text-[9px] sm:text-[10px] font-semibold text-white truncate">{song.title.slice(0, 8)}</p>
+                  <p className="text-[8px] sm:text-[9px] text-[#4ade80]">+{song.change24h}%</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bad Sentiment */}
+          <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 sm:p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <TrendingDown className="h-4 w-4 text-red-400" />
+                <span className="text-xs sm:text-sm font-medium text-white">Bad sentiment</span>
+              </div>
+              <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
+                {['Now', '7D', '1M'].map(t => (
+                  <button key={t} className="text-[9px] px-2 py-0.5 rounded text-white/50 hover:text-white">{t}</button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-1">
+              {badSentiment.length > 0 ? badSentiment.map((song, i) => (
+                <div
+                  key={song.id}
+                  onClick={() => navigate(`/heatmap/${song.id}`)}
+                  className={`bg-red-500/20 hover:bg-red-500/30 rounded-lg p-2 cursor-pointer transition-all ${
+                    i < 2 ? 'col-span-2 row-span-2' : i < 4 ? 'col-span-2' : ''
+                  }`}
+                  style={{ minHeight: i < 2 ? '80px' : '40px' }}
+                >
+                  <p className="text-[9px] sm:text-[10px] font-semibold text-white truncate">{song.title.slice(0, 8)}</p>
+                  <p className="text-[8px] sm:text-[9px] text-red-400">{song.change24h}%</p>
+                </div>
+              )) : (
+                <div className="col-span-full text-center py-6 text-white/30 text-xs">No declining tracks</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Top 99 Leaderboard */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm sm:text-base font-semibold text-white">🏆 Top 99 Music Leaderboard</h3>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 text-white/40 sm:hidden"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Mobile Search */}
+          <div className="sm:hidden mb-3">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40" />
+              <Input
+                placeholder="Search tracks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-8 w-full bg-white/5 border-white/10 text-xs placeholder:text-white/40 rounded-lg"
+              />
+            </div>
+          </div>
+          
+          {/* Table Header */}
+          <div className="hidden sm:grid grid-cols-12 gap-2 px-3 py-2 text-[10px] text-white/40 border-b border-white/5">
+            <div className="col-span-1">#</div>
+            <div className="col-span-4">Track</div>
+            <div className="col-span-2 text-right">Listeners</div>
+            <div className="col-span-2 text-right">Score</div>
+            <div className="col-span-2 text-right">24h</div>
+            <div className="col-span-1 text-right">Action</div>
+          </div>
+
+          {/* Leaderboard Items */}
+          <div className="space-y-1">
+            {mockSongs.map((song) => (
+              <div
+                key={song.id}
+                onClick={() => navigate(`/heatmap/${song.id}`)}
+                className="grid grid-cols-12 gap-2 items-center p-2 sm:p-3 bg-white/[0.01] hover:bg-white/[0.04] rounded-lg cursor-pointer transition-all group"
+              >
+                {/* Rank */}
+                <div className="col-span-2 sm:col-span-1 flex items-center gap-1">
+                  <span className="text-xs sm:text-sm font-bold text-white">{song.rank}</span>
+                  {song.trend === 'up' && <TrendingUp className="h-3 w-3 text-[#4ade80]" />}
+                  {song.trend === 'down' && <TrendingDown className="h-3 w-3 text-red-400" />}
+                </div>
+
+                {/* Track Info */}
+                <div className="col-span-6 sm:col-span-4 flex items-center gap-2">
+                  <img src={song.artwork} alt="" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] sm:text-xs font-medium text-white truncate">{song.title}</p>
+                    <p className="text-[9px] sm:text-[10px] text-white/40 truncate">{song.artist}</p>
                   </div>
                 </div>
-              </SheetHeader>
-              
-              <div className="space-y-4">
+
+                {/* Listeners */}
+                <div className="hidden sm:block col-span-2 text-right">
+                  <p className="text-xs font-medium text-white">{song.listeners}</p>
+                </div>
+
                 {/* Score */}
-                <div className="bg-white/5 rounded-xl p-4">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-white">{selectedSong.attentionScore.toLocaleString()}</div>
-                    <div className="text-white/50 text-xs mt-1">Attention Score</div>
-                    <div className={`text-sm mt-2 ${selectedSong.change24h >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
-                      {selectedSong.change24h >= 0 ? '↑' : '↓'} {Math.abs(selectedSong.change24h)}% in 24h
-                    </div>
-                  </div>
+                <div className="col-span-2 text-right">
+                  <p className="text-[10px] sm:text-xs font-bold text-white">{(song.attentionScore / 1000).toFixed(1)}K</p>
                 </div>
-                
-                {/* Platform Breakdown */}
-                <div>
-                  <h4 className="text-white/60 text-xs font-medium mb-2">Platform Mix</h4>
-                  <div className="space-y-2">
-                    {selectedSong.platforms.map((p, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <span className="text-white/80 text-xs w-16">{p.name}</span>
-                        <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-[#4ade80] rounded-full"
-                            style={{ width: `${p.percentage}%` }}
-                          />
-                        </div>
-                        <span className="text-white/60 text-xs w-8">{p.percentage}%</span>
-                      </div>
-                    ))}
-                  </div>
+
+                {/* 24h Change */}
+                <div className="col-span-2 text-right">
+                  <span className={`text-[10px] sm:text-xs font-medium ${song.change24h >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
+                    {song.change24h >= 0 ? '+' : ''}{song.change24h}%
+                  </span>
                 </div>
-                
-                {/* Actions */}
-                <div className="flex gap-2 pt-2">
-                  <Button 
-                    className="flex-1 bg-[#4ade80] text-black hover:bg-[#4ade80]/90 h-10"
-                    onClick={() => {
-                      handleInteraction('share this track', () => {
-                        toast.success('Link copied to clipboard');
-                      });
+
+                {/* Action */}
+                <div className="hidden sm:flex col-span-1 justify-end">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={`h-6 w-6 ${watchlist.includes(song.id) ? 'text-yellow-400' : 'text-white/20 group-hover:text-white/50'}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleWatchlist(song.id);
                     }}
                   >
-                    Share
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 border-white/10 text-white hover:bg-white/10 h-10"
-                    onClick={() => toggleWatchlist(selectedSong.id)}
-                  >
-                    <Star className={`h-4 w-4 mr-2 ${watchlist.includes(selectedSong.id) ? 'fill-yellow-400 text-yellow-400' : ''}`} />
-                    {watchlist.includes(selectedSong.id) ? 'Saved' : 'Watchlist'}
+                    <Star className={`h-3.5 w-3.5 ${watchlist.includes(song.id) ? 'fill-current' : ''}`} />
                   </Button>
                 </div>
               </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
-      
-      {/* User Profile Badge (if logged in) */}
-      {user && (
-        <div className="fixed bottom-4 right-4 z-40">
-          <Link to="/dashboard">
-            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full pl-2 pr-3 py-1.5 border border-white/10 hover:bg-white/15 transition-colors">
-              <Avatar className="h-6 w-6">
-                <AvatarImage src="/src/assets/track-1.jpeg" />
-                <AvatarFallback className="bg-[#4ade80] text-black text-xs">
-                  {user.email?.[0].toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-white text-xs">Dashboard</span>
-            </div>
-          </Link>
-        </div>
-      )}
+            ))}
+          </div>
+        </section>
+      </main>
     </div>
   );
 };
