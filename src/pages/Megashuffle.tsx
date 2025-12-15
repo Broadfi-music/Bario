@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
-  Shuffle, Play, Pause, X, ExternalLink, Music, Users, 
-  Sparkles, ChevronLeft, Heart, Share2, Instagram, Twitter
+  Shuffle, Play, Pause, X, Music, 
+  Sparkles, Heart, Instagram, Twitter
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -43,7 +43,6 @@ const Megashuffle = () => {
     handleInteraction('start shuffling', () => {
       setIsShuffling(true);
       
-      // Simulate shuffle animation
       let count = 0;
       const interval = setInterval(() => {
         const randomIndex = Math.floor(Math.random() * mockArtists.length);
@@ -67,218 +66,148 @@ const Megashuffle = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden relative">
+    <div className="min-h-screen bg-black text-white p-4 sm:p-6 relative">
       {/* Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 right-1/3 w-64 h-64 bg-pink-500/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '2s' }} />
-        
-        {/* Particle effects */}
-        {Array.from({ length: 20 }).map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-white/30 rounded-full animate-ping"
-            style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              animationDuration: `${2 + Math.random() * 3}s`,
-              animationDelay: `${Math.random() * 2}s`,
-            }}
-          />
-        ))}
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/10 rounded-full blur-[100px] animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-purple-500/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 right-1/3 w-48 h-48 bg-pink-500/10 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: '2s' }} />
       </div>
 
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-sm border-b border-white/5">
-        <div className="flex items-center justify-between h-12 sm:h-14 px-3 sm:px-6">
-          <button 
-            onClick={() => navigate('/dashboard')} 
-            className="flex items-center gap-1.5 text-white/60 hover:text-white transition-colors"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="text-[10px] sm:text-xs">Back</span>
-          </button>
-          
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-white/40">Shuffles: {shuffleCount}</span>
-            {user ? (
-              <Link to="/dashboard">
-                <Button size="sm" className="bg-white text-black hover:bg-white/90 text-[10px] sm:text-xs h-7 sm:h-8 px-3 rounded-lg font-medium">
-                  Dashboard
-                </Button>
-              </Link>
-            ) : (
-              <Link to="/auth">
-                <Button size="sm" className="bg-white text-black hover:bg-white/90 text-[10px] sm:text-xs h-7 sm:h-8 px-3 rounded-lg font-medium">
-                  Log In
-                </Button>
-              </Link>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="relative z-10 pt-24 pb-12 px-4 sm:px-6 min-h-screen flex flex-col items-center justify-center">
-        {/* Hero Section */}
-        <div className="text-center mb-12 max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-full border border-white/10 mb-6">
-            <Sparkles className="h-4 w-4 text-purple-400" />
-            <span className="text-[10px] sm:text-xs text-white/70">World's Largest Music Discovery Engine</span>
+      {/* Main Content - Direct Shuffle */}
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-[80vh]">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-full border border-white/10 mb-3">
+            <Sparkles className="h-3 w-3 text-purple-400" />
+            <span className="text-[9px] text-white/70">Discovery Engine</span>
           </div>
           
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Every Shuffle.
+          <h1 className="text-xl sm:text-2xl font-bold mb-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            MEGASHUFFLE
           </h1>
-          <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold mb-6 text-white">
-            A New Artist.
-          </h2>
-          <p className="text-sm sm:text-base text-white/60 mb-8 max-w-md mx-auto">
-            Discover new sounds every time you press play. Experience the world's largest randomized music discovery engine.
-          </p>
-
-          {/* Shuffle Button */}
-          <div className="relative inline-block">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full blur-xl opacity-50 animate-pulse" />
-            <Button
-              onClick={startShuffle}
-              disabled={isShuffling}
-              className="relative h-16 sm:h-20 px-8 sm:px-12 text-base sm:text-lg font-bold bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white rounded-full shadow-2xl transition-all transform hover:scale-105"
-            >
-              <Shuffle className={`h-5 w-5 sm:h-6 sm:w-6 mr-2 ${isShuffling ? 'animate-spin' : ''}`} />
-              {isShuffling ? 'Shuffling...' : 'Start Shuffling'}
-            </Button>
-          </div>
-
-          {/* Stats */}
-          <div className="flex items-center justify-center gap-6 mt-12">
-            <div className="text-center">
-              <p className="text-2xl sm:text-3xl font-bold text-white">50K+</p>
-              <p className="text-[10px] sm:text-xs text-white/50">Artists</p>
-            </div>
-            <div className="w-px h-8 bg-white/10" />
-            <div className="text-center">
-              <p className="text-2xl sm:text-3xl font-bold text-white">2M+</p>
-              <p className="text-[10px] sm:text-xs text-white/50">Shuffles</p>
-            </div>
-            <div className="w-px h-8 bg-white/10" />
-            <div className="text-center">
-              <p className="text-2xl sm:text-3xl font-bold text-white">150+</p>
-              <p className="text-[10px] sm:text-xs text-white/50">Countries</p>
-            </div>
-          </div>
+          <p className="text-[10px] text-white/50">Shuffles: {shuffleCount}</p>
         </div>
 
-        {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row items-center gap-4 mt-8">
+        {/* Shuffle Button */}
+        <div className="relative mb-6">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full blur-lg opacity-40 animate-pulse" />
           <Button
-            variant="outline"
-            onClick={() => handleInteraction('submit your music')}
-            className="h-12 px-6 text-sm border-white/20 text-white hover:bg-white/10 rounded-full"
+            onClick={startShuffle}
+            disabled={isShuffling}
+            className="relative h-14 px-8 text-sm font-bold bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white rounded-full shadow-xl transition-all transform hover:scale-105"
           >
-            <Music className="h-4 w-4 mr-2" />
-            Submit Your Music
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => handleInteraction('join the movement')}
-            className="h-12 px-6 text-sm border-purple-500/50 text-purple-400 hover:bg-purple-500/10 rounded-full"
-          >
-            <Users className="h-4 w-4 mr-2" />
-            Join the Discovery Movement
+            <Shuffle className={`h-4 w-4 mr-2 ${isShuffling ? 'animate-spin' : ''}`} />
+            {isShuffling ? 'Shuffling...' : 'Shuffle'}
           </Button>
         </div>
-      </main>
 
-      {/* Artist Popup */}
+        {/* Stats */}
+        <div className="flex items-center gap-4 text-center">
+          <div>
+            <p className="text-lg font-bold text-white">50K+</p>
+            <p className="text-[8px] text-white/40">Artists</p>
+          </div>
+          <div className="w-px h-6 bg-white/10" />
+          <div>
+            <p className="text-lg font-bold text-white">2M+</p>
+            <p className="text-[8px] text-white/40">Shuffles</p>
+          </div>
+          <div className="w-px h-6 bg-white/10" />
+          <div>
+            <p className="text-lg font-bold text-white">150+</p>
+            <p className="text-[8px] text-white/40">Countries</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Artist Popup - Smaller Card */}
       {showArtistPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="relative w-full max-w-md">
+          <div className="relative w-full max-w-xs">
             {/* Glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-pink-500/30 rounded-3xl blur-2xl" />
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-2xl blur-xl" />
             
-            <Card className="relative bg-black/90 border border-white/10 rounded-3xl p-6 sm:p-8 overflow-hidden">
+            <Card className="relative bg-black/90 border border-white/10 rounded-2xl p-4 overflow-hidden">
               {/* Close button */}
               <button
                 onClick={() => { setShowArtistPopup(false); setIsPlaying(false); }}
-                className="absolute top-4 right-4 p-2 text-white/40 hover:text-white transition-colors"
+                className="absolute top-2 right-2 p-1.5 text-white/40 hover:text-white transition-colors"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
 
               {/* Artist Avatar */}
-              <div className="relative w-32 h-32 sm:w-40 sm:h-40 mx-auto mb-6">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full animate-spin-slow opacity-50 blur-xl" />
+              <div className="relative w-20 h-20 mx-auto mb-3">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full animate-spin-slow opacity-40 blur-lg" />
                 <img
                   src={currentArtist.avatar}
                   alt={currentArtist.name}
-                  className="relative w-full h-full rounded-full object-cover border-4 border-white/20"
+                  className="relative w-full h-full rounded-full object-cover border-2 border-white/20"
                 />
               </div>
 
               {/* Artist Info */}
-              <div className="text-center mb-6">
-                <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">{currentArtist.name}</h3>
-                <p className="text-sm text-purple-400 mb-2">{currentArtist.genre}</p>
-                <p className="text-xs text-white/60">{currentArtist.tagline}</p>
-                <p className="text-[10px] text-white/40 mt-2">{currentArtist.followers} followers</p>
+              <div className="text-center mb-3">
+                <h3 className="text-sm font-bold text-white mb-0.5">{currentArtist.name}</h3>
+                <p className="text-[10px] text-purple-400 mb-1">{currentArtist.genre}</p>
+                <p className="text-[9px] text-white/50 leading-tight">{currentArtist.tagline}</p>
+                <p className="text-[8px] text-white/30 mt-1">{currentArtist.followers} followers</p>
               </div>
 
               {/* Sample Track Player */}
-              <div className="bg-white/5 rounded-xl p-4 mb-6">
-                <div className="flex items-center gap-4">
+              <div className="bg-white/5 rounded-lg p-2.5 mb-3">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => setIsPlaying(!isPlaying)}
-                    className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center hover:scale-105 transition-transform"
+                    className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center hover:scale-105 transition-transform flex-shrink-0"
                   >
                     {isPlaying ? (
-                      <Pause className="h-5 w-5 text-white" />
+                      <Pause className="h-3 w-3 text-white" />
                     ) : (
-                      <Play className="h-5 w-5 text-white ml-1" />
+                      <Play className="h-3 w-3 text-white ml-0.5" />
                     )}
                   </button>
-                  <div className="flex-1">
-                    <p className="text-xs text-white font-medium">Sample Track</p>
-                    <p className="text-[10px] text-white/50">3:24</p>
-                  </div>
-                  <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all ${isPlaying ? 'w-1/3 animate-pulse' : 'w-0'}`}
-                    />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[9px] text-white font-medium truncate">Sample Track</p>
+                    <div className="h-1 bg-white/10 rounded-full overflow-hidden mt-1">
+                      <div 
+                        className={`h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all ${isPlaying ? 'w-1/3 animate-pulse' : 'w-0'}`}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Social Links */}
-              <div className="flex items-center justify-center gap-3 mb-6">
-                <a href={currentArtist.spotify} className="p-3 bg-[#1DB954]/20 rounded-full hover:bg-[#1DB954]/30 transition-colors">
-                  <Music className="h-4 w-4 text-[#1DB954]" />
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <a href={currentArtist.spotify} className="p-2 bg-[#1DB954]/20 rounded-full hover:bg-[#1DB954]/30 transition-colors">
+                  <Music className="h-3 w-3 text-[#1DB954]" />
                 </a>
-                <a href={currentArtist.instagram} className="p-3 bg-pink-500/20 rounded-full hover:bg-pink-500/30 transition-colors">
-                  <Instagram className="h-4 w-4 text-pink-400" />
+                <a href={currentArtist.instagram} className="p-2 bg-pink-500/20 rounded-full hover:bg-pink-500/30 transition-colors">
+                  <Instagram className="h-3 w-3 text-pink-400" />
                 </a>
-                <a href={currentArtist.twitter} className="p-3 bg-blue-500/20 rounded-full hover:bg-blue-500/30 transition-colors">
-                  <Twitter className="h-4 w-4 text-blue-400" />
+                <a href={currentArtist.twitter} className="p-2 bg-blue-500/20 rounded-full hover:bg-blue-500/30 transition-colors">
+                  <Twitter className="h-3 w-3 text-blue-400" />
                 </a>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 <Button
                   onClick={() => handleInteraction('follow artist', () => toast.success(`Following ${currentArtist.name}!`))}
-                  className="flex-1 h-11 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white text-sm font-medium rounded-xl"
+                  className="flex-1 h-8 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white text-[10px] font-medium rounded-lg"
                 >
-                  <Heart className="h-4 w-4 mr-2" />
-                  Follow Artist
+                  <Heart className="h-3 w-3 mr-1" />
+                  Follow
                 </Button>
                 <Button
                   onClick={closePopupAndShuffle}
                   variant="outline"
-                  className="flex-1 h-11 border-white/20 text-white hover:bg-white/10 text-sm font-medium rounded-xl"
+                  className="flex-1 h-8 border-white/20 text-white hover:bg-white/10 text-[10px] font-medium rounded-lg"
                 >
-                  <Shuffle className="h-4 w-4 mr-2" />
-                  Shuffle Again
+                  <Shuffle className="h-3 w-3 mr-1" />
+                  Again
                 </Button>
               </div>
             </Card>
