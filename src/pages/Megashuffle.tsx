@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Library, Sparkles, User, Settings, Menu, X, Globe, Zap, Play, Pause, ChevronLeft, Shuffle, Heart, Instagram, Twitter, Music } from 'lucide-react';
+import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, BarChart3, Play, Pause, ChevronLeft, Shuffle, Heart, Instagram, Twitter, Music } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -81,9 +81,10 @@ const Megashuffle = () => {
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Library, label: 'Library', path: '/dashboard/library' },
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
-    { icon: Globe, label: 'Heatmap', path: '/global-heatmap' },
-    { icon: Zap, label: 'Alpha', path: '/music-alpha' },
+    { icon: Sparkles, label: 'Beatpulse', path: '/dashboard/beatpulse' },
     { icon: Sparkles, label: 'Megashuffle', path: '/dashboard/megashuffle' },
+    { icon: BarChart3, label: 'Billboard', path: '/dashboard/billboard' },
+    { icon: Gift, label: 'Reward & Earn', path: '/dashboard/rewards' },
   ];
 
   return (
@@ -152,13 +153,6 @@ const Megashuffle = () => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto w-full lg:w-auto relative">
-        {/* Animated Background */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-500/10 rounded-full blur-[100px] animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-purple-500/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
-          <div className="absolute top-1/2 right-1/3 w-48 h-48 bg-pink-500/10 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: '2s' }} />
-        </div>
-
         <div className="p-3 lg:p-6 relative z-10">
           {/* Header */}
           <div className="flex justify-between items-center mb-4 lg:mb-6">
@@ -208,49 +202,37 @@ const Megashuffle = () => {
             </DropdownMenu>
           </div>
 
-          {/* Shuffle Content */}
-          <div className="flex flex-col items-center justify-center min-h-[60vh]">
-            {/* Header */}
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-full border border-border mb-3">
-                <Sparkles className="h-3 w-3 text-purple-400" />
-                <span className="text-[9px] text-muted-foreground">Discovery Engine</span>
-              </div>
-              
-              <h2 className="text-xl sm:text-2xl font-bold mb-1 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                Every Shuffle. A New Artist.
-              </h2>
-              <p className="text-xs text-muted-foreground mb-1">Discover new sounds every time you press play.</p>
-              <p className="text-[10px] text-muted-foreground/60">Shuffles: {shuffleCount}</p>
-            </div>
-
+          {/* Shuffle Content - Compact */}
+          <div className="flex flex-col items-center justify-center py-8">
             {/* Shuffle Button */}
-            <div className="relative mb-6">
+            <div className="relative mb-4">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full blur-lg opacity-40 animate-pulse" />
               <Button
                 onClick={startShuffle}
                 disabled={isShuffling}
-                className="relative h-14 px-8 text-sm font-bold bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white rounded-full shadow-xl transition-all transform hover:scale-105"
+                className="relative h-12 px-6 text-xs font-bold bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white rounded-full shadow-xl transition-all transform hover:scale-105"
               >
                 <Shuffle className={`h-4 w-4 mr-2 ${isShuffling ? 'animate-spin' : ''}`} />
                 {isShuffling ? 'Shuffling...' : 'Shuffle'}
               </Button>
             </div>
 
+            <p className="text-[10px] text-muted-foreground mb-3">Shuffles: {shuffleCount}</p>
+
             {/* Stats */}
             <div className="flex items-center gap-4 text-center">
               <div>
-                <p className="text-lg font-bold text-foreground">50K+</p>
+                <p className="text-sm font-bold text-foreground">50K+</p>
                 <p className="text-[8px] text-muted-foreground">Artists</p>
               </div>
-              <div className="w-px h-6 bg-border" />
+              <div className="w-px h-4 bg-border" />
               <div>
-                <p className="text-lg font-bold text-foreground">2M+</p>
+                <p className="text-sm font-bold text-foreground">2M+</p>
                 <p className="text-[8px] text-muted-foreground">Shuffles</p>
               </div>
-              <div className="w-px h-6 bg-border" />
+              <div className="w-px h-4 bg-border" />
               <div>
-                <p className="text-lg font-bold text-foreground">150+</p>
+                <p className="text-sm font-bold text-foreground">150+</p>
                 <p className="text-[8px] text-muted-foreground">Countries</p>
               </div>
             </div>
@@ -261,8 +243,6 @@ const Megashuffle = () => {
         {showArtistPopup && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
             <div className="relative w-full max-w-xs">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-2xl blur-xl" />
-              
               <Card className="relative bg-card border border-border rounded-2xl p-4 overflow-hidden">
                 <button
                   onClick={() => { setShowArtistPopup(false); setIsPlaying(false); }}
@@ -271,8 +251,7 @@ const Megashuffle = () => {
                   <X className="h-4 w-4" />
                 </button>
 
-                <div className="relative w-20 h-20 mx-auto mb-3">
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full animate-spin-slow opacity-40 blur-lg" />
+                <div className="relative w-16 h-16 mx-auto mb-3">
                   <img
                     src={currentArtist.avatar}
                     alt={currentArtist.name}
@@ -343,16 +322,6 @@ const Megashuffle = () => {
             </div>
           </div>
         )}
-
-        <style>{`
-          @keyframes spin-slow {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-          .animate-spin-slow {
-            animation: spin-slow 8s linear infinite;
-          }
-        `}</style>
       </main>
     </div>
   );

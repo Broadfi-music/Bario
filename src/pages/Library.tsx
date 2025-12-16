@@ -1,21 +1,41 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Download, Share2, MoreVertical } from 'lucide-react';
+import { Home, Library as LibraryIcon, Sparkles, User, Settings, Menu, X, Gift, BarChart3, Play, Download, Share2, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 const Library = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success('Signed out successfully');
+    navigate('/');
+  };
+
+  const sidebarItems = [
+    { icon: Home, label: 'Home', path: '/dashboard' },
+    { icon: LibraryIcon, label: 'Library', path: '/dashboard/library' },
+    { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
+    { icon: Sparkles, label: 'Beatpulse', path: '/dashboard/beatpulse' },
+    { icon: Sparkles, label: 'Megashuffle', path: '/dashboard/megashuffle' },
+    { icon: BarChart3, label: 'Billboard', path: '/dashboard/billboard' },
+    { icon: Gift, label: 'Reward & Earn', path: '/dashboard/rewards' },
+  ];
+
   const generatedTracks = [
     { id: 1, title: 'Summer Vibes Remix', genre: 'Amapiano', date: '2024-01-15', duration: '3:24', artwork: '/src/assets/track-1.jpeg' },
     { id: 2, title: 'Night Drive Trap', genre: 'Trap', date: '2024-01-14', duration: '2:58', artwork: '/src/assets/track-2.jpeg' },
@@ -35,161 +55,254 @@ const Library = () => {
     console.log(`Sharing ${trackTitle} to ${platform}`);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto p-8">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Link to="/dashboard">
-            <Button variant="ghost" size="icon">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
+    <div className="min-h-screen bg-background flex overflow-x-hidden">
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-48 bg-card border-r border-border flex flex-col transform transition-transform duration-300 lg:transform-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="p-3 lg:p-4 flex items-center justify-between">
+          <Link to="/" className="text-lg font-bold text-foreground">
+            BARIO
           </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">My Library</h1>
-            <p className="text-muted-foreground mt-1">All your generated music in one place</p>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="lg:hidden h-7 w-7"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <nav className="flex-1 px-2 overflow-y-auto">
+          {sidebarItems.map((item) => (
+            <Link
+              key={item.label}
+              to={item.path}
+              onClick={() => setSidebarOpen(false)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors mb-0.5 ${
+                item.label === 'Library' 
+                  ? 'text-foreground bg-accent' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+              }`}
+            >
+              <item.icon className="h-4 w-4" />
+              <span className="text-xs font-medium">{item.label}</span>
+            </Link>
+          ))}
+        </nav>
+
+        <div className="p-3 border-t border-border space-y-1">
+          <Link
+            to="/dashboard/settings"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center gap-2 px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
+          >
+            <Settings className="h-4 w-4" />
+            <span className="text-xs font-medium">Settings</span>
+          </Link>
+          <Link
+            to="/dashboard/profile"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center gap-2 px-3 py-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
+          >
+            <User className="h-4 w-4" />
+            <span className="text-xs font-medium">Profile</span>
+          </Link>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto w-full lg:w-auto">
+        <div className="p-3 lg:p-6">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-4 lg:mb-6">
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="lg:hidden h-8 w-8"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-lg font-bold text-foreground">My Library</h1>
+                <p className="text-xs text-muted-foreground">All your generated music</p>
+              </div>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full h-8 w-8">
+                  <Avatar className="h-7 w-7">
+                    <AvatarImage src="/src/assets/track-1.jpeg" />
+                    <AvatarFallback>U</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard/profile" className="cursor-pointer text-xs">
+                    Edit Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard/settings" className="cursor-pointer text-xs">
+                    Manage Subscription
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut} className="text-xs">
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-2 lg:gap-4 mb-4 lg:mb-6">
+            <Card className="p-3 lg:p-4">
+              <h3 className="text-[10px] text-muted-foreground mb-0.5">Total Tracks</h3>
+              <p className="text-lg lg:text-xl font-bold text-foreground">{generatedTracks.length}</p>
+            </Card>
+            <Card className="p-3 lg:p-4">
+              <h3 className="text-[10px] text-muted-foreground mb-0.5">This Week</h3>
+              <p className="text-lg lg:text-xl font-bold text-foreground">4</p>
+            </Card>
+            <Card className="p-3 lg:p-4">
+              <h3 className="text-[10px] text-muted-foreground mb-0.5">Total Duration</h3>
+              <p className="text-lg lg:text-xl font-bold text-foreground">32:53</p>
+            </Card>
+          </div>
+
+          {/* Tracks Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 lg:gap-3">
+            {generatedTracks.map((track) => (
+              <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors overflow-hidden group">
+                <div className="aspect-square bg-muted relative">
+                  <img 
+                    src={track.artwork} 
+                    alt={track.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                    <Button size="icon" variant="secondary" className="rounded-full h-8 w-8">
+                      <Play className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Action Menu */}
+                  <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon" variant="secondary" className="h-6 w-6 rounded-full">
+                          <MoreVertical className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-xs">
+                              <Download className="h-3 w-3 mr-2" />
+                              Download
+                            </DropdownMenuItem>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle className="text-sm">Download Format</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-2 mt-4">
+                              <Button 
+                                onClick={() => handleDownload('mp3', track.title)}
+                                className="w-full text-xs h-8"
+                              >
+                                Download as MP3
+                              </Button>
+                              <Button 
+                                onClick={() => handleDownload('wav', track.title)}
+                                className="w-full text-xs h-8"
+                              >
+                                Download as WAV
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-xs">
+                              <Share2 className="h-3 w-3 mr-2" />
+                              Share
+                            </DropdownMenuItem>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle className="text-sm">Share Your Track</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-2 mt-4">
+                              <Button 
+                                onClick={() => handleShare('link', track.title)}
+                                variant="outline"
+                                className="w-full text-xs h-8"
+                              >
+                                Copy Link
+                              </Button>
+                              <Button 
+                                onClick={() => handleShare('tiktok', track.title)}
+                                variant="outline"
+                                className="w-full text-xs h-8"
+                              >
+                                Share to TikTok
+                              </Button>
+                              <Button 
+                                onClick={() => handleShare('whatsapp', track.title)}
+                                variant="outline"
+                                className="w-full text-xs h-8"
+                              >
+                                Share to WhatsApp
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+
+                        <DropdownMenuItem className="text-xs">
+                          Get Stem
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+                <div className="p-2 lg:p-3">
+                  <h3 className="font-medium text-foreground mb-0.5 text-xs truncate">{track.title}</h3>
+                  <p className="text-[10px] text-muted-foreground">{track.genre}</p>
+                  <div className="flex justify-between items-center mt-1">
+                    <p className="text-[9px] text-muted-foreground">{track.duration}</p>
+                    <p className="text-[9px] text-muted-foreground">{track.date}</p>
+                  </div>
+                </div>
+              </Card>
+            ))}
           </div>
         </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card className="p-6">
-            <h3 className="text-sm text-muted-foreground mb-1">Total Tracks</h3>
-            <p className="text-3xl font-bold text-foreground">{generatedTracks.length}</p>
-          </Card>
-          <Card className="p-6">
-            <h3 className="text-sm text-muted-foreground mb-1">This Week</h3>
-            <p className="text-3xl font-bold text-foreground">4</p>
-          </Card>
-          <Card className="p-6">
-            <h3 className="text-sm text-muted-foreground mb-1">Total Duration</h3>
-            <p className="text-3xl font-bold text-foreground">32:53</p>
-          </Card>
-        </div>
-
-        {/* Tracks Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {generatedTracks.map((track) => (
-            <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors overflow-hidden group">
-              <div className="aspect-square bg-muted relative">
-                <img 
-                  src={track.artwork} 
-                  alt={track.title}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                  <Button size="icon" variant="secondary" className="rounded-full h-12 w-12">
-                    <Play className="h-6 w-6" />
-                  </Button>
-                </div>
-                
-                {/* Action Menu */}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="icon" variant="secondary" className="h-8 w-8 rounded-full">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </DropdownMenuItem>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Download Format</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-2 mt-4">
-                            <Button 
-                              onClick={() => handleDownload('mp3', track.title)}
-                              className="w-full"
-                            >
-                              Download as MP3
-                            </Button>
-                            <Button 
-                              onClick={() => handleDownload('wav', track.title)}
-                              className="w-full"
-                            >
-                              Download as WAV
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                            <Share2 className="h-4 w-4 mr-2" />
-                            Share
-                          </DropdownMenuItem>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Share Your Track</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-2 mt-4">
-                            <Button 
-                              onClick={() => handleShare('link', track.title)}
-                              variant="outline"
-                              className="w-full"
-                            >
-                              Copy Link
-                            </Button>
-                            <Button 
-                              onClick={() => handleShare('tiktok', track.title)}
-                              variant="outline"
-                              className="w-full"
-                            >
-                              Share to TikTok
-                            </Button>
-                            <Button 
-                              onClick={() => handleShare('facebook', track.title)}
-                              variant="outline"
-                              className="w-full"
-                            >
-                              Share to Facebook
-                            </Button>
-                            <Button 
-                              onClick={() => handleShare('whatsapp', track.title)}
-                              variant="outline"
-                              className="w-full"
-                            >
-                              Share to WhatsApp
-                            </Button>
-                            <Button 
-                              onClick={() => handleShare('instagram', track.title)}
-                              variant="outline"
-                              className="w-full"
-                            >
-                              Share to Instagram
-                            </Button>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-
-                      <DropdownMenuItem>
-                        Get Stem
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-              <div className="p-4">
-                <h3 className="font-semibold text-foreground mb-1">{track.title}</h3>
-                <p className="text-sm text-muted-foreground">{track.genre}</p>
-                <div className="flex justify-between items-center mt-2">
-                  <p className="text-xs text-muted-foreground">{track.duration}</p>
-                  <p className="text-xs text-muted-foreground">{track.date}</p>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </div>
+      </main>
     </div>
   );
 };
