@@ -1,24 +1,51 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Library as LibraryIcon, Sparkles, User, Settings, Menu, X, Gift, BarChart3, Play, Download, Share2, MoreVertical } from 'lucide-react';
+import { Home, Library as LibraryIcon, Sparkles, User, Settings, Menu, X, Gift, Play, Pause, Download, Share2, MoreVertical, SkipBack, SkipForward, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Slider } from '@/components/ui/slider';
 import { useAuth } from '@/contexts/AuthContext';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
 
 const Library = () => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentTrack, setCurrentTrack] = useState<any>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
+
+  // Audio progress tracking
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateProgress = () => {
+      if (audio.duration) {
+        setProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+
+    audio.addEventListener('timeupdate', updateProgress);
+    audio.addEventListener('ended', () => {
+      setIsPlaying(false);
+      setProgress(0);
+    });
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateProgress);
+    };
+  }, [currentTrack]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -30,29 +57,52 @@ const Library = () => {
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: LibraryIcon, label: 'Library', path: '/dashboard/library' },
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
-    { icon: Sparkles, label: 'Beatpulse', path: '/dashboard/beatpulse' },
     { icon: Sparkles, label: 'Megashuffle', path: '/dashboard/megashuffle' },
-    { icon: BarChart3, label: 'Billboard', path: '/dashboard/billboard' },
     { icon: Gift, label: 'Reward & Earn', path: '/dashboard/rewards' },
   ];
 
   const generatedTracks = [
-    { id: 1, title: 'Summer Vibes Remix', genre: 'Amapiano', date: '2024-01-15', duration: '3:24', artwork: '/src/assets/track-1.jpeg' },
-    { id: 2, title: 'Night Drive Trap', genre: 'Trap', date: '2024-01-14', duration: '2:58', artwork: '/src/assets/track-2.jpeg' },
-    { id: 3, title: 'Country Soul', genre: 'Country', date: '2024-01-13', duration: '4:12', artwork: '/src/assets/track-3.jpeg' },
-    { id: 4, title: 'Jazz Fusion', genre: 'Jazz', date: '2024-01-12', duration: '5:03', artwork: '/src/assets/track-4.jpeg' },
-    { id: 5, title: 'Gospel Energy', genre: 'Gospel', date: '2024-01-11', duration: '3:58', artwork: '/src/assets/track-5.jpeg' },
-    { id: 6, title: 'City Lights Jazz', genre: 'Jazz', date: '2024-01-10', duration: '4:22', artwork: '/src/assets/track-6.jpeg' },
-    { id: 7, title: 'Ocean Wave Soul', genre: 'Soul', date: '2024-01-09', duration: '3:41', artwork: '/src/assets/track-7.jpeg' },
-    { id: 8, title: 'Desert Rose 80s', genre: '80s', date: '2024-01-08', duration: '4:15', artwork: '/src/assets/track-8.jpeg' },
+    { id: 1, title: 'Summer Vibes Remix', genre: 'Amapiano', date: '2024-01-15', duration: '3:24', artwork: '/src/assets/track-1.jpeg', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
+    { id: 2, title: 'Night Drive Trap', genre: 'Trap', date: '2024-01-14', duration: '2:58', artwork: '/src/assets/track-2.jpeg', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
+    { id: 3, title: 'Country Soul', genre: 'Country', date: '2024-01-13', duration: '4:12', artwork: '/src/assets/track-3.jpeg', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
+    { id: 4, title: 'Jazz Fusion', genre: 'Jazz', date: '2024-01-12', duration: '5:03', artwork: '/src/assets/track-4.jpeg', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' },
+    { id: 5, title: 'Gospel Energy', genre: 'Gospel', date: '2024-01-11', duration: '3:58', artwork: '/src/assets/track-5.jpeg', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3' },
+    { id: 6, title: 'City Lights Jazz', genre: 'Jazz', date: '2024-01-10', duration: '4:22', artwork: '/src/assets/track-6.jpeg', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3' },
+    { id: 7, title: 'Ocean Wave Soul', genre: 'Soul', date: '2024-01-09', duration: '3:41', artwork: '/src/assets/track-7.jpeg', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3' },
+    { id: 8, title: 'Desert Rose 80s', genre: '80s', date: '2024-01-08', duration: '4:15', artwork: '/src/assets/track-8.jpeg', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3' },
   ];
 
+  const handlePlayTrack = (track: any) => {
+    if (currentTrack?.id === track.id && isPlaying) {
+      audioRef.current?.pause();
+      setIsPlaying(false);
+    } else {
+      if (audioRef.current) {
+        audioRef.current.src = track.audio;
+        audioRef.current.play();
+      }
+      setCurrentTrack(track);
+      setIsPlaying(true);
+    }
+  };
+
+  const togglePlayPause = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
   const handleDownload = (format: 'mp3' | 'wav', trackTitle: string) => {
-    console.log(`Downloading ${trackTitle} as ${format}`);
+    toast.success(`Downloading ${trackTitle} as ${format.toUpperCase()}`);
   };
 
   const handleShare = (platform: string, trackTitle: string) => {
-    console.log(`Sharing ${trackTitle} to ${platform}`);
+    toast.success(`Sharing ${trackTitle} to ${platform}`);
   };
 
   if (loading) {
@@ -69,6 +119,8 @@ const Library = () => {
 
   return (
     <div className="min-h-screen bg-background flex overflow-x-hidden">
+      <audio ref={audioRef} />
+      
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
@@ -132,7 +184,7 @@ const Library = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto w-full lg:w-auto">
+      <main className={`flex-1 overflow-y-auto w-full lg:w-auto ${currentTrack ? 'pb-24' : ''}`}>
         <div className="p-3 lg:p-6">
           {/* Header */}
           <div className="flex justify-between items-center mb-4 lg:mb-6">
@@ -204,8 +256,17 @@ const Library = () => {
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                    <Button size="icon" variant="secondary" className="rounded-full h-8 w-8">
-                      <Play className="h-4 w-4" />
+                    <Button 
+                      size="icon" 
+                      variant="secondary" 
+                      className="rounded-full h-10 w-10"
+                      onClick={() => handlePlayTrack(track)}
+                    >
+                      {currentTrack?.id === track.id && isPlaying ? (
+                        <Pause className="h-5 w-5" />
+                      ) : (
+                        <Play className="h-5 w-5" />
+                      )}
                     </Button>
                   </div>
                   
@@ -302,6 +363,46 @@ const Library = () => {
             ))}
           </div>
         </div>
+
+        {/* Audio Player */}
+        {currentTrack && (
+          <div className="fixed bottom-0 left-0 right-0 lg:left-48 bg-card border-t border-border p-3 z-50">
+            <div className="flex items-center gap-3">
+              <img src={currentTrack.artwork} alt={currentTrack.title} className="w-10 h-10 rounded object-cover" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-foreground truncate">{currentTrack.title}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{currentTrack.genre}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="icon" variant="ghost" className="h-8 w-8">
+                  <SkipBack className="h-4 w-4" />
+                </Button>
+                <Button 
+                  size="icon" 
+                  className="h-8 w-8 bg-foreground text-background hover:bg-foreground/90 rounded-full"
+                  onClick={togglePlayPause}
+                >
+                  {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8">
+                  <SkipForward className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 w-32">
+                <Volume2 className="h-4 w-4 text-muted-foreground" />
+                <Slider defaultValue={[80]} max={100} step={1} className="w-full" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <div className="h-1 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary transition-all duration-200"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

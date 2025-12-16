@@ -125,15 +125,6 @@ const generateMockSongs = (): Song[] => {
   return songs;
 };
 
-const mockSongs = generateMockSongs();
-
-const marketEvents: MarketEvent[] = [
-  { id: 1, song: mockSongs[0], event: 'Major playlist addition driving massive streams', change: 0.01, time: '36 min ago', sources: ['@spotify', '@apple'] },
-  { id: 2, song: mockSongs[1], event: 'Viral TikTok trend challenging streaming records', change: 0, time: '42 min ago', sources: ['@tiktok'] },
-  { id: 3, song: mockSongs[4], event: 'Afrobeats crossover gaining radio momentum', change: 0.17, time: '1 hr ago', sources: ['@billboard'] },
-  { id: 4, song: mockSongs[7], event: 'Music video breaks 10M views in 24 hours', change: 0.04, time: '2 hrs ago', sources: ['@youtube'] },
-];
-
 const timeFilters = ['Now', '24H', '7D', '30D'];
 
 const GlobalHeatmap = () => {
@@ -144,6 +135,44 @@ const GlobalHeatmap = () => {
   const [watchlist, setWatchlist] = useState<number[]>([2, 5]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAllLeaderboard, setShowAllLeaderboard] = useState(false);
+  const [mockSongs, setMockSongs] = useState(generateMockSongs());
+  const [marketEvents, setMarketEvents] = useState<MarketEvent[]>([]);
+
+  // Initialize market events
+  useEffect(() => {
+    setMarketEvents([
+      { id: 1, song: mockSongs[0], event: 'Major playlist addition driving massive streams', change: 0.01, time: '36 min ago', sources: ['@spotify', '@apple'] },
+      { id: 2, song: mockSongs[1], event: 'Viral TikTok trend challenging streaming records', change: 0, time: '42 min ago', sources: ['@tiktok'] },
+      { id: 3, song: mockSongs[4], event: 'Afrobeats crossover gaining radio momentum', change: 0.17, time: '1 hr ago', sources: ['@billboard'] },
+      { id: 4, song: mockSongs[7], event: 'Music video breaks 10M views in 24 hours', change: 0.04, time: '2 hrs ago', sources: ['@youtube'] },
+    ]);
+  }, []);
+
+  // Realtime updates for songs
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMockSongs(prev => {
+        const updated = prev.map(song => {
+          const change = (Math.random() - 0.5) * 5;
+          const newChange24h = parseFloat((song.change24h + change * 0.1).toFixed(1));
+          const newListeners = `${(parseFloat(song.listeners) + (Math.random() - 0.5) * 0.1).toFixed(1)}M`;
+          return {
+            ...song,
+            change24h: newChange24h,
+            listeners: newListeners,
+            trend: newChange24h > 0 ? 'up' as const : newChange24h < 0 ? 'down' as const : 'stable' as const,
+            attentionScore: Math.floor(song.attentionScore + (Math.random() - 0.5) * 1000)
+          };
+        });
+        // Re-sort by attention score
+        updated.sort((a, b) => b.attentionScore - a.attentionScore);
+        updated.forEach((song, i) => song.rank = i + 1);
+        return updated;
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
   
   const handleInteraction = (action: string, callback?: () => void) => {
     if (!user) {
@@ -210,20 +239,21 @@ const GlobalHeatmap = () => {
         <div className="border-t border-white/5 px-3 sm:px-6 py-2 flex items-center gap-4 sm:gap-6 text-[9px] sm:text-[10px] overflow-x-auto">
           <div className="flex items-center gap-1">
             <span className="text-white/50">Listeners:</span>
-            <span className="font-semibold text-white">73M</span>
+            <span className="font-semibold text-white animate-pulse">73M</span>
             <span className="text-[#4ade80]">▲8.2%</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="text-white/50">Tracks:</span>
             <span className="font-semibold text-white">14.4k</span>
           </div>
+          <span className="text-[8px] text-green-400 animate-pulse">● LIVE</span>
         </div>
       </header>
       
       {/* Main Content */}
       <main className="pt-24 sm:pt-28 pb-6 px-3 sm:px-6">
         {/* Campaigns Section */}
-        <section className="mb-6">
+        <section className="mb-6 animate-fade-in">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <h2 className="text-[11px] sm:text-sm font-semibold text-white">🎵 SNAPS campaigns</h2>
@@ -258,7 +288,7 @@ const GlobalHeatmap = () => {
         </section>
 
         {/* Market Events */}
-        <section className="mb-6">
+        <section className="mb-6 animate-fade-in" style={{ animationDelay: '0.1s' }}>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-[10px] sm:text-xs font-medium text-white">Market events</h3>
             <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
@@ -311,13 +341,14 @@ const GlobalHeatmap = () => {
           </div>
         </section>
 
-        {/* Top Performing Music Treemap */}
-        <section className="mb-6">
+        {/* Top Performing Music Treemap - Realtime */}
+        <section className="mb-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
           <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-[#4ade80]" />
                 <span className="text-[10px] sm:text-xs font-medium text-white">Top performing music</span>
+                <span className="text-[7px] text-[#4ade80] animate-pulse">● LIVE</span>
               </div>
               <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
                 {['Now', '7D', '1M'].map(t => (
@@ -336,17 +367,20 @@ const GlobalHeatmap = () => {
                   style={{ minHeight: i < 2 ? '70px' : '35px' }}
                 >
                   <p className="text-[8px] sm:text-[9px] font-semibold text-white truncate">{song.title.slice(0, 10)}</p>
-                  <p className="text-[7px] sm:text-[8px] text-[#4ade80]">+{song.change24h}%</p>
+                  <p className="text-[7px] sm:text-[8px] text-[#4ade80]">+{song.change24h.toFixed(1)}%</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Top 99 Music Leaderboard */}
-        <section className="mb-6">
+        {/* Top 99 Music Leaderboard - Realtime */}
+        <section className="mb-6 animate-fade-in" style={{ animationDelay: '0.3s' }}>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[10px] sm:text-xs font-medium text-white">🏆 Top 99 Music Leaderboard</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-[10px] sm:text-xs font-medium text-white">🏆 Top 99 Music Leaderboard</h3>
+              <span className="text-[7px] text-[#4ade80] animate-pulse">● LIVE</span>
+            </div>
             <button 
               onClick={() => setShowAllLeaderboard(!showAllLeaderboard)}
               className="text-[9px] text-white/50 hover:text-white flex items-center gap-1"
@@ -363,31 +397,43 @@ const GlobalHeatmap = () => {
               <div className="col-span-2 hidden sm:block">Artist</div>
               <div className="col-span-2">Listeners</div>
               <div className="col-span-2">24h</div>
-              <div className="col-span-3 sm:col-span-2 text-right">Score</div>
+              <div className="col-span-3 sm:col-span-2 text-right">Momentum</div>
             </div>
             
-            {/* Table Rows */}
-            <div className="divide-y divide-white/5">
-              {(showAllLeaderboard ? mockSongs : mockSongs.slice(0, 15)).map((song) => (
-                <div 
+            {/* Table Body */}
+            <div className={`${showAllLeaderboard ? 'max-h-[600px]' : 'max-h-[400px]'} overflow-y-auto`}>
+              {(showAllLeaderboard ? mockSongs : mockSongs.slice(0, 20)).map((song) => (
+                <div
                   key={song.id}
                   onClick={() => navigate(`/global-heatmap/${song.id}`)}
-                  className="grid grid-cols-12 gap-2 px-3 py-2 hover:bg-white/[0.03] cursor-pointer transition-colors items-center"
+                  className="grid grid-cols-12 gap-2 px-3 py-2 hover:bg-white/[0.03] cursor-pointer border-b border-white/5 last:border-0 items-center transition-all"
                 >
-                  <div className="col-span-1 text-[9px] sm:text-[10px] text-white/50 font-medium">{song.rank}</div>
-                  <div className="col-span-4 sm:col-span-3 flex items-center gap-2">
-                    <img src={song.artwork} alt="" className="w-6 h-6 sm:w-8 sm:h-8 rounded object-cover" />
-                    <span className="text-[9px] sm:text-[10px] font-medium text-white truncate">{song.title}</span>
+                  <div className="col-span-1 flex items-center gap-1">
+                    <span className={`text-[9px] font-medium ${song.rank <= 3 ? 'text-yellow-400' : 'text-white/60'}`}>
+                      {song.rank}
+                    </span>
+                    {song.trend === 'up' && <TrendingUp className="h-2.5 w-2.5 text-[#4ade80]" />}
+                    {song.trend === 'down' && <TrendingDown className="h-2.5 w-2.5 text-red-400" />}
                   </div>
-                  <div className="col-span-2 hidden sm:block text-[9px] text-white/50 truncate">{song.artist}</div>
-                  <div className="col-span-2 text-[9px] sm:text-[10px] text-white">{song.listeners}</div>
+                  <div className="col-span-4 sm:col-span-3 flex items-center gap-2">
+                    <img src={song.artwork} alt="" className="w-7 h-7 rounded object-cover" />
+                    <span className="text-[9px] font-medium text-white truncate">{song.title}</span>
+                  </div>
+                  <div className="col-span-2 hidden sm:block text-[9px] text-white/60 truncate">{song.artist}</div>
+                  <div className="col-span-2 text-[9px] text-white font-medium">{song.listeners}</div>
                   <div className="col-span-2">
-                    <span className={`text-[9px] sm:text-[10px] font-medium ${song.change24h >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
-                      {song.change24h >= 0 ? '+' : ''}{song.change24h}%
+                    <span className={`text-[9px] font-medium ${song.change24h >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
+                      {song.change24h >= 0 ? '+' : ''}{song.change24h.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="col-span-3 sm:col-span-2 text-right text-[9px] sm:text-[10px] text-white font-medium">
-                    {(song.attentionScore / 1000).toFixed(1)}k
+                  <div className="col-span-3 sm:col-span-2 text-right">
+                    <span className={`text-[8px] px-1.5 py-0.5 rounded-full ${
+                      song.momentum === 'surging' ? 'bg-[#4ade80]/20 text-[#4ade80]' :
+                      song.momentum === 'cooling' ? 'bg-red-500/20 text-red-400' :
+                      'bg-white/10 text-white/50'
+                    }`}>
+                      {song.momentum}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -395,47 +441,6 @@ const GlobalHeatmap = () => {
           </div>
         </section>
       </main>
-
-      {/* Song Detail Sheet */}
-      <Sheet open={!!selectedSong} onOpenChange={() => setSelectedSong(null)}>
-        <SheetContent className="bg-black border-white/10 w-full sm:max-w-md">
-          {selectedSong && (
-            <>
-              <SheetHeader className="mb-4">
-                <div className="flex items-center gap-3">
-                  <img src={selectedSong.artwork} alt={selectedSong.title} className="w-14 h-14 rounded-xl object-cover" />
-                  <div>
-                    <SheetTitle className="text-white text-base">{selectedSong.title}</SheetTitle>
-                    <p className="text-[10px] text-white/50">{selectedSong.artist}</p>
-                  </div>
-                </div>
-              </SheetHeader>
-              
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-white/[0.03] rounded-lg p-3">
-                    <p className="text-[9px] text-white/40 mb-1">Listeners</p>
-                    <p className="text-sm font-bold text-white">{selectedSong.listeners}</p>
-                  </div>
-                  <div className="bg-white/[0.03] rounded-lg p-3">
-                    <p className="text-[9px] text-white/40 mb-1">24h Change</p>
-                    <p className={`text-sm font-bold ${selectedSong.change24h >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
-                      {selectedSong.change24h >= 0 ? '+' : ''}{selectedSong.change24h}%
-                    </p>
-                  </div>
-                </div>
-
-                <Button
-                  className="w-full bg-[#4ade80] text-black hover:bg-[#4ade80]/90 text-[10px] h-9"
-                  onClick={() => navigate(`/global-heatmap/${selectedSong.id}`)}
-                >
-                  View Full Details
-                </Button>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
     </div>
   );
 };

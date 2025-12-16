@@ -15,12 +15,9 @@ import card2 from '@/assets/card-2.png';
 import card3 from '@/assets/card-3.png';
 import card4 from '@/assets/card-4.png';
 import card5 from '@/assets/card-5.png';
-import AnimatedCD from '@/components/AnimatedCD';
 import AnimatedDice from '@/components/AnimatedDice';
 import globe from '@/assets/globe.png';
-import wavegrower from '@/assets/wavegrower.gif';
 import download4 from '@/assets/download_4.gif';
-import beatpulseBg from '@/assets/beatpulse-bg.gif';
 import exploreInspire from '@/assets/explore-inspire.gif';
 const Index = () => {
   const [playingTrack, setPlayingTrack] = useState<number | null>(null);
@@ -205,26 +202,51 @@ const Index = () => {
         </div>
       </section>
 
-      {/* BeatPulse Waveform Matcher Section */}
-      <section className="py-8 lg:py-12 px-4 sm:px-6 border-t border-foreground/5 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20" style={{
-        backgroundImage: `url(${beatpulseBg})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
-      }} />
-        <div className="container mx-auto max-w-7xl relative z-10">
-          <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-12">
-            <div className="flex-1 space-y-4 lg:space-y-6 text-center lg:text-left">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
-                BeatPulse Waveform Matcher
-              </h2>
-              <p className="text-sm sm:text-base lg:text-lg text-foreground/70 leading-relaxed">
-                A waveform matching protocol that helps artists find beat that perfectly match their vocal energy by analysing pitch and Cadence with AI. It creates a frictionless experience where every uploaded vocal is matched with the ideal beat structure, tempo pocket, and dynamic mood using AI-powered waveform alignment.
-              </p>
+      {/* Snap Campaign & Market Events Section */}
+      <section className="py-8 lg:py-12 px-4 sm:px-6 border-t border-foreground/5">
+        <div className="container mx-auto max-w-7xl">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
+              🎵 SNAPS Campaign
+            </h2>
+            <p className="text-sm sm:text-base lg:text-lg text-foreground/70 max-w-2xl mx-auto">
+              Real-time music market events and top performing tracks. Stay ahead with live data on trending songs.
+            </p>
+          </div>
+
+          {/* Market Events */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {[
+              { title: 'Midnight Rush', artist: 'Nova Echo', event: 'Major playlist addition', change: '+15.2%', time: '36 min ago' },
+              { title: 'Electric Dreams', artist: 'Synthwave Kid', event: 'Viral TikTok trend', change: '+12.8%', time: '42 min ago' },
+              { title: 'Afro Vibes', artist: 'Lagos Sound', event: 'Radio momentum gain', change: '+28.5%', time: '1 hr ago' },
+              { title: 'K-Pop Fire', artist: 'Seoul Stars', event: '10M video views', change: '+18.3%', time: '2 hrs ago' },
+            ].map((event, i) => (
+              <div key={i} className="bg-foreground/5 rounded-xl p-4 hover:bg-foreground/10 transition-colors">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-medium text-foreground">{event.title}</span>
+                  <span className="text-xs text-green-400">{event.change}</span>
+                </div>
+                <p className="text-xs text-foreground/60 mb-1">{event.artist}</p>
+                <p className="text-xs text-foreground/50">{event.event}</p>
+                <p className="text-[10px] text-foreground/30 mt-2">{event.time}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Top Performing Music */}
+          <div className="bg-foreground/5 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-sm font-semibold text-foreground">🔥 Top Performing Music</span>
+              <span className="text-[10px] text-green-400 animate-pulse">● LIVE</span>
             </div>
-            <div className="flex-1 flex justify-center w-full max-w-sm lg:max-w-none">
-              <AnimatedCD />
+            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+              {['Midnight Rush', 'Electric Dreams', 'Golden Hour', 'Afro Vibes', 'K-Pop Fire', 'Summer Feels', 'Tokyo Drift', 'Neon Nights'].map((title, i) => (
+                <div key={i} className={`bg-green-500/20 hover:bg-green-500/30 rounded-lg p-2 cursor-pointer transition-all ${i < 2 ? 'col-span-2 row-span-2' : ''}`}>
+                  <p className="text-[9px] font-semibold text-foreground truncate">{title}</p>
+                  <p className="text-[8px] text-green-400">+{(15 - i * 1.5).toFixed(1)}%</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
