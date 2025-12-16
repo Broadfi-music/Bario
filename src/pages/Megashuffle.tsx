@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, BarChart3, Play, Pause, ChevronLeft, Shuffle, Heart, Instagram, Twitter, Music } from 'lucide-react';
+import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, Play, Pause, ChevronLeft, Shuffle, Heart, Instagram, Twitter, Music, TrendingUp, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,6 +19,60 @@ const mockArtists = [
   { id: 8, name: 'Yuki Beats', genre: 'J-Pop', avatar: '/src/assets/track-2.jpeg', tagline: 'Tokyo vibes, worldwide appeal', followers: '76.8K' },
 ];
 
+const trendingSongs = [
+  { id: 1, title: 'Midnight Dreams', artist: 'Nova Echo', artwork: '/src/assets/card-1.png', plays: '2.4M', duration: '3:24' },
+  { id: 2, title: 'Electric Soul', artist: 'Synthwave Kid', artwork: '/src/assets/card-2.png', plays: '1.8M', duration: '3:52' },
+  { id: 3, title: 'Lagos Nights', artist: 'Lagos Sound', artwork: '/src/assets/card-5.png', plays: '1.5M', duration: '4:01' },
+  { id: 4, title: 'Seoul Sunset', artist: 'Seoul Stars', artwork: '/src/assets/track-3.jpeg', plays: '1.2M', duration: '3:33' },
+  { id: 5, title: 'Ocean Breeze', artist: 'Beach House', artwork: '/src/assets/track-1.jpeg', plays: '980K', duration: '4:15' },
+  { id: 6, title: 'Club Anthem', artist: 'DJ Pulse', artwork: '/src/assets/card-4.png', plays: '876K', duration: '3:45' },
+];
+
+const popularArtists = [
+  { id: 1, name: 'Nova Echo', genre: 'Synth-Pop', avatar: '/src/assets/card-1.png', monthlyListeners: '4.2M' },
+  { id: 2, name: 'Lagos Sound', genre: 'Afrobeats', avatar: '/src/assets/card-5.png', monthlyListeners: '3.8M' },
+  { id: 3, name: 'Seoul Stars', genre: 'K-Pop', avatar: '/src/assets/track-3.jpeg', monthlyListeners: '6.1M' },
+  { id: 4, name: 'DJ Pulse', genre: 'House', avatar: '/src/assets/card-4.png', monthlyListeners: '2.9M' },
+  { id: 5, name: 'Beach House', genre: 'Indie', avatar: '/src/assets/track-1.jpeg', monthlyListeners: '2.4M' },
+  { id: 6, name: 'Synthwave Kid', genre: 'Electronic', avatar: '/src/assets/card-2.png', monthlyListeners: '1.9M' },
+];
+
+const generateRankingData = () => [
+  { id: 1, rank: 1, title: 'Viral Sensation', artist: 'Nova Echo', artwork: '/src/assets/card-1.png', listeners: 2456789, change: 12, trend: 'up' },
+  { id: 2, rank: 2, title: 'Summer Anthem', artist: 'Lagos Sound', artwork: '/src/assets/card-5.png', listeners: 2234567, change: 8, trend: 'up' },
+  { id: 3, rank: 3, title: 'Night Drive', artist: 'Synthwave Kid', artwork: '/src/assets/card-2.png', listeners: 1987654, change: -3, trend: 'down' },
+  { id: 4, rank: 4, title: 'K-Pop Dreams', artist: 'Seoul Stars', artwork: '/src/assets/track-3.jpeg', listeners: 1876543, change: 15, trend: 'up' },
+  { id: 5, rank: 5, title: 'Beach Vibes', artist: 'Beach House', artwork: '/src/assets/track-1.jpeg', listeners: 1654321, change: -2, trend: 'down' },
+  { id: 6, rank: 6, title: 'Club Banger', artist: 'DJ Pulse', artwork: '/src/assets/card-4.png', listeners: 1543210, change: 5, trend: 'up' },
+  { id: 7, rank: 7, title: 'Country Roads', artist: 'Amber Waves', artwork: '/src/assets/card-3.png', listeners: 1432109, change: -1, trend: 'down' },
+  { id: 8, rank: 8, title: 'Tokyo Lights', artist: 'Yuki Beats', artwork: '/src/assets/track-2.jpeg', listeners: 1321098, change: 9, trend: 'up' },
+];
+
+const newArtistsRanking = [
+  { id: 1, rank: 1, name: 'Rising Star', genre: 'Pop', avatar: '/src/assets/card-1.png', listeners: 567890, change: 45, trend: 'up' },
+  { id: 2, rank: 2, name: 'Fresh Beats', genre: 'Hip Hop', avatar: '/src/assets/card-2.png', listeners: 456789, change: 32, trend: 'up' },
+  { id: 3, rank: 3, name: 'Indie Dreams', genre: 'Indie', avatar: '/src/assets/track-1.jpeg', listeners: 345678, change: 18, trend: 'up' },
+  { id: 4, rank: 4, name: 'EDM King', genre: 'EDM', avatar: '/src/assets/card-4.png', listeners: 234567, change: -5, trend: 'down' },
+  { id: 5, rank: 5, name: 'Soul Sister', genre: 'R&B', avatar: '/src/assets/card-5.png', listeners: 198765, change: 22, trend: 'up' },
+];
+
+const top50Songs = [
+  { id: 1, rank: 1, title: 'Global Hit #1', artist: 'Nova Echo', artwork: '/src/assets/card-1.png', listeners: 8765432, change: 0, trend: 'same' },
+  { id: 2, rank: 2, title: 'Chart Topper', artist: 'Lagos Sound', artwork: '/src/assets/card-5.png', listeners: 7654321, change: 2, trend: 'up' },
+  { id: 3, rank: 3, title: 'Platinum Dreams', artist: 'Seoul Stars', artwork: '/src/assets/track-3.jpeg', listeners: 6543210, change: -1, trend: 'down' },
+  { id: 4, rank: 4, title: 'Gold Record', artist: 'DJ Pulse', artwork: '/src/assets/card-4.png', listeners: 5432109, change: 3, trend: 'up' },
+  { id: 5, rank: 5, title: 'Diamond Status', artist: 'Beach House', artwork: '/src/assets/track-1.jpeg', listeners: 4321098, change: -2, trend: 'down' },
+  { id: 6, rank: 6, title: 'Streaming King', artist: 'Synthwave Kid', artwork: '/src/assets/card-2.png', listeners: 3210987, change: 1, trend: 'up' },
+  { id: 7, rank: 7, title: 'Radio Favorite', artist: 'Amber Waves', artwork: '/src/assets/card-3.png', listeners: 2109876, change: 4, trend: 'up' },
+  { id: 8, rank: 8, title: 'Viral Moment', artist: 'Yuki Beats', artwork: '/src/assets/track-2.jpeg', listeners: 1098765, change: -3, trend: 'down' },
+];
+
+const formatListeners = (num: number) => {
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(0)}K`;
+  return num.toString();
+};
+
 const Megashuffle = () => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
@@ -28,12 +82,36 @@ const Megashuffle = () => {
   const [currentArtist, setCurrentArtist] = useState(mockArtists[0]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [shuffleCount, setShuffleCount] = useState(0);
+  const [rankingData, setRankingData] = useState(generateRankingData());
+  const [playingTrackId, setPlayingTrackId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
+
+  // Realtime ranking updates simulation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRankingData(prev => {
+        const updated = [...prev];
+        // Randomly adjust listeners and rankings
+        updated.forEach(item => {
+          const change = Math.floor(Math.random() * 10000) - 5000;
+          item.listeners = Math.max(100000, item.listeners + change);
+          item.change = Math.floor(Math.random() * 20) - 5;
+          item.trend = item.change > 0 ? 'up' : item.change < 0 ? 'down' : 'same';
+        });
+        // Re-sort by listeners
+        updated.sort((a, b) => b.listeners - a.listeners);
+        updated.forEach((item, index) => item.rank = index + 1);
+        return updated;
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -65,6 +143,10 @@ const Megashuffle = () => {
     startShuffle();
   };
 
+  const handlePlayTrack = (trackId: number) => {
+    setPlayingTrackId(playingTrackId === trackId ? null : trackId);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -81,9 +163,7 @@ const Megashuffle = () => {
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Library, label: 'Library', path: '/dashboard/library' },
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
-    { icon: Sparkles, label: 'Beatpulse', path: '/dashboard/beatpulse' },
     { icon: Sparkles, label: 'Megashuffle', path: '/dashboard/megashuffle' },
-    { icon: BarChart3, label: 'Billboard', path: '/dashboard/billboard' },
     { icon: Gift, label: 'Reward & Earn', path: '/dashboard/rewards' },
   ];
 
@@ -202,41 +282,212 @@ const Megashuffle = () => {
             </DropdownMenu>
           </div>
 
-          {/* Shuffle Content - Compact */}
-          <div className="flex flex-col items-center justify-center py-8">
-            {/* Shuffle Button */}
-            <div className="relative mb-4">
+          {/* Shuffle Section - Compact */}
+          <div className="flex flex-col items-center justify-center py-6 mb-6">
+            <div className="relative mb-3">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full blur-lg opacity-40 animate-pulse" />
               <Button
                 onClick={startShuffle}
                 disabled={isShuffling}
-                className="relative h-12 px-6 text-xs font-bold bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white rounded-full shadow-xl transition-all transform hover:scale-105"
+                className="relative h-10 px-5 text-xs font-bold bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white rounded-full shadow-xl transition-all transform hover:scale-105"
               >
                 <Shuffle className={`h-4 w-4 mr-2 ${isShuffling ? 'animate-spin' : ''}`} />
                 {isShuffling ? 'Shuffling...' : 'Shuffle'}
               </Button>
             </div>
-
-            <p className="text-[10px] text-muted-foreground mb-3">Shuffles: {shuffleCount}</p>
-
-            {/* Stats */}
-            <div className="flex items-center gap-4 text-center">
-              <div>
-                <p className="text-sm font-bold text-foreground">50K+</p>
-                <p className="text-[8px] text-muted-foreground">Artists</p>
-              </div>
-              <div className="w-px h-4 bg-border" />
-              <div>
-                <p className="text-sm font-bold text-foreground">2M+</p>
-                <p className="text-[8px] text-muted-foreground">Shuffles</p>
-              </div>
-              <div className="w-px h-4 bg-border" />
-              <div>
-                <p className="text-sm font-bold text-foreground">150+</p>
-                <p className="text-[8px] text-muted-foreground">Countries</p>
-              </div>
-            </div>
+            <p className="text-[10px] text-muted-foreground">Shuffles: {shuffleCount}</p>
           </div>
+
+          {/* Trending Songs - Spotify Style */}
+          <section className="mb-6">
+            <h2 className="text-sm font-bold text-foreground mb-3">Trending Songs</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {trendingSongs.map((song) => (
+                <Card 
+                  key={song.id} 
+                  className="bg-card hover:bg-accent/50 transition-colors cursor-pointer p-2 group"
+                  onClick={() => handlePlayTrack(song.id)}
+                >
+                  <div className="relative aspect-square mb-2 rounded-md overflow-hidden">
+                    <img src={song.artwork} alt={song.title} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+                        {playingTrackId === song.id ? (
+                          <Pause className="h-4 w-4 text-black" />
+                        ) : (
+                          <Play className="h-4 w-4 text-black ml-0.5" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <h3 className="text-xs font-medium text-foreground truncate">{song.title}</h3>
+                  <p className="text-[10px] text-muted-foreground truncate">{song.artist}</p>
+                  <p className="text-[9px] text-muted-foreground/60">{song.plays} plays</p>
+                </Card>
+              ))}
+            </div>
+          </section>
+
+          {/* Popular Artists - Spotify Style */}
+          <section className="mb-6">
+            <h2 className="text-sm font-bold text-foreground mb-3">Popular Artists</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {popularArtists.map((artist) => (
+                <Card 
+                  key={artist.id} 
+                  className="bg-card hover:bg-accent/50 transition-colors cursor-pointer p-3 text-center group"
+                >
+                  <div className="relative w-16 h-16 mx-auto mb-2">
+                    <img 
+                      src={artist.avatar} 
+                      alt={artist.name} 
+                      className="w-full h-full rounded-full object-cover shadow-lg"
+                    />
+                    <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Play className="h-5 w-5 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-xs font-medium text-foreground truncate">{artist.name}</h3>
+                  <p className="text-[10px] text-muted-foreground">{artist.genre}</p>
+                  <p className="text-[9px] text-muted-foreground/60">{artist.monthlyListeners} monthly</p>
+                </Card>
+              ))}
+            </div>
+          </section>
+
+          {/* Realtime Rankings - Audiomack Style */}
+          <section className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-foreground">🔥 Hot Right Now</h2>
+              <span className="text-[9px] text-green-500 animate-pulse">● LIVE</span>
+            </div>
+            <Card className="bg-card border border-border overflow-hidden">
+              {rankingData.map((item, index) => (
+                <div 
+                  key={item.id}
+                  className={`flex items-center gap-3 p-2.5 hover:bg-accent/50 transition-colors cursor-pointer ${index !== rankingData.length - 1 ? 'border-b border-border' : ''}`}
+                  onClick={() => handlePlayTrack(item.id + 100)}
+                >
+                  <div className="w-6 text-center">
+                    <span className={`text-xs font-bold ${item.rank <= 3 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
+                      {item.rank}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 w-8">
+                    {item.trend === 'up' && <TrendingUp className="h-3 w-3 text-green-500" />}
+                    {item.trend === 'down' && <TrendingDown className="h-3 w-3 text-red-500" />}
+                    <span className={`text-[9px] ${item.trend === 'up' ? 'text-green-500' : item.trend === 'down' ? 'text-red-500' : 'text-muted-foreground'}`}>
+                      {item.change > 0 ? `+${item.change}` : item.change}
+                    </span>
+                  </div>
+                  <div className="relative w-10 h-10 flex-shrink-0 group">
+                    <img src={item.artwork} alt={item.title} className="w-full h-full rounded object-cover" />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded">
+                      {playingTrackId === item.id + 100 ? (
+                        <Pause className="h-4 w-4 text-white" />
+                      ) : (
+                        <Play className="h-4 w-4 text-white" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-medium text-foreground truncate">{item.title}</h4>
+                    <p className="text-[10px] text-muted-foreground truncate">{item.artist}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-medium text-foreground">{formatListeners(item.listeners)}</p>
+                    <p className="text-[8px] text-muted-foreground">listeners</p>
+                  </div>
+                </div>
+              ))}
+            </Card>
+          </section>
+
+          {/* New Artists - Audiomack Style */}
+          <section className="mb-6">
+            <h2 className="text-sm font-bold text-foreground mb-3">🌟 Rising New Artists</h2>
+            <Card className="bg-card border border-border overflow-hidden">
+              {newArtistsRanking.map((artist, index) => (
+                <div 
+                  key={artist.id}
+                  className={`flex items-center gap-3 p-2.5 hover:bg-accent/50 transition-colors cursor-pointer ${index !== newArtistsRanking.length - 1 ? 'border-b border-border' : ''}`}
+                >
+                  <div className="w-6 text-center">
+                    <span className={`text-xs font-bold ${artist.rank <= 3 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
+                      {artist.rank}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 w-8">
+                    {artist.trend === 'up' && <TrendingUp className="h-3 w-3 text-green-500" />}
+                    {artist.trend === 'down' && <TrendingDown className="h-3 w-3 text-red-500" />}
+                    <span className={`text-[9px] ${artist.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+                      {artist.change > 0 ? `+${artist.change}` : artist.change}
+                    </span>
+                  </div>
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={artist.avatar} />
+                    <AvatarFallback>{artist.name[0]}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-medium text-foreground truncate">{artist.name}</h4>
+                    <p className="text-[10px] text-muted-foreground">{artist.genre}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-medium text-foreground">{formatListeners(artist.listeners)}</p>
+                    <p className="text-[8px] text-muted-foreground">listeners</p>
+                  </div>
+                </div>
+              ))}
+            </Card>
+          </section>
+
+          {/* Top 50 - Audiomack Style */}
+          <section className="mb-6">
+            <h2 className="text-sm font-bold text-foreground mb-3">🏆 Top 50</h2>
+            <Card className="bg-card border border-border overflow-hidden">
+              {top50Songs.map((song, index) => (
+                <div 
+                  key={song.id}
+                  className={`flex items-center gap-3 p-2.5 hover:bg-accent/50 transition-colors cursor-pointer ${index !== top50Songs.length - 1 ? 'border-b border-border' : ''}`}
+                  onClick={() => handlePlayTrack(song.id + 200)}
+                >
+                  <div className="w-6 text-center">
+                    <span className={`text-xs font-bold ${song.rank <= 3 ? 'text-yellow-500' : 'text-muted-foreground'}`}>
+                      {song.rank}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 w-8">
+                    {song.trend === 'up' && <TrendingUp className="h-3 w-3 text-green-500" />}
+                    {song.trend === 'down' && <TrendingDown className="h-3 w-3 text-red-500" />}
+                    {song.trend === 'same' && <span className="text-[9px] text-muted-foreground">—</span>}
+                    {song.trend !== 'same' && (
+                      <span className={`text-[9px] ${song.trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>
+                        {song.change > 0 ? `+${song.change}` : song.change}
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative w-10 h-10 flex-shrink-0 group">
+                    <img src={song.artwork} alt={song.title} className="w-full h-full rounded object-cover" />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded">
+                      {playingTrackId === song.id + 200 ? (
+                        <Pause className="h-4 w-4 text-white" />
+                      ) : (
+                        <Play className="h-4 w-4 text-white" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-medium text-foreground truncate">{song.title}</h4>
+                    <p className="text-[10px] text-muted-foreground truncate">{song.artist}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-medium text-foreground">{formatListeners(song.listeners)}</p>
+                    <p className="text-[8px] text-muted-foreground">listeners</p>
+                  </div>
+                </div>
+              ))}
+            </Card>
+          </section>
         </div>
 
         {/* Artist Popup */}
