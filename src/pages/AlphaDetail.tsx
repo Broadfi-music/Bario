@@ -1,14 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeft, Star, TrendingUp, TrendingDown, ExternalLink, Share2, Play,
-  Users, Brain, Zap, Clock, Target, Check, X, Trophy, ChevronLeft, ChevronRight, Music
+  Users, Brain, Zap, Clock, Target, Check, X, Trophy, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+
+// Platform Icons
+const SpotifyIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="#1DB954">
+    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+  </svg>
+);
+
+const AppleMusicIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="#FA243C">
+    <path d="M23.994 6.124c0-.738-.065-1.47-.24-2.19a4.93 4.93 0 00-.75-1.69 3.57 3.57 0 00-1.3-1.123 4.77 4.77 0 00-1.71-.51C19.01.5 17.86.5 17.14.5H6.85c-.72 0-1.87 0-2.86.11a4.77 4.77 0 00-1.71.51 3.57 3.57 0 00-1.3 1.124 4.93 4.93 0 00-.75 1.69C.07 4.64.005 5.37.005 6.11v11.78c0 .74.065 1.47.24 2.19.175.72.43 1.24.75 1.69.32.45.77.86 1.3 1.12.53.27 1.1.44 1.71.51.99.11 2.14.11 2.86.11h10.29c.72 0 1.87 0 2.86-.11a4.77 4.77 0 001.71-.51c.53-.26.98-.67 1.3-1.12.32-.45.575-.97.75-1.69.175-.72.24-1.45.24-2.19V6.124zm-6.23 6.49v5.4c0 .55-.27 1.01-.74 1.31-.31.2-.63.33-.98.4-.35.07-.72.11-1.09.02-.92-.21-1.56-.96-1.56-1.87 0-.91.64-1.67 1.56-1.88.37-.08.74-.05 1.09.02.23.05.46.13.67.24V9.9L11 10.77v7.66c0 .55-.27 1.01-.74 1.31-.31.2-.63.33-.98.4-.35.07-.72.11-1.09.02-.92-.21-1.56-.96-1.56-1.87 0-.91.64-1.67 1.56-1.88.37-.08.74-.05 1.09.02.23.05.45.13.67.24V8.44c0-.42.22-.79.57-.99.35-.21.78-.23 1.15-.07l5.83 2.18c.48.18.8.64.8 1.15v1.91z"/>
+  </svg>
+);
+
+const DeezerIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="#FEAA2D">
+    <path d="M18.81 4.16v3.03H24V4.16h-5.19zM6.27 8.38v3.027h5.189V8.38h-5.19zm12.54 0v3.027H24V8.38h-5.19zM0 12.59v3.027h5.188v-3.028H0zm6.27 0v3.027h5.189v-3.028h-5.19zm6.27 0v3.027h5.19v-3.028h-5.19zm6.27 0v3.027H24v-3.028h-5.19zM0 16.81v3.029h5.188v-3.03H0zm6.27 0v3.029h5.189v-3.03h-5.19zm6.27 0v3.029h5.19v-3.03h-5.19zm6.27 0v3.029H24v-3.03h-5.19z"/>
+  </svg>
+);
+
+const AudiomackIcon = () => (
+  <svg viewBox="0 0 24 24" className="w-4 h-4" fill="#FFA200">
+    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.75 16.824c-.26.26-.682.26-.943 0l-4.807-4.807-4.807 4.807a.667.667 0 01-.943-.943L11.057 11.074 6.25 6.267a.667.667 0 01.943-.943L12 10.131l4.807-4.807a.667.667 0 01.943.943L12.943 11.074l4.807 4.807c.26.26.26.682 0 .943z"/>
+  </svg>
+);
 
 // Mock data
 const mockMarkets = [
@@ -68,7 +93,32 @@ const AlphaDetail = () => {
   const [confidence, setConfidence] = useState<'low' | 'medium' | 'high'>('medium');
   const [showAllVoices, setShowAllVoices] = useState(false);
   
-  const market = mockMarkets.find(m => m.id === Number(id)) || mockMarkets[0];
+  const initialMarket = mockMarkets.find(m => m.id === Number(id)) || mockMarkets[0];
+  const [market, setMarket] = useState(initialMarket);
+  const [chartData, setChartData] = useState(initialMarket.historyData);
+
+  // Real-time data updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMarket(prev => ({
+        ...prev,
+        probability: Math.max(5, Math.min(95, prev.probability + (Math.random() - 0.5) * 3)),
+        fanProbability: Math.max(5, Math.min(95, prev.fanProbability + (Math.random() - 0.5) * 2)),
+        aiProbability: Math.max(5, Math.min(95, prev.aiProbability + (Math.random() - 0.5) * 2)),
+        change24h: prev.change24h + (Math.random() - 0.5) * 1.5,
+        listeners: `${(parseFloat(prev.listeners.replace(/[KM]/g, '')) + (Math.random() - 0.3) * 0.05).toFixed(1)}${prev.listeners.includes('M') ? 'M' : 'K'}`,
+        reach24h: `${(parseFloat(prev.reach24h.replace('K', '')) + (Math.random() - 0.3) * 2).toFixed(2)}K`,
+        totalForecasts: prev.totalForecasts + Math.floor(Math.random() * 10),
+      }));
+      
+      // Update chart data
+      setChartData(prev => {
+        const newData = [...prev.slice(1), Math.max(10, Math.min(90, prev[prev.length - 1] + (Math.random() - 0.5) * 8))];
+        return newData;
+      });
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleInteraction = (action: string, callback?: () => void) => {
     if (!user) {
@@ -142,13 +192,16 @@ const AlphaDetail = () => {
                 {/* Streaming Platforms */}
                 <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5">
                   <a href="#" className="flex items-center justify-center w-8 h-8 rounded-full bg-[#1DB954]/20 hover:bg-[#1DB954]/30 transition-colors">
-                    <Music className="h-4 w-4 text-[#1DB954]" />
+                    <SpotifyIcon />
                   </a>
                   <a href="#" className="flex items-center justify-center w-8 h-8 rounded-full bg-[#FA243C]/20 hover:bg-[#FA243C]/30 transition-colors">
-                    <Music className="h-4 w-4 text-[#FA243C]" />
+                    <AppleMusicIcon />
                   </a>
-                  <a href="#" className="flex items-center justify-center w-8 h-8 rounded-full bg-[#FF0000]/20 hover:bg-[#FF0000]/30 transition-colors">
-                    <Play className="h-4 w-4 text-[#FF0000]" />
+                  <a href="#" className="flex items-center justify-center w-8 h-8 rounded-full bg-[#FEAA2D]/20 hover:bg-[#FEAA2D]/30 transition-colors">
+                    <DeezerIcon />
+                  </a>
+                  <a href="#" className="flex items-center justify-center w-8 h-8 rounded-full bg-[#FFA200]/20 hover:bg-[#FFA200]/30 transition-colors">
+                    <AudiomackIcon />
                   </a>
                 </div>
                 
@@ -314,12 +367,15 @@ const AlphaDetail = () => {
 
               {/* Charts */}
               <Card className="bg-white/[0.02] border-white/5 p-4">
-                <h3 className="text-[10px] font-medium text-white mb-4">Probability over time</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[10px] font-medium text-white">Probability over time</h3>
+                  <span className="text-[7px] text-purple-400 animate-pulse">● realtime</span>
+                </div>
                 <div className="h-40 bg-white/[0.02] rounded-xl flex items-end justify-around p-4">
-                  {market.historyData.map((value, i) => (
+                  {chartData.map((value, i) => (
                     <div key={i} className="flex flex-col items-center gap-1">
                       <div 
-                        className="w-5 sm:w-6 bg-gradient-to-t from-purple-500/50 to-purple-500 rounded-t transition-all"
+                        className="w-5 sm:w-6 bg-gradient-to-t from-purple-500/50 to-purple-500 rounded-t transition-all duration-500"
                         style={{ height: `${value}%` }}
                       />
                       <span className="text-[7px] text-white/30">{i + 1}d</span>
