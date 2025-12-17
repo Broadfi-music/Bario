@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.get-track]
 verify_jwt = false
+
+[functions.heatmap-sync]
+verify_jwt = false
+
+[functions.heatmap-tracks]
+verify_jwt = false
+
+[functions.heatmap-track-detail]
+verify_jwt = false

@@ -35,6 +35,302 @@ export type Database = {
         }
         Relationships: []
       }
+      heatmap_artists: {
+        Row: {
+          audius_id: string | null
+          country: string | null
+          created_at: string
+          deezer_id: string | null
+          followers: number | null
+          id: string
+          image_url: string | null
+          itunes_id: string | null
+          lastfm_mbid: string | null
+          name: string
+          spotify_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          audius_id?: string | null
+          country?: string | null
+          created_at?: string
+          deezer_id?: string | null
+          followers?: number | null
+          id?: string
+          image_url?: string | null
+          itunes_id?: string | null
+          lastfm_mbid?: string | null
+          name: string
+          spotify_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audius_id?: string | null
+          country?: string | null
+          created_at?: string
+          deezer_id?: string | null
+          followers?: number | null
+          id?: string
+          image_url?: string | null
+          itunes_id?: string | null
+          lastfm_mbid?: string | null
+          name?: string
+          spotify_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      heatmap_smart_feed_events: {
+        Row: {
+          created_at: string
+          description: string | null
+          event_type: string
+          id: string
+          source: string | null
+          title: string
+          track_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          event_type: string
+          id?: string
+          source?: string | null
+          title: string
+          track_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          source?: string | null
+          title?: string
+          track_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "heatmap_smart_feed_events_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "heatmap_tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      heatmap_top_voices: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          delta: number | null
+          id: string
+          name: string
+          score: number | null
+          type: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          delta?: number | null
+          id?: string
+          name: string
+          score?: number | null
+          type?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          delta?: number | null
+          id?: string
+          name?: string
+          score?: number | null
+          type?: string | null
+        }
+        Relationships: []
+      }
+      heatmap_track_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          likes: number | null
+          sentiment: string | null
+          track_id: string | null
+          user_avatar: string | null
+          user_name: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          likes?: number | null
+          sentiment?: string | null
+          track_id?: string | null
+          user_avatar?: string | null
+          user_name: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          likes?: number | null
+          sentiment?: string | null
+          track_id?: string | null
+          user_avatar?: string | null
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "heatmap_track_comments_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "heatmap_tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      heatmap_track_metrics: {
+        Row: {
+          attention_score: number | null
+          attention_score_change_24h: number | null
+          attention_score_change_7d: number | null
+          audius_trending_rank: number | null
+          country_code: string | null
+          deezer_chart_position_country: number | null
+          deezer_chart_position_global: number | null
+          id: string
+          lastfm_listeners: number | null
+          lastfm_playcount: number | null
+          mindshare: number | null
+          spotify_popularity: number | null
+          timestamp: string
+          track_id: string | null
+          youtube_view_count: number | null
+        }
+        Insert: {
+          attention_score?: number | null
+          attention_score_change_24h?: number | null
+          attention_score_change_7d?: number | null
+          audius_trending_rank?: number | null
+          country_code?: string | null
+          deezer_chart_position_country?: number | null
+          deezer_chart_position_global?: number | null
+          id?: string
+          lastfm_listeners?: number | null
+          lastfm_playcount?: number | null
+          mindshare?: number | null
+          spotify_popularity?: number | null
+          timestamp?: string
+          track_id?: string | null
+          youtube_view_count?: number | null
+        }
+        Update: {
+          attention_score?: number | null
+          attention_score_change_24h?: number | null
+          attention_score_change_7d?: number | null
+          audius_trending_rank?: number | null
+          country_code?: string | null
+          deezer_chart_position_country?: number | null
+          deezer_chart_position_global?: number | null
+          id?: string
+          lastfm_listeners?: number | null
+          lastfm_playcount?: number | null
+          mindshare?: number | null
+          spotify_popularity?: number | null
+          timestamp?: string
+          track_id?: string | null
+          youtube_view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "heatmap_track_metrics_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "heatmap_tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      heatmap_tracks: {
+        Row: {
+          album_name: string | null
+          apple_url: string | null
+          artist_id: string | null
+          artist_name: string
+          audius_id: string | null
+          audius_url: string | null
+          cover_image_url: string | null
+          created_at: string
+          deezer_id: string | null
+          deezer_url: string | null
+          duration_ms: number | null
+          id: string
+          isrc: string | null
+          itunes_id: string | null
+          lastfm_mbid: string | null
+          preview_url: string | null
+          primary_genre: string | null
+          spotify_id: string | null
+          spotify_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          album_name?: string | null
+          apple_url?: string | null
+          artist_id?: string | null
+          artist_name: string
+          audius_id?: string | null
+          audius_url?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          deezer_id?: string | null
+          deezer_url?: string | null
+          duration_ms?: number | null
+          id?: string
+          isrc?: string | null
+          itunes_id?: string | null
+          lastfm_mbid?: string | null
+          preview_url?: string | null
+          primary_genre?: string | null
+          spotify_id?: string | null
+          spotify_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          album_name?: string | null
+          apple_url?: string | null
+          artist_id?: string | null
+          artist_name?: string
+          audius_id?: string | null
+          audius_url?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          deezer_id?: string | null
+          deezer_url?: string | null
+          duration_ms?: number | null
+          id?: string
+          isrc?: string | null
+          itunes_id?: string | null
+          lastfm_mbid?: string | null
+          preview_url?: string | null
+          primary_genre?: string | null
+          spotify_id?: string | null
+          spotify_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "heatmap_tracks_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "heatmap_artists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       likes: {
         Row: {
           created_at: string
