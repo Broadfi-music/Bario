@@ -97,15 +97,22 @@ export function useHeatmapTracks(limit = 99) {
 
   const fetchTracks = useCallback(async () => {
     try {
-      const response = await supabase.functions.invoke('heatmap-tracks', {
-        body: null,
-      });
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/heatmap-tracks?limit=${limit}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmJvaGhzeGxyZWZrb3VibWVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODY3NjAsImV4cCI6MjA4MDQ2Mjc2MH0.1Ms3xhguJjQ-bbPronddzgO-XCYcTZTkcWS-uUMg1q4'
+          }
+        }
+      );
 
-      if (response.error) {
-        throw new Error(response.error.message);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = response.data;
+      const data = await response.json();
       if (data?.tracks) {
         setTracks(data.tracks);
         setSummary(data.summary);
