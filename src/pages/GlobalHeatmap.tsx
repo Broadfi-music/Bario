@@ -1,179 +1,85 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Search, Star, TrendingUp, TrendingDown, ExternalLink, Filter, Clock,
-  Play, Users, ChevronRight, Sparkles, Zap, ChevronLeft
+  Play, Pause, Users, ChevronRight, Sparkles, Zap, ChevronLeft, Volume2, RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useHeatmapTracks, useSyncHeatmap, HeatmapTrack } from '@/hooks/useHeatmapData';
 
-// Types
-interface Song {
-  id: number;
-  rank: number;
-  trend: 'up' | 'down' | 'stable';
-  trendValue: number;
-  title: string;
-  artist: string;
-  artwork: string;
-  attentionScore: number;
-  momentum: 'surging' | 'cooling' | 'stable';
-  change24h: number;
-  listeners: string;
-  marketCap: string;
-  platforms: { name: string; percentage: number }[];
-  marketMoves: string[];
-  isWatchlisted: boolean;
-  twitterHandle?: string;
-  description?: string;
-}
+// Platform icons
+const SpotifyIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor">
+    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+  </svg>
+);
+
+const DeezerIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor">
+    <path d="M18.81 4.16v3.03H24V4.16h-5.19zM6.27 8.38v3.027h5.189V8.38H6.27zm12.54 0v3.027H24V8.38h-5.19zM6.27 12.594v3.027h5.189v-3.027H6.27zm6.271 0v3.027h5.19v-3.027h-5.19zm6.27 0v3.027H24v-3.027h-5.19zM0 16.81v3.029h5.19v-3.03H0zm6.27 0v3.029h5.189v-3.03H6.27zm6.271 0v3.029h5.19v-3.03h-5.19zm6.27 0v3.029H24v-3.03h-5.19z"/>
+  </svg>
+);
+
+const AppleMusicIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor">
+    <path d="M23.997 6.124c0-.738-.065-1.47-.24-2.19-.317-1.31-1.062-2.31-2.18-3.043C21.003.517 20.373.285 19.7.164c-.517-.093-1.038-.135-1.564-.15-.04-.003-.083-.01-.124-.013H5.988c-.152.01-.303.017-.455.026C4.786.07 4.043.15 3.34.428 2.004.958 1.04 1.88.475 3.208c-.192.448-.292.925-.363 1.408-.056.392-.088.785-.1 1.18 0 .032-.007.062-.01.093v12.223c.01.14.017.283.027.424.05.815.154 1.624.497 2.373.65 1.42 1.738 2.353 3.234 2.802.42.127.856.187 1.293.228.555.053 1.11.06 1.667.06h11.03c.525 0 1.048-.034 1.57-.1.823-.106 1.597-.35 2.296-.81.84-.553 1.472-1.287 1.88-2.208.186-.42.293-.87.37-1.324.113-.675.138-1.358.137-2.04-.002-3.8 0-7.595-.004-11.392z"/>
+  </svg>
+);
+
+const AudiusIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-3 w-3" fill="currentColor">
+    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 14.656c-.164.238-.41.376-.688.376H6.794c-.278 0-.524-.138-.688-.376-.164-.238-.205-.537-.114-.815l2.55-6.967c.123-.336.447-.56.802-.56h5.312c.355 0 .679.224.802.56l2.55 6.967c.091.278.05.577-.114.815z"/>
+  </svg>
+);
 
 interface MarketEvent {
   id: number;
-  song: Song;
+  song: HeatmapTrack;
   event: string;
   change: number;
   time: string;
   sources: string[];
 }
 
-// Generate 99 mock songs
-const generateMockSongs = (): Song[] => {
-  const baseSongs = [
-    { title: 'Midnight Rush', artist: 'Nova Echo', artwork: '/src/assets/card-1.png', twitterHandle: '@novaecho', description: 'Breakout synth-pop hit dominating charts globally' },
-    { title: 'Electric Dreams', artist: 'Synthwave Kid', artwork: '/src/assets/card-2.png', twitterHandle: '@synthwavekid', description: 'Retro-futuristic anthem trending worldwide' },
-    { title: 'Golden Hour', artist: 'Amber Waves', artwork: '/src/assets/card-3.png', twitterHandle: '@amberwaves', description: 'Country crossover gaining radio momentum' },
-    { title: 'Neon Nights', artist: 'DJ Pulse', artwork: '/src/assets/card-4.png', twitterHandle: '@djpulse', description: 'Electronic banger holding steady' },
-    { title: 'Afro Vibes', artist: 'Lagos Sound', artwork: '/src/assets/card-5.png', twitterHandle: '@lagossound', description: 'Afrobeats sensation breaking out globally' },
-    { title: 'Summer Feels', artist: 'Beach House', artwork: '/src/assets/track-1.jpeg', twitterHandle: '@beachhouseband', description: 'Dreamy indie vibes for summer' },
-    { title: 'Tokyo Drift', artist: 'Yuki Beats', artwork: '/src/assets/track-2.jpeg', twitterHandle: '@yukibeats', description: 'J-pop influenced electronic track' },
-    { title: 'K-Pop Fire', artist: 'Seoul Stars', artwork: '/src/assets/track-3.jpeg', twitterHandle: '@seoulstars', description: 'K-pop group dominating YouTube' },
-  ];
-  
-  const additionalTitles = [
-    'Moonlight Sonata', 'Urban Dreams', 'Desert Storm', 'Ocean Waves', 'Mountain High',
-    'City Lights', 'Starlight', 'Thunder Road', 'Crystal Clear', 'Velvet Sky',
-    'Neon Love', 'Dark Paradise', 'Wild Heart', 'Silver Lining', 'Golden Days',
-    'Midnight Sun', 'Blue Monday', 'Red Alert', 'Green Light', 'Purple Rain',
-    'Diamond Eyes', 'Fire & Ice', 'Sweet Escape', 'Lost in Time', 'Future Shock',
-    'Rhythm Nation', 'Soul Train', 'Dance Floor', 'Beat Drop', 'Bass Line',
-    'Melody Maker', 'Harmony', 'Symphony', 'Crescendo', 'Tempo',
-    'Groove Machine', 'Funk Master', 'Jazz Hands', 'Blues Brother', 'Rock Solid',
-    'Pop Culture', 'Hip Hop Hero', 'R&B Smooth', 'Country Road', 'Folk Tale',
-    'Indie Spirit', 'Alt Rock', 'Metal Head', 'Punk Rock', 'EDM Life',
-    'House Music', 'Techno Beat', 'Trance State', 'Dubstep Drop', 'Drum & Bass',
-    'Reggae Vibes', 'Latin Heat', 'Salsa Night', 'Bachata Love', 'Cumbia Flow',
-    'Afrobeat King', 'Amapiano Queen', 'Gqom Master', 'Kwaito Style', 'Highlife',
-    'Dancehall', 'Soca Party', 'Calypso Sun', 'Zouk Love', 'Kompa Direct',
-    'Bollywood Beat', 'Bhangra Blast', 'Qawwali Soul', 'Sufi Spirit', 'Raag Raga',
-    'J-Pop Star', 'K-Pop Dream', 'C-Pop Rising', 'V-Pop Wave', 'Thai Pop',
-    'Arabic Nights', 'Turkish Delight', 'Persian Dream', 'Israeli Beat', 'African Sun',
-    'Caribbean Wave', 'Island Time', 'Beach Vibes', 'Sunset Drive', 'Night Owl'
-  ];
-  
-  const artists = [
-    'Nova Echo', 'Synthwave Kid', 'Amber Waves', 'DJ Pulse', 'Lagos Sound',
-    'Beach House', 'Yuki Beats', 'Seoul Stars', 'Midnight Crew', 'Electric Soul',
-    'Urban Legend', 'Crystal Method', 'Velvet Touch', 'Diamond Girl', 'Golden Boy',
-    'Silver Star', 'Bronze Age', 'Platinum Plus', 'Titanium', 'Carbon Copy',
-    'Neon Tiger', 'Digital Love', 'Analog Dream', 'Virtual Reality', 'Cyber Punk'
-  ];
-
-  const songs: Song[] = [];
-  const artworks = [
-    '/src/assets/card-1.png', '/src/assets/card-2.png', '/src/assets/card-3.png',
-    '/src/assets/card-4.png', '/src/assets/card-5.png', '/src/assets/track-1.jpeg',
-    '/src/assets/track-2.jpeg', '/src/assets/track-3.jpeg', '/src/assets/track-4.jpeg',
-    '/src/assets/track-5.jpeg', '/src/assets/track-6.jpeg', '/src/assets/track-7.jpeg',
-    '/src/assets/track-8.jpeg'
-  ];
-
-  for (let i = 0; i < 99; i++) {
-    const base = baseSongs[i % baseSongs.length];
-    const title = i < 8 ? base.title : additionalTitles[i - 8] || `Track ${i + 1}`;
-    const artist = i < 8 ? base.artist : artists[i % artists.length];
-    const change24h = Math.random() > 0.3 ? Math.random() * 30 : -(Math.random() * 15);
-    
-    songs.push({
-      id: i + 1,
-      rank: i + 1,
-      trend: change24h > 0 ? 'up' : change24h < 0 ? 'down' : 'stable',
-      trendValue: Math.abs(Math.floor(change24h)),
-      title,
-      artist,
-      artwork: artworks[i % artworks.length],
-      attentionScore: Math.floor(100000 - (i * 900) + Math.random() * 500),
-      momentum: change24h > 10 ? 'surging' : change24h < -5 ? 'cooling' : 'stable',
-      change24h: parseFloat(change24h.toFixed(1)),
-      listeners: `${(2.5 - (i * 0.02)).toFixed(1)}M`,
-      marketCap: `${(45 - (i * 0.4)).toFixed(1)}M`,
-      platforms: [
-        { name: 'Spotify', percentage: Math.floor(25 + Math.random() * 20) },
-        { name: 'TikTok', percentage: Math.floor(20 + Math.random() * 25) }
-      ],
-      marketMoves: change24h > 10 ? ['Viral', 'Trending'] : ['Steady'],
-      isWatchlisted: false,
-      twitterHandle: `@${artist.toLowerCase().replace(' ', '')}`,
-      description: i < 8 ? base.description : `${title} by ${artist} - trending now`
-    });
-  }
-  
-  return songs;
-};
-
 const timeFilters = ['Now', '24H', '7D', '30D'];
 
 const GlobalHeatmap = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [timeWindow, setTimeWindow] = useState('24H');
-  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
-  const [watchlist, setWatchlist] = useState<number[]>([2, 5]);
+  const [watchlist, setWatchlist] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAllLeaderboard, setShowAllLeaderboard] = useState(false);
-  const [mockSongs, setMockSongs] = useState(generateMockSongs());
   const [marketEvents, setMarketEvents] = useState<MarketEvent[]>([]);
-
-  // Initialize market events
-  useEffect(() => {
-    setMarketEvents([
-      { id: 1, song: mockSongs[0], event: 'Major playlist addition driving massive streams', change: 0.01, time: '36 min ago', sources: ['@spotify', '@apple'] },
-      { id: 2, song: mockSongs[1], event: 'Viral TikTok trend challenging streaming records', change: 0, time: '42 min ago', sources: ['@tiktok'] },
-      { id: 3, song: mockSongs[4], event: 'Afrobeats crossover gaining radio momentum', change: 0.17, time: '1 hr ago', sources: ['@billboard'] },
-      { id: 4, song: mockSongs[7], event: 'Music video breaks 10M views in 24 hours', change: 0.04, time: '2 hrs ago', sources: ['@youtube'] },
-    ]);
-  }, []);
-
-  // Realtime updates for songs
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMockSongs(prev => {
-        const updated = prev.map(song => {
-          const change = (Math.random() - 0.5) * 5;
-          const newChange24h = parseFloat((song.change24h + change * 0.1).toFixed(1));
-          const newListeners = `${(parseFloat(song.listeners) + (Math.random() - 0.5) * 0.1).toFixed(1)}M`;
-          return {
-            ...song,
-            change24h: newChange24h,
-            listeners: newListeners,
-            trend: newChange24h > 0 ? 'up' as const : newChange24h < 0 ? 'down' as const : 'stable' as const,
-            attentionScore: Math.floor(song.attentionScore + (Math.random() - 0.5) * 1000)
-          };
-        });
-        // Re-sort by attention score
-        updated.sort((a, b) => b.attentionScore - a.attentionScore);
-        updated.forEach((song, i) => song.rank = i + 1);
-        return updated;
-      });
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, []);
+  const [currentTrack, setCurrentTrack] = useState<HeatmapTrack | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   
+  const { tracks, summary, loading, error, refetch } = useHeatmapTracks(99);
+  const { sync, syncing } = useSyncHeatmap();
+
+  // Generate market events from top tracks
+  useEffect(() => {
+    if (tracks.length > 0) {
+      const events: MarketEvent[] = tracks.slice(0, 4).map((track, i) => ({
+        id: i + 1,
+        song: track,
+        event: i === 0 ? 'Major playlist addition driving massive streams' :
+               i === 1 ? 'Viral TikTok trend challenging streaming records' :
+               i === 2 ? 'Crossover gaining radio momentum' :
+               'Music video breaks milestone views',
+        change: track.metrics.change24h / 100,
+        time: `${Math.floor(Math.random() * 60) + 10} min ago`,
+        sources: ['@spotify', '@apple', '@deezer'].slice(0, Math.floor(Math.random() * 3) + 1)
+      }));
+      setMarketEvents(events);
+    }
+  }, [tracks]);
+
   const handleInteraction = (action: string, callback?: () => void) => {
     if (!user) {
       toast.error('Please sign in to ' + action);
@@ -183,7 +89,7 @@ const GlobalHeatmap = () => {
     callback?.();
   };
 
-  const toggleWatchlist = (id: number) => {
+  const toggleWatchlist = (id: string) => {
     handleInteraction('add to watchlist', () => {
       setWatchlist(prev => 
         prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
@@ -192,11 +98,77 @@ const GlobalHeatmap = () => {
     });
   };
 
+  const playTrack = (track: HeatmapTrack, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (currentTrack?.id === track.id && isPlaying) {
+      audioRef.current?.pause();
+      setIsPlaying(false);
+      return;
+    }
+    
+    if (!track.previewUrl) {
+      toast.error('No preview available for this track');
+      return;
+    }
+    
+    if (audioRef.current) {
+      audioRef.current.src = track.previewUrl;
+      audioRef.current.play();
+      setCurrentTrack(track);
+      setIsPlaying(true);
+    }
+  };
+
+  const handleSync = async () => {
+    try {
+      await sync();
+      toast.success('Heatmap data synced successfully!');
+      refetch();
+    } catch (err) {
+      toast.error('Failed to sync data');
+    }
+  };
+
+  // Filter tracks based on search
+  const filteredTracks = tracks.filter(t => 
+    t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.artist.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Top performing music (positive change)
-  const topPerforming = mockSongs.filter(s => s.change24h > 0).slice(0, 20);
+  const topPerforming = filteredTracks.filter(s => s.metrics.change24h > 0).slice(0, 20);
+
+  // Format listener count
+  const formatListeners = (count: number) => {
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+    return count.toString();
+  };
+
+  if (loading && tracks.length === 0) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-[#4ade80] border-t-transparent rounded-full mx-auto mb-4" />
+          <p className="text-white/60 text-sm">Loading heatmap data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
+      {/* Hidden Audio Element */}
+      <audio 
+        ref={audioRef} 
+        onEnded={() => setIsPlaying(false)}
+        onError={() => {
+          setIsPlaying(false);
+          toast.error('Failed to play preview');
+        }}
+      />
+      
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-sm border-b border-white/5">
         <div className="flex items-center justify-between h-12 sm:h-14 px-3 sm:px-6">
@@ -209,6 +181,17 @@ const GlobalHeatmap = () => {
           </button>
           
           <div className="flex items-center gap-1.5 sm:gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleSync}
+              disabled={syncing}
+              className="text-[9px] h-7 px-2 border-white/10 text-white/60 hover:text-white"
+            >
+              <RefreshCw className={`h-3 w-3 mr-1 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Syncing...' : 'Sync'}
+            </Button>
+            
             <div className="relative hidden sm:block">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40" />
               <Input
@@ -239,26 +222,28 @@ const GlobalHeatmap = () => {
         <div className="border-t border-white/5 px-3 sm:px-6 py-2 flex items-center gap-4 sm:gap-6 text-[9px] sm:text-[10px] overflow-x-auto">
           <div className="flex items-center gap-1">
             <span className="text-white/50">Listeners:</span>
-            <span className="font-semibold text-white animate-pulse">73M</span>
-            <span className="text-[#4ade80]">▲8.2%</span>
+            <span className="font-semibold text-white animate-pulse">
+              {summary?.totalListeners ? formatListeners(summary.totalListeners) : '73M'}
+            </span>
+            <span className="text-[#4ade80]">▲{summary?.avgChange24h || '8.2'}%</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="text-white/50">Tracks:</span>
-            <span className="font-semibold text-white">14.4k</span>
+            <span className="font-semibold text-white">{summary?.totalTracks || tracks.length}</span>
           </div>
           <span className="text-[8px] text-green-400 animate-pulse">● LIVE</span>
         </div>
       </header>
       
       {/* Main Content */}
-      <main className="pt-24 sm:pt-28 pb-6 px-3 sm:px-6">
+      <main className="pt-24 sm:pt-28 pb-24 px-3 sm:px-6">
         {/* Campaigns Section */}
         <section className="mb-6 animate-fade-in">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <h2 className="text-[11px] sm:text-sm font-semibold text-white">🎵 SNAPS campaigns</h2>
+              <h2 className="text-[11px] sm:text-sm font-semibold text-white">🎵 Trending Now</h2>
               <div className="hidden sm:flex items-center gap-1 px-2 py-1 bg-[#4ade80]/10 rounded-full">
-                <span className="text-[9px] text-[#4ade80]">Total plays: 18M</span>
+                <span className="text-[9px] text-[#4ade80]">Total plays: {summary?.totalListeners ? formatListeners(summary.totalListeners) : '18M'}</span>
               </div>
             </div>
             <button className="text-[9px] sm:text-[10px] text-white/50 hover:text-white flex items-center gap-1">
@@ -267,19 +252,35 @@ const GlobalHeatmap = () => {
           </div>
           
           <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            {mockSongs.slice(0, 5).map((song) => (
+            {filteredTracks.slice(0, 8).map((track) => (
               <div
-                key={song.id}
-                onClick={() => navigate(`/global-heatmap/${song.id}`)}
-                className="flex-shrink-0 flex items-center gap-2 sm:gap-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-xl p-2 sm:p-3 cursor-pointer transition-all min-w-[160px] sm:min-w-[200px]"
+                key={track.id}
+                className="flex-shrink-0 flex items-center gap-2 sm:gap-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-xl p-2 sm:p-3 cursor-pointer transition-all min-w-[180px] sm:min-w-[220px] group"
               >
-                <img src={song.artwork} alt={song.title} className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] sm:text-[10px] font-medium text-white truncate">{song.title}</p>
-                  <p className="text-[8px] sm:text-[9px] text-white/50 truncate">{song.twitterHandle}</p>
+                <div className="relative">
+                  <img src={track.artwork} alt={track.title} className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover" />
+                  <button
+                    onClick={(e) => playTrack(track, e)}
+                    className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
+                  >
+                    {currentTrack?.id === track.id && isPlaying ? (
+                      <Pause className="h-4 w-4 text-white" />
+                    ) : (
+                      <Play className="h-4 w-4 text-white" />
+                    )}
+                  </button>
+                </div>
+                <div className="flex-1 min-w-0" onClick={() => navigate(`/global-heatmap/${track.id}`)}>
+                  <p className="text-[9px] sm:text-[10px] font-medium text-white truncate">{track.title}</p>
+                  <p className="text-[8px] sm:text-[9px] text-white/50 truncate">{track.artist}</p>
+                  <div className="flex items-center gap-1 mt-1">
+                    {track.spotifyUrl && <SpotifyIcon />}
+                    {track.deezerUrl && <DeezerIcon />}
+                    {track.audiusUrl && <AudiusIcon />}
+                  </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-[9px] sm:text-[10px] font-bold text-[#4ade80]">{song.listeners}</p>
+                  <p className="text-[9px] sm:text-[10px] font-bold text-[#4ade80]">{formatListeners(track.metrics.lastfmListeners)}</p>
                   <p className="text-[7px] sm:text-[8px] text-white/40">listeners</p>
                 </div>
               </div>
@@ -314,7 +315,19 @@ const GlobalHeatmap = () => {
                 className="bg-white/[0.02] hover:bg-white/[0.05] border-white/5 p-3 cursor-pointer transition-all group"
               >
                 <div className="flex items-start gap-2 mb-2">
-                  <img src={event.song.artwork} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                  <div className="relative">
+                    <img src={event.song.artwork} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                    <button
+                      onClick={(e) => playTrack(event.song, e)}
+                      className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
+                    >
+                      {currentTrack?.id === event.song.id && isPlaying ? (
+                        <Pause className="h-3 w-3 text-white" />
+                      ) : (
+                        <Play className="h-3 w-3 text-white" />
+                      )}
+                    </button>
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-[9px] sm:text-[10px] font-medium text-white truncate">{event.song.title}</span>
@@ -322,17 +335,15 @@ const GlobalHeatmap = () => {
                         {event.change >= 0 ? '▲' : '▼'}{Math.abs(event.change).toFixed(2)} (24h)
                       </span>
                     </div>
-                    <p className="text-[8px] text-white/40">{event.song.marketCap} cap</p>
+                    <p className="text-[8px] text-white/40">{event.song.artist}</p>
                   </div>
                 </div>
                 <p className="text-[9px] sm:text-[10px] text-white/70 line-clamp-2 mb-2">{event.event}</p>
                 <div className="flex items-center justify-between">
-                  <div className="flex -space-x-1">
-                    {event.sources.map((source, i) => (
-                      <div key={i} className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center text-[7px]">
-                        {source.charAt(1).toUpperCase()}
-                      </div>
-                    ))}
+                  <div className="flex gap-1">
+                    {event.song.spotifyUrl && <SpotifyIcon />}
+                    {event.song.deezerUrl && <DeezerIcon />}
+                    {event.song.audiusUrl && <AudiusIcon />}
                   </div>
                   <span className="text-[8px] text-white/30">{event.time}</span>
                 </div>
@@ -357,17 +368,29 @@ const GlobalHeatmap = () => {
               </div>
             </div>
             <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-1">
-              {topPerforming.map((song, i) => (
+              {topPerforming.map((track, i) => (
                 <div
-                  key={song.id}
-                  onClick={() => navigate(`/global-heatmap/${song.id}`)}
-                  className={`bg-[#4ade80]/20 hover:bg-[#4ade80]/30 rounded-lg p-2 cursor-pointer transition-all ${
+                  key={track.id}
+                  onClick={() => navigate(`/global-heatmap/${track.id}`)}
+                  className={`bg-[#4ade80]/20 hover:bg-[#4ade80]/30 rounded-lg p-2 cursor-pointer transition-all group relative ${
                     i < 2 ? 'col-span-2 row-span-2' : i < 6 ? 'col-span-2' : ''
                   }`}
                   style={{ minHeight: i < 2 ? '70px' : '35px' }}
                 >
-                  <p className="text-[8px] sm:text-[9px] font-semibold text-white truncate">{song.title.slice(0, 10)}</p>
-                  <p className="text-[7px] sm:text-[8px] text-[#4ade80]">+{song.change24h.toFixed(1)}%</p>
+                  {i < 4 && (
+                    <button
+                      onClick={(e) => playTrack(track, e)}
+                      className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
+                    >
+                      {currentTrack?.id === track.id && isPlaying ? (
+                        <Pause className="h-2.5 w-2.5 text-white" />
+                      ) : (
+                        <Play className="h-2.5 w-2.5 text-white" />
+                      )}
+                    </button>
+                  )}
+                  <p className="text-[8px] sm:text-[9px] font-semibold text-white truncate">{track.title.slice(0, 12)}</p>
+                  <p className="text-[7px] sm:text-[8px] text-[#4ade80]">+{track.metrics.change24h.toFixed(1)}%</p>
                 </div>
               ))}
             </div>
@@ -397,43 +420,62 @@ const GlobalHeatmap = () => {
               <div className="col-span-2 hidden sm:block">Artist</div>
               <div className="col-span-2">Listeners</div>
               <div className="col-span-2">24h</div>
-              <div className="col-span-3 sm:col-span-2 text-right">Momentum</div>
+              <div className="col-span-2 text-center">Play</div>
+              <div className="col-span-1 text-right">Links</div>
             </div>
             
             {/* Table Body */}
-            <div className={`${showAllLeaderboard ? 'max-h-[600px]' : 'max-h-[400px]'} overflow-y-auto`}>
-              {(showAllLeaderboard ? mockSongs : mockSongs.slice(0, 20)).map((song) => (
+            <div className={`${showAllLeaderboard ? 'max-h-[600px]' : 'max-h-[400px]'} overflow-y-auto scroll-smooth`}>
+              {(showAllLeaderboard ? filteredTracks : filteredTracks.slice(0, 25)).map((track) => (
                 <div
-                  key={song.id}
-                  onClick={() => navigate(`/global-heatmap/${song.id}`)}
-                  className="grid grid-cols-12 gap-2 px-3 py-2 hover:bg-white/[0.03] cursor-pointer border-b border-white/5 last:border-0 items-center transition-all"
+                  key={track.id}
+                  className="grid grid-cols-12 gap-2 px-3 py-2 hover:bg-white/[0.03] cursor-pointer border-b border-white/5 last:border-0 items-center transition-all group"
                 >
                   <div className="col-span-1 flex items-center gap-1">
-                    <span className={`text-[9px] font-medium ${song.rank <= 3 ? 'text-yellow-400' : 'text-white/60'}`}>
-                      {song.rank}
+                    <span className={`text-[9px] font-medium ${track.rank <= 3 ? 'text-yellow-400' : 'text-white/60'}`}>
+                      {track.rank}
                     </span>
-                    {song.trend === 'up' && <TrendingUp className="h-2.5 w-2.5 text-[#4ade80]" />}
-                    {song.trend === 'down' && <TrendingDown className="h-2.5 w-2.5 text-red-400" />}
+                    {track.trend === 'up' && <TrendingUp className="h-2.5 w-2.5 text-[#4ade80]" />}
+                    {track.trend === 'down' && <TrendingDown className="h-2.5 w-2.5 text-red-400" />}
                   </div>
-                  <div className="col-span-4 sm:col-span-3 flex items-center gap-2">
-                    <img src={song.artwork} alt="" className="w-7 h-7 rounded object-cover" />
-                    <span className="text-[9px] font-medium text-white truncate">{song.title}</span>
+                  <div className="col-span-4 sm:col-span-3 flex items-center gap-2" onClick={() => navigate(`/global-heatmap/${track.id}`)}>
+                    <img src={track.artwork} alt="" className="w-7 h-7 rounded object-cover" />
+                    <span className="text-[9px] font-medium text-white truncate">{track.title}</span>
                   </div>
-                  <div className="col-span-2 hidden sm:block text-[9px] text-white/60 truncate">{song.artist}</div>
-                  <div className="col-span-2 text-[9px] text-white font-medium">{song.listeners}</div>
+                  <div className="col-span-2 hidden sm:block text-[9px] text-white/60 truncate">{track.artist}</div>
+                  <div className="col-span-2 text-[9px] text-white font-medium">{formatListeners(track.metrics.lastfmListeners)}</div>
                   <div className="col-span-2">
-                    <span className={`text-[9px] font-medium ${song.change24h >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
-                      {song.change24h >= 0 ? '+' : ''}{song.change24h.toFixed(1)}%
+                    <span className={`text-[9px] font-medium ${track.metrics.change24h >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
+                      {track.metrics.change24h >= 0 ? '+' : ''}{track.metrics.change24h.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="col-span-3 sm:col-span-2 text-right">
-                    <span className={`text-[8px] px-1.5 py-0.5 rounded-full ${
-                      song.momentum === 'surging' ? 'bg-[#4ade80]/20 text-[#4ade80]' :
-                      song.momentum === 'cooling' ? 'bg-red-500/20 text-red-400' :
-                      'bg-white/10 text-white/50'
-                    }`}>
-                      {song.momentum}
-                    </span>
+                  <div className="col-span-2 text-center">
+                    <button
+                      onClick={(e) => playTrack(track, e)}
+                      className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
+                        currentTrack?.id === track.id && isPlaying 
+                          ? 'bg-[#4ade80] text-black' 
+                          : 'bg-white/10 text-white hover:bg-white/20'
+                      }`}
+                    >
+                      {currentTrack?.id === track.id && isPlaying ? (
+                        <Pause className="h-3 w-3" />
+                      ) : (
+                        <Play className="h-3 w-3" />
+                      )}
+                    </button>
+                  </div>
+                  <div className="col-span-1 flex items-center justify-end gap-1">
+                    {track.spotifyUrl && (
+                      <a href={track.spotifyUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-[#1DB954] hover:opacity-80">
+                        <SpotifyIcon />
+                      </a>
+                    )}
+                    {track.deezerUrl && (
+                      <a href={track.deezerUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-[#FEAA2D] hover:opacity-80">
+                        <DeezerIcon />
+                      </a>
+                    )}
                   </div>
                 </div>
               ))}
@@ -441,6 +483,45 @@ const GlobalHeatmap = () => {
           </div>
         </section>
       </main>
+
+      {/* Fixed Audio Player */}
+      {currentTrack && (
+        <div className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-sm border-t border-white/10 px-4 py-3 z-50">
+          <div className="max-w-7xl mx-auto flex items-center gap-4">
+            <img src={currentTrack.artwork} alt="" className="w-12 h-12 rounded-lg object-cover" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{currentTrack.title}</p>
+              <p className="text-xs text-white/50 truncate">{currentTrack.artist}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={(e) => playTrack(currentTrack, e)}
+                className="w-10 h-10 rounded-full bg-[#4ade80] text-black flex items-center justify-center hover:bg-[#4ade80]/90"
+              >
+                {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+              </button>
+              <Volume2 className="h-4 w-4 text-white/40" />
+            </div>
+            <div className="hidden sm:flex items-center gap-2">
+              {currentTrack.spotifyUrl && (
+                <a href={currentTrack.spotifyUrl} target="_blank" rel="noopener noreferrer" className="text-[#1DB954]">
+                  <SpotifyIcon />
+                </a>
+              )}
+              {currentTrack.deezerUrl && (
+                <a href={currentTrack.deezerUrl} target="_blank" rel="noopener noreferrer" className="text-[#FEAA2D]">
+                  <DeezerIcon />
+                </a>
+              )}
+              {currentTrack.audiusUrl && (
+                <a href={currentTrack.audiusUrl} target="_blank" rel="noopener noreferrer" className="text-[#CC0FE0]">
+                  <AudiusIcon />
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
