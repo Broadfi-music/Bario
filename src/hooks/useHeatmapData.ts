@@ -48,10 +48,17 @@ export interface TrackDetail {
     name: string;
     image: string;
     followers: number;
+    monthlyListeners: number;
     genres: string[];
+    bio: string;
+    spotifyUrl: string | null;
     topTracks: Array<{
+      id: string;
       rank: number;
       title: string;
+      album: string;
+      artwork: string;
+      previewUrl: string | null;
       playcount: number;
       listeners: number;
       spotifyRank: number;
@@ -65,45 +72,60 @@ export interface TrackDetail {
   genre: string;
   duration: number;
   description: string;
+  tags: string[];
   platforms: {
     spotify: { url: string | null; popularity: number | null; available: boolean };
     deezer: { url: string | null; chartPosition: number | null; available: boolean };
     appleMusic: { url: string | null; available: boolean };
     audius: { url: string | null; trendingRank: number | null; available: boolean };
+    youtube: { url: string | null; available: boolean };
   };
   metrics: {
     attentionScore: number;
     listeners: number;
     playcount: number;
     mindshare: number;
+    communityListeners: number;
     change24h: number;
     change7d: number;
     change30d: number;
-    tags: Array<{ name: string }>;
   };
+  topListeners: Array<{ id: string; avatar: string; name: string; isVerified: boolean; playsCount: number }>;
   chartData: Array<{ timestamp: string; value: number; listeners: number }>;
-  smartFeed: Array<{ event_type: string; title: string; description: string; source: string; created_at: string }>;
+  smartFeed: Array<{ id: string; type: string; title: string; description: string; source: string; timestamp: string }>;
   comments: Array<{ user_name: string; user_avatar: string; content: string; sentiment: string; likes: number; created_at: string }>;
-  relatedTracks: Array<{ rank: number; title: string; playcount: number; listeners: number }>;
+  relatedTracks: Array<{ id: string; rank: number; title: string; artwork: string; previewUrl: string | null; playcount: number; listeners: number }>;
 }
 
 const SUPABASE_URL = 'https://sufbohhsxlrefkoubmed.supabase.co';
+const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmJvaGhzeGxyZWZrb3VibWVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODY3NjAsImV4cCI6MjA4MDQ2Mjc2MH0.1Ms3xhguJjQ-bbPronddzgO-XCYcTZTkcWS-uUMg1q4';
 
 export function useHeatmapTracks(limit = 99) {
   const [tracks, setTracks] = useState<HeatmapTrack[]>([]);
-  const [summary, setSummary] = useState<HeatmapSummary | null>(null);
+  const [genres, setGenres] = useState<string[]>([]);
+  const [summary, setSummary] = useState<HeatmapSummary>({
+    totalTracks: 0,
+    totalListeners: 0,
+    avgChange24h: '0',
+    lastUpdated: new Date().toISOString()
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTracks = useCallback(async () => {
+  const fetchTracks = useCallback(async (search?: string, genre?: string) => {
     try {
+      setLoading(true);
+      const params = new URLSearchParams({ limit: limit.toString() });
+      if (search) params.append('search', search);
+      if (genre) params.append('genre', genre);
+      
       const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/heatmap-tracks?limit=${limit}`,
+        `${SUPABASE_URL}/functions/v1/heatmap-tracks?${params}`,
         {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmJvaGhzeGxyZWZrb3VibWVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODY3NjAsImV4cCI6MjA4MDQ2Mjc2MH0.1Ms3xhguJjQ-bbPronddzgO-XCYcTZTkcWS-uUMg1q4'
+            'apikey': API_KEY
           }
         }
       );
@@ -115,7 +137,11 @@ export function useHeatmapTracks(limit = 99) {
       const data = await response.json();
       if (data?.tracks) {
         setTracks(data.tracks);
-        setSummary(data.summary);
+        setSummary(data.summary || summary);
+        
+        // Extract unique genres
+        const uniqueGenres = [...new Set(data.tracks.map((t: HeatmapTrack) => t.genre).filter(Boolean))];
+        setGenres(uniqueGenres as string[]);
       }
     } catch (err) {
       console.error('Error fetching heatmap tracks:', err);
@@ -123,13 +149,24 @@ export function useHeatmapTracks(limit = 99) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [limit]);
+
+  const searchTracks = useCallback((query: string) => {
+    fetchTracks(query, undefined);
+  }, [fetchTracks]);
+
+  const filterByGenre = useCallback((genre: string) => {
+    fetchTracks(undefined, genre);
+  }, [fetchTracks]);
+
+  const refetch = useCallback(() => {
+    fetchTracks();
+  }, [fetchTracks]);
 
   // Subscribe to realtime updates
   useEffect(() => {
     fetchTracks();
 
-    // Set up realtime subscription for metrics updates
     const channel = supabase
       .channel('heatmap-metrics')
       .on(
@@ -139,10 +176,7 @@ export function useHeatmapTracks(limit = 99) {
           schema: 'public',
           table: 'heatmap_track_metrics'
         },
-        () => {
-          // Refetch when metrics change
-          fetchTracks();
-        }
+        () => fetchTracks()
       )
       .subscribe();
 
@@ -151,7 +185,7 @@ export function useHeatmapTracks(limit = 99) {
     };
   }, [fetchTracks]);
 
-  // Realtime simulation for UI updates between API calls
+  // Realtime simulation for UI updates
   useEffect(() => {
     if (tracks.length === 0) return;
 
@@ -174,7 +208,6 @@ export function useHeatmapTracks(limit = 99) {
           };
         });
         
-        // Re-sort by attention score
         updated.sort((a, b) => b.metrics.attentionScore - a.metrics.attentionScore);
         updated.forEach((track, i) => track.rank = i + 1);
         
@@ -185,7 +218,7 @@ export function useHeatmapTracks(limit = 99) {
     return () => clearInterval(interval);
   }, [tracks.length]);
 
-  return { tracks, summary, loading, error, refetch: fetchTracks };
+  return { tracks, genres, summary, loading, error, refetch, searchTracks, filterByGenre };
 }
 
 export function useTrackDetail(trackId: string | undefined) {
@@ -198,15 +231,23 @@ export function useTrackDetail(trackId: string | undefined) {
     
     try {
       setLoading(true);
-      const response = await supabase.functions.invoke('heatmap-track-detail', {
-        body: { id: trackId },
-      });
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/heatmap-track-detail?id=${trackId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': API_KEY
+          }
+        }
+      );
 
-      if (response.error) {
-        throw new Error(response.error.message);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      setTrack(response.data);
+      const data = await response.json();
+      setTrack(data);
     } catch (err) {
       console.error('Error fetching track detail:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch track');
