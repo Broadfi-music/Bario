@@ -1,27 +1,54 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Library, Sparkles, User, Settings, Plus, Play, Heart, Pause, Menu, X, Globe, Zap, Gift } from 'lucide-react';
+import { Home, Library, Sparkles, User, Settings, Plus, Play, Heart, Pause, Menu, X, Gift, SkipBack, SkipForward, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useState, useEffect } from 'react';
+import { Slider } from '@/components/ui/slider';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useDashboardMusic, DashboardTrack } from '@/hooks/useDashboardMusic';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
-  const [currentTrack, setCurrentTrack] = useState<any>(null);
+  const { data: musicData, loading: musicLoading } = useDashboardMusic();
+  const [currentTrack, setCurrentTrack] = useState<DashboardTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [likedTracks, setLikedTracks] = useState<Set<number>>(new Set());
+  const [likedTracks, setLikedTracks] = useState<Set<string | number>>(new Set());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
+  const [progress, setProgress] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
+
+  // Audio progress tracking
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const updateProgress = () => {
+      if (audio.duration) {
+        setProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+
+    audio.addEventListener('timeupdate', updateProgress);
+    audio.addEventListener('ended', () => {
+      setIsPlaying(false);
+      setProgress(0);
+    });
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateProgress);
+    };
+  }, [currentTrack]);
 
   const toggleSection = (sectionIndex: number) => {
     setExpandedSections(prev => {
@@ -35,24 +62,49 @@ const Dashboard = () => {
     });
   };
 
-  const handleLike = (trackId: number) => {
+  const handleLike = (trackId: string | number) => {
     setLikedTracks(prev => {
       const newSet = new Set(prev);
       if (newSet.has(trackId)) {
         newSet.delete(trackId);
+        toast.success('Removed from favorites');
       } else {
         newSet.add(trackId);
+        toast.success('Added to favorites');
       }
       return newSet;
     });
   };
 
-  const handlePlay = (track: any) => {
-    if (currentTrack?.id === track.id) {
-      setIsPlaying(!isPlaying);
+  const handlePlay = (track: DashboardTrack) => {
+    if (!track.preview) {
+      toast.error('No preview available for this track');
+      return;
+    }
+    
+    if (currentTrack?.id === track.id && isPlaying) {
+      audioRef.current?.pause();
+      setIsPlaying(false);
     } else {
+      if (audioRef.current) {
+        audioRef.current.src = track.preview;
+        audioRef.current.play().catch(() => {
+          toast.error('Unable to play this track');
+        });
+      }
       setCurrentTrack(track);
       setIsPlaying(true);
+    }
+  };
+
+  const togglePlayPause = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
     }
   };
 
@@ -87,60 +139,31 @@ const Dashboard = () => {
     { label: 'Alpha', path: '/music-alpha' },
   ];
 
-  const creators = [
-    { id: 1, name: 'DJ Marcus', avatar: '/src/assets/track-1.jpeg' },
-    { id: 2, name: 'Sarah Beats', avatar: '/src/assets/track-2.jpeg' },
-    { id: 3, name: 'Mike Rivers', avatar: '/src/assets/track-3.jpeg' },
-    { id: 4, name: 'Jazz Masters', avatar: '/src/assets/track-4.jpeg' },
-  ];
-
   const sections = [
     {
       title: 'Recent Remixes',
-      tracks: [
-        { id: 1, title: 'Summer Vibes', genre: 'Amapiano', duration: '3:24', artwork: '/src/assets/card-1.png', creator: creators[0], plays: '45K', likes: '2.1K' },
-        { id: 2, title: 'Night Drive', genre: 'Trap', duration: '2:58', artwork: '/src/assets/card-2.png', creator: creators[1], plays: '32K', likes: '1.8K' },
-        { id: 3, title: 'Country Road', genre: 'Country', duration: '4:12', artwork: '/src/assets/card-3.png', creator: creators[2], plays: '28K', likes: '1.5K' },
-        { id: 4, title: 'Jazz Club', genre: 'Jazz', duration: '5:03', artwork: '/src/assets/card-4.png', creator: creators[3], plays: '21K', likes: '1.2K' },
-      ]
+      tracks: musicData.recentRemixes,
     },
     {
       title: 'New Songs',
-      tracks: [
-        { id: 9, title: 'Fresh Start', genre: 'Gospel', duration: '3:58', artwork: '/src/assets/card-5.png', creator: creators[0], plays: '18K', likes: '980' },
-        { id: 10, title: 'City Lights', genre: 'Jazz', duration: '4:22', artwork: '/src/assets/card-1.png', creator: creators[1], plays: '15K', likes: '850' },
-        { id: 11, title: 'Ocean Wave', genre: 'Soul', duration: '3:41', artwork: '/src/assets/card-2.png', creator: creators[2], plays: '12K', likes: '720' },
-        { id: 12, title: 'Desert Rose', genre: '80s', duration: '4:15', artwork: '/src/assets/card-3.png', creator: creators[3], plays: '9K', likes: '540' },
-      ]
+      tracks: musicData.newSongs,
     },
     {
       title: 'Trending Songs',
       layout: 'list',
-      tracks: [
-        { id: 17, title: 'Viral Melody', genre: 'Pop', duration: '3:18', artwork: '/src/assets/card-3.png', creator: creators[0], plays: '2.4M', likes: '156K' },
-        { id: 18, title: 'Chart Topper', genre: 'Hip Hop', duration: '3:44', artwork: '/src/assets/card-4.png', creator: creators[1], plays: '1.8M', likes: '98K' },
-        { id: 19, title: 'Hit Parade', genre: 'Country', duration: '3:52', artwork: '/src/assets/card-5.png', creator: creators[2], plays: '1.5M', likes: '87K' },
-        { id: 20, title: 'Rising Star', genre: 'R&B', duration: '4:03', artwork: '/src/assets/card-1.png', creator: creators[3], plays: '1.2M', likes: '72K' },
-        { id: 25, title: 'Summer Anthem', genre: 'Pop', duration: '3:33', artwork: '/src/assets/card-2.png', creator: creators[0], plays: '1.1M', likes: '65K' },
-        { id: 26, title: 'Night Life', genre: 'Hip Hop', duration: '3:15', artwork: '/src/assets/card-3.png', creator: creators[1], plays: '980K', likes: '54K' },
-      ]
+      tracks: musicData.trendingSongs,
     },
     {
       title: 'Trending Remixes',
       layout: 'list',
-      tracks: [
-        { id: 21, title: 'Classic Reimagined', genre: 'Jazz', duration: '4:28', artwork: '/src/assets/card-4.png', creator: creators[0], plays: '890K', likes: '48K' },
-        { id: 22, title: 'Modern Twist', genre: 'Funk', duration: '3:39', artwork: '/src/assets/card-5.png', creator: creators[1], plays: '756K', likes: '42K' },
-        { id: 23, title: 'Genre Fusion', genre: 'Soul', duration: '3:47', artwork: '/src/assets/card-1.png', creator: creators[2], plays: '654K', likes: '36K' },
-        { id: 24, title: 'Remix Revolution', genre: 'Instrumental', duration: '4:11', artwork: '/src/assets/card-2.png', creator: creators[3], plays: '543K', likes: '29K' },
-        { id: 27, title: 'Retro Wave', genre: 'Synthwave', duration: '3:55', artwork: '/src/assets/card-3.png', creator: creators[0], plays: '432K', likes: '24K' },
-        { id: 28, title: 'Bass Drop', genre: 'EDM', duration: '3:28', artwork: '/src/assets/card-4.png', creator: creators[1], plays: '389K', likes: '21K' },
-      ]
+      tracks: musicData.trendingRemixes,
     },
   ];
 
   return (
     <div className="min-h-screen bg-background flex overflow-x-hidden">
+      <audio ref={audioRef} />
+      
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
@@ -200,7 +223,7 @@ const Dashboard = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto w-full lg:w-auto">
+      <main className={`flex-1 overflow-y-auto w-full lg:w-auto ${currentTrack ? 'pb-24' : ''}`}>
         <div className="p-3 lg:p-6">
           {/* Header */}
           <div className="flex justify-between items-center mb-4 lg:mb-6">
@@ -287,22 +310,33 @@ const Dashboard = () => {
             </Link>
           </div>
 
+          {/* Loading State */}
+          {musicLoading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-muted-foreground text-sm">Loading music...</div>
+            </div>
+          )}
+
           {/* Track Sections */}
-          {sections.map((section, sectionIndex) => {
+          {!musicLoading && sections.map((section, sectionIndex) => {
             const isExpanded = expandedSections.has(sectionIndex);
             const displayTracks = isExpanded ? section.tracks : section.tracks.slice(0, 4);
+            
+            if (section.tracks.length === 0) return null;
             
             return (
             <div key={sectionIndex} className="mb-6 lg:mb-8">
               <div className="flex justify-between items-center mb-2 lg:mb-3">
                 <h2 className="text-sm lg:text-lg font-bold text-foreground">{section.title}</h2>
-                <Button 
-                  variant="ghost" 
-                  className="text-muted-foreground hover:text-foreground text-xs h-7 px-2"
-                  onClick={() => toggleSection(sectionIndex)}
-                >
-                  {isExpanded ? 'Show less' : 'Show more'}
-                </Button>
+                {section.tracks.length > 4 && (
+                  <Button 
+                    variant="ghost" 
+                    className="text-muted-foreground hover:text-foreground text-xs h-7 px-2"
+                    onClick={() => toggleSection(sectionIndex)}
+                  >
+                    {isExpanded ? 'Show less' : 'Show more'}
+                  </Button>
+                )}
               </div>
               {section.layout === 'list' ? (
                 <div className="space-y-1.5">
@@ -314,13 +348,19 @@ const Dashboard = () => {
                             src={track.artwork} 
                             alt={track.title}
                             className="w-full h-full object-cover rounded"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/src/assets/card-1.png';
+                            }}
                           />
                           <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/40 rounded">
                             <Button 
                               size="icon" 
                               variant="secondary" 
                               className="rounded-full h-5 w-5"
-                              onClick={() => handlePlay(track)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePlay(track);
+                              }}
                             >
                               {isPlaying && currentTrack?.id === track.id ? (
                                 <Pause className="h-2.5 w-2.5" />
@@ -333,16 +373,15 @@ const Dashboard = () => {
                         <div className="flex-1 min-w-0">
                           <h3 className="font-medium text-foreground truncate text-xs">{track.title}</h3>
                           <div className="flex items-center gap-1 mt-0.5">
-                            <Avatar className="h-3 w-3">
-                              <AvatarImage src={track.creator.avatar} />
-                              <AvatarFallback>{track.creator.name[0]}</AvatarFallback>
-                            </Avatar>
-                            <Link 
-                              to={`/dashboard/creator/${track.creator.id}`}
-                              className="text-[10px] text-muted-foreground hover:text-foreground hover:underline truncate"
-                            >
-                              {track.creator.name}
-                            </Link>
+                            {track.artistImage && (
+                              <Avatar className="h-3 w-3">
+                                <AvatarImage src={track.artistImage} />
+                                <AvatarFallback>{track.artist?.[0]}</AvatarFallback>
+                              </Avatar>
+                            )}
+                            <span className="text-[10px] text-muted-foreground truncate">
+                              {track.artist}
+                            </span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
@@ -358,7 +397,10 @@ const Dashboard = () => {
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => handleLike(track.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleLike(track.id);
+                            }}
                             className={`h-6 w-6 ${likedTracks.has(track.id) ? "text-red-500" : "text-muted-foreground"}`}
                           >
                             <Heart className={`h-3 w-3 ${likedTracks.has(track.id) ? "fill-current" : ""}`} />
@@ -377,13 +419,19 @@ const Dashboard = () => {
                           src={track.artwork} 
                           alt={track.title}
                           className="absolute inset-0 w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/src/assets/card-1.png';
+                          }}
                         />
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
                           <Button 
                             size="icon" 
                             variant="secondary" 
                             className="rounded-full h-8 w-8"
-                            onClick={() => handlePlay(track)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePlay(track);
+                            }}
                           >
                             {isPlaying && currentTrack?.id === track.id ? (
                               <Pause className="h-4 w-4" />
@@ -392,40 +440,30 @@ const Dashboard = () => {
                             )}
                           </Button>
                         </div>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleLike(track.id);
+                          }}
+                          className={`absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity ${likedTracks.has(track.id) ? "text-red-500" : "text-white"}`}
+                        >
+                          <Heart className={`h-3 w-3 ${likedTracks.has(track.id) ? "fill-current" : ""}`} />
+                        </Button>
                       </div>
                       <div className="p-2">
-                        <h3 className="font-medium text-foreground text-xs truncate">{track.title}</h3>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Avatar className="h-3 w-3">
-                            <AvatarImage src={track.creator.avatar} />
-                            <AvatarFallback>{track.creator.name[0]}</AvatarFallback>
-                          </Avatar>
-                          <Link 
-                            to={`/dashboard/creator/${track.creator.id}`}
-                            className="text-[10px] text-muted-foreground hover:text-foreground hover:underline truncate"
-                          >
-                            {track.creator.name}
-                          </Link>
-                        </div>
-                        <div className="flex items-center justify-between mt-1">
-                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                            <span className="flex items-center gap-0.5">
-                              <Play className="h-2 w-2" />
-                              {track.plays}
-                            </span>
-                            <span className="flex items-center gap-0.5">
-                              <Heart className="h-2 w-2" />
-                              {track.likes}
-                            </span>
-                          </div>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleLike(track.id)}
-                            className={`h-5 w-5 ${likedTracks.has(track.id) ? "text-red-500" : "text-muted-foreground"}`}
-                          >
-                            <Heart className={`h-3 w-3 ${likedTracks.has(track.id) ? "fill-current" : ""}`} />
-                          </Button>
+                        <h3 className="font-medium text-foreground mb-0.5 text-xs truncate">{track.title}</h3>
+                        <p className="text-[10px] text-muted-foreground truncate">{track.artist}</p>
+                        <div className="flex items-center gap-2 mt-1 text-[9px] text-muted-foreground">
+                          <span className="flex items-center gap-0.5">
+                            <Play className="h-2 w-2" />
+                            {track.plays}
+                          </span>
+                          <span className="flex items-center gap-0.5">
+                            <Heart className="h-2 w-2" />
+                            {track.likes}
+                          </span>
                         </div>
                       </div>
                     </Card>
@@ -435,38 +473,49 @@ const Dashboard = () => {
             </div>
             );
           })}
+        </div>
 
-          {/* Audio Player */}
-          {currentTrack && (
-            <div className="fixed bottom-0 left-0 right-0 bg-card border-t border-border p-2 z-50">
-              <div className="max-w-7xl mx-auto flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={currentTrack.artwork} />
-                  <AvatarFallback>{currentTrack.title[0]}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-foreground truncate text-xs">{currentTrack.title}</h4>
-                  <div className="flex items-center gap-1">
-                    <Avatar className="h-3 w-3">
-                      <AvatarImage src={currentTrack.creator.avatar} />
-                      <AvatarFallback>{currentTrack.creator.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <p className="text-[10px] text-muted-foreground truncate">{currentTrack.creator.name}</p>
-                  </div>
-                </div>
-                <Button
-                  size="icon"
-                  variant="secondary"
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  className="rounded-full h-8 w-8"
-                >
-                  {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+        {/* Audio Player */}
+        {currentTrack && (
+          <div className="fixed bottom-0 left-0 right-0 lg:left-48 bg-card border-t border-border p-3 z-50">
+            <div className="flex items-center gap-3">
+              <img 
+                src={currentTrack.artwork} 
+                alt={currentTrack.title} 
+                className="w-10 h-10 rounded object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/src/assets/card-1.png';
+                }}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-foreground truncate">{currentTrack.title}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{currentTrack.artist}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="icon" variant="ghost" className="h-8 w-8">
+                  <SkipBack className="h-4 w-4" />
                 </Button>
-                <span className="text-[10px] text-muted-foreground hidden sm:inline">{currentTrack.duration}</span>
+                <Button 
+                  size="icon" 
+                  className="h-8 w-8 bg-foreground text-background hover:bg-foreground/90 rounded-full"
+                  onClick={togglePlayPause}
+                >
+                  {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8">
+                  <SkipForward className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 w-32">
+                <Volume2 className="h-4 w-4 text-muted-foreground" />
+                <Slider defaultValue={[80]} max={100} step={1} className="w-full" />
               </div>
             </div>
-          )}
-        </div>
+            <div className="mt-2">
+              <Slider value={[progress]} max={100} step={0.1} className="w-full" />
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
