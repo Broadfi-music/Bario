@@ -5,61 +5,73 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Get Spotify token
-async function getSpotifyToken(): Promise<string> {
-  const clientId = Deno.env.get('SPOTIFY_CLIENT_ID');
-  const clientSecret = Deno.env.get('SPOTIFY_CLIENT_SECRET');
-  
-  const response = await fetch('https://accounts.spotify.com/api/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Authorization': 'Basic ' + btoa(`${clientId}:${clientSecret}`)
-    },
-    body: 'grant_type=client_credentials'
-  });
-  
-  const data = await response.json();
-  return data.access_token;
-}
-
-// Get Spotify track details
-async function getSpotifyTrack(trackId: string, token: string) {
+// Get Deezer track details
+async function getDeezerTrack(trackId: string) {
   try {
-    const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    return await response.json();
-  } catch (e) {
-    console.error('Error fetching Spotify track:', e);
-    return null;
-  }
-}
-
-// Get Spotify artist details
-async function getSpotifyArtist(artistId: string, token: string) {
-  try {
-    const response = await fetch(`https://api.spotify.com/v1/artists/${artistId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    return await response.json();
-  } catch (e) {
-    console.error('Error fetching artist:', e);
-    return null;
-  }
-}
-
-// Get artist top tracks
-async function getArtistTopTracks(artistId: string, token: string) {
-  try {
-    const response = await fetch(
-      `https://api.spotify.com/v1/artists/${artistId}/top-tracks?market=US`,
-      { headers: { 'Authorization': `Bearer ${token}` } }
-    );
+    const response = await fetch(`https://api.deezer.com/track/${trackId}`);
     const data = await response.json();
-    return data.tracks || [];
+    if (data.error) return null;
+    return data;
   } catch (e) {
-    console.error('Error fetching top tracks:', e);
+    console.error('Deezer track error:', e);
+    return null;
+  }
+}
+
+// Get Deezer artist details
+async function getDeezerArtist(artistId: number) {
+  try {
+    const response = await fetch(`https://api.deezer.com/artist/${artistId}`);
+    const data = await response.json();
+    if (data.error) return null;
+    return data;
+  } catch (e) {
+    console.error('Deezer artist error:', e);
+    return null;
+  }
+}
+
+// Get artist top tracks from Deezer
+async function getDeezerArtistTopTracks(artistId: number) {
+  try {
+    const response = await fetch(`https://api.deezer.com/artist/${artistId}/top?limit=10`);
+    const data = await response.json();
+    return data.data || [];
+  } catch (e) {
+    console.error('Deezer artist top tracks error:', e);
+    return [];
+  }
+}
+
+// Get artist albums from Deezer
+async function getDeezerArtistAlbums(artistId: number) {
+  try {
+    const response = await fetch(`https://api.deezer.com/artist/${artistId}/albums?limit=10`);
+    const data = await response.json();
+    return data.data || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// Get related tracks from Deezer
+async function getDeezerRelatedTracks(trackId: string) {
+  try {
+    const response = await fetch(`https://api.deezer.com/track/${trackId}/recommendations?limit=5`);
+    const data = await response.json();
+    return data.data || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// Search Deezer
+async function searchDeezer(query: string, limit: number = 10) {
+  try {
+    const response = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+    const data = await response.json();
+    return data.data || [];
+  } catch (e) {
     return [];
   }
 }
@@ -77,8 +89,8 @@ async function getLastfmTrackInfo(artist: string, track: string) {
     return {
       listeners: parseInt(data.track?.listeners) || 0,
       playcount: parseInt(data.track?.playcount) || 0,
-      tags: data.track?.toptags?.tag?.slice(0, 5) || [],
-      wiki: data.track?.wiki?.summary?.replace(/<[^>]*>/g, '') || null
+      tags: data.track?.toptags?.tag?.slice(0, 5).map((t: any) => t.name) || [],
+      wiki: data.track?.wiki?.summary?.replace(/<[^>]*>/g, '').substring(0, 500) || null
     };
   } catch (e) {
     return { listeners: 0, playcount: 0, tags: [], wiki: null };
@@ -96,7 +108,7 @@ async function getLastfmArtistInfo(artist: string) {
     );
     const data = await response.json();
     return {
-      bio: data.artist?.bio?.summary?.replace(/<[^>]*>/g, '') || null,
+      bio: data.artist?.bio?.summary?.replace(/<[^>]*>/g, '').substring(0, 600) || null,
       listeners: parseInt(data.artist?.stats?.listeners) || 0,
       playcount: parseInt(data.artist?.stats?.playcount) || 0
     };
@@ -123,164 +135,222 @@ serve(async (req) => {
     
     console.log(`Fetching track details for: ${trackId}`);
     
-    // Get Spotify token
-    const spotifyToken = await getSpotifyToken();
+    // Try to get track from Deezer
+    let deezerTrack = await getDeezerTrack(trackId);
     
-    // Fetch Spotify track
-    const spotifyTrack = await getSpotifyTrack(trackId, spotifyToken);
+    // If not found by ID, try searching
+    if (!deezerTrack) {
+      console.log('Track not found by ID, trying search...');
+      // The ID might be encoded, try decoding
+      try {
+        const decoded = atob(trackId);
+        const searchResults = await searchDeezer(decoded, 1);
+        if (searchResults.length > 0) {
+          deezerTrack = await getDeezerTrack(String(searchResults[0].id));
+        }
+      } catch (e) {
+        // Try searching with the ID as-is
+        const searchResults = await searchDeezer(trackId, 1);
+        if (searchResults.length > 0) {
+          deezerTrack = await getDeezerTrack(String(searchResults[0].id));
+        }
+      }
+    }
     
-    if (!spotifyTrack || spotifyTrack.error) {
+    if (!deezerTrack) {
       return new Response(JSON.stringify({ 
         error: 'Track not found',
-        details: spotifyTrack?.error?.message || 'Invalid track ID'
+        details: 'Could not find track in Deezer database'
       }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
     
-    const artistId = spotifyTrack.artists?.[0]?.id;
-    const artistName = spotifyTrack.artists?.[0]?.name || 'Unknown Artist';
+    const artistId = deezerTrack.artist?.id;
+    const artistName = deezerTrack.artist?.name || 'Unknown Artist';
+    const trackTitle = deezerTrack.title || deezerTrack.title_short;
     
     // Fetch all additional data in parallel
-    const [spotifyArtist, artistTopTracks, lastfmTrackInfo, lastfmArtistInfo] = await Promise.all([
-      artistId ? getSpotifyArtist(artistId, spotifyToken) : null,
-      artistId ? getArtistTopTracks(artistId, spotifyToken) : [],
-      getLastfmTrackInfo(artistName, spotifyTrack.name),
-      getLastfmArtistInfo(artistName)
+    const [deezerArtist, artistTopTracks, lastfmTrackInfo, lastfmArtistInfo, relatedTracks] = await Promise.all([
+      artistId ? getDeezerArtist(artistId) : null,
+      artistId ? getDeezerArtistTopTracks(artistId) : [],
+      getLastfmTrackInfo(artistName, trackTitle),
+      getLastfmArtistInfo(artistName),
+      getDeezerRelatedTracks(String(deezerTrack.id))
     ]);
     
     // Format artist top 10 tracks with platform rankings
     const formattedTopTracks = artistTopTracks.slice(0, 10).map((track: any, i: number) => ({
       rank: i + 1,
-      id: track.id,
-      title: track.name,
-      album: track.album?.name,
-      artwork: track.album?.images?.[0]?.url,
-      previewUrl: track.preview_url,
-      popularity: track.popularity,
-      spotifyRank: Math.floor((100 - track.popularity) / 10) + 1,
-      deezerRank: Math.floor(Math.random() * 50) + 1,
-      appleMusicRank: Math.floor(Math.random() * 50) + 1,
-      listeners: Math.floor(track.popularity * 25000 + Math.random() * 500000)
+      id: String(track.id),
+      title: track.title || track.title_short,
+      album: track.album?.title,
+      artwork: track.album?.cover_big || track.album?.cover_medium || 
+               `https://e-cdns-images.dzcdn.net/images/cover/${track.md5_image}/500x500-000000-80-0-0.jpg`,
+      previewUrl: track.preview,
+      duration: (track.duration || 200) * 1000,
+      popularity: Math.floor(70 + Math.random() * 30),
+      spotifyRank: Math.floor(Math.random() * 30) + 1,
+      deezerRank: i + 1,
+      appleMusicRank: Math.floor(Math.random() * 40) + 1,
+      listeners: Math.floor(1000000 - i * 80000 + Math.random() * 500000)
+    }));
+    
+    // Format related tracks
+    const formattedRelatedTracks = relatedTracks.map((track: any, i: number) => ({
+      id: String(track.id),
+      title: track.title || track.title_short,
+      artist: track.artist?.name || 'Unknown',
+      artwork: track.album?.cover_big || track.album?.cover_medium,
+      previewUrl: track.preview,
+      listeners: Math.floor(500000 + Math.random() * 2000000)
     }));
     
     // Generate top listeners (community)
     const topListeners = Array.from({ length: 20 }, (_, i) => ({
       id: `listener-${i + 1}`,
-      name: ['MusicFan', 'BeatLover', 'SoundSeeker', 'RhythmRider', 'MelodyMaster', 'TuneHunter', 'GrooveGuru', 'HarmonyHero'][i % 8] + (i > 7 ? ` ${Math.floor(i / 8) + 1}` : ''),
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${i}`,
-      playsCount: Math.floor(500 - i * 20 + Math.random() * 50),
+      name: ['MusicFan', 'BeatLover', 'SoundSeeker', 'RhythmRider', 'MelodyMaster', 
+             'TuneHunter', 'GrooveGuru', 'HarmonyHero', 'SongExplorer', 'TrackAddict'][i % 10] + 
+            (i >= 10 ? ` ${Math.floor(i / 10) + 1}` : ''),
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=listener${i}`,
+      playsCount: Math.floor(800 - i * 35 + Math.random() * 100),
       joinedDaysAgo: Math.floor(Math.random() * 365),
       isVerified: i < 5
     }));
     
     // Generate smart feed events
+    const listeners = lastfmTrackInfo.listeners || Math.floor(Math.random() * 3000000) + 500000;
     const smartFeed = [
       {
         id: '1',
         type: 'milestone',
-        title: `${spotifyTrack.name} hits ${Math.floor(spotifyTrack.popularity * 10)}M streams`,
-        description: `The track continues to dominate charts worldwide with impressive streaming numbers.`,
-        source: 'Spotify Charts',
+        title: `${trackTitle} reaches ${Math.floor(listeners / 1000000)}M+ listeners`,
+        description: `The track continues to gain momentum with impressive global streaming numbers.`,
+        source: 'Global Charts',
         timestamp: new Date(Date.now() - Math.random() * 86400000).toISOString()
       },
       {
         id: '2',
         type: 'playlist',
-        title: `Added to Today's Top Hits`,
-        description: `Major playlist placement boosting visibility across millions of listeners.`,
-        source: 'Spotify Editorial',
+        title: `Added to Top Charts Playlist`,
+        description: `Major playlist placement boosting visibility across millions of listeners worldwide.`,
+        source: 'Editorial Picks',
         timestamp: new Date(Date.now() - Math.random() * 172800000).toISOString()
       },
       {
         id: '3',
         type: 'trending',
-        title: `Trending on TikTok with 50K+ videos`,
+        title: `Trending on social media with ${Math.floor(Math.random() * 100) + 20}K+ videos`,
         description: `User-generated content driving viral growth and new listener discovery.`,
         source: 'Social Trends',
         timestamp: new Date(Date.now() - Math.random() * 259200000).toISOString()
+      },
+      {
+        id: '4',
+        type: 'chart',
+        title: `Enters Top 10 in ${Math.floor(Math.random() * 20) + 5} countries`,
+        description: `Strong performance across multiple markets showing global appeal.`,
+        source: 'Regional Charts',
+        timestamp: new Date(Date.now() - Math.random() * 345600000).toISOString()
       }
     ];
     
     // Calculate metrics
-    const change24h = (Math.random() * 20 - 5);
-    const listeners = lastfmTrackInfo.listeners || Math.floor(spotifyTrack.popularity * 30000);
-    const mindshare = (spotifyTrack.popularity / 2 + Math.random() * 10);
+    const change24h = Math.random() * 25 - 5;
+    const popularity = Math.floor(70 + Math.random() * 25);
+    const mindshare = popularity / 2 + Math.random() * 15;
+    const playcount = lastfmTrackInfo.playcount || listeners * 6;
     
     // Build response
     const response = {
-      id: spotifyTrack.id,
-      title: spotifyTrack.name,
-      album: spotifyTrack.album?.name,
-      artwork: spotifyTrack.album?.images?.[0]?.url,
-      previewUrl: spotifyTrack.preview_url,
-      duration: spotifyTrack.duration_ms,
-      releaseDate: spotifyTrack.album?.release_date,
-      isExplicit: spotifyTrack.explicit,
+      id: String(deezerTrack.id),
+      title: trackTitle,
+      album: deezerTrack.album?.title,
+      artwork: deezerTrack.album?.cover_xl || deezerTrack.album?.cover_big || 
+               deezerTrack.album?.cover_medium ||
+               `https://e-cdns-images.dzcdn.net/images/cover/${deezerTrack.md5_image}/500x500-000000-80-0-0.jpg`,
+      previewUrl: deezerTrack.preview,
+      duration: (deezerTrack.duration || 200) * 1000,
+      releaseDate: deezerTrack.release_date || deezerTrack.album?.release_date,
+      isExplicit: deezerTrack.explicit_lyrics || false,
       description: lastfmTrackInfo.wiki || 
-        `${spotifyTrack.name} by ${artistName} is a ${spotifyTrack.popularity > 70 ? 'chart-topping hit' : 'trending track'} ` +
-        `from the album "${spotifyTrack.album?.name}". ` +
-        `Currently ranked in the top ${100 - spotifyTrack.popularity + 10} globally with ` +
-        `${listeners.toLocaleString()} active listeners.`,
-      tags: lastfmTrackInfo.tags.map((t: any) => t.name || t),
+        `${trackTitle} by ${artistName} is a ${popularity > 80 ? 'chart-topping hit' : 'trending track'} ` +
+        `${deezerTrack.album?.title ? `from the album "${deezerTrack.album.title}"` : ''}. ` +
+        `Currently reaching ${listeners.toLocaleString()} active listeners globally with ` +
+        `strong performance across all major streaming platforms.`,
+      tags: lastfmTrackInfo.tags.length > 0 ? lastfmTrackInfo.tags : 
+            ['Music', 'Trending', 'Popular', deezerTrack.album?.genre_id ? 'Chart Hit' : 'Single'],
       artist: {
         id: artistId,
         name: artistName,
-        image: spotifyArtist?.images?.[0]?.url || spotifyTrack.album?.images?.[0]?.url,
-        followers: spotifyArtist?.followers?.total || 0,
-        monthlyListeners: lastfmArtistInfo.listeners || Math.floor((spotifyArtist?.followers?.total || 100000) * 2.5),
-        genres: spotifyArtist?.genres || [],
+        image: deezerArtist?.picture_xl || deezerArtist?.picture_big || 
+               deezerArtist?.picture_medium || deezerTrack.album?.cover_big,
+        followers: deezerArtist?.nb_fan || Math.floor(Math.random() * 5000000) + 100000,
+        monthlyListeners: lastfmArtistInfo.listeners || Math.floor((deezerArtist?.nb_fan || 500000) * 2.5),
+        genres: deezerArtist?.genres?.data?.map((g: any) => g.name) || ['Pop', 'Music'],
         bio: lastfmArtistInfo.bio || 
-          `${artistName} is a ${spotifyArtist?.genres?.[0] || 'music'} artist with ` +
-          `${(spotifyArtist?.followers?.total || 0).toLocaleString()} followers on Spotify.`,
+          `${artistName} is a globally recognized artist with ` +
+          `${(deezerArtist?.nb_fan || 500000).toLocaleString()} fans. Known for hits like "${trackTitle}", ` +
+          `they continue to dominate charts and streaming platforms worldwide.`,
         topTracks: formattedTopTracks,
-        spotifyUrl: spotifyArtist?.external_urls?.spotify,
-        popularity: spotifyArtist?.popularity || 50
+        spotifyUrl: `https://open.spotify.com/search/${encodeURIComponent(artistName)}`,
+        deezerUrl: deezerArtist?.link || `https://www.deezer.com/artist/${artistId}`,
+        appleMusicUrl: `https://music.apple.com/search?term=${encodeURIComponent(artistName)}`,
+        youtubeUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(artistName)}`,
+        popularity: Math.floor(70 + Math.random() * 25)
       },
       platforms: {
         spotify: {
-          url: spotifyTrack.external_urls?.spotify,
-          popularity: spotifyTrack.popularity,
+          url: `https://open.spotify.com/search/${encodeURIComponent(trackTitle + ' ' + artistName)}`,
+          popularity,
           available: true
         },
         deezer: {
-          url: `https://www.deezer.com/search/${encodeURIComponent(spotifyTrack.name + ' ' + artistName)}`,
-          chartPosition: Math.floor(Math.random() * 50) + 1,
+          url: deezerTrack.link || `https://www.deezer.com/track/${deezerTrack.id}`,
+          chartPosition: Math.floor(Math.random() * 30) + 1,
           available: true
         },
         appleMusic: {
-          url: `https://music.apple.com/search?term=${encodeURIComponent(spotifyTrack.name + ' ' + artistName)}`,
-          chartPosition: Math.floor(Math.random() * 50) + 1,
+          url: `https://music.apple.com/search?term=${encodeURIComponent(trackTitle + ' ' + artistName)}`,
+          chartPosition: Math.floor(Math.random() * 40) + 1,
           available: true
         },
         audius: {
-          url: `https://audius.co/search/${encodeURIComponent(spotifyTrack.name)}`,
+          url: `https://audius.co/search/${encodeURIComponent(trackTitle)}`,
           available: true
         },
         youtube: {
-          url: `https://www.youtube.com/results?search_query=${encodeURIComponent(spotifyTrack.name + ' ' + artistName)}`,
+          url: `https://www.youtube.com/results?search_query=${encodeURIComponent(trackTitle + ' ' + artistName + ' official')}`,
           available: true
         }
       },
       metrics: {
-        attentionScore: Math.round(spotifyTrack.popularity * 1000 + listeners / 100),
+        attentionScore: Math.round(popularity * 1000 + listeners / 100),
         listeners,
-        playcount: lastfmTrackInfo.playcount || listeners * 5,
+        playcount,
         mindshare: parseFloat(mindshare.toFixed(1)),
-        communityListeners: Math.floor(listeners / 100),
+        communityListeners: Math.floor(listeners / 80),
         change24h: parseFloat(change24h.toFixed(1)),
-        change7d: parseFloat((change24h * 2.5 + Math.random() * 10).toFixed(1)),
-        change30d: parseFloat((change24h * 4 + Math.random() * 15).toFixed(1))
+        change7d: parseFloat((change24h * 2.3 + Math.random() * 12).toFixed(1)),
+        change30d: parseFloat((change24h * 4 + Math.random() * 18).toFixed(1))
       },
       chartData: Array.from({ length: 30 }, (_, i) => ({
         date: new Date(Date.now() - (29 - i) * 86400000).toISOString().split('T')[0],
-        listeners: Math.floor(listeners * (0.8 + Math.random() * 0.4)),
-        streams: Math.floor(listeners * 5 * (0.8 + Math.random() * 0.4))
+        listeners: Math.floor(listeners * (0.75 + Math.random() * 0.5)),
+        streams: Math.floor(playcount / 30 * (0.75 + Math.random() * 0.5))
       })),
       topListeners,
       smartFeed,
-      relatedTracks: formattedTopTracks.slice(0, 5).filter((t: any) => t.id !== spotifyTrack.id)
+      relatedTracks: formattedRelatedTracks.length > 0 ? formattedRelatedTracks : 
+                     formattedTopTracks.slice(1, 6).map((t: any) => ({
+                       id: t.id,
+                       title: t.title,
+                       artist: artistName,
+                       artwork: t.artwork,
+                       previewUrl: t.previewUrl,
+                       listeners: t.listeners
+                     }))
     };
     
     return new Response(JSON.stringify(response), {
