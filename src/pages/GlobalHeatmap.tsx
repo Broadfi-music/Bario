@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Search, Star, TrendingUp, TrendingDown, ExternalLink, Filter, Clock,
-  Play, Pause, Users, ChevronRight, Sparkles, Zap, ChevronLeft, Volume2, RefreshCw
+  Play, Pause, Users, ChevronRight, Sparkles, Zap, ChevronLeft, Volume2, RefreshCw, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,7 +42,6 @@ interface MarketEvent {
   event: string;
   change: number;
   time: string;
-  sources: string[];
 }
 
 const timeFilters = ['Now', '24H', '7D', '30D'];
@@ -51,15 +50,19 @@ const GlobalHeatmap = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [timeWindow, setTimeWindow] = useState('24H');
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<HeatmapTrack[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const [showAllLeaderboard, setShowAllLeaderboard] = useState(false);
   const [marketEvents, setMarketEvents] = useState<MarketEvent[]>([]);
   const [currentTrack, setCurrentTrack] = useState<HeatmapTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [selectedGenre, setSelectedGenre] = useState<string>('');
   
-  const { tracks, summary, loading, error, refetch } = useHeatmapTracks(99);
+  const { tracks, genres, summary, loading, error, refetch, searchTracks, filterByGenre } = useHeatmapTracks(99);
   const { sync, syncing } = useSyncHeatmap();
 
   // Generate market events from top tracks
@@ -73,12 +76,32 @@ const GlobalHeatmap = () => {
                i === 2 ? 'Crossover gaining radio momentum' :
                'Music video breaks milestone views',
         change: track.metrics.change24h / 100,
-        time: `${Math.floor(Math.random() * 60) + 10} min ago`,
-        sources: ['@spotify', '@apple', '@deezer'].slice(0, Math.floor(Math.random() * 3) + 1)
+        time: `${Math.floor(Math.random() * 60) + 10} min ago`
       }));
       setMarketEvents(events);
     }
   }, [tracks]);
+
+  // Handle search with debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim()) {
+        searchTracks(searchQuery);
+        setShowSearchResults(true);
+      } else {
+        setShowSearchResults(false);
+        refetch();
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Update search results when tracks change
+  useEffect(() => {
+    if (searchQuery.trim() && tracks.length > 0) {
+      setSearchResults(tracks);
+    }
+  }, [tracks, searchQuery]);
 
   const handleInteraction = (action: string, callback?: () => void) => {
     if (!user) {
@@ -130,14 +153,21 @@ const GlobalHeatmap = () => {
     }
   };
 
-  // Filter tracks based on search
-  const filteredTracks = tracks.filter(t => 
-    t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.artist.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleGenreFilter = (genre: string) => {
+    setSelectedGenre(genre);
+    if (genre) {
+      filterByGenre(genre);
+    } else {
+      refetch();
+    }
+  };
 
-  // Top performing music (positive change)
-  const topPerforming = filteredTracks.filter(s => s.metrics.change24h > 0).slice(0, 20);
+  const clearSearch = () => {
+    setSearchQuery('');
+    setShowSearchResults(false);
+    setSearchResults([]);
+    refetch();
+  };
 
   // Format listener count
   const formatListeners = (count: number) => {
@@ -146,12 +176,15 @@ const GlobalHeatmap = () => {
     return count.toString();
   };
 
+  // Top performing music (positive change)
+  const topPerforming = tracks.filter(s => s.metrics.change24h > 0).slice(0, 20);
+
   if (loading && tracks.length === 0) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-2 border-[#4ade80] border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-white/60 text-sm">Loading heatmap data...</p>
+          <p className="text-white/60 text-sm">Loading heatmap data from streaming platforms...</p>
         </div>
       </div>
     );
@@ -192,14 +225,47 @@ const GlobalHeatmap = () => {
               {syncing ? 'Syncing...' : 'Sync'}
             </Button>
             
-            <div className="relative hidden sm:block">
+            {/* Search Input */}
+            <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40" />
               <Input
-                placeholder="Search"
+                ref={searchInputRef}
+                placeholder="Search any music..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-8 w-40 bg-white/5 border-white/10 text-xs placeholder:text-white/40 rounded-lg"
+                className="pl-8 pr-8 h-8 w-32 sm:w-48 bg-white/5 border-white/10 text-xs placeholder:text-white/40 rounded-lg"
               />
+              {searchQuery && (
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+              
+              {/* Search Results Dropdown */}
+              {showSearchResults && searchResults.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-black/95 border border-white/10 rounded-lg shadow-xl max-h-64 overflow-y-auto z-50">
+                  {searchResults.slice(0, 10).map((track) => (
+                    <div
+                      key={track.id}
+                      onClick={() => {
+                        navigate(`/global-heatmap/${track.id}`);
+                        clearSearch();
+                      }}
+                      className="flex items-center gap-2 p-2 hover:bg-white/10 cursor-pointer"
+                    >
+                      <img src={track.artwork} alt="" className="w-8 h-8 rounded object-cover" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] text-white truncate">{track.title}</p>
+                        <p className="text-[9px] text-white/50 truncate">{track.artist}</p>
+                      </div>
+                      <span className="text-[8px] text-white/40">{formatListeners(track.metrics.lastfmListeners)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             
             {user ? (
@@ -237,7 +303,32 @@ const GlobalHeatmap = () => {
       
       {/* Main Content */}
       <main className="pt-24 sm:pt-28 pb-24 px-3 sm:px-6">
-        {/* Campaigns Section */}
+        {/* Genre Filters */}
+        <section className="mb-4 overflow-x-auto">
+          <div className="flex gap-2 pb-2">
+            <button
+              onClick={() => handleGenreFilter('')}
+              className={`px-3 py-1.5 rounded-full text-[9px] whitespace-nowrap transition-colors ${
+                !selectedGenre ? 'bg-[#4ade80] text-black font-medium' : 'bg-white/5 text-white/60 hover:bg-white/10'
+              }`}
+            >
+              All Genres
+            </button>
+            {genres.map((genre) => (
+              <button
+                key={genre}
+                onClick={() => handleGenreFilter(genre)}
+                className={`px-3 py-1.5 rounded-full text-[9px] whitespace-nowrap transition-colors ${
+                  selectedGenre === genre ? 'bg-[#4ade80] text-black font-medium' : 'bg-white/5 text-white/60 hover:bg-white/10'
+                }`}
+              >
+                {genre}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Trending Now */}
         <section className="mb-6 animate-fade-in">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -252,9 +343,10 @@ const GlobalHeatmap = () => {
           </div>
           
           <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            {filteredTracks.slice(0, 8).map((track) => (
+            {tracks.slice(0, 8).map((track) => (
               <div
                 key={track.id}
+                onClick={() => navigate(`/global-heatmap/${track.id}`)}
                 className="flex-shrink-0 flex items-center gap-2 sm:gap-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-xl p-2 sm:p-3 cursor-pointer transition-all min-w-[180px] sm:min-w-[220px] group"
               >
                 <div className="relative">
@@ -270,7 +362,7 @@ const GlobalHeatmap = () => {
                     )}
                   </button>
                 </div>
-                <div className="flex-1 min-w-0" onClick={() => navigate(`/global-heatmap/${track.id}`)}>
+                <div className="flex-1 min-w-0">
                   <p className="text-[9px] sm:text-[10px] font-medium text-white truncate">{track.title}</p>
                   <p className="text-[8px] sm:text-[9px] text-white/50 truncate">{track.artist}</p>
                   <div className="flex items-center gap-1 mt-1">
@@ -352,7 +444,7 @@ const GlobalHeatmap = () => {
           </div>
         </section>
 
-        {/* Top Performing Music Treemap - Realtime */}
+        {/* Top Performing Music */}
         <section className="mb-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
           <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3">
@@ -375,108 +467,106 @@ const GlobalHeatmap = () => {
                   className={`bg-[#4ade80]/20 hover:bg-[#4ade80]/30 rounded-lg p-2 cursor-pointer transition-all group relative ${
                     i < 2 ? 'col-span-2 row-span-2' : i < 6 ? 'col-span-2' : ''
                   }`}
-                  style={{ minHeight: i < 2 ? '70px' : '35px' }}
+                  style={{ minHeight: i < 2 ? '100px' : '50px' }}
                 >
-                  {i < 4 && (
-                    <button
-                      onClick={(e) => playTrack(track, e)}
-                      className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
-                    >
-                      {currentTrack?.id === track.id && isPlaying ? (
-                        <Pause className="h-2.5 w-2.5 text-white" />
-                      ) : (
-                        <Play className="h-2.5 w-2.5 text-white" />
-                      )}
-                    </button>
-                  )}
-                  <p className="text-[8px] sm:text-[9px] font-semibold text-white truncate">{track.title.slice(0, 12)}</p>
-                  <p className="text-[7px] sm:text-[8px] text-[#4ade80]">+{track.metrics.change24h.toFixed(1)}%</p>
+                  <img 
+                    src={track.artwork} 
+                    alt={track.title}
+                    className="absolute inset-0 w-full h-full object-cover rounded-lg opacity-60"
+                  />
+                  <div className="relative z-10 h-full flex flex-col justify-between">
+                    <div className="flex justify-between items-start">
+                      <span className="text-[8px] sm:text-[9px] font-bold text-white truncate max-w-[80%]">{track.title}</span>
+                      <button
+                        onClick={(e) => playTrack(track, e)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        {currentTrack?.id === track.id && isPlaying ? (
+                          <Pause className="h-4 w-4 text-white" />
+                        ) : (
+                          <Play className="h-4 w-4 text-white" />
+                        )}
+                      </button>
+                    </div>
+                    <div>
+                      <p className="text-[7px] sm:text-[8px] text-white/70 truncate">{track.artist}</p>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[8px] sm:text-[9px] text-white font-semibold">{formatListeners(track.metrics.lastfmListeners)}</span>
+                        <span className="text-[7px] text-[#4ade80]">+{track.metrics.change24h.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Top 99 Music Leaderboard - Realtime */}
-        <section className="mb-6 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <h3 className="text-[10px] sm:text-xs font-medium text-white">🏆 Top 99 Music Leaderboard</h3>
-              <span className="text-[7px] text-[#4ade80] animate-pulse">● LIVE</span>
-            </div>
-            <button 
-              onClick={() => setShowAllLeaderboard(!showAllLeaderboard)}
-              className="text-[9px] text-white/50 hover:text-white flex items-center gap-1"
-            >
-              {showAllLeaderboard ? 'Show less' : 'View all 99'} <ChevronRight className="h-3 w-3" />
-            </button>
-          </div>
-          
+        {/* Top 99 Music Leaderboard */}
+        <section className="animate-fade-in" style={{ animationDelay: '0.3s' }}>
           <div className="bg-white/[0.02] border border-white/5 rounded-xl overflow-hidden">
-            {/* Table Header */}
-            <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-white/[0.02] border-b border-white/5 text-[8px] sm:text-[9px] text-white/40">
-              <div className="col-span-1">#</div>
-              <div className="col-span-4 sm:col-span-3">Song</div>
-              <div className="col-span-2 hidden sm:block">Artist</div>
-              <div className="col-span-2">Listeners</div>
-              <div className="col-span-2">24h</div>
-              <div className="col-span-2 text-center">Play</div>
-              <div className="col-span-1 text-right">Links</div>
+            <div className="flex items-center justify-between p-3 sm:p-4 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] sm:text-xs font-medium text-white">Top 99 Music Leaderboard</span>
+                <span className="text-[7px] text-[#4ade80] animate-pulse">● LIVE</span>
+              </div>
+              <button
+                onClick={() => setShowAllLeaderboard(!showAllLeaderboard)}
+                className="text-[9px] text-[#4ade80] hover:underline"
+              >
+                {showAllLeaderboard ? 'Show less' : 'Show all'}
+              </button>
             </div>
             
-            {/* Table Body */}
-            <div className={`${showAllLeaderboard ? 'max-h-[600px]' : 'max-h-[400px]'} overflow-y-auto scroll-smooth`}>
-              {(showAllLeaderboard ? filteredTracks : filteredTracks.slice(0, 25)).map((track) => (
+            <div className="divide-y divide-white/5">
+              {tracks.slice(0, showAllLeaderboard ? 99 : 20).map((track) => (
                 <div
                   key={track.id}
-                  className="grid grid-cols-12 gap-2 px-3 py-2 hover:bg-white/[0.03] cursor-pointer border-b border-white/5 last:border-0 items-center transition-all group"
+                  onClick={() => navigate(`/global-heatmap/${track.id}`)}
+                  className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 hover:bg-white/5 cursor-pointer group"
                 >
-                  <div className="col-span-1 flex items-center gap-1">
-                    <span className={`text-[9px] font-medium ${track.rank <= 3 ? 'text-yellow-400' : 'text-white/60'}`}>
-                      {track.rank}
-                    </span>
-                    {track.trend === 'up' && <TrendingUp className="h-2.5 w-2.5 text-[#4ade80]" />}
-                    {track.trend === 'down' && <TrendingDown className="h-2.5 w-2.5 text-red-400" />}
+                  <span className="text-[9px] sm:text-[10px] text-white/40 w-6">{track.rank}</span>
+                  <div className="flex items-center gap-1">
+                    {track.trend === 'up' && <TrendingUp className="h-3 w-3 text-[#4ade80]" />}
+                    {track.trend === 'down' && <TrendingDown className="h-3 w-3 text-red-400" />}
                   </div>
-                  <div className="col-span-4 sm:col-span-3 flex items-center gap-2" onClick={() => navigate(`/global-heatmap/${track.id}`)}>
-                    <img src={track.artwork} alt="" className="w-7 h-7 rounded object-cover" />
-                    <span className="text-[9px] font-medium text-white truncate">{track.title}</span>
-                  </div>
-                  <div className="col-span-2 hidden sm:block text-[9px] text-white/60 truncate">{track.artist}</div>
-                  <div className="col-span-2 text-[9px] text-white font-medium">{formatListeners(track.metrics.lastfmListeners)}</div>
-                  <div className="col-span-2">
-                    <span className={`text-[9px] font-medium ${track.metrics.change24h >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
-                      {track.metrics.change24h >= 0 ? '+' : ''}{track.metrics.change24h.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="col-span-2 text-center">
+                  <div className="relative">
+                    <img src={track.artwork} alt={track.title} className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover" />
                     <button
                       onClick={(e) => playTrack(track, e)}
-                      className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
-                        currentTrack?.id === track.id && isPlaying 
-                          ? 'bg-[#4ade80] text-black' 
-                          : 'bg-white/10 text-white hover:bg-white/20'
-                      }`}
+                      className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
                     >
                       {currentTrack?.id === track.id && isPlaying ? (
-                        <Pause className="h-3 w-3" />
+                        <Pause className="h-3 w-3 text-white" />
                       ) : (
-                        <Play className="h-3 w-3" />
+                        <Play className="h-3 w-3 text-white" />
                       )}
                     </button>
                   </div>
-                  <div className="col-span-1 flex items-center justify-end gap-1">
-                    {track.spotifyUrl && (
-                      <a href={track.spotifyUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-[#1DB954] hover:opacity-80">
-                        <SpotifyIcon />
-                      </a>
-                    )}
-                    {track.deezerUrl && (
-                      <a href={track.deezerUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-[#FEAA2D] hover:opacity-80">
-                        <DeezerIcon />
-                      </a>
-                    )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[9px] sm:text-[10px] font-medium text-white truncate">{track.title}</p>
+                    <p className="text-[8px] sm:text-[9px] text-white/50 truncate">{track.artist}</p>
                   </div>
+                  <div className="hidden sm:flex items-center gap-1">
+                    {track.spotifyUrl && <SpotifyIcon />}
+                    {track.deezerUrl && <DeezerIcon />}
+                    {track.audiusUrl && <AudiusIcon />}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[9px] sm:text-[10px] font-semibold text-white">{formatListeners(track.metrics.lastfmListeners)}</p>
+                    <p className={`text-[7px] sm:text-[8px] ${track.metrics.change24h >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
+                      {track.metrics.change24h >= 0 ? '+' : ''}{track.metrics.change24h.toFixed(1)}%
+                    </p>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleWatchlist(track.id);
+                    }}
+                    className={`opacity-0 group-hover:opacity-100 transition-opacity ${watchlist.includes(track.id) ? 'text-yellow-400' : 'text-white/40 hover:text-yellow-400'}`}
+                  >
+                    <Star className="h-4 w-4" fill={watchlist.includes(track.id) ? 'currentColor' : 'none'} />
+                  </button>
                 </div>
               ))}
             </div>
@@ -486,39 +576,42 @@ const GlobalHeatmap = () => {
 
       {/* Fixed Audio Player */}
       {currentTrack && (
-        <div className="fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-sm border-t border-white/10 px-4 py-3 z-50">
+        <div className="fixed bottom-0 left-0 right-0 bg-black/95 border-t border-white/10 p-3 z-50">
           <div className="max-w-7xl mx-auto flex items-center gap-4">
             <img src={currentTrack.artwork} alt="" className="w-12 h-12 rounded-lg object-cover" />
+            <button
+              onClick={() => {
+                if (isPlaying) {
+                  audioRef.current?.pause();
+                  setIsPlaying(false);
+                } else {
+                  audioRef.current?.play();
+                  setIsPlaying(true);
+                }
+              }}
+              className="w-10 h-10 rounded-full bg-[#4ade80] flex items-center justify-center flex-shrink-0"
+            >
+              {isPlaying ? <Pause className="h-5 w-5 text-black" /> : <Play className="h-5 w-5 text-black" />}
+            </button>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{currentTrack.title}</p>
+              <p className="text-sm text-white truncate">{currentTrack.title}</p>
               <p className="text-xs text-white/50 truncate">{currentTrack.artist}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={(e) => playTrack(currentTrack, e)}
-                className="w-10 h-10 rounded-full bg-[#4ade80] text-black flex items-center justify-center hover:bg-[#4ade80]/90"
-              >
-                {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-              </button>
-              <Volume2 className="h-4 w-4 text-white/40" />
             </div>
             <div className="hidden sm:flex items-center gap-2">
               {currentTrack.spotifyUrl && (
-                <a href={currentTrack.spotifyUrl} target="_blank" rel="noopener noreferrer" className="text-[#1DB954]">
+                <a href={currentTrack.spotifyUrl} target="_blank" rel="noopener noreferrer" className="text-[#1DB954] hover:scale-110 transition-transform">
                   <SpotifyIcon />
                 </a>
               )}
               {currentTrack.deezerUrl && (
-                <a href={currentTrack.deezerUrl} target="_blank" rel="noopener noreferrer" className="text-[#FEAA2D]">
+                <a href={currentTrack.deezerUrl} target="_blank" rel="noopener noreferrer" className="text-[#FEAA2D] hover:scale-110 transition-transform">
                   <DeezerIcon />
                 </a>
               )}
-              {currentTrack.audiusUrl && (
-                <a href={currentTrack.audiusUrl} target="_blank" rel="noopener noreferrer" className="text-[#CC0FE0]">
-                  <AudiusIcon />
-                </a>
-              )}
             </div>
+            <button onClick={() => { setCurrentTrack(null); setIsPlaying(false); audioRef.current?.pause(); }}>
+              <X className="h-4 w-4 text-white/50 hover:text-white" />
+            </button>
           </div>
         </div>
       )}
