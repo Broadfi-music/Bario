@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Library as LibraryIcon, Sparkles, User, Settings, Menu, X, Gift, Play, Pause, Download, Share2, MoreVertical, SkipBack, SkipForward, Volume2 } from 'lucide-react';
+import { Home, Library as LibraryIcon, Sparkles, User, Settings, Menu, X, Gift, Play, Pause, Download, Share2, MoreVertical, SkipBack, SkipForward, Volume2, Music } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -9,6 +9,19 @@ import { Slider } from '@/components/ui/slider';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+
+interface UserRemix {
+  id: string;
+  title: string;
+  genre: string;
+  created_at: string;
+  album_art_url: string | null;
+  remix_file_url: string | null;
+  play_count: number;
+  like_count: number;
+  is_published: boolean;
+}
 
 const Library = () => {
   const navigate = useNavigate();
@@ -17,6 +30,8 @@ const Library = () => {
   const [currentTrack, setCurrentTrack] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [userRemixes, setUserRemixes] = useState<UserRemix[]>([]);
+  const [loadingRemixes, setLoadingRemixes] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -24,6 +39,38 @@ const Library = () => {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
+
+  // Fetch user's remixes and liked tracks
+  useEffect(() => {
+    const fetchUserRemixes = async () => {
+      if (!user) return;
+      
+      try {
+        setLoadingRemixes(true);
+        
+        // Fetch user's published remixes
+        const { data: remixes, error } = await supabase
+          .from('remixes')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching remixes:', error);
+        } else {
+          setUserRemixes(remixes || []);
+        }
+      } catch (err) {
+        console.error('Fetch error:', err);
+      } finally {
+        setLoadingRemixes(false);
+      }
+    };
+
+    if (user) {
+      fetchUserRemixes();
+    }
+  }, [user]);
 
   // Audio progress tracking
   useEffect(() => {
@@ -61,25 +108,21 @@ const Library = () => {
     { icon: Gift, label: 'Reward & Earn', path: '/dashboard/rewards' },
   ];
 
-  const generatedTracks = [
-    { id: 1, title: 'Summer Vibes Remix', genre: 'Amapiano', date: '2024-01-15', duration: '3:24', artwork: '/src/assets/track-1.jpeg', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
-    { id: 2, title: 'Night Drive Trap', genre: 'Trap', date: '2024-01-14', duration: '2:58', artwork: '/src/assets/track-2.jpeg', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
-    { id: 3, title: 'Country Soul', genre: 'Country', date: '2024-01-13', duration: '4:12', artwork: '/src/assets/track-3.jpeg', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
-    { id: 4, title: 'Jazz Fusion', genre: 'Jazz', date: '2024-01-12', duration: '5:03', artwork: '/src/assets/track-4.jpeg', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' },
-    { id: 5, title: 'Gospel Energy', genre: 'Gospel', date: '2024-01-11', duration: '3:58', artwork: '/src/assets/track-5.jpeg', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3' },
-    { id: 6, title: 'City Lights Jazz', genre: 'Jazz', date: '2024-01-10', duration: '4:22', artwork: '/src/assets/track-6.jpeg', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3' },
-    { id: 7, title: 'Ocean Wave Soul', genre: 'Soul', date: '2024-01-09', duration: '3:41', artwork: '/src/assets/track-7.jpeg', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3' },
-    { id: 8, title: 'Desert Rose 80s', genre: '80s', date: '2024-01-08', duration: '4:15', artwork: '/src/assets/track-8.jpeg', audio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3' },
-  ];
-
   const handlePlayTrack = (track: any) => {
+    if (!track.remix_file_url) {
+      toast.error('No audio file available');
+      return;
+    }
+    
     if (currentTrack?.id === track.id && isPlaying) {
       audioRef.current?.pause();
       setIsPlaying(false);
     } else {
       if (audioRef.current) {
-        audioRef.current.src = track.audio;
-        audioRef.current.play();
+        audioRef.current.src = track.remix_file_url;
+        audioRef.current.play().catch(() => {
+          toast.error('Unable to play this track');
+        });
       }
       setCurrentTrack(track);
       setIsPlaying(true);
@@ -103,6 +146,14 @@ const Library = () => {
 
   const handleShare = (platform: string, trackTitle: string) => {
     toast.success(`Sharing ${trackTitle} to ${platform}`);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   if (loading) {
@@ -199,7 +250,7 @@ const Library = () => {
               </Button>
               <div>
                 <h1 className="text-lg font-bold text-foreground">My Library</h1>
-                <p className="text-xs text-muted-foreground">All your generated music</p>
+                <p className="text-xs text-muted-foreground">Your remixes and favorites</p>
               </div>
             </div>
             <DropdownMenu>
@@ -233,142 +284,191 @@ const Library = () => {
           <div className="grid grid-cols-3 gap-2 lg:gap-4 mb-4 lg:mb-6">
             <Card className="p-3 lg:p-4">
               <h3 className="text-[10px] text-muted-foreground mb-0.5">Total Tracks</h3>
-              <p className="text-lg lg:text-xl font-bold text-foreground">{generatedTracks.length}</p>
+              <p className="text-lg lg:text-xl font-bold text-foreground">{userRemixes.length}</p>
             </Card>
             <Card className="p-3 lg:p-4">
-              <h3 className="text-[10px] text-muted-foreground mb-0.5">This Week</h3>
-              <p className="text-lg lg:text-xl font-bold text-foreground">4</p>
+              <h3 className="text-[10px] text-muted-foreground mb-0.5">Published</h3>
+              <p className="text-lg lg:text-xl font-bold text-foreground">
+                {userRemixes.filter(r => r.is_published).length}
+              </p>
             </Card>
             <Card className="p-3 lg:p-4">
-              <h3 className="text-[10px] text-muted-foreground mb-0.5">Total Duration</h3>
-              <p className="text-lg lg:text-xl font-bold text-foreground">32:53</p>
+              <h3 className="text-[10px] text-muted-foreground mb-0.5">Total Plays</h3>
+              <p className="text-lg lg:text-xl font-bold text-foreground">
+                {userRemixes.reduce((acc, r) => acc + (r.play_count || 0), 0)}
+              </p>
             </Card>
           </div>
+
+          {/* Loading State */}
+          {loadingRemixes && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-muted-foreground text-sm">Loading your library...</div>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!loadingRemixes && userRemixes.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 px-4">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                <Music className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Your library is empty</h3>
+              <p className="text-sm text-muted-foreground text-center mb-6 max-w-sm">
+                Start creating remixes or add songs to your favorites to see them here.
+              </p>
+              <Link to="/dashboard/create">
+                <Button className="bg-black text-white hover:bg-black/90">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Create Your First Remix
+                </Button>
+              </Link>
+            </div>
+          )}
 
           {/* Tracks Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 lg:gap-3">
-            {generatedTracks.map((track) => (
-              <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors overflow-hidden group">
-                <div className="aspect-square bg-muted relative">
-                  <img 
-                    src={track.artwork} 
-                    alt={track.title}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                    <Button 
-                      size="icon" 
-                      variant="secondary" 
-                      className="rounded-full h-10 w-10"
-                      onClick={() => handlePlayTrack(track)}
-                    >
-                      {currentTrack?.id === track.id && isPlaying ? (
-                        <Pause className="h-5 w-5" />
-                      ) : (
-                        <Play className="h-5 w-5" />
-                      )}
-                    </Button>
-                  </div>
-                  
-                  {/* Action Menu */}
-                  <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="icon" variant="secondary" className="h-6 w-6 rounded-full">
-                          <MoreVertical className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-xs">
-                              <Download className="h-3 w-3 mr-2" />
-                              Download
-                            </DropdownMenuItem>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle className="text-sm">Download Format</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-2 mt-4">
-                              <Button 
-                                onClick={() => handleDownload('mp3', track.title)}
-                                className="w-full text-xs h-8"
-                              >
-                                Download as MP3
-                              </Button>
-                              <Button 
-                                onClick={() => handleDownload('wav', track.title)}
-                                className="w-full text-xs h-8"
-                              >
-                                Download as WAV
-                              </Button>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+          {!loadingRemixes && userRemixes.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 lg:gap-3">
+              {userRemixes.map((track) => (
+                <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors overflow-hidden group">
+                  <div className="aspect-square bg-muted relative">
+                    <img 
+                      src={track.album_art_url || '/src/assets/card-1.png'} 
+                      alt={track.title}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/src/assets/card-1.png';
+                      }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                      <Button 
+                        size="icon" 
+                        variant="secondary" 
+                        className="rounded-full h-10 w-10"
+                        onClick={() => handlePlayTrack(track)}
+                      >
+                        {currentTrack?.id === track.id && isPlaying ? (
+                          <Pause className="h-5 w-5" />
+                        ) : (
+                          <Play className="h-5 w-5" />
+                        )}
+                      </Button>
+                    </div>
+                    
+                    {/* Published Badge */}
+                    {track.is_published && (
+                      <div className="absolute top-1.5 left-1.5 bg-green-500 text-white text-[8px] px-1.5 py-0.5 rounded">
+                        Published
+                      </div>
+                    )}
+                    
+                    {/* Action Menu */}
+                    <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="icon" variant="secondary" className="h-6 w-6 rounded-full">
+                            <MoreVertical className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-xs">
+                                <Download className="h-3 w-3 mr-2" />
+                                Download
+                              </DropdownMenuItem>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle className="text-sm">Download Format</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-2 mt-4">
+                                <Button 
+                                  onClick={() => handleDownload('mp3', track.title)}
+                                  className="w-full text-xs h-8"
+                                >
+                                  Download as MP3
+                                </Button>
+                                <Button 
+                                  onClick={() => handleDownload('wav', track.title)}
+                                  className="w-full text-xs h-8"
+                                >
+                                  Download as WAV
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
 
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-xs">
-                              <Share2 className="h-3 w-3 mr-2" />
-                              Share
-                            </DropdownMenuItem>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle className="text-sm">Share Your Track</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-2 mt-4">
-                              <Button 
-                                onClick={() => handleShare('link', track.title)}
-                                variant="outline"
-                                className="w-full text-xs h-8"
-                              >
-                                Copy Link
-                              </Button>
-                              <Button 
-                                onClick={() => handleShare('tiktok', track.title)}
-                                variant="outline"
-                                className="w-full text-xs h-8"
-                              >
-                                Share to TikTok
-                              </Button>
-                              <Button 
-                                onClick={() => handleShare('whatsapp', track.title)}
-                                variant="outline"
-                                className="w-full text-xs h-8"
-                              >
-                                Share to WhatsApp
-                              </Button>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-xs">
+                                <Share2 className="h-3 w-3 mr-2" />
+                                Share
+                              </DropdownMenuItem>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle className="text-sm">Share Your Track</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-2 mt-4">
+                                <Button 
+                                  onClick={() => handleShare('link', track.title)}
+                                  variant="outline"
+                                  className="w-full text-xs h-8"
+                                >
+                                  Copy Link
+                                </Button>
+                                <Button 
+                                  onClick={() => handleShare('tiktok', track.title)}
+                                  variant="outline"
+                                  className="w-full text-xs h-8"
+                                >
+                                  Share to TikTok
+                                </Button>
+                                <Button 
+                                  onClick={() => handleShare('whatsapp', track.title)}
+                                  variant="outline"
+                                  className="w-full text-xs h-8"
+                                >
+                                  Share to WhatsApp
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
 
-                        <DropdownMenuItem className="text-xs">
-                          Get Stem
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          <DropdownMenuItem className="text-xs">
+                            Get Stems
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                </div>
-                <div className="p-2 lg:p-3">
-                  <h3 className="font-medium text-foreground mb-0.5 text-xs truncate">{track.title}</h3>
-                  <p className="text-[10px] text-muted-foreground">{track.genre}</p>
-                  <div className="flex justify-between items-center mt-1">
-                    <p className="text-[9px] text-muted-foreground">{track.duration}</p>
-                    <p className="text-[9px] text-muted-foreground">{track.date}</p>
+                  <div className="p-2 lg:p-3">
+                    <h3 className="font-medium text-foreground mb-0.5 text-xs truncate">{track.title}</h3>
+                    <p className="text-[10px] text-muted-foreground">{track.genre}</p>
+                    <div className="flex justify-between items-center mt-1">
+                      <p className="text-[9px] text-muted-foreground">{track.play_count || 0} plays</p>
+                      <p className="text-[9px] text-muted-foreground">{formatDate(track.created_at)}</p>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Audio Player */}
         {currentTrack && (
           <div className="fixed bottom-0 left-0 right-0 lg:left-48 bg-card border-t border-border p-3 z-50">
             <div className="flex items-center gap-3">
-              <img src={currentTrack.artwork} alt={currentTrack.title} className="w-10 h-10 rounded object-cover" />
+              <img 
+                src={currentTrack.album_art_url || '/src/assets/card-1.png'} 
+                alt={currentTrack.title} 
+                className="w-10 h-10 rounded object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/src/assets/card-1.png';
+                }}
+              />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-foreground truncate">{currentTrack.title}</p>
                 <p className="text-[10px] text-muted-foreground truncate">{currentTrack.genre}</p>
@@ -394,12 +494,7 @@ const Library = () => {
               </div>
             </div>
             <div className="mt-2">
-              <div className="h-1 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary transition-all duration-200"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
+              <Slider value={[progress]} max={100} step={0.1} className="w-full" />
             </div>
           </div>
         )}
