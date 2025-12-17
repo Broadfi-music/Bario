@@ -1,16 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { 
-  ArrowLeft, Star, TrendingUp, TrendingDown, ExternalLink, Share2, Play,
-  Users, Clock, Zap, ChevronDown, Copy, Music, ChevronLeft, ChevronRight
+  ArrowLeft, Star, TrendingUp, TrendingDown, ExternalLink, Share2, Play, Pause,
+  Users, Clock, Zap, ChevronDown, Copy, Music, ChevronLeft, ChevronRight, Volume2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useTrackDetail } from '@/hooks/useHeatmapData';
 
-// Platform icons as SVG components
+// Platform icons
 const SpotifyIcon = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
     <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
@@ -19,7 +20,7 @@ const SpotifyIcon = () => (
 
 const AppleMusicIcon = () => (
   <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
-    <path d="M23.997 6.124c0-.738-.065-1.47-.24-2.19-.317-1.31-1.062-2.31-2.18-3.043C21.003.517 20.373.285 19.7.164c-.517-.093-1.038-.135-1.564-.15-.04-.003-.083-.01-.124-.013H5.988c-.152.01-.303.017-.455.026C4.786.07 4.043.15 3.34.428 2.004.958 1.04 1.88.475 3.208c-.192.448-.292.925-.363 1.408-.056.392-.088.785-.1 1.18 0 .032-.007.062-.01.093v12.223c.01.14.017.283.027.424.05.815.154 1.624.497 2.373.65 1.42 1.738 2.353 3.234 2.802.42.127.856.187 1.293.228.555.053 1.11.06 1.667.06h11.03c.525 0 1.048-.034 1.57-.1.823-.106 1.597-.35 2.296-.81.84-.553 1.472-1.287 1.88-2.208.186-.42.293-.87.37-1.324.113-.675.138-1.358.137-2.04-.002-3.8 0-7.595-.004-11.392zm-6.423 3.99v5.712c0 .417-.058.827-.244 1.206-.29.59-.76.962-1.388 1.14-.35.1-.706.157-1.07.173-.95.042-1.785-.392-2.244-1.158-.33-.55-.39-1.155-.212-1.78.307-1.09 1.35-1.76 2.59-1.657.48.044.94.16 1.37.39v-3.4c0-.08 0-.16.01-.24.04-.23.2-.39.44-.43.3-.06.6-.1.9-.13.55-.06 1.1-.12 1.63-.18.35-.04.68.12.84.41.08.15.12.33.12.51v.41z"/>
+    <path d="M23.997 6.124c0-.738-.065-1.47-.24-2.19-.317-1.31-1.062-2.31-2.18-3.043C21.003.517 20.373.285 19.7.164c-.517-.093-1.038-.135-1.564-.15-.04-.003-.083-.01-.124-.013H5.988c-.152.01-.303.017-.455.026C4.786.07 4.043.15 3.34.428 2.004.958 1.04 1.88.475 3.208c-.192.448-.292.925-.363 1.408-.056.392-.088.785-.1 1.18 0 .032-.007.062-.01.093v12.223c.01.14.017.283.027.424.05.815.154 1.624.497 2.373.65 1.42 1.738 2.353 3.234 2.802.42.127.856.187 1.293.228.555.053 1.11.06 1.667.06h11.03c.525 0 1.048-.034 1.57-.1.823-.106 1.597-.35 2.296-.81.84-.553 1.472-1.287 1.88-2.208.186-.42.293-.87.37-1.324.113-.675.138-1.358.137-2.04-.002-3.8 0-7.595-.004-11.392z"/>
   </svg>
 );
 
@@ -35,86 +36,50 @@ const AudiusIcon = () => (
   </svg>
 );
 
-// Generate 99 mock songs
-const generateMockSongs = () => {
-  const baseSongs = [
-    { title: 'Midnight Rush', artist: 'Nova Echo', artwork: '/src/assets/card-1.png', twitterHandle: '@novaecho', description: 'Breakout synth-pop hit dominating charts globally. High energy production with viral hooks.' },
-    { title: 'Electric Dreams', artist: 'Synthwave Kid', artwork: '/src/assets/card-2.png', twitterHandle: '@synthwavekid', description: 'Retro-futuristic anthem trending worldwide on TikTok with dance challenges.' },
-    { title: 'Golden Hour', artist: 'Amber Waves', artwork: '/src/assets/card-3.png', twitterHandle: '@amberwaves', description: 'Country crossover gaining radio momentum with heartfelt lyrics.' },
-    { title: 'Neon Nights', artist: 'DJ Pulse', artwork: '/src/assets/card-4.png', twitterHandle: '@djpulse', description: 'Electronic banger holding steady on club charts.' },
-    { title: 'Afro Vibes', artist: 'Lagos Sound', artwork: '/src/assets/card-5.png', twitterHandle: '@lagossound', description: 'Afrobeats sensation breaking out globally with infectious rhythm.' },
-  ];
-  
-  const artworks = [
-    '/src/assets/card-1.png', '/src/assets/card-2.png', '/src/assets/card-3.png',
-    '/src/assets/card-4.png', '/src/assets/card-5.png', '/src/assets/track-1.jpeg',
-    '/src/assets/track-2.jpeg', '/src/assets/track-3.jpeg'
-  ];
+const YouTubeIcon = () => (
+  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
+    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+  </svg>
+);
 
-  return Array.from({ length: 99 }, (_, i) => {
-    const base = baseSongs[i % baseSongs.length];
-    return {
-      id: i + 1, rank: i + 1, trend: 'up' as const, trendValue: 12, 
-      title: i < 5 ? base.title : `Track ${i + 1}`, 
-      artist: i < 5 ? base.artist : `Artist ${i + 1}`,
-      artwork: artworks[i % artworks.length], 
-      attentionScore: 98470 - (i * 500), momentum: 'surging' as const, 
-      change24h: 15.2 - (i * 0.1),
-      listeners: (2.4 - (i * 0.02)).toFixed(1), 
-      mindshare: (5.2 - (i * 0.05)).toFixed(1), 
-      reach24h: (113.78 - (i * 1)).toFixed(2),
-      twitterHandle: i < 5 ? base.twitterHandle : `@artist${i + 1}`, 
-      description: i < 5 ? base.description : `Trending track with amazing production and viral potential.`,
-      platforms: [{ name: 'Spotify', percentage: 34 }, { name: 'TikTok', percentage: 28 }, { name: 'YouTube', percentage: 22 }],
-      latestBuzz: 'Major playlist addition driving massive streams, TikTok trend gaining momentum',
-      change7D: -8.48 + (Math.random() * 20), change30D: -15.08 + (Math.random() * 30),
-    };
-  });
+const formatNumber = (num: number) => {
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+  return num.toString();
 };
-
-const mockSongs = generateMockSongs();
-
-const topVoices = Array.from({ length: 50 }, (_, i) => ({
-  name: ['Sanera', 'Princ3', 'MickEy M', 'DefiBoss', 'Calvin', 'Crypto Aman', 'BeatMaster', 'ChartKing'][i % 8] + (i > 7 ? ` ${i}` : ''),
-  avatar: ['🎵', '🎸', '🎹', '🎤', '🎧', '🎺', '🎷', '🥁'][i % 8],
-  score: 49.11 - (i * 0.5),
-  change: Math.random() > 0.3 ? Math.random() * 200 : -(Math.random() * 50),
-  color: Math.random() > 0.3 ? 'bg-[#4ade80]' : 'bg-red-500'
-}));
-
-const smartFeed = [
-  { user: 'Lookonchain', handle: '@lookonchain', time: 'Dec 14', content: 'Nova Echo streams increased 1,400 in 24h, reaching total of 16,796 plays on Spotify.', views: '81.03K', likes: 453, comments: 93, reposts: 21 },
-  { user: 'Cointelegraph', handle: '@Cointelegraph', time: 'Dec 14', content: '⚡NEW: Midnight Rush hits Top 50 Global Charts - massive streaming milestone!', views: '33.44K', likes: 253, comments: 80, reposts: 26 },
-];
 
 const HeatmapDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [activeTab, setActiveTab] = useState('charts');
   const [timeRange, setTimeRange] = useState('7D');
-  const [showAllVoices, setShowAllVoices] = useState(false);
-  const [realtimeListeners, setRealtimeListeners] = useState('2.4');
-  const [realtimeMindshare, setRealtimeMindshare] = useState('5.2');
-  const [realtimeReach, setRealtimeReach] = useState('113.78');
-  const [chartData, setChartData] = useState([120, 100, 110, 90, 100, 60, 80, 40, 70, 50]);
+  const [showAllListeners, setShowAllListeners] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
   
-  const song = mockSongs.find(s => s.id === Number(id)) || mockSongs[0];
+  const { track, loading, error } = useTrackDetail(id);
 
-  // Realtime updates
+  // Real-time updates simulation
+  const [realtimeListeners, setRealtimeListeners] = useState(0);
+  const [realtimeMindshare, setRealtimeMindshare] = useState(0);
+  
   useEffect(() => {
-    const interval = setInterval(() => {
-      setRealtimeListeners(prev => (parseFloat(prev) + (Math.random() - 0.4) * 0.1).toFixed(1));
-      setRealtimeMindshare(prev => (parseFloat(prev) + (Math.random() - 0.5) * 0.05).toFixed(1));
-      setRealtimeReach(prev => (parseFloat(prev) + (Math.random() - 0.3) * 2).toFixed(2));
-      setChartData(prev => {
-        const newData = [...prev.slice(1), Math.floor(prev[prev.length - 1] + (Math.random() - 0.5) * 30)];
-        return newData;
-      });
-    }, 2000);
+    if (track) {
+      setRealtimeListeners(track.metrics.listeners);
+      setRealtimeMindshare(track.metrics.mindshare);
+    }
+  }, [track]);
 
+  useEffect(() => {
+    if (!track) return;
+    const interval = setInterval(() => {
+      setRealtimeListeners(prev => Math.max(0, prev + Math.floor((Math.random() - 0.4) * 1000)));
+      setRealtimeMindshare(prev => Math.max(0, parseFloat((prev + (Math.random() - 0.5) * 0.1).toFixed(1))));
+    }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [track]);
 
   const handleInteraction = (action: string, callback?: () => void) => {
     if (!user) {
@@ -127,7 +92,7 @@ const HeatmapDetail = () => {
 
   const handleShare = (platform: string) => {
     const url = window.location.href;
-    const text = `Check out ${song.title} by ${song.artist} on Bario!`;
+    const text = track ? `Check out ${track.title} by ${track.artist.name} on Bario!` : '';
     
     let shareUrl = '';
     switch (platform) {
@@ -145,14 +110,63 @@ const HeatmapDetail = () => {
         toast.success('Link copied to clipboard!');
         return;
     }
+    if (shareUrl) window.open(shareUrl, '_blank', 'width=600,height=400');
+  };
+
+  const playTrack = (previewUrl: string | null, trackId: string) => {
+    if (!previewUrl) {
+      toast.error('No preview available');
+      return;
+    }
     
-    if (shareUrl) {
-      window.open(shareUrl, '_blank', 'width=600,height=400');
+    if (playingTrackId === trackId && isPlaying) {
+      audioRef.current?.pause();
+      setIsPlaying(false);
+      setPlayingTrackId(null);
+      return;
+    }
+    
+    if (audioRef.current) {
+      audioRef.current.src = previewUrl;
+      audioRef.current.play();
+      setIsPlaying(true);
+      setPlayingTrackId(trackId);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-[#4ade80] border-t-transparent rounded-full mx-auto mb-4" />
+          <p className="text-white/60 text-sm">Loading track details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !track) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">{error || 'Track not found'}</p>
+          <Button onClick={() => navigate('/global-heatmap')} className="bg-white text-black">
+            Back to Heatmap
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
+      {/* Hidden Audio Element */}
+      <audio 
+        ref={audioRef} 
+        onEnded={() => { setIsPlaying(false); setPlayingTrackId(null); }}
+        onError={() => { setIsPlaying(false); toast.error('Failed to play'); }}
+      />
+      
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-sm border-b border-white/5">
         <div className="flex items-center justify-between h-12 sm:h-14 px-3 sm:px-6">
@@ -184,33 +198,57 @@ const HeatmapDetail = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
             {/* Left Sidebar - Song Info */}
             <div className="lg:col-span-3 space-y-4">
-              {/* Song Header */}
               <Card className="bg-white/[0.02] border-white/5 p-4">
+                {/* Track Header */}
                 <div className="flex items-start gap-3 mb-4">
-                  <img src={song.artwork} alt={song.title} className="w-14 h-14 rounded-xl object-cover" />
+                  <div className="relative group">
+                    <img src={track.artwork} alt={track.title} className="w-16 h-16 rounded-xl object-cover" />
+                    <button
+                      onClick={() => playTrack(track.previewUrl, track.id)}
+                      className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"
+                    >
+                      {playingTrackId === track.id && isPlaying ? (
+                        <Pause className="h-6 w-6 text-white" />
+                      ) : (
+                        <Play className="h-6 w-6 text-white" />
+                      )}
+                    </button>
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <h1 className="text-sm sm:text-base font-bold text-white truncate">{song.title}</h1>
-                    <p className="text-[10px] text-white/50">{song.artist}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[9px] text-white/40">{song.twitterHandle}</span>
-                      <ExternalLink className="h-3 w-3 text-white/40" />
-                    </div>
+                    <h1 className="text-sm sm:text-base font-bold text-white truncate">{track.title}</h1>
+                    <p className="text-[10px] text-white/50">{track.artist.name}</p>
+                    <p className="text-[9px] text-white/40">{track.album}</p>
                   </div>
                 </div>
-                <p className="text-[10px] text-white/60 mb-4">{song.description}</p>
+                
+                <p className="text-[10px] text-white/60 mb-4 line-clamp-3">{track.description}</p>
+                
+                {/* Tags */}
+                {track.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-4">
+                    {track.tags.slice(0, 4).map((tag, i) => (
+                      <span key={i} className="px-2 py-0.5 bg-white/5 rounded-full text-[8px] text-white/50">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 
                 {/* Streaming Platforms */}
-                <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/5">
-                  <a href="https://spotify.com" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 rounded-full bg-[#1DB954]/20 hover:bg-[#1DB954]/30 transition-colors text-[#1DB954]">
+                <div className="flex items-center gap-2 mb-4 pb-4 border-b border-white/5">
+                  <a href={track.platforms.spotify.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 rounded-full bg-[#1DB954]/20 hover:bg-[#1DB954]/30 transition-colors text-[#1DB954]">
                     <SpotifyIcon />
                   </a>
-                  <a href="https://music.apple.com" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 rounded-full bg-[#FA243C]/20 hover:bg-[#FA243C]/30 transition-colors text-[#FA243C]">
+                  <a href={track.platforms.appleMusic.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 rounded-full bg-[#FA243C]/20 hover:bg-[#FA243C]/30 transition-colors text-[#FA243C]">
                     <AppleMusicIcon />
                   </a>
-                  <a href="https://deezer.com" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 rounded-full bg-[#FEAA2D]/20 hover:bg-[#FEAA2D]/30 transition-colors text-[#FEAA2D]">
+                  <a href={track.platforms.deezer.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 rounded-full bg-[#FEAA2D]/20 hover:bg-[#FEAA2D]/30 transition-colors text-[#FEAA2D]">
                     <DeezerIcon />
                   </a>
-                  <a href="https://audius.co" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 rounded-full bg-[#CC0FE0]/20 hover:bg-[#CC0FE0]/30 transition-colors text-[#CC0FE0]">
+                  <a href={track.platforms.youtube.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 rounded-full bg-[#FF0000]/20 hover:bg-[#FF0000]/30 transition-colors text-[#FF0000]">
+                    <YouTubeIcon />
+                  </a>
+                  <a href={track.platforms.audius.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-8 h-8 rounded-full bg-[#CC0FE0]/20 hover:bg-[#CC0FE0]/30 transition-colors text-[#CC0FE0]">
                     <AudiusIcon />
                   </a>
                 </div>
@@ -219,30 +257,19 @@ const HeatmapDetail = () => {
                 <div className="bg-white/[0.03] rounded-xl p-3 mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[9px] text-white/50">Community listeners</span>
-                    <span className="text-[9px] text-white/40">{realtimeListeners}M total</span>
+                    <span className="text-[9px] text-white/40">{formatNumber(track.metrics.communityListeners)} active</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                       <div className="h-full bg-[#4ade80] rounded-full" style={{ width: '87%' }} />
                     </div>
-                    <span className="text-[9px] text-[#4ade80]">87.1%</span>
-                    <span className="text-[9px] text-red-400">12.9%</span>
+                    <span className="text-[9px] text-[#4ade80]">87%</span>
                   </div>
                   <div className="flex -space-x-1 mt-2">
-                    {[1,2,3,4,5,6].map(i => (
-                      <div key={i} className="w-5 h-5 rounded-full bg-white/10 border-2 border-black" />
+                    {track.topListeners.slice(0, 6).map((listener, i) => (
+                      <img key={i} src={listener.avatar} alt="" className="w-5 h-5 rounded-full border-2 border-black" />
                     ))}
                   </div>
-                </div>
-
-                {/* Latest Buzz */}
-                <div className="bg-white/[0.03] rounded-xl p-3 mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Zap className="h-3 w-3 text-yellow-400" />
-                    <span className="text-[9px] text-white/50">Latest buzz</span>
-                  </div>
-                  <p className="text-[9px] text-white/70">{song.latestBuzz}</p>
-                  <p className="text-[8px] text-white/30 mt-1">Dec 15, 6:01AM</p>
                 </div>
 
                 {/* Stats */}
@@ -250,26 +277,24 @@ const HeatmapDetail = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] text-white/40">Listeners</span>
                     <div className="flex items-center gap-1">
-                      <span className="text-[9px] font-medium text-white">{realtimeListeners}M</span>
+                      <span className="text-[9px] font-medium text-white">{formatNumber(realtimeListeners)}</span>
                       <span className="text-[7px] text-[#4ade80] animate-pulse">● LIVE</span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
+                    <span className="text-[9px] text-white/40">Mindshare</span>
+                    <span className="text-[9px] text-white">{realtimeMindshare.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <span className="text-[9px] text-white/40">Δ 24h</span>
-                    <span className={`text-[9px] ${song.change24h >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
-                      {song.change24h >= 0 ? '+' : ''}{song.change24h.toFixed(1)}%
+                    <span className={`text-[9px] ${track.metrics.change24h >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
+                      {track.metrics.change24h >= 0 ? '+' : ''}{track.metrics.change24h.toFixed(1)}%
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] text-white/40">Δ 7D</span>
-                    <span className={`text-[9px] ${song.change7D >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
-                      {song.change7D >= 0 ? '+' : ''}{song.change7D.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] text-white/40">Δ 30D</span>
-                    <span className={`text-[9px] ${song.change30D >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
-                      {song.change30D >= 0 ? '+' : ''}{song.change30D.toFixed(1)}%
+                    <span className={`text-[9px] ${track.metrics.change7d >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
+                      {track.metrics.change7d >= 0 ? '+' : ''}{track.metrics.change7d.toFixed(1)}%
                     </span>
                   </div>
                 </div>
@@ -284,194 +309,225 @@ const HeatmapDetail = () => {
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="flex-1 h-8 text-[9px] border-white/10 text-white hover:bg-white/5"
-                      >
+                      <Button variant="outline" className="flex-1 h-8 text-[9px] border-white/10 text-white hover:bg-white/5">
                         <Share2 className="h-3 w-3 mr-1" /> Share
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                      <DropdownMenuItem onClick={() => handleShare('twitter')} className="text-xs">
-                        Share to X (Twitter)
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleShare('facebook')} className="text-xs">
-                        Share to Facebook
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleShare('whatsapp')} className="text-xs">
-                        Share to WhatsApp
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleShare('copy')} className="text-xs">
-                        Copy Link
-                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleShare('twitter')} className="text-xs">Share to X</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleShare('whatsapp')} className="text-xs">Share to WhatsApp</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleShare('copy')} className="text-xs">Copy Link</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               </Card>
             </div>
 
-            {/* Center - Charts */}
+            {/* Center - Charts & Artist Top Tracks */}
             <div className="lg:col-span-6 space-y-4">
-              {/* Tabs */}
-              <div className="flex items-center gap-4 border-b border-white/10">
-                {['Charts'].map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab.toLowerCase())}
-                    className={`pb-2 text-[10px] font-medium transition-colors relative ${
-                      activeTab === tab.toLowerCase() ? 'text-white' : 'text-white/40'
-                    }`}
-                  >
-                    {tab}
-                    {activeTab === tab.toLowerCase() && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#4ade80]" />
-                    )}
-                  </button>
-                ))}
-                <div className="ml-auto flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
-                  {['24h', '7D', '1M', '3M', 'YTD'].map(t => (
-                    <button
-                      key={t}
-                      onClick={() => setTimeRange(t)}
-                      className={`text-[8px] px-2 py-1 rounded-md transition-colors ${
-                        timeRange === t ? 'bg-[#4ade80] text-black font-medium' : 'text-white/50'
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Chart Area */}
+              {/* Chart */}
               <Card className="bg-white/[0.02] border-white/5 p-4">
-                <div className="grid grid-cols-3 gap-4 mb-4">
-                  <div>
-                    <p className="text-[9px] text-white/40">Listeners</p>
-                    <p className="text-base font-bold text-white">{realtimeListeners}M</p>
-                    <p className={`text-[9px] ${song.change24h >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
-                      {song.change24h >= 0 ? '▲' : '▼'}{Math.abs(song.change24h).toFixed(1)}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-white/40">Mindshare</p>
-                    <p className="text-base font-bold text-white">{realtimeMindshare}%</p>
-                    <p className="text-[9px] text-[#4ade80]">▲ realtime</p>
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-white/40">Listeners</p>
-                    <p className="text-base font-bold text-[#4ade80]">{realtimeListeners}M</p>
-                    <p className="text-[9px] text-[#4ade80] animate-pulse">● LIVE</p>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[11px] font-medium text-white">Listener Activity (30 Days)</h3>
+                  <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
+                    {['7D', '30D', '90D'].map(t => (
+                      <button
+                        key={t}
+                        onClick={() => setTimeRange(t)}
+                        className={`text-[8px] px-2 py-0.5 rounded ${timeRange === t ? 'bg-[#4ade80] text-black' : 'text-white/50'}`}
+                      >
+                        {t}
+                      </button>
+                    ))}
                   </div>
                 </div>
-
-                {/* Realtime Chart */}
-                <div className="h-48 sm:h-64 bg-white/[0.02] rounded-xl flex items-center justify-center relative overflow-hidden">
-                  <svg className="w-full h-full absolute inset-0">
-                    <defs>
-                      <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#4ade80" stopOpacity="0.3" />
-                        <stop offset="100%" stopColor="#4ade80" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <path
-                      d={`M0,${200 - chartData[0]} ${chartData.map((d, i) => `Q${i * 80 + 40},${200 - d} ${(i + 1) * 80},${200 - chartData[Math.min(i + 1, chartData.length - 1)]}`).join(' ')}`}
-                      fill="none"
-                      stroke="#4ade80"
-                      strokeWidth="2"
-                      className="transition-all duration-500"
-                    />
-                    <path
-                      d={`M0,${200 - chartData[0]} ${chartData.map((d, i) => `Q${i * 80 + 40},${200 - d} ${(i + 1) * 80},${200 - chartData[Math.min(i + 1, chartData.length - 1)]}`).join(' ')} L800,200 L0,200 Z`}
-                      fill="url(#chartGradient)"
-                      className="transition-all duration-500"
-                    />
-                  </svg>
-                  <div className="absolute bottom-4 left-4 flex items-center gap-4">
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-[#4ade80]" />
-                      <span className="text-[8px] text-white/50">Listeners</span>
+                <div className="h-32 flex items-end gap-1">
+                  {track.chartData.slice(-20).map((point, i) => (
+                    <div key={i} className="flex-1 flex flex-col items-center">
+                      <div
+                        className="w-full bg-[#4ade80]/50 rounded-t hover:bg-[#4ade80] transition-colors"
+                        style={{ height: `${(point.listeners / Math.max(...track.chartData.map(d => d.listeners))) * 100}%` }}
+                      />
                     </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-full bg-purple-400" />
-                      <span className="text-[8px] text-white/50">Mindshare</span>
-                    </div>
-                  </div>
-                  <div className="absolute top-2 right-2">
-                    <span className="text-[7px] text-[#4ade80] animate-pulse">● LIVE</span>
-                  </div>
+                  ))}
                 </div>
               </Card>
 
-              {/* Stats Row */}
-              <div className="grid grid-cols-1 gap-3">
-                <Card className="bg-white/[0.02] border-white/5 p-3">
-                  <p className="text-[9px] text-white/40 mb-1">24h reach</p>
-                  <p className="text-sm font-bold text-white">{realtimeReach}K</p>
-                  <p className="text-[8px] text-[#4ade80] animate-pulse">● LIVE</p>
-                  <div className="h-8 mt-2">
-                    <svg className="w-full h-full">
-                      <path d="M0,20 Q10,18 20,15 T40,10 T60,12 T80,5" fill="none" stroke="#4ade80" strokeWidth="1.5" />
-                    </svg>
-                  </div>
-                </Card>
-              </div>
-
-              {/* Top Voices */}
+              {/* Artist Top 10 Tracks */}
               <Card className="bg-white/[0.02] border-white/5 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-[10px] font-medium text-white">Top Voices</h3>
-                  <button 
-                    onClick={() => setShowAllVoices(!showAllVoices)}
-                    className="text-[9px] text-white/50 hover:text-white flex items-center gap-1"
-                  >
-                    {showAllVoices ? 'Show less' : 'View all 50'} <ChevronRight className="h-3 w-3" />
-                  </button>
+                <h3 className="text-[11px] font-medium text-white mb-3">
+                  {track.artist.name}'s Top Tracks - Platform Rankings
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-[8px] text-white/40 border-b border-white/5">
+                        <th className="text-left py-2 pr-2">#</th>
+                        <th className="text-left py-2">Track</th>
+                        <th className="text-center py-2">
+                          <SpotifyIcon />
+                        </th>
+                        <th className="text-center py-2">
+                          <DeezerIcon />
+                        </th>
+                        <th className="text-center py-2">
+                          <AppleMusicIcon />
+                        </th>
+                        <th className="text-right py-2">Listeners</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {track.artist.topTracks.map((t) => (
+                        <tr 
+                          key={t.id} 
+                          className="text-[9px] border-b border-white/5 hover:bg-white/5 cursor-pointer group"
+                          onClick={() => navigate(`/global-heatmap/${t.id}`)}
+                        >
+                          <td className="py-2 pr-2 text-white/40">{t.rank}</td>
+                          <td className="py-2">
+                            <div className="flex items-center gap-2">
+                              <div className="relative">
+                                <img src={t.artwork} alt="" className="w-8 h-8 rounded object-cover" />
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); playTrack(t.previewUrl, t.id); }}
+                                  className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded"
+                                >
+                                  {playingTrackId === t.id && isPlaying ? (
+                                    <Pause className="h-3 w-3 text-white" />
+                                  ) : (
+                                    <Play className="h-3 w-3 text-white" />
+                                  )}
+                                </button>
+                              </div>
+                              <div className="truncate max-w-[120px]">
+                                <p className="text-white truncate">{t.title}</p>
+                                <p className="text-white/40 text-[8px] truncate">{t.album}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-2 text-center text-[#1DB954]">#{t.spotifyRank}</td>
+                          <td className="py-2 text-center text-[#FEAA2D]">#{t.deezerRank}</td>
+                          <td className="py-2 text-center text-[#FA243C]">#{t.appleMusicRank}</td>
+                          <td className="py-2 text-right text-white/60">{formatNumber(t.listeners)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                  {(showAllVoices ? topVoices : topVoices.slice(0, 10)).map((voice, i) => (
-                    <div key={i} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/[0.03]">
-                      <span className="text-[9px] text-white/40 w-4">{i + 1}</span>
-                      <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs">
-                        {voice.avatar}
+              </Card>
+
+              {/* Smart Feed */}
+              <Card className="bg-white/[0.02] border-white/5 p-4">
+                <h3 className="text-[11px] font-medium text-white mb-3">Smart Feed</h3>
+                <div className="space-y-3">
+                  {track.smartFeed.map((event) => (
+                    <div key={event.id} className="flex gap-3 p-2 bg-white/[0.02] rounded-lg">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${
+                        event.type === 'milestone' ? 'bg-[#4ade80]/20 text-[#4ade80]' :
+                        event.type === 'playlist' ? 'bg-blue-500/20 text-blue-400' :
+                        'bg-purple-500/20 text-purple-400'
+                      }`}>
+                        {event.type === 'milestone' ? '🎉' : event.type === 'playlist' ? '📋' : '🔥'}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[9px] font-medium text-white truncate">{voice.name}</p>
+                      <div className="flex-1">
+                        <p className="text-[10px] font-medium text-white">{event.title}</p>
+                        <p className="text-[9px] text-white/50">{event.description}</p>
+                        <p className="text-[8px] text-white/30 mt-1">{event.source} • {new Date(event.timestamp).toLocaleDateString()}</p>
                       </div>
-                      <span className="text-[9px] text-white/50">{voice.score.toFixed(2)}</span>
-                      <span className={`text-[8px] ${voice.change >= 0 ? 'text-[#4ade80]' : 'text-red-400'}`}>
-                        {voice.change >= 0 ? '+' : ''}{voice.change.toFixed(0)}%
-                      </span>
                     </div>
                   ))}
+                </div>
+              </Card>
+
+              {/* Artist Profile */}
+              <Card className="bg-white/[0.02] border-white/5 p-4">
+                <h3 className="text-[11px] font-medium text-white mb-3">About Artist</h3>
+                <div className="flex items-start gap-4">
+                  <img src={track.artist.image} alt={track.artist.name} className="w-20 h-20 rounded-full object-cover" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-bold text-white">{track.artist.name}</h4>
+                    <div className="flex items-center gap-4 mt-1 text-[9px] text-white/50">
+                      <span>{formatNumber(track.artist.monthlyListeners)} monthly listeners</span>
+                      <span>{formatNumber(track.artist.followers)} followers</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {track.artist.genres.slice(0, 3).map((genre, i) => (
+                        <span key={i} className="px-2 py-0.5 bg-white/5 rounded-full text-[8px] text-white/50">
+                          {genre}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-[9px] text-white/60 mt-2 line-clamp-3">{track.artist.bio}</p>
+                    
+                    {/* Artist Streaming Platforms */}
+                    <div className="flex items-center gap-2 mt-3">
+                      <a href={track.artist.spotifyUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-1 bg-[#1DB954]/20 rounded text-[8px] text-[#1DB954] hover:bg-[#1DB954]/30">
+                        <SpotifyIcon /> Spotify
+                      </a>
+                      <a href={track.platforms.youtube.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2 py-1 bg-[#FF0000]/20 rounded text-[8px] text-[#FF0000] hover:bg-[#FF0000]/30">
+                        <YouTubeIcon /> YouTube
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </Card>
             </div>
 
-            {/* Right Sidebar - Smart Feed */}
+            {/* Right Sidebar - Top Listeners */}
             <div className="lg:col-span-3 space-y-4">
               <Card className="bg-white/[0.02] border-white/5 p-4">
-                <h3 className="text-[10px] font-medium text-white mb-3">Smart Feed</h3>
-                <div className="space-y-4">
-                  {smartFeed.map((item, i) => (
-                    <div key={i} className="border-b border-white/5 pb-4 last:border-0 last:pb-0">
-                      <div className="flex items-start gap-2 mb-2">
-                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                          <span className="text-[10px]">📰</span>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-[10px] font-medium text-white">Top Listeners</h3>
+                  <button
+                    onClick={() => setShowAllListeners(!showAllListeners)}
+                    className="text-[8px] text-[#4ade80] hover:underline"
+                  >
+                    {showAllListeners ? 'Show less' : 'View all'}
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {track.topListeners.slice(0, showAllListeners ? 20 : 8).map((listener, i) => (
+                    <div key={listener.id} className="flex items-center gap-2 p-2 hover:bg-white/5 rounded-lg">
+                      <span className="text-[8px] text-white/40 w-4">{i + 1}</span>
+                      <img src={listener.avatar} alt="" className="w-7 h-7 rounded-full" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1">
+                          <p className="text-[9px] text-white truncate">{listener.name}</p>
+                          {listener.isVerified && <span className="text-[8px] text-[#4ade80]">✓</span>}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1">
-                            <span className="text-[9px] font-medium text-white">{item.user}</span>
-                            <span className="text-[8px] text-white/40">{item.handle}</span>
-                          </div>
-                          <span className="text-[8px] text-white/30">{item.time}</span>
-                        </div>
+                        <p className="text-[8px] text-white/40">{listener.playsCount} plays</p>
                       </div>
-                      <p className="text-[9px] text-white/70 mb-2">{item.content}</p>
-                      <div className="flex items-center gap-3 text-[8px] text-white/40">
-                        <span>{item.views} views</span>
-                        <span>{item.likes} likes</span>
-                        <span>{item.comments} comments</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              {/* Related Tracks */}
+              <Card className="bg-white/[0.02] border-white/5 p-4">
+                <h3 className="text-[10px] font-medium text-white mb-3">Related Tracks</h3>
+                <div className="space-y-2">
+                  {track.relatedTracks.map((t) => (
+                    <div
+                      key={t.id}
+                      onClick={() => navigate(`/global-heatmap/${t.id}`)}
+                      className="flex items-center gap-2 p-2 hover:bg-white/5 rounded-lg cursor-pointer group"
+                    >
+                      <div className="relative">
+                        <img src={t.artwork} alt="" className="w-10 h-10 rounded object-cover" />
+                        <button
+                          onClick={(e) => { e.stopPropagation(); playTrack(t.previewUrl, t.id); }}
+                          className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded"
+                        >
+                          {playingTrackId === t.id && isPlaying ? (
+                            <Pause className="h-3 w-3 text-white" />
+                          ) : (
+                            <Play className="h-3 w-3 text-white" />
+                          )}
+                        </button>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[9px] text-white truncate">{t.title}</p>
+                        <p className="text-[8px] text-white/40">{formatNumber(t.listeners)} listeners</p>
                       </div>
                     </div>
                   ))}
@@ -481,6 +537,33 @@ const HeatmapDetail = () => {
           </div>
         </div>
       </main>
+
+      {/* Fixed Audio Player */}
+      {playingTrackId && (
+        <div className="fixed bottom-0 left-0 right-0 bg-black/95 border-t border-white/10 p-3">
+          <div className="max-w-7xl mx-auto flex items-center gap-4">
+            <button
+              onClick={() => {
+                if (isPlaying) {
+                  audioRef.current?.pause();
+                  setIsPlaying(false);
+                } else {
+                  audioRef.current?.play();
+                  setIsPlaying(true);
+                }
+              }}
+              className="w-10 h-10 rounded-full bg-[#4ade80] flex items-center justify-center"
+            >
+              {isPlaying ? <Pause className="h-5 w-5 text-black" /> : <Play className="h-5 w-5 text-black" />}
+            </button>
+            <div className="flex-1">
+              <p className="text-sm text-white">{playingTrackId === track?.id ? track.title : 'Now Playing'}</p>
+              <p className="text-xs text-white/50">{playingTrackId === track?.id ? track.artist.name : ''}</p>
+            </div>
+            <Volume2 className="h-4 w-4 text-white/50" />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
