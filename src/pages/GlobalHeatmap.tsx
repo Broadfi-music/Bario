@@ -61,9 +61,27 @@ const GlobalHeatmap = () => {
   const [currentTrack, setCurrentTrack] = useState<HeatmapTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState<string>('');
+  const [selectedCountry, setSelectedCountry] = useState<string>('GLOBAL');
   
   const { tracks, genres, summary, loading, error, refetch, searchTracks, filterByGenre } = useHeatmapTracks(99);
   const { sync, syncing } = useSyncHeatmap();
+  
+  const countries = [
+    { code: 'GLOBAL', name: '🌍 Global' },
+    { code: 'US', name: '🇺🇸 USA' },
+    { code: 'UK', name: '🇬🇧 UK' },
+    { code: 'NG', name: '🇳🇬 Nigeria' },
+    { code: 'GH', name: '🇬🇭 Ghana' },
+    { code: 'ZA', name: '🇿🇦 South Africa' },
+    { code: 'KE', name: '🇰🇪 Kenya' },
+    { code: 'BR', name: '🇧🇷 Brazil' },
+    { code: 'MX', name: '🇲🇽 Mexico' },
+    { code: 'FR', name: '🇫🇷 France' },
+    { code: 'DE', name: '🇩🇪 Germany' },
+    { code: 'JP', name: '🇯🇵 Japan' },
+    { code: 'KR', name: '🇰🇷 South Korea' },
+    { code: 'IN', name: '🇮🇳 India' },
+  ];
 
   // Generate market events from top tracks
   useEffect(() => {
@@ -179,16 +197,7 @@ const GlobalHeatmap = () => {
   // Top performing music (positive change)
   const topPerforming = tracks.filter(s => s.metrics.change24h > 0).slice(0, 20);
 
-  if (loading && tracks.length === 0) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-2 border-[#4ade80] border-t-transparent rounded-full mx-auto mb-4" />
-          <p className="text-white/60 text-sm">Loading heatmap data from streaming platforms...</p>
-        </div>
-      </div>
-    );
-  }
+  // No loading screen - show content immediately
 
   return (
     <div className="min-h-screen bg-black text-white">
