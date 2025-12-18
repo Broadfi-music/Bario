@@ -37,6 +37,7 @@ export function useDashboardMusic() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [likedTracks, setLikedTracks] = useState<Set<string | number>>(new Set());
 
   const fetchData = useCallback(async () => {
     try {
@@ -62,11 +63,81 @@ export function useDashboardMusic() {
     }
   }, []);
 
+  // Initial fetch
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  return { data, loading, error, refetch: fetchData };
+  // Real-time updates for trending songs and remixes every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setData(prev => {
+        // Shuffle and update trending songs
+        const shuffledTrending = [...prev.trendingSongs]
+          .sort(() => Math.random() - 0.5)
+          .map((song, i) => ({
+            ...song,
+            rank: i + 1,
+            plays: `${(parseFloat(song.plays.replace(/[KM]/g, '')) * (1 + (Math.random() - 0.3) * 0.1)).toFixed(1)}${song.plays.includes('M') ? 'M' : 'K'}`,
+          }));
+        
+        // Shuffle and update trending remixes
+        const shuffledRemixes = [...prev.trendingRemixes]
+          .sort(() => Math.random() - 0.5)
+          .map((remix, i) => ({
+            ...remix,
+            plays: `${(parseFloat(remix.plays.replace(/[KM]/g, '')) * (1 + (Math.random() - 0.3) * 0.1)).toFixed(1)}${remix.plays.includes('M') ? 'M' : 'K'}`,
+          }));
+        
+        // Shuffle recent remixes
+        const shuffledRecentRemixes = [...prev.recentRemixes]
+          .sort(() => Math.random() - 0.5);
+        
+        // Shuffle new songs
+        const shuffledNewSongs = [...prev.newSongs]
+          .sort(() => Math.random() - 0.5);
+        
+        return {
+          ...prev,
+          trendingSongs: shuffledTrending,
+          trendingRemixes: shuffledRemixes,
+          recentRemixes: shuffledRecentRemixes,
+          newSongs: shuffledNewSongs,
+        };
+      });
+    }, 30000); // Update every 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const toggleLike = useCallback((trackId: string | number) => {
+    setLikedTracks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(trackId)) {
+        newSet.delete(trackId);
+      } else {
+        newSet.add(trackId);
+      }
+      // Store in localStorage for persistence
+      localStorage.setItem('likedTracks', JSON.stringify([...newSet]));
+      return newSet;
+    });
+  }, []);
+
+  // Load liked tracks from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('likedTracks');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setLikedTracks(new Set(parsed));
+      } catch (e) {
+        console.error('Failed to parse liked tracks:', e);
+      }
+    }
+  }, []);
+
+  return { data, loading, error, refetch: fetchData, likedTracks, toggleLike };
 }
 
 export interface MegashuffleArtist {
