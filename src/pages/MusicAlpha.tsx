@@ -38,7 +38,7 @@ const MusicAlpha = () => {
   const navigate = useNavigate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [activeTab, setActiveTab] = useState('projects');
-  const [viewMode, setViewMode] = useState<'simple' | 'pro'>('simple');
+  
   const [horizon, setHorizon] = useState('7D');
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -157,20 +157,6 @@ const MusicAlpha = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8 h-8 w-40 bg-white/5 border-white/10 text-xs placeholder:text-white/40 rounded-lg"
               />
-            </div>
-            
-            <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
-              {['simple', 'pro'].map(mode => (
-                <button
-                  key={mode}
-                  onClick={() => setViewMode(mode as 'simple' | 'pro')}
-                  className={`text-[8px] sm:text-[9px] px-2 py-1 rounded-md capitalize transition-colors ${
-                    viewMode === mode ? 'bg-purple-500 text-white font-medium' : 'text-white/50'
-                  }`}
-                >
-                  {mode}
-                </button>
-              ))}
             </div>
             
             {user && (

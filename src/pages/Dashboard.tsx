@@ -13,10 +13,9 @@ import { useDashboardMusic, DashboardTrack } from '@/hooks/useDashboardMusic';
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading, signOut } = useAuth();
-  const { data: musicData, loading: musicLoading } = useDashboardMusic();
+  const { data: musicData, loading: musicLoading, likedTracks, toggleLike } = useDashboardMusic();
   const [currentTrack, setCurrentTrack] = useState<DashboardTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [likedTracks, setLikedTracks] = useState<Set<string | number>>(new Set());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
   const [progress, setProgress] = useState(0);
@@ -62,18 +61,10 @@ const Dashboard = () => {
     });
   };
 
-  const handleLike = (trackId: string | number) => {
-    setLikedTracks(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(trackId)) {
-        newSet.delete(trackId);
-        toast.success('Removed from favorites');
-      } else {
-        newSet.add(trackId);
-        toast.success('Added to favorites');
-      }
-      return newSet;
-    });
+  const handleLike = (trackId: string | number, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    toggleLike(trackId);
+    toast.success(likedTracks.has(trackId) ? 'Removed from favorites' : 'Added to favorites');
   };
 
   const handlePlay = (track: DashboardTrack) => {
@@ -142,21 +133,21 @@ const Dashboard = () => {
   const sections = [
     {
       title: 'Recent Remixes',
-      tracks: musicData.recentRemixes,
+      tracks: musicData.recentRemixes.slice(0, 10),
     },
     {
       title: 'New Songs',
-      tracks: musicData.newSongs,
+      tracks: musicData.newSongs.slice(0, 10),
     },
     {
-      title: 'Trending Songs',
+      title: `Trending Songs (${musicData.trendingSongs.length})`,
       layout: 'list',
-      tracks: musicData.trendingSongs,
+      tracks: musicData.trendingSongs.slice(0, 20),
     },
     {
-      title: 'Trending Remixes',
+      title: `Trending Remixes (${musicData.trendingRemixes.length})`,
       layout: 'list',
-      tracks: musicData.trendingRemixes,
+      tracks: musicData.trendingRemixes.slice(0, 20),
     },
   ];
 
@@ -397,10 +388,7 @@ const Dashboard = () => {
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleLike(track.id);
-                            }}
+                            onClick={(e) => handleLike(track.id, e)}
                             className={`h-6 w-6 ${likedTracks.has(track.id) ? "text-red-500" : "text-muted-foreground"}`}
                           >
                             <Heart className={`h-3 w-3 ${likedTracks.has(track.id) ? "fill-current" : ""}`} />

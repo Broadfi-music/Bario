@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useDashboardMusic, DashboardTrack } from '@/hooks/useDashboardMusic';
 
 interface UserRemix {
   id: string;
@@ -32,7 +33,14 @@ const Library = () => {
   const [progress, setProgress] = useState(0);
   const [userRemixes, setUserRemixes] = useState<UserRemix[]>([]);
   const [loadingRemixes, setLoadingRemixes] = useState(true);
+  const [activeTab, setActiveTab] = useState<'remixes' | 'favorites'>('favorites');
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  const { data: musicData, likedTracks } = useDashboardMusic();
+  
+  // Get all tracks that are liked
+  const favoriteTracks = [...musicData.trendingSongs, ...musicData.newSongs, ...musicData.trendingRemixes, ...musicData.recentRemixes]
+    .filter(track => likedTracks.has(track.id));
 
   useEffect(() => {
     if (!loading && !user) {
@@ -280,42 +288,60 @@ const Library = () => {
             </DropdownMenu>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-2 lg:gap-4 mb-4 lg:mb-6">
-            <Card className="p-3 lg:p-4">
-              <h3 className="text-[10px] text-muted-foreground mb-0.5">Total Tracks</h3>
-              <p className="text-lg lg:text-xl font-bold text-foreground">{userRemixes.length}</p>
-            </Card>
-            <Card className="p-3 lg:p-4">
-              <h3 className="text-[10px] text-muted-foreground mb-0.5">Published</h3>
-              <p className="text-lg lg:text-xl font-bold text-foreground">
-                {userRemixes.filter(r => r.is_published).length}
-              </p>
-            </Card>
-            <Card className="p-3 lg:p-4">
-              <h3 className="text-[10px] text-muted-foreground mb-0.5">Total Plays</h3>
-              <p className="text-lg lg:text-xl font-bold text-foreground">
-                {userRemixes.reduce((acc, r) => acc + (r.play_count || 0), 0)}
-              </p>
-            </Card>
+          {/* Tabs */}
+          <div className="flex gap-2 mb-4">
+            <Button
+              variant={activeTab === 'favorites' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('favorites')}
+              className="text-xs h-8"
+            >
+              Favorites ({favoriteTracks.length})
+            </Button>
+            <Button
+              variant={activeTab === 'remixes' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('remixes')}
+              className="text-xs h-8"
+            >
+              My Remixes ({userRemixes.length})
+            </Button>
           </div>
 
           {/* Loading State */}
-          {loadingRemixes && (
+          {loadingRemixes && activeTab === 'remixes' && (
             <div className="flex items-center justify-center py-12">
               <div className="text-muted-foreground text-sm">Loading your library...</div>
             </div>
           )}
 
-          {/* Empty State */}
-          {!loadingRemixes && userRemixes.length === 0 && (
+          {/* Empty State for Favorites */}
+          {activeTab === 'favorites' && favoriteTracks.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 px-4">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
                 <Music className="h-8 w-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">Your library is empty</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-2">No favorites yet</h3>
               <p className="text-sm text-muted-foreground text-center mb-6 max-w-sm">
-                Start creating remixes or add songs to your favorites to see them here.
+                Add songs to your favorites from the Dashboard to see them here.
+              </p>
+              <Link to="/dashboard">
+                <Button className="bg-black text-white hover:bg-black/90">
+                  Go to Dashboard
+                </Button>
+              </Link>
+            </div>
+          )}
+
+          {/* Empty State for Remixes */}
+          {activeTab === 'remixes' && !loadingRemixes && userRemixes.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 px-4">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+                <Music className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">No remixes yet</h3>
+              <p className="text-sm text-muted-foreground text-center mb-6 max-w-sm">
+                Create your first remix to see it here.
               </p>
               <Link to="/dashboard/create">
                 <Button className="bg-black text-white hover:bg-black/90">
@@ -326,9 +352,57 @@ const Library = () => {
             </div>
           )}
 
-          {/* Tracks Grid */}
-          {!loadingRemixes && userRemixes.length > 0 && (
+          {/* Favorites Grid */}
+          {activeTab === 'favorites' && favoriteTracks.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 lg:gap-3">
+              {favoriteTracks.map((track) => (
+                <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors overflow-hidden group">
+                  <div className="aspect-square bg-muted relative">
+                    <img 
+                      src={track.artwork} 
+                      alt={track.title}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/src/assets/card-1.png';
+                      }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                      <Button 
+                        size="icon" 
+                        variant="secondary" 
+                        className="rounded-full h-10 w-10"
+                        onClick={() => {
+                          if (track.preview) {
+                            if (audioRef.current) {
+                              audioRef.current.src = track.preview;
+                              audioRef.current.play();
+                              setCurrentTrack(track);
+                              setIsPlaying(true);
+                            }
+                          } else {
+                            toast.error('No preview available');
+                          }
+                        }}
+                      >
+                        {currentTrack?.id === track.id && isPlaying ? (
+                          <Pause className="h-5 w-5" />
+                        ) : (
+                          <Play className="h-5 w-5" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="p-2">
+                    <h3 className="font-medium text-foreground truncate text-xs">{track.title}</h3>
+                    <p className="text-[10px] text-muted-foreground truncate">{track.artist}</p>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Remixes Grid */}
+          {activeTab === 'remixes' && !loadingRemixes && userRemixes.length > 0 && (
               {userRemixes.map((track) => (
                 <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors overflow-hidden group">
                   <div className="aspect-square bg-muted relative">

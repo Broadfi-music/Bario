@@ -312,9 +312,34 @@ const GlobalHeatmap = () => {
       
       {/* Main Content */}
       <main className="pt-24 sm:pt-28 pb-24 px-3 sm:px-6">
-        {/* Genre Filters */}
-        <section className="mb-4 overflow-x-auto">
-          <div className="flex gap-2 pb-2">
+        {/* Country Dropdown & Genre Filters */}
+        <section className="mb-4">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            {/* Country Dropdown */}
+            <div className="relative">
+              <select
+                value={selectedCountry}
+                onChange={(e) => setSelectedCountry(e.target.value)}
+                className="appearance-none bg-white/5 border border-white/10 text-white text-[10px] px-3 py-1.5 pr-8 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#4ade80] cursor-pointer"
+              >
+                {countries.map((country) => (
+                  <option key={country.code} value={country.code} className="bg-black text-white">
+                    {country.name}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                <svg className="h-3 w-3 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+            <span className="text-[9px] text-white/40">|</span>
+            <span className="text-[9px] text-white/50">Top charts from {countries.find(c => c.code === selectedCountry)?.name.replace(/^.{2}\s/, '') || 'Global'}</span>
+          </div>
+          
+          {/* Genre Filters */}
+          <div className="flex gap-2 pb-2 overflow-x-auto">
             <button
               onClick={() => handleGenreFilter('')}
               className={`px-3 py-1.5 rounded-full text-[9px] whitespace-nowrap transition-colors ${
