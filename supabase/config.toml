@@ -14,3 +14,12 @@ verify_jwt = false
 
 [functions.heatmap-track-detail]
 verify_jwt = false
+
+[functions.dashboard-music]
+verify_jwt = false
+
+[functions.megashuffle-music]
+verify_jwt = false
+
+[functions.alpha-predictions]
+verify_jwt = false
