@@ -1,7 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-
-const SUPABASE_URL = 'https://sufbohhsxlrefkoubmed.supabase.co';
-const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmJvaGhzeGxyZWZrb3VibWVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODY3NjAsImV4cCI6MjA4MDQ2Mjc2MH0.1Ms3xhguJjQ-bbPronddzgO-XCYcTZTkcWS-uUMg1q4';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface PredictionMarket {
   id: string;
@@ -65,28 +63,28 @@ export function useAlphaPredictions() {
   const fetchMarkets = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/alpha-predictions?action=markets`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': API_KEY
-          }
-        }
-      );
+      setError(null);
+      
+      console.log('Fetching alpha predictions...');
+      
+      const { data, error: fetchError } = await supabase.functions.invoke('alpha-predictions', {
+        body: { action: 'markets' }
+      });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (fetchError) {
+        console.error('Supabase function error:', fetchError);
+        throw new Error(fetchError.message);
       }
 
-      const data = await response.json();
+      console.log('Alpha predictions response:', data);
       
-      if (data.markets) {
+      if (data?.markets) {
         setMarkets(data.markets);
         setAiModels(data.aiModels || []);
         setFanForecasters(data.fanForecasters || []);
         setStats(data.stats || null);
+      } else {
+        console.error('No markets in response:', data);
       }
     } catch (err) {
       console.error('Error fetching alpha predictions:', err);
@@ -98,23 +96,14 @@ export function useAlphaPredictions() {
 
   const submitPrediction = useCallback(async (marketId: string, prediction: 'will' | 'wont', confidence: number, userId?: string) => {
     try {
-      const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/alpha-predictions?action=predict`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': API_KEY
-          },
-          body: JSON.stringify({ marketId, prediction, confidence, userId })
-        }
-      );
+      const { data, error: submitError } = await supabase.functions.invoke('alpha-predictions', {
+        body: { action: 'predict', marketId, prediction, confidence, userId }
+      });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (submitError) {
+        throw new Error(submitError.message);
       }
 
-      const data = await response.json();
       return data;
     } catch (err) {
       console.error('Error submitting prediction:', err);
