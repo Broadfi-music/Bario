@@ -240,8 +240,21 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const action = url.searchParams.get('action') || 'markets';
+    let action = url.searchParams.get('action') || 'markets';
     const limit = parseInt(url.searchParams.get('limit') || '30');
+    
+    // Also check body for action (for supabase.functions.invoke)
+    let body: any = {};
+    if (req.method === 'POST') {
+      try {
+        body = await req.json();
+        if (body.action) {
+          action = body.action;
+        }
+      } catch (e) {
+        // No body or invalid JSON
+      }
+    }
     
     console.log(`Alpha predictions: action=${action}, limit=${limit}`);
     
@@ -275,7 +288,6 @@ serve(async (req) => {
     }
     
     if (action === 'analyze') {
-      const body = await req.json();
       const tracks = body.tracks || [];
       
       const analysis = await analyzeWithAI(tracks, 'reasoning');
@@ -288,7 +300,6 @@ serve(async (req) => {
     }
     
     if (action === 'predict') {
-      const body = await req.json();
       const { marketId, prediction, confidence, userId } = body;
       
       // In production, this would save to database

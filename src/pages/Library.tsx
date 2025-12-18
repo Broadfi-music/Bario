@@ -403,6 +403,7 @@ const Library = () => {
 
           {/* Remixes Grid */}
           {activeTab === 'remixes' && !loadingRemixes && userRemixes.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 lg:gap-3">
               {userRemixes.map((track) => (
                 <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors overflow-hidden group">
                   <div className="aspect-square bg-muted relative">
