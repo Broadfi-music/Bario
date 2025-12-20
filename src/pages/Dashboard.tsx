@@ -1,14 +1,17 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Library, Sparkles, User, Settings, Plus, Play, Heart, Pause, Menu, X, Gift, SkipBack, SkipForward, Volume2 } from 'lucide-react';
+import { Home, Library, Sparkles, User, Settings, Plus, Play, Heart, Pause, Menu, X, Gift, SkipBack, SkipForward, Volume2, Search, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useDashboardMusic, DashboardTrack } from '@/hooks/useDashboardMusic';
+import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -19,6 +22,10 @@ const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
   const [progress, setProgress] = useState(0);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -117,12 +124,29 @@ const Dashboard = () => {
     return null;
   }
 
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('music-search', {
+        body: { query: searchQuery }
+      });
+      if (error) throw error;
+      setSearchResults(data?.results || []);
+    } catch (err) {
+      toast.error('Search failed');
+    } finally {
+      setSearching(false);
+    }
+  };
+
   const sidebarItems = [
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Library, label: 'Library', path: '/dashboard/library' },
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
     { icon: Sparkles, label: 'Megashuffle', path: '/dashboard/megashuffle' },
     { icon: Gift, label: 'Reward & Earn', path: '/dashboard/rewards' },
+    { icon: Upload, label: 'Upload', path: '/dashboard/upload' },
   ];
 
   const topNavItems = [
@@ -155,7 +179,45 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background flex overflow-x-hidden">
       <audio ref={audioRef} />
       
-      {/* Mobile Sidebar Overlay */}
+      {/* Search Dialog */}
+      <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Search Music</DialogTitle>
+          </DialogHeader>
+          <div className="flex gap-2 mb-4">
+            <Input
+              placeholder="Search for songs, artists..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            />
+            <Button onClick={handleSearch} disabled={searching}>
+              {searching ? 'Searching...' : 'Search'}
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {searchResults.map((result) => (
+              <Card key={result.id} className="p-2 cursor-pointer hover:bg-accent/50" onClick={() => {
+                handlePlay({ ...result, preview: result.preview });
+                setSearchOpen(false);
+              }}>
+                <div className="flex items-center gap-2">
+                  <img src={result.artwork} alt={result.title} className="w-10 h-10 rounded object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/src/assets/card-1.png'; }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{result.title}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{result.artist}</p>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{result.source}</span>
+                  <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); handleLike(result.id); }} className="h-6 w-6">
+                    <Heart className={`h-3 w-3 ${likedTracks.has(result.id) ? 'fill-red-500 text-red-500' : ''}`} />
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
       {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -228,6 +290,9 @@ const Dashboard = () => {
             </Button>
             <div className="flex-1" />
             <div className="flex items-center gap-2">
+              <Button onClick={() => setSearchOpen(true)} variant="ghost" size="icon" className="h-8 w-8">
+                <Search className="h-4 w-4" />
+              </Button>
               <Link to="/dashboard/new-remix">
                 <Button className="bg-black text-white hover:bg-black/90 text-xs px-3 h-8">
                   <Plus className="h-4 w-4 mr-1" />

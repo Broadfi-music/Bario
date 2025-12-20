@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.alpha-predictions]
 verify_jwt = false
+
+[functions.music-search]
+verify_jwt = false
+
+[functions.user-upload]
+verify_jwt = false
