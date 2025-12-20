@@ -29,3 +29,9 @@ verify_jwt = false
 
 [functions.user-upload]
 verify_jwt = false
+
+[functions.spotify-auth]
+verify_jwt = false
+
+[functions.spotify-search]
+verify_jwt = false
