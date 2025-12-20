@@ -149,6 +149,7 @@ export interface MegashuffleArtist {
   tagline: string;
   monthlyListeners: string;
   isAudius?: boolean;
+  deezerId?: string | number;
   topTrack?: {
     id: string | number;
     title: string;

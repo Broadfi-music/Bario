@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, Play, Pause, ChevronLeft, Shuffle, TrendingUp, TrendingDown, SkipBack, SkipForward, Volume2 } from 'lucide-react';
+import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, Play, Pause, ChevronLeft, Shuffle, TrendingUp, TrendingDown, SkipBack, SkipForward, Volume2, Heart, ExternalLink, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Slider } from '@/components/ui/slider';
 import { useMegashuffleMusic, MegashuffleArtist, MegashuffleTrack } from '@/hooks/useDashboardMusic';
+import { supabase } from '@/integrations/supabase/client';
 
 const formatListeners = (num: number | string) => {
   if (typeof num === 'string') return num;
@@ -25,10 +26,18 @@ const Megashuffle = () => {
   const [isShuffling, setIsShuffling] = useState(false);
   const [showArtistPopup, setShowArtistPopup] = useState(false);
   const [currentArtist, setCurrentArtist] = useState<MegashuffleArtist | null>(null);
+  const [artistTracks, setArtistTracks] = useState<any[]>([]);
   const [shuffleCount, setShuffleCount] = useState(0);
   const [currentTrack, setCurrentTrack] = useState<MegashuffleTrack | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [likedTracks, setLikedTracks] = useState<Set<string>>(new Set());
+  const [showAllTrending, setShowAllTrending] = useState(false);
+  const [showAllArtists, setShowAllArtists] = useState(false);
+  const [showAllTop50, setShowAllTop50] = useState(false);
+  const [randomizedTop50, setRandomizedTop50] = useState<MegashuffleTrack[]>([]);
+  const [randomizedTrending, setRandomizedTrending] = useState<MegashuffleTrack[]>([]);
+  const [randomizedArtists, setRandomizedArtists] = useState<MegashuffleArtist[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -36,6 +45,38 @@ const Megashuffle = () => {
       navigate('/auth');
     }
   }, [user, loading, navigate]);
+
+  // Randomize data on load and periodically
+  useEffect(() => {
+    if (musicData.top50Songs.length > 0) {
+      randomizeData();
+    }
+  }, [musicData]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (musicData.top50Songs.length > 0) {
+        randomizeData();
+      }
+    }, 45000); // Randomize every 45 seconds
+    return () => clearInterval(interval);
+  }, [musicData]);
+
+  const randomizeData = () => {
+    // Shuffle top 50
+    const shuffledTop50 = [...musicData.top50Songs]
+      .sort(() => Math.random() - 0.5)
+      .map((song, index) => ({ ...song, rank: index + 1 }));
+    setRandomizedTop50(shuffledTop50);
+
+    // Shuffle trending
+    const shuffledTrending = [...musicData.trendingSongs].sort(() => Math.random() - 0.5);
+    setRandomizedTrending(shuffledTrending);
+
+    // Shuffle artists
+    const shuffledArtists = [...musicData.artists].sort(() => Math.random() - 0.5);
+    setRandomizedArtists(shuffledArtists);
+  };
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -55,31 +96,58 @@ const Megashuffle = () => {
   };
 
   const startShuffle = async () => {
-    if (musicData.artists.length === 0) {
+    if (randomizedArtists.length === 0) {
       toast.error('Loading artists...');
       return;
     }
     setIsShuffling(true);
     let count = 0;
-    const interval = setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * musicData.artists.length);
-      setCurrentArtist(musicData.artists[randomIndex]);
+    const interval = setInterval(async () => {
+      const randomIndex = Math.floor(Math.random() * randomizedArtists.length);
+      setCurrentArtist(randomizedArtists[randomIndex]);
       count++;
       if (count >= 10) {
         clearInterval(interval);
         setIsShuffling(false);
+        const selectedArtist = randomizedArtists[randomIndex];
+        setCurrentArtist(selectedArtist);
+        
+        // Fetch artist's tracks from Deezer
+        if (selectedArtist.deezerId) {
+          try {
+            const response = await fetch(`https://api.deezer.com/artist/${selectedArtist.deezerId}/top?limit=5`);
+            const data = await response.json();
+            setArtistTracks((data.data || []).map((t: any) => ({
+              id: t.id,
+              title: t.title,
+              artwork: t.album?.cover_medium || '/src/assets/card-1.png',
+              preview: t.preview,
+              duration: formatDuration(t.duration),
+            })));
+          } catch (e) {
+            setArtistTracks([]);
+          }
+        }
+        
         setShowArtistPopup(true);
         setShuffleCount(prev => prev + 1);
       }
     }, 100);
   };
 
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const closePopupAndShuffle = () => {
     setShowArtistPopup(false);
+    setArtistTracks([]);
     startShuffle();
   };
 
-  const handlePlayTrack = (track: MegashuffleTrack) => {
+  const handlePlayTrack = (track: MegashuffleTrack | any) => {
     if (!track.preview) {
       toast.error('No preview available');
       return;
@@ -105,6 +173,39 @@ const Megashuffle = () => {
     }
   };
 
+  const handleLike = async (track: MegashuffleTrack) => {
+    if (!user) {
+      toast.error('Please sign in to add favorites');
+      return;
+    }
+    
+    const trackId = track.id.toString();
+    const newLiked = new Set(likedTracks);
+    
+    if (newLiked.has(trackId)) {
+      newLiked.delete(trackId);
+      toast.success('Removed from favorites');
+    } else {
+      newLiked.add(trackId);
+      toast.success('Added to favorites');
+      
+      try {
+        await supabase.from('user_favorites').insert({
+          user_id: user.id,
+          track_id: trackId,
+          track_title: track.title,
+          artist_name: track.artist,
+          cover_image_url: track.artwork,
+          preview_url: track.preview || '',
+          source: 'megashuffle',
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    setLikedTracks(newLiked);
+  };
+
   if (loading || !user) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="text-foreground">Loading...</div></div>;
 
   const sidebarItems = [
@@ -113,7 +214,12 @@ const Megashuffle = () => {
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
     { icon: Sparkles, label: 'Megashuffle', path: '/dashboard/megashuffle' },
     { icon: Gift, label: 'Reward & Earn', path: '/dashboard/rewards' },
+    { icon: Upload, label: 'Upload', path: '/dashboard/upload' },
   ];
+
+  const displayTrending = showAllTrending ? randomizedTrending : randomizedTrending.slice(0, 12);
+  const displayArtists = showAllArtists ? randomizedArtists : randomizedArtists.slice(0, 12);
+  const displayTop50 = showAllTop50 ? randomizedTop50 : randomizedTop50.slice(0, 20);
 
   return (
     <div className="min-h-screen bg-background flex overflow-x-hidden">
@@ -164,9 +270,14 @@ const Megashuffle = () => {
 
           {/* Trending Songs */}
           <section className="mb-6">
-            <h2 className="text-sm font-bold text-foreground mb-3">Trending Songs</h2>
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-sm font-bold text-foreground">Trending Songs</h2>
+              <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowAllTrending(!showAllTrending)}>
+                {showAllTrending ? 'Show Less' : 'View More'}
+              </Button>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {musicData.trendingSongs.slice(0, 12).map((song) => (
+              {displayTrending.map((song) => (
                 <Card key={song.id} className="bg-card hover:bg-accent/50 transition-colors cursor-pointer p-2 group" onClick={() => handlePlayTrack(song)}>
                   <div className="relative aspect-square mb-2 rounded-md overflow-hidden">
                     <img src={song.artwork} alt={song.title} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/src/assets/card-1.png'; }} />
@@ -175,6 +286,14 @@ const Megashuffle = () => {
                         {currentTrack?.id === song.id && isAudioPlaying ? <Pause className="h-4 w-4 text-black" /> : <Play className="h-4 w-4 text-black ml-0.5" />}
                       </div>
                     </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className={`absolute top-1 right-1 h-6 w-6 bg-black/50 hover:bg-black/70 ${likedTracks.has(song.id.toString()) ? 'text-red-500' : 'text-white'}`}
+                      onClick={(e) => { e.stopPropagation(); handleLike(song); }}
+                    >
+                      <Heart className={`h-3 w-3 ${likedTracks.has(song.id.toString()) ? 'fill-current' : ''}`} />
+                    </Button>
                   </div>
                   <h3 className="text-xs font-medium text-foreground truncate">{song.title}</h3>
                   <p className="text-[10px] text-muted-foreground truncate">{song.artist}</p>
@@ -185,26 +304,36 @@ const Megashuffle = () => {
 
           {/* New Artists */}
           <section className="mb-6">
-            <h2 className="text-sm font-bold text-foreground mb-3">New Artists</h2>
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-sm font-bold text-foreground">New Artists</h2>
+              <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowAllArtists(!showAllArtists)}>
+                {showAllArtists ? 'Show Less' : 'View More'}
+              </Button>
+            </div>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-              {musicData.artists.slice(0, 12).map((artist) => (
-                <div key={artist.id} className="text-center">
-                  <Avatar className="w-14 h-14 mx-auto mb-2">
+              {displayArtists.map((artist) => (
+                <Link key={artist.id} to={artist.deezerId ? `/dashboard/artist/${artist.deezerId}` : '#'} className="text-center group">
+                  <Avatar className="w-14 h-14 mx-auto mb-2 ring-2 ring-transparent group-hover:ring-primary transition-all">
                     <AvatarImage src={artist.avatar} />
                     <AvatarFallback>{artist.name?.[0]}</AvatarFallback>
                   </Avatar>
                   <p className="text-xs font-medium text-foreground truncate">{artist.name}</p>
                   <p className="text-[10px] text-muted-foreground">{artist.monthlyListeners} listeners</p>
-                </div>
+                </Link>
               ))}
             </div>
           </section>
 
           {/* Top 50 */}
           <section className="mb-6">
-            <h2 className="text-sm font-bold text-foreground mb-3">Top 50 New Releases</h2>
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-sm font-bold text-foreground">Top 50 New Releases</h2>
+              <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowAllTop50(!showAllTop50)}>
+                {showAllTop50 ? 'Show Less' : 'View All 50'}
+              </Button>
+            </div>
             <div className="space-y-1">
-              {musicData.top50Songs.slice(0, 20).map((song) => (
+              {displayTop50.map((song) => (
                 <Card key={song.id} className="bg-card hover:bg-accent/50 transition-colors cursor-pointer p-2" onClick={() => handlePlayTrack(song)}>
                   <div className="flex items-center gap-2">
                     <span className="w-6 text-center text-xs font-bold text-muted-foreground">{song.rank}</span>
@@ -215,6 +344,14 @@ const Megashuffle = () => {
                       <p className="text-[10px] text-muted-foreground truncate">{song.artist}</p>
                     </div>
                     <span className="text-[10px] text-muted-foreground">{typeof song.listeners === 'number' ? formatListeners(song.listeners) : song.listeners}</span>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className={`h-6 w-6 ${likedTracks.has(song.id.toString()) ? 'text-red-500' : 'text-muted-foreground'}`}
+                      onClick={(e) => { e.stopPropagation(); handleLike(song); }}
+                    >
+                      <Heart className={`h-3 w-3 ${likedTracks.has(song.id.toString()) ? 'fill-current' : ''}`} />
+                    </Button>
                   </div>
                 </Card>
               ))}
@@ -222,19 +359,63 @@ const Megashuffle = () => {
           </section>
         </div>
 
-        {/* Artist Popup */}
+        {/* Artist Popup - Enhanced */}
         {showArtistPopup && currentArtist && (
           <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-            <Card className="w-full max-w-sm p-6 text-center">
-              <Avatar className="w-24 h-24 mx-auto mb-4">
-                <AvatarImage src={currentArtist.avatar} />
-                <AvatarFallback>{currentArtist.name?.[0]}</AvatarFallback>
-              </Avatar>
-              <h2 className="text-lg font-bold text-foreground mb-1">{currentArtist.name}</h2>
-              <p className="text-sm text-muted-foreground mb-2">{currentArtist.genre}</p>
-              <p className="text-xs text-muted-foreground mb-4">{currentArtist.monthlyListeners} monthly listeners</p>
+            <Card className="w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+              <div className="text-center mb-4">
+                <Avatar className="w-24 h-24 mx-auto mb-4 ring-4 ring-primary/30">
+                  <AvatarImage src={currentArtist.avatar} />
+                  <AvatarFallback>{currentArtist.name?.[0]}</AvatarFallback>
+                </Avatar>
+                <h2 className="text-lg font-bold text-foreground mb-1">{currentArtist.name}</h2>
+                <p className="text-sm text-muted-foreground mb-1">{currentArtist.genre}</p>
+                <p className="text-xs text-muted-foreground">{currentArtist.monthlyListeners} monthly listeners</p>
+              </div>
+
+              {/* Social Links */}
+              <div className="flex justify-center gap-2 mb-4">
+                <a href={`https://open.spotify.com/search/${encodeURIComponent(currentArtist.name)}`} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="sm" className="text-xs"><ExternalLink className="h-3 w-3 mr-1" />Spotify</Button>
+                </a>
+                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(currentArtist.name)}`} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="sm" className="text-xs"><ExternalLink className="h-3 w-3 mr-1" />YouTube</Button>
+                </a>
+                <a href={`https://www.instagram.com/${currentArtist.name.replace(/\s+/g, '').toLowerCase()}`} target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" size="sm" className="text-xs"><ExternalLink className="h-3 w-3 mr-1" />Instagram</Button>
+                </a>
+              </div>
+
+              {/* Artist's Top Tracks */}
+              {artistTracks.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-xs font-semibold text-foreground mb-2">Latest Releases</h3>
+                  <div className="space-y-1">
+                    {artistTracks.map((track) => (
+                      <Card key={track.id} className="p-2 bg-accent/30 hover:bg-accent/50 cursor-pointer" onClick={() => handlePlayTrack(track)}>
+                        <div className="flex items-center gap-2">
+                          <img src={track.artwork} alt={track.title} className="w-8 h-8 rounded" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">{track.title}</p>
+                            <p className="text-[10px] text-muted-foreground">{track.duration}</p>
+                          </div>
+                          <Button size="icon" variant="ghost" className="h-6 w-6">
+                            {currentTrack?.id === track.id && isAudioPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-2">
-                <Button onClick={() => setShowArtistPopup(false)} variant="outline" className="flex-1 text-xs">Close</Button>
+                <Button onClick={() => { setShowArtistPopup(false); setArtistTracks([]); }} variant="outline" className="flex-1 text-xs">Close</Button>
+                {currentArtist.deezerId && (
+                  <Link to={`/dashboard/artist/${currentArtist.deezerId}`} className="flex-1">
+                    <Button variant="secondary" className="w-full text-xs">View Profile</Button>
+                  </Link>
+                )}
                 <Button onClick={closePopupAndShuffle} className="flex-1 text-xs bg-gradient-to-r from-blue-500 to-purple-500">Shuffle Again</Button>
               </div>
             </Card>
