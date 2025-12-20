@@ -58,6 +58,7 @@ async function fetchDeezerNewArtists(): Promise<any[]> {
               genre: album.genre_id ? getGenreName(album.genre_id) : 'Various',
               tagline: `Emerging artist from ${artistData.link ? 'Deezer' : 'the underground'}`,
               monthlyListeners: formatListeners(artistData.nb_fan || Math.floor(Math.random() * 2000000)),
+              deezerId: artistData.id,
               topTrack: topTrackData.data?.[0] ? {
                 id: topTrackData.data[0].id,
                 title: topTrackData.data[0].title,
