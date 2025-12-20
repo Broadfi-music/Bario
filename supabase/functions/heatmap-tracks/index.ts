@@ -39,6 +39,54 @@ async function getSpotifyToken(): Promise<string | null> {
   }
 }
 
+// Spotify country playlist IDs - These are REAL Spotify Top 50 playlists for each country
+const spotifyCountryPlaylists: Record<string, string> = {
+  'US': '37i9dQZEVXbLRQDuF5jeBp',   // USA Top 50
+  'UK': '37i9dQZEVXbLnolsZ8PSNw',   // UK Top 50  
+  'NG': '37i9dQZEVXbKY7jLzlJ11V',   // Nigeria Top 50
+  'GH': '37i9dQZEVXbKwYxaLxBIbS',   // Ghana Top 50
+  'ZA': '37i9dQZEVXbMH2jvi6jvjk',   // South Africa Top 50
+  'KE': '37i9dQZEVXbKMzVsSGQ49S',   // Kenya Top 50
+  'BR': '37i9dQZEVXbMXbN3EUUhlg',   // Brazil Top 50
+  'MX': '37i9dQZEVXbO3qyFxbkOE1',   // Mexico Top 50
+  'FR': '37i9dQZEVXbIPWwFssbupI',   // France Top 50
+  'DE': '37i9dQZEVXbJiZcmkrIHGU',   // Germany Top 50
+  'JP': '37i9dQZEVXbKXQ4mDTEBXq',   // Japan Top 50
+  'KR': '37i9dQZEVXbNxXF4SkHj9F',   // South Korea Top 50
+  'IN': '37i9dQZEVXbLZ52XmnySJg',   // India Top 50
+  'AU': '37i9dQZEVXbJPcfkRz0wJ0',   // Australia Top 50
+  'CA': '37i9dQZEVXbKj23U1GF4IR',   // Canada Top 50
+  'ES': '37i9dQZEVXbNFJfN1Vw8d9',   // Spain Top 50
+  'IT': '37i9dQZEVXbIQnj7RRhdSX',   // Italy Top 50
+  'GLOBAL': '37i9dQZEVXbMDoHDwVN2tF' // Global Top 50
+};
+
+// Get Spotify Top 50 playlist for a specific country
+async function getSpotifyCountryTop50(countryCode: string, limit: number = 50): Promise<any[]> {
+  const token = await getSpotifyToken();
+  if (!token) return [];
+
+  const playlistId = spotifyCountryPlaylists[countryCode] || spotifyCountryPlaylists['GLOBAL'];
+  
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${limit}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+
+    if (!response.ok) {
+      console.error(`Spotify country playlist error for ${countryCode}:`, response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    return (data.items || []).map((item: any) => item.track).filter(Boolean);
+  } catch (e) {
+    console.error(`Spotify country playlist error for ${countryCode}:`, e);
+    return [];
+  }
+}
+
 // Search Spotify tracks
 async function searchSpotify(query: string, limit: number = 20): Promise<any[]> {
   const token = await getSpotifyToken();
@@ -47,16 +95,10 @@ async function searchSpotify(query: string, limit: number = 20): Promise<any[]> 
   try {
     const response = await fetch(
       `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=${limit}`,
-      {
-        headers: { 'Authorization': `Bearer ${token}` }
-      }
+      { headers: { 'Authorization': `Bearer ${token}` } }
     );
 
-    if (!response.ok) {
-      console.error('Spotify search error:', response.status);
-      return [];
-    }
-
+    if (!response.ok) return [];
     const data = await response.json();
     return data.tracks?.items || [];
   } catch (e) {
@@ -65,113 +107,33 @@ async function searchSpotify(query: string, limit: number = 20): Promise<any[]> 
   }
 }
 
-// Get Spotify new releases
-async function getSpotifyNewReleases(limit: number = 20): Promise<any[]> {
-  const token = await getSpotifyToken();
-  if (!token) return [];
+// Deezer country playlist IDs
+const deezerCountryPlaylists: Record<string, string> = {
+  'US': '1313621735', 'UK': '1313616765', 'NG': '1362528775', 'BR': '1313620315',
+  'FR': '1109890291', 'DE': '1111143121', 'JP': '1314023803', 'KR': '1362525895',
+  'MX': '1313621165', 'IN': '1313627025', 'ZA': '1362526755', 'GH': '1362527195',
+  'KE': '1362527485', 'AU': '1313623995', 'CA': '1313619455', 'ES': '1116189381', 'IT': '1116187241'
+};
 
-  try {
-    const response = await fetch(
-      `https://api.spotify.com/v1/browse/new-releases?limit=${limit}`,
-      {
-        headers: { 'Authorization': `Bearer ${token}` }
-      }
-    );
-
-    if (!response.ok) {
-      console.error('Spotify new releases error:', response.status);
-      return [];
+// Deezer API - Get country charts
+async function getDeezerCountryChart(countryCode: string, limit: number = 50): Promise<any[]> {
+  const playlistId = deezerCountryPlaylists[countryCode];
+  
+  if (playlistId) {
+    try {
+      const response = await fetch(`https://api.deezer.com/playlist/${playlistId}/tracks?limit=${limit}`);
+      const data = await response.json();
+      if (data.data && data.data.length > 0) return data.data;
+    } catch (e) {
+      console.error(`Deezer country chart error for ${countryCode}:`, e);
     }
-
-    const data = await response.json();
-    // Get tracks from albums
-    const albums = data.albums?.items || [];
-    const tracks: any[] = [];
-    
-    for (const album of albums.slice(0, 10)) {
-      const tracksResponse = await fetch(
-        `https://api.spotify.com/v1/albums/${album.id}/tracks?limit=2`,
-        { headers: { 'Authorization': `Bearer ${token}` } }
-      );
-      if (tracksResponse.ok) {
-        const tracksData = await tracksResponse.json();
-        for (const track of tracksData.items || []) {
-          tracks.push({
-            ...track,
-            album: album,
-            popularity: album.popularity || 50
-          });
-        }
-      }
-    }
-    
-    return tracks;
-  } catch (e) {
-    console.error('Spotify new releases error:', e);
-    return [];
   }
+  
+  // Fallback to global chart
+  return getDeezerGlobalChart(limit);
 }
 
-// Get Spotify featured playlists tracks
-async function getSpotifyFeaturedTracks(limit: number = 30): Promise<any[]> {
-  const token = await getSpotifyToken();
-  if (!token) return [];
-
-  try {
-    // Get featured playlists
-    const playlistsResponse = await fetch(
-      `https://api.spotify.com/v1/browse/featured-playlists?limit=5`,
-      { headers: { 'Authorization': `Bearer ${token}` } }
-    );
-
-    if (!playlistsResponse.ok) return [];
-    
-    const playlistsData = await playlistsResponse.json();
-    const playlists = playlistsData.playlists?.items || [];
-    
-    const tracks: any[] = [];
-    for (const playlist of playlists.slice(0, 3)) {
-      try {
-        const tracksResponse = await fetch(
-          `https://api.spotify.com/v1/playlists/${playlist.id}/tracks?limit=10`,
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        if (tracksResponse.ok) {
-          const tracksData = await tracksResponse.json();
-          for (const item of tracksData.items || []) {
-            if (item.track) {
-              tracks.push(item.track);
-            }
-          }
-        }
-      } catch (e) {
-        console.error('Error fetching playlist tracks:', e);
-      }
-    }
-    
-    return tracks.slice(0, limit);
-  } catch (e) {
-    console.error('Spotify featured error:', e);
-    return [];
-  }
-}
-
-// Deezer API (no authentication required)
-async function searchDeezer(query: string, limit: number = 50) {
-  try {
-    const response = await fetch(
-      `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=${limit}`
-    );
-    const data = await response.json();
-    return data.data || [];
-  } catch (e) {
-    console.error('Deezer search error:', e);
-    return [];
-  }
-}
-
-// Get Deezer global chart tracks
-async function getDeezerChart(limit: number = 50) {
+async function getDeezerGlobalChart(limit: number = 50): Promise<any[]> {
   try {
     const response = await fetch(`https://api.deezer.com/chart/0/tracks?limit=${limit}`);
     const data = await response.json();
@@ -182,40 +144,19 @@ async function getDeezerChart(limit: number = 50) {
   }
 }
 
-// Get Deezer country chart tracks
-async function getDeezerCountryChart(countryCode: string, limit: number = 50) {
-  const countryPlaylists: Record<string, string> = {
-    'US': '1313621735', 'UK': '1313616765', 'NG': '1362528775', 'BR': '1313620315',
-    'FR': '1109890291', 'DE': '1111143121', 'JP': '1314023803', 'KR': '1362525895',
-    'MX': '1313621165', 'IN': '1313627025', 'ZA': '1362526755', 'GH': '1362527195',
-    'EG': '1362526465', 'KE': '1362527485', 'CO': '1313620485', 'AR': '1313619685',
-    'ES': '1116189381', 'IT': '1116187241', 'AU': '1313623995', 'CA': '1313619455',
-  };
-  
-  const playlistId = countryPlaylists[countryCode];
-  if (playlistId) {
-    try {
-      const response = await fetch(`https://api.deezer.com/playlist/${playlistId}/tracks?limit=${limit}`);
-      const data = await response.json();
-      return data.data || [];
-    } catch (e) {
-      console.error(`Deezer country chart error for ${countryCode}:`, e);
-    }
+async function searchDeezer(query: string, limit: number = 50): Promise<any[]> {
+  try {
+    const response = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+    const data = await response.json();
+    return data.data || [];
+  } catch (e) {
+    console.error('Deezer search error:', e);
+    return [];
   }
-  
-  const countryNames: Record<string, string> = {
-    'US': 'american', 'UK': 'british', 'NG': 'nigerian afrobeats', 'BR': 'brazilian',
-    'FR': 'french', 'DE': 'german', 'JP': 'japanese', 'KR': 'korean kpop',
-    'MX': 'mexican', 'IN': 'indian', 'ZA': 'south african amapiano', 'GH': 'ghana highlife',
-    'EG': 'egyptian arabic', 'KE': 'kenyan', 'CO': 'colombian reggaeton', 'AR': 'argentine',
-    'ES': 'spanish', 'IT': 'italian', 'AU': 'australian', 'CA': 'canadian'
-  };
-  
-  return searchDeezer(`${countryNames[countryCode] || ''} hits 2024`, limit);
 }
 
 // Get Audius trending tracks
-async function getAudiusTrending(limit: number = 30) {
+async function getAudiusTrending(limit: number = 20): Promise<any[]> {
   try {
     const response = await fetch(
       `https://discoveryprovider.audius.co/v1/tracks/trending?limit=${limit}&time=week`,
@@ -229,8 +170,7 @@ async function getAudiusTrending(limit: number = 30) {
   }
 }
 
-// Search Audius tracks
-async function searchAudius(query: string, limit: number = 20) {
+async function searchAudius(query: string, limit: number = 20): Promise<any[]> {
   try {
     const response = await fetch(
       `https://discoveryprovider.audius.co/v1/tracks/search?query=${encodeURIComponent(query)}&limit=${limit}`,
@@ -245,7 +185,7 @@ async function searchAudius(query: string, limit: number = 20) {
 }
 
 // Get Last.fm track info for real listener counts
-async function getLastfmInfo(artist: string, track: string) {
+async function getLastfmTrackInfo(artist: string, track: string): Promise<{ listeners: number; playcount: number }> {
   if (!LASTFM_API_KEY) return { listeners: 0, playcount: 0 };
   
   try {
@@ -266,25 +206,17 @@ const countries = [
   { code: 'GLOBAL', name: 'Global' }, { code: 'US', name: 'United States' },
   { code: 'UK', name: 'United Kingdom' }, { code: 'NG', name: 'Nigeria' },
   { code: 'GH', name: 'Ghana' }, { code: 'ZA', name: 'South Africa' },
-  { code: 'KE', name: 'Kenya' }, { code: 'EG', name: 'Egypt' },
-  { code: 'BR', name: 'Brazil' }, { code: 'MX', name: 'Mexico' },
-  { code: 'CO', name: 'Colombia' }, { code: 'AR', name: 'Argentina' },
-  { code: 'FR', name: 'France' }, { code: 'DE', name: 'Germany' },
-  { code: 'ES', name: 'Spain' }, { code: 'IT', name: 'Italy' },
-  { code: 'JP', name: 'Japan' }, { code: 'KR', name: 'South Korea' },
-  { code: 'IN', name: 'India' }, { code: 'AU', name: 'Australia' },
-  { code: 'CA', name: 'Canada' }
+  { code: 'KE', name: 'Kenya' }, { code: 'BR', name: 'Brazil' },
+  { code: 'MX', name: 'Mexico' }, { code: 'FR', name: 'France' },
+  { code: 'DE', name: 'Germany' }, { code: 'JP', name: 'Japan' },
+  { code: 'KR', name: 'South Korea' }, { code: 'IN', name: 'India' },
+  { code: 'AU', name: 'Australia' }, { code: 'CA', name: 'Canada' },
+  { code: 'ES', name: 'Spain' }, { code: 'IT', name: 'Italy' }
 ];
 
-const genreMap: Record<string, number> = {
-  'All': 0, 'Pop': 132, 'Hip-Hop': 116, 'R&B': 165, 'Rock': 152,
-  'Electronic': 106, 'Reggaeton': 122, 'Latin': 197, 'Afrobeats': 2,
-  'K-Pop': 173, 'Country': 84, 'Jazz': 129, 'Classical': 98, 'Indie': 85, 'Metal': 464
-};
+const genres = ['All', 'Pop', 'Hip-Hop', 'R&B', 'Rock', 'Electronic', 'Reggaeton', 'Latin', 'Afrobeats', 'K-Pop'];
 
-const genres = Object.keys(genreMap);
-
-function formatSpotifyTrack(track: any, index: number, countryCode?: string) {
+function formatSpotifyTrack(track: any, index: number, countryCode: string) {
   const popularity = track.popularity || 50;
   const monthlyListeners = popularity * 50000 + (index < 10 ? 500000 : 100000);
   const change24h = (Math.random() * 25 - 5);
@@ -301,13 +233,11 @@ function formatSpotifyTrack(track: any, index: number, countryCode?: string) {
     previewUrl: track.preview_url,
     genre: 'Pop',
     duration: track.duration_ms || 200000,
-    country: countryCode || 'GLOBAL',
-    deezerRank: 0,
+    country: countryCode,
     spotifyUrl: track.external_urls?.spotify || `https://open.spotify.com/track/${track.id}`,
     deezerUrl: null,
     appleUrl: `https://music.apple.com/search?term=${encodeURIComponent(track.name + ' ' + (track.artists?.[0]?.name || ''))}`,
     audiusUrl: null,
-    youtubeUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(track.name + ' ' + (track.artists?.[0]?.name || ''))}`,
     deezerId: null,
     spotifyId: track.id,
     audiusId: null,
@@ -319,7 +249,7 @@ function formatSpotifyTrack(track: any, index: number, countryCode?: string) {
       deezerRank: 0,
       lastfmListeners: monthlyListeners,
       lastfmPlaycount: monthlyListeners * 8,
-      monthlyListeners: monthlyListeners,
+      monthlyListeners,
       audiusRank: null,
       audiusPlays: null,
       mindshare: parseFloat((popularity / 2.5 + Math.random() * 5).toFixed(1)),
@@ -332,11 +262,10 @@ function formatSpotifyTrack(track: any, index: number, countryCode?: string) {
   };
 }
 
-function formatDeezerTrack(track: any, index: number, countryCode?: string) {
+function formatDeezerTrack(track: any, index: number, countryCode: string) {
   const deezerRank = track.rank || 0;
   const baseListeners = Math.floor(deezerRank / 10);
   const monthlyListeners = Math.max(100000, baseListeners + (index < 10 ? 500000 : index < 30 ? 200000 : 50000));
-  const playcount = monthlyListeners * (Math.floor(Math.random() * 5) + 8);
   const change24h = (Math.random() * 25 - 5);
   const popularity = Math.min(100, Math.floor(deezerRank / 8000) + 50);
   const attentionScore = Math.round(popularity * 800 + monthlyListeners / 500);
@@ -353,13 +282,12 @@ function formatDeezerTrack(track: any, index: number, countryCode?: string) {
     previewUrl: track.preview,
     genre: track.genre || 'Pop',
     duration: (track.duration || 200) * 1000,
-    country: countryCode || 'GLOBAL',
-    deezerRank: deezerRank,
+    country: countryCode,
+    deezerRank,
     spotifyUrl: `https://open.spotify.com/search/${encodeURIComponent(track.title + ' ' + (track.artist?.name || ''))}`,
     deezerUrl: track.link || `https://www.deezer.com/track/${track.id}`,
     appleUrl: `https://music.apple.com/search?term=${encodeURIComponent(track.title + ' ' + (track.artist?.name || ''))}`,
-    audiusUrl: `https://audius.co/search/${encodeURIComponent(track.title)}`,
-    youtubeUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(track.title + ' ' + (track.artist?.name || ''))}`,
+    audiusUrl: null,
     deezerId: String(track.id),
     spotifyId: null,
     audiusId: null,
@@ -368,10 +296,10 @@ function formatDeezerTrack(track: any, index: number, countryCode?: string) {
       attentionScore,
       spotifyPopularity: popularity,
       deezerPosition: track.position || index + 1,
-      deezerRank: deezerRank,
+      deezerRank,
       lastfmListeners: monthlyListeners,
-      lastfmPlaycount: playcount,
-      monthlyListeners: monthlyListeners,
+      lastfmPlaycount: monthlyListeners * 8,
+      monthlyListeners,
       audiusRank: null,
       audiusPlays: null,
       mindshare: parseFloat((popularity / 2.5 + Math.random() * 5).toFixed(1)),
@@ -399,7 +327,7 @@ function formatAudiusTrack(track: any, index: number) {
     artist: track.user?.name || 'Unknown Artist',
     artistId: track.user?.id,
     album: track.album?.playlist_name || 'Single',
-    artwork: track.artwork?.['480x480'] || track.artwork?.['1000x1000'] || track.cover_art || '/placeholder.svg',
+    artwork: track.artwork?.['480x480'] || track.artwork?.['1000x1000'] || '/placeholder.svg',
     previewUrl: null,
     genre: track.genre || 'Electronic',
     duration: (track.duration || 200) * 1000,
@@ -409,7 +337,6 @@ function formatAudiusTrack(track: any, index: number) {
     deezerUrl: null,
     appleUrl: null,
     audiusUrl: `https://audius.co/${track.user?.handle}/${track.permalink}`,
-    youtubeUrl: null,
     deezerId: null,
     spotifyId: null,
     audiusId: track.id,
@@ -445,79 +372,77 @@ serve(async (req) => {
     const search = url.searchParams.get('search') || '';
     const genre = url.searchParams.get('genre') || 'All';
     const country = url.searchParams.get('country') || 'GLOBAL';
-    const includeAudius = url.searchParams.get('audius') !== 'false';
-    const includeSpotify = url.searchParams.get('spotify') !== 'false';
     
-    console.log(`Fetching tracks: limit=${limit}, search=${search}, genre=${genre}, country=${country}, spotify=${includeSpotify}`);
+    console.log(`Fetching tracks: limit=${limit}, search=${search}, genre=${genre}, country=${country}`);
     
     let tracks: any[] = [];
     
     if (search) {
-      // Search all sources
-      const [deezerResults, audiusResults, spotifyResults] = await Promise.all([
-        searchDeezer(search, limit),
-        includeAudius ? searchAudius(search, 15) : [],
-        includeSpotify ? searchSpotify(search, 15) : []
+      // Search all sources in parallel
+      const [spotifyResults, deezerResults, audiusResults] = await Promise.all([
+        searchSpotify(search, 15),
+        searchDeezer(search, 30),
+        searchAudius(search, 10)
       ]);
       
-      const spotifyTracks = spotifyResults.map((t: any, i: number) => formatSpotifyTrack(t, i));
-      const deezerTracks = deezerResults.map((t: any, i: number) => formatDeezerTrack(t, i + spotifyTracks.length));
+      const spotifyTracks = spotifyResults.map((t: any, i: number) => formatSpotifyTrack(t, i, country));
+      const deezerTracks = deezerResults.map((t: any, i: number) => formatDeezerTrack(t, i + spotifyTracks.length, country));
       const audiusTracks = audiusResults.map((t: any, i: number) => formatAudiusTrack(t, i + spotifyTracks.length + deezerTracks.length));
       
       tracks = [...spotifyTracks, ...deezerTracks, ...audiusTracks];
       console.log(`Search results: Spotify=${spotifyTracks.length}, Deezer=${deezerTracks.length}, Audius=${audiusTracks.length}`);
+      
     } else if (country && country !== 'GLOBAL') {
-      const countryTracks = await getDeezerCountryChart(country, limit);
-      tracks = countryTracks.map((t: any, i: number) => formatDeezerTrack(t, i, country));
+      // Get country-specific charts from Spotify and Deezer
+      const [spotifyTracks, deezerTracks] = await Promise.all([
+        getSpotifyCountryTop50(country, 50),
+        getDeezerCountryChart(country, 50)
+      ]);
+      
+      const formattedSpotify = spotifyTracks.map((t: any, i: number) => formatSpotifyTrack(t, i, country));
+      const formattedDeezer = deezerTracks.map((t: any, i: number) => formatDeezerTrack(t, i + formattedSpotify.length, country));
+      
+      tracks = [...formattedSpotify, ...formattedDeezer];
+      console.log(`Country ${country} results: Spotify=${formattedSpotify.length}, Deezer=${formattedDeezer.length}`);
+      
     } else if (genre && genre !== 'All') {
-      const genreResults = await searchDeezer(`${genre} hits 2024`, limit);
-      tracks = genreResults.map((t: any, i: number) => ({
-        ...formatDeezerTrack(t, i),
-        genre
-      }));
+      // Genre-specific search
+      const [spotifyResults, deezerResults] = await Promise.all([
+        searchSpotify(`${genre} hits 2024`, 20),
+        searchDeezer(`${genre} hits 2024`, 40)
+      ]);
+      
+      const spotifyTracks = spotifyResults.map((t: any, i: number) => ({ ...formatSpotifyTrack(t, i, 'GLOBAL'), genre }));
+      const deezerTracks = deezerResults.map((t: any, i: number) => ({ ...formatDeezerTrack(t, i + spotifyTracks.length, 'GLOBAL'), genre }));
+      
+      tracks = [...spotifyTracks, ...deezerTracks];
+      
     } else {
-      // Get global chart + Audius + Spotify trending
-      const [chartTracks, audiusTrending, spotifyFeatured] = await Promise.all([
-        getDeezerChart(50),
-        includeAudius ? getAudiusTrending(15) : [],
-        includeSpotify ? getSpotifyFeaturedTracks(20) : []
+      // Global trending - get from all sources
+      const [spotifyGlobal, deezerGlobal, audiusTrending] = await Promise.all([
+        getSpotifyCountryTop50('GLOBAL', 40),
+        getDeezerGlobalChart(40),
+        getAudiusTrending(15)
       ]);
       
-      // Add variety from different regions
-      const [afroTracks, latinTracks, kpopTracks] = await Promise.all([
-        searchDeezer('afrobeats trending 2024', 8),
-        searchDeezer('reggaeton latin 2024', 8),
-        searchDeezer('kpop korean 2024', 8)
-      ]);
+      const spotifyTracks = spotifyGlobal.map((t: any, i: number) => formatSpotifyTrack(t, i, 'GLOBAL'));
+      const deezerTracks = deezerGlobal.map((t: any, i: number) => formatDeezerTrack(t, i + spotifyTracks.length, 'GLOBAL'));
+      const audiusTracks = audiusTrending.map((t: any, i: number) => formatAudiusTrack(t, i + spotifyTracks.length + deezerTracks.length));
       
-      const allDeezerTracks = [
-        ...chartTracks.map((t: any) => ({ ...t, genre: 'Pop' })),
-        ...afroTracks.map((t: any) => ({ ...t, genre: 'Afrobeats' })),
-        ...latinTracks.map((t: any) => ({ ...t, genre: 'Latin' })),
-        ...kpopTracks.map((t: any) => ({ ...t, genre: 'K-Pop' }))
-      ];
-      
-      // Remove duplicates
-      const seen = new Set();
-      const uniqueDeezer = allDeezerTracks.filter(t => {
-        if (seen.has(t.id)) return false;
-        seen.add(t.id);
-        return true;
-      });
-      
-      const spotifyFormatted = spotifyFeatured.map((t: any, i: number) => formatSpotifyTrack(t, i));
-      const deezerFormatted = uniqueDeezer.slice(0, limit - 20).map((t: any, i: number) => 
-        formatDeezerTrack(t, i + spotifyFormatted.length)
-      );
-      const audiusFormatted = audiusTrending.map((t: any, i: number) => 
-        formatAudiusTrack(t, i + spotifyFormatted.length + deezerFormatted.length)
-      );
-      
-      tracks = [...spotifyFormatted, ...deezerFormatted, ...audiusFormatted];
-      console.log(`Global results: Spotify=${spotifyFormatted.length}, Deezer=${deezerFormatted.length}, Audius=${audiusFormatted.length}`);
+      tracks = [...spotifyTracks, ...deezerTracks, ...audiusTracks];
+      console.log(`Global results: Spotify=${spotifyTracks.length}, Deezer=${deezerTracks.length}, Audius=${audiusTracks.length}`);
     }
     
-    // Sort by attention score
+    // Remove duplicates by title+artist
+    const seen = new Set();
+    tracks = tracks.filter(t => {
+      const key = `${t.title.toLowerCase()}_${t.artist.toLowerCase()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    
+    // Sort by attention score and assign ranks
     tracks.sort((a, b) => b.metrics.attentionScore - a.metrics.attentionScore);
     tracks.forEach((t, i) => t.rank = i + 1);
     
@@ -534,7 +459,7 @@ serve(async (req) => {
     console.log(`Returning ${tracks.length} tracks from: ${JSON.stringify(sourceCounts)}`);
     
     return new Response(JSON.stringify({
-      tracks,
+      tracks: tracks.slice(0, limit),
       genres,
       countries,
       sources: sourceCounts,

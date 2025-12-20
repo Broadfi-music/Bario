@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Search, Star, TrendingUp, TrendingDown, ExternalLink, Filter, Clock,
-  Play, Pause, Users, ChevronRight, Sparkles, Zap, ChevronLeft, Volume2, RefreshCw, X
+  Play, Pause, Users, ChevronRight, Sparkles, Zap, ChevronLeft, Volume2, X, Flame
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,8 +63,7 @@ const GlobalHeatmap = () => {
   const [selectedGenre, setSelectedGenre] = useState<string>('');
   const [selectedCountry, setSelectedCountry] = useState<string>('GLOBAL');
   
-  const { tracks, genres, summary, loading, error, refetch, searchTracks, filterByGenre } = useHeatmapTracks(99);
-  const { sync, syncing } = useSyncHeatmap();
+  const { tracks, genres, summary, loading, error, refetch, searchTracks, filterByGenre, filterByCountry } = useHeatmapTracks(99);
   
   const countries = [
     { code: 'GLOBAL', name: '🌍 Global' },
@@ -161,14 +160,9 @@ const GlobalHeatmap = () => {
     }
   };
 
-  const handleSync = async () => {
-    try {
-      await sync();
-      toast.success('Heatmap data synced successfully!');
-      refetch();
-    } catch (err) {
-      toast.error('Failed to sync data');
-    }
+  const handleCountryChange = (country: string) => {
+    setSelectedCountry(country);
+    filterByCountry(country);
   };
 
   const handleGenreFilter = (genre: string) => {
@@ -226,12 +220,20 @@ const GlobalHeatmap = () => {
             <Button
               size="sm"
               variant="outline"
-              onClick={handleSync}
-              disabled={syncing}
-              className="text-[9px] h-7 px-2 border-white/10 text-white/60 hover:text-white"
+              onClick={() => navigate('/pass-the-plug')}
+              className="text-[9px] h-7 px-2 border-[#4ade80]/30 bg-[#4ade80]/10 text-[#4ade80] hover:bg-[#4ade80]/20"
             >
-              <RefreshCw className={`h-3 w-3 mr-1 ${syncing ? 'animate-spin' : ''}`} />
-              {syncing ? 'Syncing...' : 'Sync'}
+              <Zap className="h-3 w-3 mr-1" />
+              Pass the Plug
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate('/three-strike')}
+              className="text-[9px] h-7 px-2 border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"
+            >
+              <Flame className="h-3 w-3 mr-1" />
+              Three Strike
             </Button>
             
             {/* Search Input */}
@@ -319,7 +321,7 @@ const GlobalHeatmap = () => {
             <div className="relative">
               <select
                 value={selectedCountry}
-                onChange={(e) => setSelectedCountry(e.target.value)}
+                onChange={(e) => handleCountryChange(e.target.value)}
                 className="appearance-none bg-white/5 border border-white/10 text-white text-[10px] px-3 py-1.5 pr-8 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#4ade80] cursor-pointer"
               >
                 {countries.map((country) => (

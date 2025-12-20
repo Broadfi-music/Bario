@@ -109,15 +109,20 @@ export function useHeatmapTracks(limit = 99) {
     avgChange24h: '0',
     lastUpdated: new Date().toISOString()
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentCountry, setCurrentCountry] = useState('GLOBAL');
 
-  const fetchTracks = useCallback(async (search?: string, genre?: string) => {
+  const fetchTracks = useCallback(async (search?: string, genre?: string, country?: string) => {
     try {
       setLoading(true);
       const params = new URLSearchParams({ limit: limit.toString() });
       if (search) params.append('search', search);
       if (genre) params.append('genre', genre);
+      if (country) {
+        params.append('country', country);
+        setCurrentCountry(country);
+      }
       
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/heatmap-tracks?${params}`,
@@ -152,16 +157,20 @@ export function useHeatmapTracks(limit = 99) {
   }, [limit]);
 
   const searchTracks = useCallback((query: string) => {
-    fetchTracks(query, undefined);
-  }, [fetchTracks]);
+    fetchTracks(query, undefined, currentCountry);
+  }, [fetchTracks, currentCountry]);
 
   const filterByGenre = useCallback((genre: string) => {
-    fetchTracks(undefined, genre);
+    fetchTracks(undefined, genre, currentCountry);
+  }, [fetchTracks, currentCountry]);
+
+  const filterByCountry = useCallback((country: string) => {
+    fetchTracks(undefined, undefined, country);
   }, [fetchTracks]);
 
   const refetch = useCallback(() => {
-    fetchTracks();
-  }, [fetchTracks]);
+    fetchTracks(undefined, undefined, currentCountry);
+  }, [fetchTracks, currentCountry]);
 
   // Subscribe to realtime updates
   useEffect(() => {
@@ -218,7 +227,7 @@ export function useHeatmapTracks(limit = 99) {
     return () => clearInterval(interval);
   }, [tracks.length]);
 
-  return { tracks, genres, summary, loading, error, refetch, searchTracks, filterByGenre };
+  return { tracks, genres, summary, loading, error, refetch, searchTracks, filterByGenre, filterByCountry };
 }
 
 export function useTrackDetail(trackId: string | undefined) {

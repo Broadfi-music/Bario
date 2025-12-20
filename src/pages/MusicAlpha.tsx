@@ -159,6 +159,16 @@ const MusicAlpha = () => {
               />
             </div>
             
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate('/music-alpha/head-to-head')}
+              className="text-[9px] h-7 px-2 border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+            >
+              <Users className="h-3 w-3 mr-1" />
+              Head to Head
+            </Button>
+            
             {user && (
               <div className="flex items-center gap-1 px-2 py-1 bg-purple-500/20 rounded-lg">
                 <Sparkles className="h-3 w-3 text-purple-400" />
