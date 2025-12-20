@@ -7,6 +7,88 @@ const corsHeaders = {
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 const LASTFM_API_KEY = Deno.env.get('LASTFM_API_KEY');
+const SPOTIFY_CLIENT_ID = Deno.env.get('SPOTIFY_CLIENT_ID');
+const SPOTIFY_CLIENT_SECRET = Deno.env.get('SPOTIFY_CLIENT_SECRET');
+
+// Get Spotify access token
+async function getSpotifyToken(): Promise<string | null> {
+  if (!SPOTIFY_CLIENT_ID || !SPOTIFY_CLIENT_SECRET) {
+    console.log('Spotify credentials not configured');
+    return null;
+  }
+
+  try {
+    const response = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + btoa(`${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`)
+      },
+      body: 'grant_type=client_credentials'
+    });
+
+    if (!response.ok) {
+      console.error('Spotify token error:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    return data.access_token;
+  } catch (e) {
+    console.error('Spotify token fetch error:', e);
+    return null;
+  }
+}
+
+// Get Spotify new releases
+async function getSpotifyNewReleases(limit: number = 20): Promise<any[]> {
+  const token = await getSpotifyToken();
+  if (!token) return [];
+
+  try {
+    const response = await fetch(
+      `https://api.spotify.com/v1/browse/new-releases?limit=${limit}`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+
+    if (!response.ok) {
+      console.error('Spotify new releases error:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    const albums = data.albums?.items || [];
+    const tracks: any[] = [];
+    
+    // Get first track from each album
+    for (const album of albums.slice(0, 15)) {
+      try {
+        const tracksResponse = await fetch(
+          `https://api.spotify.com/v1/albums/${album.id}/tracks?limit=1`,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        if (tracksResponse.ok) {
+          const tracksData = await tracksResponse.json();
+          for (const track of tracksData.items || []) {
+            tracks.push({
+              ...track,
+              album: album,
+              popularity: album.popularity || 50
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching album tracks:', e);
+      }
+    }
+    
+    console.log(`Spotify new releases: ${tracks.length} tracks`);
+    return tracks;
+  } catch (e) {
+    console.error('Spotify new releases error:', e);
+    return [];
+  }
+}
 
 // Get Deezer new releases
 async function getDeezerNewReleases(limit: number = 30) {
@@ -112,7 +194,6 @@ Return JSON:
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
     
-    // Extract JSON from response
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
@@ -130,11 +211,44 @@ Return JSON:
 }
 
 // Generate prediction markets from real data
-function generateMarkets(deezerTracks: any[], audiusTracks: any[], lastfmTracks: any[]) {
+function generateMarkets(spotifyTracks: any[], deezerTracks: any[], audiusTracks: any[], lastfmTracks: any[]) {
   const markets: any[] = [];
   
+  // Spotify tracks as premium prediction markets
+  spotifyTracks.slice(0, 15).forEach((track, i) => {
+    const popularity = track.popularity || 50;
+    const change24h = (Math.random() * 30 - 5);
+    const probability = Math.min(95, Math.max(10, popularity + change24h));
+    
+    markets.push({
+      id: `spotify_${track.id}`,
+      songTitle: track.name,
+      artist: track.artists?.[0]?.name || 'Unknown',
+      artwork: track.album?.images?.[0]?.url || track.album?.images?.[1]?.url || '/placeholder.svg',
+      status: change24h > 10 ? 'surging' : change24h < -5 ? 'cooling' : 'stable',
+      outcome: i < 3 ? 'Will hit #1 on Spotify Global?' : 
+               i < 8 ? 'Top 10 Billboard Hot 100 this month?' :
+               'Double streaming numbers in 7 days?',
+      probability: Math.round(probability),
+      fanProbability: Math.round(probability + (Math.random() * 10 - 5)),
+      aiProbability: Math.round(probability + (Math.random() * 8 - 4)),
+      totalForecasts: Math.floor(Math.random() * 20000) + 3000,
+      fanAccuracy: Math.floor(Math.random() * 20) + 60,
+      aiAccuracy: Math.floor(Math.random() * 15) + 70,
+      horizon: i < 3 ? '24h' : i < 8 ? '7D' : '30D',
+      isWatchlisted: false,
+      change24h: parseFloat(change24h.toFixed(1)),
+      listeners: formatNumber(popularity * 50000),
+      monthlyListeners: popularity * 50000,
+      marketCap: formatNumber(popularity * 750000),
+      previewUrl: track.preview_url,
+      spotifyUrl: track.external_urls?.spotify,
+      source: 'spotify'
+    });
+  });
+  
   // Deezer chart tracks as prediction markets
-  deezerTracks.slice(0, 20).forEach((track, i) => {
+  deezerTracks.slice(0, 15).forEach((track, i) => {
     const deezerRank = track.rank || 100000;
     const listeners = Math.floor(deezerRank / 10);
     const change24h = (Math.random() * 30 - 5);
@@ -146,9 +260,9 @@ function generateMarkets(deezerTracks: any[], audiusTracks: any[], lastfmTracks:
       artist: track.artist?.name || 'Unknown',
       artwork: track.album?.cover_big || track.album?.cover_medium || '/placeholder.svg',
       status: change24h > 10 ? 'surging' : change24h < -5 ? 'cooling' : 'stable',
-      outcome: i < 5 ? 'Will hit #1 on Spotify Global?' : 
-               i < 10 ? 'Top 10 Billboard Hot 100 this month?' :
-               'Double streaming numbers in 7 days?',
+      outcome: i < 5 ? 'Will hit Top 5 on Deezer Global?' : 
+               i < 10 ? 'Break 1M streams this week?' :
+               'Trending on social media in 48h?',
       probability: Math.round(probability),
       fanProbability: Math.round(probability + (Math.random() * 10 - 5)),
       aiProbability: Math.round(probability + (Math.random() * 8 - 4)),
@@ -243,7 +357,6 @@ serve(async (req) => {
     let action = url.searchParams.get('action') || 'markets';
     const limit = parseInt(url.searchParams.get('limit') || '30');
     
-    // Also check body for action (for supabase.functions.invoke)
     let body: any = {};
     if (req.method === 'POST') {
       try {
@@ -259,23 +372,32 @@ serve(async (req) => {
     console.log(`Alpha predictions: action=${action}, limit=${limit}`);
     
     if (action === 'markets') {
-      // Fetch real data from multiple sources
-      const [deezerTracks, audiusTracks, lastfmTracks] = await Promise.all([
+      // Fetch real data from multiple sources including Spotify
+      const [spotifyTracks, deezerTracks, audiusTracks, lastfmTracks] = await Promise.all([
+        getSpotifyNewReleases(20),
         getDeezerNewReleases(30),
         getAudiusTrending(15),
         getLastfmTopTracks(20)
       ]);
       
-      const markets = generateMarkets(deezerTracks, audiusTracks, lastfmTracks);
+      console.log(`Data fetched: Spotify=${spotifyTracks.length}, Deezer=${deezerTracks.length}, Audius=${audiusTracks.length}, LastFM=${lastfmTracks.length}`);
+      
+      const markets = generateMarkets(spotifyTracks, deezerTracks, audiusTracks, lastfmTracks);
       
       // Get AI analysis if available
       const aiAnalysis = await analyzeWithAI(markets, 'prediction');
+      
+      const sourceCounts = markets.reduce((acc: any, m) => {
+        acc[m.source] = (acc[m.source] || 0) + 1;
+        return acc;
+      }, {});
       
       return new Response(JSON.stringify({
         markets,
         aiInsights: aiAnalysis,
         aiModels: generateAILeaderboard(),
         fanForecasters: generateFanLeaderboard(),
+        sources: sourceCounts,
         stats: {
           activeMarkets: markets.length,
           totalPredictions: Math.floor(Math.random() * 50000) + 30000,
@@ -289,7 +411,6 @@ serve(async (req) => {
     
     if (action === 'analyze') {
       const tracks = body.tracks || [];
-      
       const analysis = await analyzeWithAI(tracks, 'reasoning');
       
       return new Response(JSON.stringify({
@@ -301,8 +422,6 @@ serve(async (req) => {
     
     if (action === 'predict') {
       const { marketId, prediction, confidence, userId } = body;
-      
-      // In production, this would save to database
       const points = Math.floor(confidence * 10);
       
       return new Response(JSON.stringify({
