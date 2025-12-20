@@ -504,6 +504,141 @@ export type Database = {
         }
         Relationships: []
       }
+      user_albums: {
+        Row: {
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          genre: string | null
+          id: string
+          title: string
+          track_count: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          genre?: string | null
+          id?: string
+          title: string
+          track_count?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          genre?: string | null
+          id?: string
+          title?: string
+          track_count?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_favorites: {
+        Row: {
+          artist_name: string
+          cover_image_url: string | null
+          created_at: string
+          id: string
+          preview_url: string | null
+          source: string
+          track_id: string
+          track_title: string
+          user_id: string
+        }
+        Insert: {
+          artist_name: string
+          cover_image_url?: string | null
+          created_at?: string
+          id?: string
+          preview_url?: string | null
+          source: string
+          track_id: string
+          track_title: string
+          user_id: string
+        }
+        Update: {
+          artist_name?: string
+          cover_image_url?: string | null
+          created_at?: string
+          id?: string
+          preview_url?: string | null
+          source?: string
+          track_id?: string
+          track_title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_uploads: {
+        Row: {
+          album_id: string | null
+          apple_url: string | null
+          audio_url: string
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          duration_ms: number | null
+          genre: string | null
+          id: string
+          is_published: boolean | null
+          like_count: number | null
+          play_count: number | null
+          soundcloud_url: string | null
+          spotify_url: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          youtube_url: string | null
+        }
+        Insert: {
+          album_id?: string | null
+          apple_url?: string | null
+          audio_url: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          duration_ms?: number | null
+          genre?: string | null
+          id?: string
+          is_published?: boolean | null
+          like_count?: number | null
+          play_count?: number | null
+          soundcloud_url?: string | null
+          spotify_url?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          youtube_url?: string | null
+        }
+        Update: {
+          album_id?: string | null
+          apple_url?: string | null
+          audio_url?: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          duration_ms?: number | null
+          genre?: string | null
+          id?: string
+          is_published?: boolean | null
+          like_count?: number | null
+          play_count?: number | null
+          soundcloud_url?: string | null
+          spotify_url?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -23,6 +23,8 @@ import HeatmapDetail from "@/pages/HeatmapDetail";
 import AlphaDetail from "@/pages/AlphaDetail";
 import Analytics from "@/pages/Analytics";
 import Megashuffle from "@/pages/Megashuffle";
+import Upload from "@/pages/Upload";
+import ArtistProfile from "@/pages/ArtistProfile";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,7 +53,9 @@ const App = () => {
               <Route path="/dashboard/library" element={<Library />} />
               <Route path="/dashboard/analytics" element={<Analytics />} />
               <Route path="/dashboard/megashuffle" element={<Megashuffle />} />
+              <Route path="/dashboard/upload" element={<Upload />} />
               <Route path="/dashboard/creator/:id" element={<CreatorProfile />} />
+              <Route path="/dashboard/artist/:id" element={<ArtistProfile />} />
               <Route path="/dashboard/music-result" element={<MusicResultPage />} />
               <Route path="/music-result" element={<MusicResultPage />} />
               <Route path="/pricing" element={<Pricing />} />
