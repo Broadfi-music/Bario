@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useDashboardMusic, DashboardTrack } from '@/hooks/useDashboardMusic';
+
 
 interface UserRemix {
   id: string;
@@ -34,13 +34,9 @@ const Library = () => {
   const [userRemixes, setUserRemixes] = useState<UserRemix[]>([]);
   const [loadingRemixes, setLoadingRemixes] = useState(true);
   const [activeTab, setActiveTab] = useState<'remixes' | 'favorites'>('favorites');
+  const [userFavorites, setUserFavorites] = useState<any[]>([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(true);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  
-  const { data: musicData, likedTracks } = useDashboardMusic();
-  
-  // Get all tracks that are liked
-  const favoriteTracks = [...musicData.trendingSongs, ...musicData.newSongs, ...musicData.trendingRemixes, ...musicData.recentRemixes]
-    .filter(track => likedTracks.has(track.id));
 
   useEffect(() => {
     if (!loading && !user) {
@@ -48,7 +44,46 @@ const Library = () => {
     }
   }, [user, loading, navigate]);
 
-  // Fetch user's remixes and liked tracks
+  // Fetch user's favorites from database
+  useEffect(() => {
+    const fetchUserFavorites = async () => {
+      if (!user) return;
+      
+      try {
+        setLoadingFavorites(true);
+        const { data, error } = await supabase
+          .from('user_favorites')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching favorites:', error);
+        } else {
+          // Transform to match track format
+          const favorites = (data || []).map((fav: any) => ({
+            id: fav.id,
+            title: fav.track_title,
+            artist: fav.artist_name,
+            artwork: fav.cover_image_url || '/src/assets/card-1.png',
+            preview: fav.preview_url,
+            source: fav.source,
+          }));
+          setUserFavorites(favorites);
+        }
+      } catch (err) {
+        console.error('Fetch error:', err);
+      } finally {
+        setLoadingFavorites(false);
+      }
+    };
+
+    if (user) {
+      fetchUserFavorites();
+    }
+  }, [user]);
+
+  // Fetch user's remixes
   useEffect(() => {
     const fetchUserRemixes = async () => {
       if (!user) return;
@@ -296,7 +331,7 @@ const Library = () => {
               onClick={() => setActiveTab('favorites')}
               className="text-xs h-8"
             >
-              Favorites ({favoriteTracks.length})
+              Favorites ({userFavorites.length})
             </Button>
             <Button
               variant={activeTab === 'remixes' ? 'default' : 'outline'}
@@ -316,7 +351,7 @@ const Library = () => {
           )}
 
           {/* Empty State for Favorites */}
-          {activeTab === 'favorites' && favoriteTracks.length === 0 && (
+          {activeTab === 'favorites' && !loadingFavorites && userFavorites.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 px-4">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
                 <Music className="h-8 w-8 text-muted-foreground" />
@@ -353,9 +388,9 @@ const Library = () => {
           )}
 
           {/* Favorites Grid */}
-          {activeTab === 'favorites' && favoriteTracks.length > 0 && (
+          {activeTab === 'favorites' && userFavorites.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 lg:gap-3">
-              {favoriteTracks.map((track) => (
+              {userFavorites.map((track) => (
                 <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors overflow-hidden group">
                   <div className="aspect-square bg-muted relative">
                     <img 

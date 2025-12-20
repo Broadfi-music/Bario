@@ -34,6 +34,14 @@ const Dashboard = () => {
     }
   }, [user, loading, navigate]);
 
+  // Get all tracks as a flat list for skip functionality
+  const allTracks = [
+    ...musicData.recentRemixes,
+    ...musicData.newSongs,
+    ...musicData.trendingSongs,
+    ...musicData.trendingRemixes,
+  ].filter(t => t.preview);
+
   // Audio progress tracking
   useEffect(() => {
     const audio = audioRef.current;
@@ -45,16 +53,33 @@ const Dashboard = () => {
       }
     };
 
+    const handleEnded = () => {
+      // Auto-play next track
+      skipToNextTrack();
+    };
+
     audio.addEventListener('timeupdate', updateProgress);
-    audio.addEventListener('ended', () => {
-      setIsPlaying(false);
-      setProgress(0);
-    });
+    audio.addEventListener('ended', handleEnded);
 
     return () => {
       audio.removeEventListener('timeupdate', updateProgress);
+      audio.removeEventListener('ended', handleEnded);
     };
-  }, [currentTrack]);
+  }, [currentTrack, allTracks]);
+
+  const skipToNextTrack = () => {
+    if (!currentTrack || allTracks.length === 0) return;
+    const currentIndex = allTracks.findIndex(t => t.id === currentTrack.id);
+    const nextIndex = (currentIndex + 1) % allTracks.length;
+    handlePlay(allTracks[nextIndex]);
+  };
+
+  const skipToPrevTrack = () => {
+    if (!currentTrack || allTracks.length === 0) return;
+    const currentIndex = allTracks.findIndex(t => t.id === currentTrack.id);
+    const prevIndex = currentIndex <= 0 ? allTracks.length - 1 : currentIndex - 1;
+    handlePlay(allTracks[prevIndex]);
+  };
 
   const toggleSection = (sectionIndex: number) => {
     setExpandedSections(prev => {
@@ -167,16 +192,6 @@ const Dashboard = () => {
     }
   };
 
-  // Get source badge color
-  const getSourceColor = (source: string) => {
-    switch (source?.toLowerCase()) {
-      case 'spotify': return 'bg-green-500/20 text-green-400';
-      case 'deezer': return 'bg-orange-500/20 text-orange-400';
-      case 'audius': return 'bg-purple-500/20 text-purple-400';
-      case 'lastfm': return 'bg-red-500/20 text-red-400';
-      default: return 'bg-gray-500/20 text-gray-400';
-    }
-  };
 
   const sidebarItems = [
     { icon: Home, label: 'Home', path: '/dashboard' },
@@ -202,12 +217,12 @@ const Dashboard = () => {
       tracks: musicData.newSongs.slice(0, 10),
     },
     {
-      title: `Trending Songs (${musicData.trendingSongs.length})`,
+      title: 'Trending Songs',
       layout: 'list',
       tracks: musicData.trendingSongs.slice(0, 20),
     },
     {
-      title: `Trending Remixes (${musicData.trendingRemixes.length})`,
+      title: 'Trending Remixes',
       layout: 'list',
       tracks: musicData.trendingRemixes.slice(0, 20),
     },
@@ -254,9 +269,6 @@ const Dashboard = () => {
                     <p className="text-xs font-medium truncate">{result.title}</p>
                     <p className="text-[10px] text-muted-foreground truncate">{result.artist}</p>
                   </div>
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${getSourceColor(result.source)}`}>
-                    {result.source?.charAt(0).toUpperCase() + result.source?.slice(1)}
-                  </span>
                   <Button size="icon" variant="ghost" onClick={(e) => handleSearchLike(result, e)} className="h-6 w-6">
                     <Heart className={`h-3 w-3 ${likedTracks.has(result.id) ? 'fill-red-500 text-red-500' : ''}`} />
                   </Button>
@@ -593,7 +605,7 @@ const Dashboard = () => {
                 <p className="text-[10px] text-muted-foreground truncate">{currentTrack.artist}</p>
               </div>
               <div className="flex items-center gap-2">
-                <Button size="icon" variant="ghost" className="h-8 w-8">
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={skipToPrevTrack}>
                   <SkipBack className="h-4 w-4" />
                 </Button>
                 <Button 
@@ -603,7 +615,7 @@ const Dashboard = () => {
                 >
                   {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
                 </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8">
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={skipToNextTrack}>
                   <SkipForward className="h-4 w-4" />
                 </Button>
               </div>
