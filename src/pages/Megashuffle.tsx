@@ -206,7 +206,7 @@ const Megashuffle = () => {
     setLikedTracks(newLiked);
   };
 
-  if (loading || !user) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="text-foreground">Loading...</div></div>;
+  // Don't block rendering while loading - show content progressively
 
   const sidebarItems = [
     { icon: Home, label: 'Home', path: '/dashboard' },
@@ -312,7 +312,7 @@ const Megashuffle = () => {
             </div>
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {displayArtists.map((artist) => (
-                <Link key={artist.id} to={artist.deezerId ? `/dashboard/artist/${artist.deezerId}` : '#'} className="text-center group">
+                <Link key={artist.id} to={`/dashboard/artist/${artist.deezerId || artist.id}`} className="text-center group">
                   <Avatar className="w-14 h-14 mx-auto mb-2 ring-2 ring-transparent group-hover:ring-primary transition-all">
                     <AvatarImage src={artist.avatar} />
                     <AvatarFallback>{artist.name?.[0]}</AvatarFallback>
@@ -411,11 +411,9 @@ const Megashuffle = () => {
 
               <div className="flex gap-2">
                 <Button onClick={() => { setShowArtistPopup(false); setArtistTracks([]); }} variant="outline" className="flex-1 text-xs">Close</Button>
-                {currentArtist.deezerId && (
-                  <Link to={`/dashboard/artist/${currentArtist.deezerId}`} className="flex-1">
-                    <Button variant="secondary" className="w-full text-xs">View Profile</Button>
-                  </Link>
-                )}
+                <Link to={`/dashboard/artist/${currentArtist.deezerId || currentArtist.id}`} className="flex-1">
+                  <Button variant="secondary" className="w-full text-xs">View Profile</Button>
+                </Link>
                 <Button onClick={closePopupAndShuffle} className="flex-1 text-xs bg-gradient-to-r from-blue-500 to-purple-500">Shuffle Again</Button>
               </div>
             </Card>

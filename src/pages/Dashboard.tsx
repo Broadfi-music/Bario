@@ -112,13 +112,7 @@ const Dashboard = () => {
     navigate('/');
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground">Loading...</div>
-      </div>
-    );
-  }
+  // Don't show full page loading - content loads progressively
 
   if (!user) {
     return null;
@@ -132,11 +126,55 @@ const Dashboard = () => {
         body: { query: searchQuery }
       });
       if (error) throw error;
-      setSearchResults(data?.results || []);
+      // Filter to only include tracks with previews
+      const resultsWithPreviews = (data?.results || []).filter((r: any) => r.preview);
+      setSearchResults(resultsWithPreviews);
     } catch (err) {
       toast.error('Search failed');
     } finally {
       setSearching(false);
+    }
+  };
+
+  const handleSearchLike = async (result: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      toast.error('Please sign in to add favorites');
+      return;
+    }
+    
+    const trackId = result.id.toString();
+    toggleLike(result.id);
+    
+    if (!likedTracks.has(result.id)) {
+      try {
+        await supabase.from('user_favorites').insert({
+          user_id: user.id,
+          track_id: trackId,
+          track_title: result.title,
+          artist_name: result.artist,
+          cover_image_url: result.artwork,
+          preview_url: result.preview || '',
+          source: result.source || 'search',
+        });
+        toast.success('Added to favorites');
+      } catch (err) {
+        console.error('Failed to save favorite:', err);
+        toast.error('Failed to save favorite');
+      }
+    } else {
+      toast.success('Removed from favorites');
+    }
+  };
+
+  // Get source badge color
+  const getSourceColor = (source: string) => {
+    switch (source?.toLowerCase()) {
+      case 'spotify': return 'bg-green-500/20 text-green-400';
+      case 'deezer': return 'bg-orange-500/20 text-orange-400';
+      case 'audius': return 'bg-purple-500/20 text-purple-400';
+      case 'lastfm': return 'bg-red-500/20 text-red-400';
+      default: return 'bg-gray-500/20 text-gray-400';
     }
   };
 
@@ -197,19 +235,29 @@ const Dashboard = () => {
             </Button>
           </div>
           <div className="space-y-2">
+            {searchResults.length === 0 && !searching && searchQuery && (
+              <p className="text-xs text-muted-foreground text-center py-4">No tracks with previews found</p>
+            )}
             {searchResults.map((result) => (
               <Card key={result.id} className="p-2 cursor-pointer hover:bg-accent/50" onClick={() => {
                 handlePlay({ ...result, preview: result.preview });
                 setSearchOpen(false);
               }}>
                 <div className="flex items-center gap-2">
-                  <img src={result.artwork} alt={result.title} className="w-10 h-10 rounded object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/src/assets/card-1.png'; }} />
+                  <div className="relative">
+                    <img src={result.artwork} alt={result.title} className="w-10 h-10 rounded object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/src/assets/card-1.png'; }} />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity rounded">
+                      <Play className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium truncate">{result.title}</p>
                     <p className="text-[10px] text-muted-foreground truncate">{result.artist}</p>
                   </div>
-                  <span className="text-[10px] text-muted-foreground">{result.source}</span>
-                  <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); handleLike(result.id); }} className="h-6 w-6">
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${getSourceColor(result.source)}`}>
+                    {result.source?.charAt(0).toUpperCase() + result.source?.slice(1)}
+                  </span>
+                  <Button size="icon" variant="ghost" onClick={(e) => handleSearchLike(result, e)} className="h-6 w-6">
                     <Heart className={`h-3 w-3 ${likedTracks.has(result.id) ? 'fill-red-500 text-red-500' : ''}`} />
                   </Button>
                 </div>
