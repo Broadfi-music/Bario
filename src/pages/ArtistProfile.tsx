@@ -1,9 +1,10 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, ChevronLeft, Play, Pause, Heart, ExternalLink, SkipBack, SkipForward, Volume2 } from 'lucide-react';
+import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, ChevronLeft, Play, Pause, Heart, ExternalLink, SkipBack, SkipForward, Volume2, Users, Music, Disc, Calendar, MapPin, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Slider } from '@/components/ui/slider';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -17,20 +18,41 @@ interface ArtistData {
   genre: string;
   followers: number;
   monthlyListeners: string;
+  albums: number;
   socialLinks: {
     spotify?: string;
     instagram?: string;
     twitter?: string;
     youtube?: string;
   };
-  tracks: {
-    id: string;
-    title: string;
-    artwork: string;
-    preview: string;
-    plays: string;
-    duration: string;
-  }[];
+  tracks: TrackData[];
+  albums_list: AlbumData[];
+  relatedArtists: RelatedArtist[];
+}
+
+interface TrackData {
+  id: string;
+  title: string;
+  artwork: string;
+  preview: string;
+  plays: string;
+  duration: string;
+  album?: string;
+}
+
+interface AlbumData {
+  id: string;
+  title: string;
+  cover: string;
+  releaseDate: string;
+  trackCount: number;
+}
+
+interface RelatedArtist {
+  id: string;
+  name: string;
+  avatar: string;
+  followers: string;
 }
 
 const ArtistProfile = () => {
@@ -44,7 +66,11 @@ const ArtistProfile = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [likedTracks, setLikedTracks] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState('tracks');
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Get all tracks as flat list for skip functionality
+  const allTracks = artist?.tracks.filter(t => t.preview) || [];
 
   useEffect(() => {
     if (!loading && !user) {
@@ -59,13 +85,37 @@ const ArtistProfile = () => {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
     const updateProgress = () => {
       if (audio.duration) setProgress((audio.currentTime / audio.duration) * 100);
     };
+
+    const handleEnded = () => {
+      skipToNextTrack();
+    };
+
     audio.addEventListener('timeupdate', updateProgress);
-    audio.addEventListener('ended', () => { setIsPlaying(false); setProgress(0); });
-    return () => audio.removeEventListener('timeupdate', updateProgress);
-  }, [currentTrack]);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('timeupdate', updateProgress);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [currentTrack, allTracks]);
+
+  const skipToNextTrack = () => {
+    if (!currentTrack || allTracks.length === 0) return;
+    const currentIndex = allTracks.findIndex(t => t.id === currentTrack.id);
+    const nextIndex = (currentIndex + 1) % allTracks.length;
+    handlePlay(allTracks[nextIndex]);
+  };
+
+  const skipToPrevTrack = () => {
+    if (!currentTrack || allTracks.length === 0) return;
+    const currentIndex = allTracks.findIndex(t => t.id === currentTrack.id);
+    const prevIndex = currentIndex <= 0 ? allTracks.length - 1 : currentIndex - 1;
+    handlePlay(allTracks[prevIndex]);
+  };
 
   const fetchArtist = async () => {
     if (!id) return;
@@ -77,30 +127,60 @@ const ArtistProfile = () => {
       const data = await response.json();
       
       if (data.error) {
-        // If Deezer fails, try to search by ID in our megashuffle data
-        console.log('Deezer artist not found, trying fallback');
-        setArtist(null);
+        // Fallback: search by name
+        const searchResponse = await fetch(`https://api.deezer.com/search/artist?q=${encodeURIComponent(id)}&limit=1`);
+        const searchData = await searchResponse.json();
+        
+        if (searchData.data && searchData.data.length > 0) {
+          const artistId = searchData.data[0].id;
+          await fetchArtistById(artistId);
+        } else {
+          setArtist(null);
+        }
         setArtistLoading(false);
         return;
       }
       
-      // Fetch artist's tracks
-      const tracksResponse = await fetch(`https://api.deezer.com/artist/${id}/top?limit=20`);
-      const tracksData = await tracksResponse.json();
-      
-      const artistData: ArtistData = {
-        id: data.id?.toString() || id,
-        name: data.name || 'Unknown Artist',
-        avatar: data.picture_xl || data.picture_big || data.picture_medium || '/src/assets/card-1.png',
-        bio: `${data.name} is a talented artist with ${data.nb_album || 0} albums and ${data.nb_fan || 0} fans on Deezer.`,
+      await fetchArtistById(data.id);
+    } catch (error) {
+      console.error('Error fetching artist:', error);
+      setArtist(null);
+    } finally {
+      setArtistLoading(false);
+    }
+  };
+
+  const fetchArtistById = async (artistId: string | number) => {
+    try {
+      // Fetch artist info
+      const [artistRes, tracksRes, albumsRes, relatedRes] = await Promise.all([
+        fetch(`https://api.deezer.com/artist/${artistId}`),
+        fetch(`https://api.deezer.com/artist/${artistId}/top?limit=50`),
+        fetch(`https://api.deezer.com/artist/${artistId}/albums?limit=20`),
+        fetch(`https://api.deezer.com/artist/${artistId}/related?limit=10`),
+      ]);
+
+      const [artistData, tracksData, albumsData, relatedData] = await Promise.all([
+        artistRes.json(),
+        tracksRes.json(),
+        albumsRes.json(),
+        relatedRes.json(),
+      ]);
+
+      const artistInfo: ArtistData = {
+        id: artistData.id?.toString() || id!,
+        name: artistData.name || 'Unknown Artist',
+        avatar: artistData.picture_xl || artistData.picture_big || artistData.picture_medium || '/src/assets/card-1.png',
+        bio: generateArtistBio(artistData),
         genre: 'Music',
-        followers: data.nb_fan || 0,
-        monthlyListeners: formatListeners(data.nb_fan || 0),
+        followers: artistData.nb_fan || 0,
+        albums: artistData.nb_album || 0,
+        monthlyListeners: formatListeners(artistData.nb_fan || 0),
         socialLinks: {
-          spotify: `https://open.spotify.com/search/${encodeURIComponent(data.name || '')}`,
-          instagram: `https://instagram.com/${(data.name || '').replace(/\s+/g, '').toLowerCase()}`,
-          twitter: `https://twitter.com/${(data.name || '').replace(/\s+/g, '').toLowerCase()}`,
-          youtube: `https://youtube.com/results?search_query=${encodeURIComponent(data.name || '')}`,
+          spotify: `https://open.spotify.com/search/${encodeURIComponent(artistData.name || '')}`,
+          instagram: `https://instagram.com/${(artistData.name || '').replace(/\s+/g, '').toLowerCase()}`,
+          twitter: `https://twitter.com/${(artistData.name || '').replace(/\s+/g, '').toLowerCase()}`,
+          youtube: `https://youtube.com/results?search_query=${encodeURIComponent(artistData.name || '')}`,
         },
         tracks: (tracksData.data || []).map((track: any) => ({
           id: track.id?.toString(),
@@ -109,54 +189,36 @@ const ArtistProfile = () => {
           preview: track.preview || '',
           plays: formatListeners(track.rank || Math.floor(Math.random() * 1000000)),
           duration: formatDuration(track.duration),
+          album: track.album?.title,
+        })),
+        albums_list: (albumsData.data || []).map((album: any) => ({
+          id: album.id?.toString(),
+          title: album.title,
+          cover: album.cover_medium || album.cover || '/src/assets/card-1.png',
+          releaseDate: album.release_date || 'Unknown',
+          trackCount: album.nb_tracks || 0,
+        })),
+        relatedArtists: (relatedData.data || []).map((artist: any) => ({
+          id: artist.id?.toString(),
+          name: artist.name,
+          avatar: artist.picture_medium || artist.picture || '/src/assets/card-1.png',
+          followers: formatListeners(artist.nb_fan || 0),
         })),
       };
       
-      setArtist(artistData);
+      setArtist(artistInfo);
     } catch (error) {
-      console.error('Error fetching artist:', error);
-      // Try to search for the artist by name if ID doesn't work
-      try {
-        const searchResponse = await fetch(`https://api.deezer.com/search/artist?q=${id}&limit=1`);
-        const searchData = await searchResponse.json();
-        if (searchData.data && searchData.data.length > 0) {
-          const artistId = searchData.data[0].id;
-          // Retry with found ID
-          const retryResponse = await fetch(`https://api.deezer.com/artist/${artistId}`);
-          const retryData = await retryResponse.json();
-          const tracksResponse = await fetch(`https://api.deezer.com/artist/${artistId}/top?limit=20`);
-          const tracksData = await tracksResponse.json();
-          
-          const artistData: ArtistData = {
-            id: retryData.id?.toString() || id,
-            name: retryData.name || 'Unknown Artist',
-            avatar: retryData.picture_xl || retryData.picture_big || retryData.picture_medium || '/src/assets/card-1.png',
-            bio: `${retryData.name} is a talented artist with ${retryData.nb_album || 0} albums and ${retryData.nb_fan || 0} fans on Deezer.`,
-            genre: 'Music',
-            followers: retryData.nb_fan || 0,
-            monthlyListeners: formatListeners(retryData.nb_fan || 0),
-            socialLinks: {
-              spotify: `https://open.spotify.com/search/${encodeURIComponent(retryData.name || '')}`,
-            },
-            tracks: (tracksData.data || []).map((track: any) => ({
-              id: track.id?.toString(),
-              title: track.title,
-              artwork: track.album?.cover_medium || '/src/assets/card-1.png',
-              preview: track.preview || '',
-              plays: formatListeners(track.rank || Math.floor(Math.random() * 1000000)),
-              duration: formatDuration(track.duration),
-            })),
-          };
-          setArtist(artistData);
-        } else {
-          setArtist(null);
-        }
-      } catch {
-        setArtist(null);
-      }
-    } finally {
-      setArtistLoading(false);
+      console.error('Error fetching artist details:', error);
+      setArtist(null);
     }
+  };
+
+  const generateArtistBio = (data: any) => {
+    const name = data.name || 'This artist';
+    const albums = data.nb_album || 0;
+    const fans = data.nb_fan || 0;
+    
+    return `${name} is a talented musician with ${albums} albums and over ${formatListeners(fans)} fans worldwide. Known for their unique sound and captivating performances, ${name} continues to push boundaries and inspire listeners across the globe. Their music spans various genres and has earned them a dedicated following on streaming platforms.`;
   };
 
   const formatListeners = (num: number) => {
@@ -197,13 +259,15 @@ const ArtistProfile = () => {
     }
   };
 
-  const handleLike = async (trackId: string) => {
+  const handleLike = async (track: TrackData) => {
     if (!user) {
       toast.error('Please sign in to add favorites');
       return;
     }
     
+    const trackId = track.id.toString();
     const newLiked = new Set(likedTracks);
+    
     if (newLiked.has(trackId)) {
       newLiked.delete(trackId);
       toast.success('Removed from favorites');
@@ -211,28 +275,31 @@ const ArtistProfile = () => {
       newLiked.add(trackId);
       toast.success('Added to favorites');
       
-      // Save to database
-      const track = artist?.tracks.find(t => t.id === trackId);
-      if (track) {
-        try {
-          await supabase.from('user_favorites').insert({
-            user_id: user.id,
-            track_id: trackId,
-            track_title: track.title,
-            artist_name: artist?.name || '',
-            cover_image_url: track.artwork,
-            preview_url: track.preview,
-            source: 'deezer',
-          });
-        } catch (err) {
-          console.error(err);
-        }
+      try {
+        await supabase.from('user_favorites').insert({
+          user_id: user.id,
+          track_id: trackId,
+          track_title: track.title,
+          artist_name: artist?.name || '',
+          cover_image_url: track.artwork,
+          preview_url: track.preview,
+          source: 'deezer',
+        });
+      } catch (err) {
+        console.error(err);
       }
     }
     setLikedTracks(newLiked);
   };
 
-  // Don't block UI while checking auth
+  const playAllTracks = () => {
+    const tracksWithPreview = artist?.tracks.filter(t => t.preview) || [];
+    if (tracksWithPreview.length > 0) {
+      handlePlay(tracksWithPreview[0]);
+    } else {
+      toast.error('No playable tracks available');
+    }
+  };
 
   const sidebarItems = [
     { icon: Home, label: 'Home', path: '/dashboard' },
@@ -240,6 +307,7 @@ const ArtistProfile = () => {
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
     { icon: Sparkles, label: 'Megashuffle', path: '/dashboard/megashuffle' },
     { icon: Gift, label: 'Reward & Earn', path: '/dashboard/rewards' },
+    { icon: Upload, label: 'Upload', path: '/dashboard/upload' },
   ];
 
   return (
@@ -261,7 +329,7 @@ const ArtistProfile = () => {
         </nav>
       </aside>
 
-      <main className={`flex-1 overflow-y-auto w-full lg:w-auto ${currentTrack ? 'pb-20' : ''}`}>
+      <main className={`flex-1 overflow-y-auto w-full lg:w-auto ${currentTrack ? 'pb-24' : ''}`}>
         <div className="p-3 lg:p-6">
           <div className="flex items-center gap-2 mb-6">
             <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8" onClick={() => setSidebarOpen(true)}><Menu className="h-5 w-5" /></Button>
@@ -271,31 +339,58 @@ const ArtistProfile = () => {
 
           {artistLoading ? (
             <div className="flex items-center justify-center py-12">
-              <div className="text-muted-foreground">Loading artist...</div>
+              <div className="animate-pulse text-muted-foreground">Loading artist...</div>
             </div>
           ) : artist ? (
             <div className="space-y-6">
-              {/* Artist Header */}
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <Avatar className="w-24 h-24 lg:w-32 lg:h-32">
-                  <AvatarImage src={artist.avatar} />
-                  <AvatarFallback>{artist.name?.[0]}</AvatarFallback>
-                </Avatar>
-                <div className="text-center sm:text-left">
-                  <h2 className="text-xl lg:text-2xl font-bold text-foreground">{artist.name}</h2>
-                  <p className="text-sm text-muted-foreground">{artist.genre}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{artist.monthlyListeners} monthly listeners</p>
-                  <div className="flex gap-2 mt-3 justify-center sm:justify-start">
-                    {artist.socialLinks.spotify && (
-                      <a href={artist.socialLinks.spotify} target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" size="sm" className="text-xs"><ExternalLink className="h-3 w-3 mr-1" />Spotify</Button>
-                      </a>
-                    )}
-                    {artist.socialLinks.youtube && (
-                      <a href={artist.socialLinks.youtube} target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" size="sm" className="text-xs"><ExternalLink className="h-3 w-3 mr-1" />YouTube</Button>
-                      </a>
-                    )}
+              {/* Artist Header with Cover */}
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-b from-primary/20 to-background rounded-xl" />
+                <div className="relative p-6">
+                  <div className="flex flex-col md:flex-row items-center gap-6">
+                    <Avatar className="w-32 h-32 lg:w-40 lg:h-40 ring-4 ring-primary/30 shadow-2xl">
+                      <AvatarImage src={artist.avatar} />
+                      <AvatarFallback className="text-4xl">{artist.name?.[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="text-center md:text-left flex-1">
+                      <p className="text-xs text-primary font-medium mb-1">VERIFIED ARTIST</p>
+                      <h2 className="text-2xl lg:text-4xl font-bold text-foreground mb-2">{artist.name}</h2>
+                      <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-muted-foreground mb-4">
+                        <span className="flex items-center gap-1">
+                          <Users className="h-4 w-4" />
+                          {artist.monthlyListeners} monthly listeners
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Heart className="h-4 w-4" />
+                          {formatListeners(artist.followers)} followers
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Disc className="h-4 w-4" />
+                          {artist.albums} albums
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                        <Button onClick={playAllTracks} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                          <Play className="h-4 w-4 mr-2" />
+                          Play All
+                        </Button>
+                        {artist.socialLinks.spotify && (
+                          <a href={artist.socialLinks.spotify} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm"><ExternalLink className="h-3 w-3 mr-1" />Spotify</Button>
+                          </a>
+                        )}
+                        {artist.socialLinks.youtube && (
+                          <a href={artist.socialLinks.youtube} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm"><ExternalLink className="h-3 w-3 mr-1" />YouTube</Button>
+                          </a>
+                        )}
+                        {artist.socialLinks.instagram && (
+                          <a href={artist.socialLinks.instagram} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm"><ExternalLink className="h-3 w-3 mr-1" />Instagram</Button>
+                          </a>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -303,45 +398,105 @@ const ArtistProfile = () => {
               {/* Bio */}
               <Card className="p-4">
                 <h3 className="text-sm font-semibold text-foreground mb-2">About</h3>
-                <p className="text-xs text-muted-foreground">{artist.bio}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{artist.bio}</p>
               </Card>
 
-              {/* Tracks */}
-              <div>
-                <h3 className="text-sm font-bold text-foreground mb-3">Popular Tracks</h3>
-                <div className="space-y-1">
-                  {artist.tracks.map((track, index) => (
-                    <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors cursor-pointer p-2" onClick={() => handlePlay(track)}>
-                      <div className="flex items-center gap-2">
-                        <span className="w-6 text-center text-xs font-bold text-muted-foreground">{index + 1}</span>
-                        <div className="relative w-10 h-10 flex-shrink-0">
-                          <img src={track.artwork} alt={track.title} className="w-full h-full object-cover rounded" onError={(e) => { (e.target as HTMLImageElement).src = '/src/assets/card-1.png'; }} />
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/40 rounded">
-                            {currentTrack?.id === track.id && isPlaying ? <Pause className="h-4 w-4 text-white" /> : <Play className="h-4 w-4 text-white" />}
+              {/* Tabs */}
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-4">
+                  <TabsTrigger value="tracks" className="text-xs">Popular ({artist.tracks.length})</TabsTrigger>
+                  <TabsTrigger value="albums" className="text-xs">Albums ({artist.albums_list.length})</TabsTrigger>
+                  <TabsTrigger value="related" className="text-xs">Similar Artists</TabsTrigger>
+                </TabsList>
+
+                {/* Popular Tracks */}
+                <TabsContent value="tracks">
+                  <div className="space-y-1">
+                    {artist.tracks.map((track, index) => (
+                      <Card key={track.id} className="bg-card hover:bg-accent/50 transition-colors cursor-pointer p-2" onClick={() => handlePlay(track)}>
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 text-center text-xs font-bold text-muted-foreground">{index + 1}</span>
+                          <div className="relative w-10 h-10 flex-shrink-0 group">
+                            <img src={track.artwork} alt={track.title} className="w-full h-full object-cover rounded" onError={(e) => { (e.target as HTMLImageElement).src = '/src/assets/card-1.png'; }} />
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded">
+                              {currentTrack?.id === track.id && isPlaying ? <Pause className="h-4 w-4 text-white" /> : <Play className="h-4 w-4 text-white" />}
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-foreground truncate">{track.title}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">{track.album}</p>
+                          </div>
+                          <span className="text-[10px] text-muted-foreground hidden sm:block">{track.plays} plays</span>
+                          <span className="text-[10px] text-muted-foreground">{track.duration}</span>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={(e) => { e.stopPropagation(); handleLike(track); }}
+                            className={`h-7 w-7 ${likedTracks.has(track.id) ? 'text-red-500' : 'text-muted-foreground'}`}
+                          >
+                            <Heart className={`h-3 w-3 ${likedTracks.has(track.id) ? 'fill-current' : ''}`} />
+                          </Button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </TabsContent>
+
+                {/* Albums */}
+                <TabsContent value="albums">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {artist.albums_list.map((album) => (
+                      <Card key={album.id} className="bg-card hover:bg-accent/50 transition-colors overflow-hidden group cursor-pointer">
+                        <div className="aspect-square bg-muted relative">
+                          <img src={album.cover} alt={album.title} className="absolute inset-0 w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/src/assets/card-1.png'; }} />
+                        </div>
+                        <div className="p-3">
+                          <h3 className="font-medium text-foreground truncate text-xs">{album.title}</h3>
+                          <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {album.releaseDate.split('-')[0]}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Music className="h-3 w-3" />
+                              {album.trackCount} tracks
+                            </span>
                           </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-foreground truncate">{track.title}</p>
-                          <p className="text-[10px] text-muted-foreground">{track.plays} plays</p>
-                        </div>
-                        <span className="text-[10px] text-muted-foreground">{track.duration}</span>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={(e) => { e.stopPropagation(); handleLike(track.id); }}
-                          className={`h-7 w-7 ${likedTracks.has(track.id) ? 'text-red-500' : 'text-muted-foreground'}`}
-                        >
-                          <Heart className={`h-3 w-3 ${likedTracks.has(track.id) ? 'fill-current' : ''}`} />
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </div>
+                      </Card>
+                    ))}
+                  </div>
+                </TabsContent>
+
+                {/* Related Artists */}
+                <TabsContent value="related">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    {artist.relatedArtists.map((relatedArtist) => (
+                      <Link key={relatedArtist.id} to={`/dashboard/artist/${relatedArtist.id}`}>
+                        <Card className="bg-card hover:bg-accent/50 transition-colors p-4 text-center group cursor-pointer">
+                          <Avatar className="w-20 h-20 mx-auto mb-3 ring-2 ring-transparent group-hover:ring-primary transition-all">
+                            <AvatarImage src={relatedArtist.avatar} />
+                            <AvatarFallback>{relatedArtist.name?.[0]}</AvatarFallback>
+                          </Avatar>
+                          <h3 className="font-medium text-foreground truncate text-xs">{relatedArtist.name}</h3>
+                          <p className="text-[10px] text-muted-foreground">{relatedArtist.followers} followers</p>
+                        </Card>
+                      </Link>
+                    ))}
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">Artist not found</p>
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <User className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">Artist Not Found</h3>
+              <p className="text-sm text-muted-foreground mb-4">We couldn't find this artist. Try searching for another one.</p>
+              <Button onClick={() => navigate('/dashboard/megashuffle')}>
+                Go to Megashuffle
+              </Button>
             </div>
           )}
         </div>
@@ -350,17 +505,17 @@ const ArtistProfile = () => {
         {currentTrack && (
           <div className="fixed bottom-0 left-0 right-0 lg:left-48 bg-card border-t border-border p-3 z-40">
             <div className="flex items-center gap-3">
-              <img src={currentTrack.artwork} alt={currentTrack.title} className="w-10 h-10 rounded object-cover" />
+              <img src={currentTrack.artwork} alt={currentTrack.title} className="w-10 h-10 rounded object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/src/assets/card-1.png'; }} />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-foreground truncate">{currentTrack.title}</p>
                 <p className="text-[10px] text-muted-foreground truncate">{artist?.name}</p>
               </div>
               <div className="flex items-center gap-2">
-                <Button size="icon" variant="ghost" className="h-8 w-8"><SkipBack className="h-4 w-4" /></Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={skipToPrevTrack}><SkipBack className="h-4 w-4" /></Button>
                 <Button size="icon" className="h-8 w-8 bg-foreground text-background hover:bg-foreground/90 rounded-full" onClick={togglePlayPause}>
                   {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
                 </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8"><SkipForward className="h-4 w-4" /></Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={skipToNextTrack}><SkipForward className="h-4 w-4" /></Button>
               </div>
               <div className="hidden sm:flex items-center gap-2 w-24">
                 <Volume2 className="h-4 w-4 text-muted-foreground" />
