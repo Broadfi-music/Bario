@@ -360,6 +360,38 @@ export type Database = {
           },
         ]
       }
+      prediction_votes: {
+        Row: {
+          created_at: string
+          id: string
+          prediction_id: string
+          user_id: string
+          vote: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          prediction_id: string
+          user_id: string
+          vote: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          prediction_id?: string
+          user_id?: string
+          vote?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prediction_votes_prediction_id_fkey"
+            columns: ["prediction_id"]
+            isOneToOne: false
+            referencedRelation: "user_predictions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -573,6 +605,66 @@ export type Database = {
           track_id?: string
           track_title?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_predictions: {
+        Row: {
+          artist_name: string | null
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          image_url: string | null
+          no_votes: number | null
+          song_artwork: string | null
+          song_id: string | null
+          song_source: string | null
+          song_title: string | null
+          status: string | null
+          title: string
+          total_votes: number | null
+          updated_at: string
+          user_id: string
+          yes_votes: number | null
+        }
+        Insert: {
+          artist_name?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          image_url?: string | null
+          no_votes?: number | null
+          song_artwork?: string | null
+          song_id?: string | null
+          song_source?: string | null
+          song_title?: string | null
+          status?: string | null
+          title: string
+          total_votes?: number | null
+          updated_at?: string
+          user_id: string
+          yes_votes?: number | null
+        }
+        Update: {
+          artist_name?: string | null
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          image_url?: string | null
+          no_votes?: number | null
+          song_artwork?: string | null
+          song_id?: string | null
+          song_source?: string | null
+          song_title?: string | null
+          status?: string | null
+          title?: string
+          total_votes?: number | null
+          updated_at?: string
+          user_id?: string
+          yes_votes?: number | null
         }
         Relationships: []
       }

@@ -61,37 +61,32 @@ export function useAlphaPredictions() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchMarkets = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      console.log('Fetching alpha predictions...');
-      
-      const { data, error: fetchError } = await supabase.functions.invoke('alpha-predictions', {
-        body: { action: 'markets' }
-      });
-
+    // Don't block UI - set loading false immediately to show content fast
+    setError(null);
+    
+    // Start fetch in background
+    supabase.functions.invoke('alpha-predictions', {
+      body: { action: 'markets' }
+    }).then(({ data, error: fetchError }) => {
       if (fetchError) {
         console.error('Supabase function error:', fetchError);
-        throw new Error(fetchError.message);
+        setError(fetchError.message);
+        setLoading(false);
+        return;
       }
-
-      console.log('Alpha predictions response:', data);
       
       if (data?.markets) {
         setMarkets(data.markets);
         setAiModels(data.aiModels || []);
         setFanForecasters(data.fanForecasters || []);
         setStats(data.stats || null);
-      } else {
-        console.error('No markets in response:', data);
       }
-    } catch (err) {
+      setLoading(false);
+    }).catch(err => {
       console.error('Error fetching alpha predictions:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch predictions');
-    } finally {
       setLoading(false);
-    }
+    });
   }, []);
 
   const submitPrediction = useCallback(async (marketId: string, prediction: 'will' | 'wont', confidence: number, userId?: string) => {
