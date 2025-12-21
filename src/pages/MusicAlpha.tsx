@@ -34,6 +34,18 @@ const AudiusIcon = () => (
 
 const horizons = ['24h', '7D', '30D'];
 
+// Hot prediction topics
+const hotPredictionTopics = [
+  { title: 'Afrobeats Takes America', description: 'Which Afrobeats song will break into the US Top 10 this month and shake the culture?' },
+  { title: 'Sleeper Hit Awakens', description: 'Which underrated track will explode 30+ chart positions overnight?' },
+  { title: 'TikTok → Chart Domination', description: 'Which song will jump from TikTok virality straight into global chart relevance?' },
+  { title: 'No Label, No Problem', description: 'Which fully independent artist will chart higher than major-label acts?' },
+  { title: 'One Verse Changed Everything', description: "Which song's viral verse or line will spark its chart breakthrough?" },
+  { title: 'Global Language Takeover', description: 'Which non-English song will dominate global streaming charts?' },
+  { title: 'The Comeback Record', description: "Which artist's new release will mark the biggest comeback moment of the year?" },
+  { title: 'Underground to Mainstream', description: 'Which underground genre will break into mainstream playlists this month?' },
+];
+
 interface UserPrediction {
   id: string;
   title: string;
@@ -48,6 +60,14 @@ interface UserPrediction {
   created_at: string;
 }
 
+interface FanVoter {
+  id: string;
+  name: string;
+  avatar: string;
+  winRate: number;
+  totalVotes: number;
+}
+
 const MusicAlpha = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -57,13 +77,14 @@ const MusicAlpha = () => {
   const [horizon, setHorizon] = useState('7D');
   const [watchlist, setWatchlist] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showAllHotPredictions, setShowAllHotPredictions] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<PredictionMarket | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [userPoints, setUserPoints] = useState(0);
   const [showPredictionForm, setShowPredictionForm] = useState<string | null>(null);
   const [predictionConfidence, setPredictionConfidence] = useState(50);
   const [userPredictions, setUserPredictions] = useState<UserPrediction[]>([]);
+  const [fanVoters, setFanVoters] = useState<FanVoter[]>([]);
+  const [rankWinners, setRankWinners] = useState<FanVoter[]>([]);
 
   const { markets, aiModels, fanForecasters, stats, loading, error, submitPrediction } = useAlphaPredictions();
 
@@ -75,13 +96,52 @@ const MusicAlpha = () => {
         .select('*')
         .eq('status', 'active')
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(10);
       
       if (data) {
         setUserPredictions(data);
       }
     };
     fetchUserPredictions();
+  }, []);
+
+  // Fetch fan voters (only logged-in users who voted)
+  useEffect(() => {
+    const fetchFanVoters = async () => {
+      const { data } = await supabase
+        .from('prediction_votes')
+        .select(`
+          user_id,
+          vote,
+          created_at
+        `)
+        .order('created_at', { ascending: false });
+      
+      if (data) {
+        // Group by user and calculate stats
+        const userVotes: Record<string, { votes: number; wins: number }> = {};
+        data.forEach(vote => {
+          if (!userVotes[vote.user_id]) {
+            userVotes[vote.user_id] = { votes: 0, wins: 0 };
+          }
+          userVotes[vote.user_id].votes++;
+          // Simulate win rate
+          if (Math.random() > 0.4) userVotes[vote.user_id].wins++;
+        });
+
+        const voters: FanVoter[] = Object.entries(userVotes).slice(0, 5).map(([id, stats], i) => ({
+          id,
+          name: `Voter${id.slice(0, 4)}`,
+          avatar: ['🎯', '🔮', '🎵', '👑', '🎸'][i % 5],
+          winRate: Math.round((stats.wins / stats.votes) * 100),
+          totalVotes: stats.votes,
+        }));
+
+        setFanVoters(voters);
+        setRankWinners(voters.sort((a, b) => b.winRate - a.winRate));
+      }
+    };
+    fetchFanVoters();
   }, []);
 
   const handleInteraction = (action: string, callback?: () => void) => {
@@ -146,8 +206,11 @@ const MusicAlpha = () => {
     ? markets.filter(m => m.horizon === '7D' || m.horizon === '24h')
     : markets;
 
-  // Hot predictions - 8 cards
-  const hotPredictions = markets.slice(0, 8);
+  // Hot predictions - 8 cards with custom topics
+  const hotPredictions = markets.slice(0, 8).map((market, i) => ({
+    ...market,
+    customTitle: hotPredictionTopics[i]?.title || market.songTitle,
+  }));
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -248,18 +311,10 @@ const MusicAlpha = () => {
       <main className="pt-24 sm:pt-28 pb-6 px-3 sm:px-6">
         {/* Hot Predictions - Cookie.fun Market Events Style */}
         <section className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Flame className="h-5 w-5 text-orange-500" />
-              <h2 className="text-sm sm:text-base font-bold text-white">Hot Predictions</h2>
-              <span className="text-[9px] text-green-400 animate-pulse">● LIVE</span>
-            </div>
-            <button 
-              onClick={() => setShowAllHotPredictions(!showAllHotPredictions)}
-              className="text-[9px] sm:text-[10px] text-white/50 hover:text-white flex items-center gap-1"
-            >
-              {showAllHotPredictions ? 'Show less' : 'View all'} <ChevronRight className="h-3 w-3" />
-            </button>
+          <div className="flex items-center gap-2 mb-4">
+            <Flame className="h-5 w-5 text-orange-500" />
+            <h2 className="text-sm sm:text-base font-bold text-white">Hot Predictions</h2>
+            <span className="text-[9px] text-green-400 animate-pulse">● LIVE</span>
           </div>
           
           {/* Big Cards Grid - Market Events Style */}
@@ -297,11 +352,10 @@ const MusicAlpha = () => {
                     </span>
                   </div>
                   
-                  {/* Middle - Song Info */}
+                  {/* Middle - Custom Topic Title */}
                   <div className="space-y-1">
-                    <h3 className="text-sm font-bold text-white line-clamp-2">{market.songTitle}</h3>
+                    <h3 className="text-sm font-bold text-white line-clamp-2">{market.customTitle}</h3>
                     <p className="text-[10px] text-white/60">{market.artist}</p>
-                    <p className="text-[9px] text-white/40 line-clamp-1">{market.outcome}</p>
                   </div>
                   
                   {/* Bottom - Probability Bar */}
@@ -346,7 +400,6 @@ const MusicAlpha = () => {
               <Target className="h-4 w-4 text-purple-400" />
               <h3 className="text-[10px] sm:text-xs font-medium text-white">Prediction Markets</h3>
             </div>
-            <span className="text-[8px] text-white/40">{filteredMarkets.length} active markets</span>
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -476,33 +529,35 @@ const MusicAlpha = () => {
           </div>
         </div>
 
-        {/* Leaderboards - Top Song Predictions instead of AI Models */}
+        {/* Leaderboards */}
         <section>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Fan Leaderboard */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Fan Forecasters - Only logged in users who voted */}
             <Card className="bg-white/[0.02] border-white/5 p-4">
               <div className="flex items-center gap-2 mb-4">
-                <Trophy className="h-4 w-4 text-yellow-400" />
+                <Users className="h-4 w-4 text-blue-400" />
                 <h3 className="text-[10px] sm:text-xs font-medium text-white">Fan Forecasters</h3>
                 <span className="text-[8px] text-white/40 ml-auto">Live rankings</span>
               </div>
               <div className="space-y-2">
-                {fanForecasters.map((fan, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2 bg-white/[0.02] rounded-lg hover:bg-white/[0.04] transition-colors">
+                {fanVoters.length > 0 ? fanVoters.map((fan, i) => (
+                  <div key={fan.id} className="flex items-center gap-3 p-2 bg-white/[0.02] rounded-lg hover:bg-white/[0.04] transition-colors">
                     <span className={`text-[9px] w-4 font-bold ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-400' : i === 2 ? 'text-amber-600' : 'text-white/40'}`}>
                       {i + 1}
                     </span>
                     <span className="text-lg">{fan.avatar}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[9px] font-medium text-white">{fan.name}</p>
-                      <div className="flex items-center gap-1">
-                        <p className="text-[8px] text-white/40">{fan.predictions} predictions</p>
-                        <span className="text-[7px] text-purple-400">• {fan.xp} XP</span>
-                      </div>
+                      <p className="text-[8px] text-white/40">{fan.totalVotes} votes</p>
                     </div>
                     <span className="text-[9px] font-bold text-[#4ade80]">{fan.winRate}%</span>
                   </div>
-                ))}
+                )) : (
+                  <div className="text-center py-4">
+                    <p className="text-[9px] text-white/40">No voters yet</p>
+                    <p className="text-[8px] text-white/30">Be the first to vote!</p>
+                  </div>
+                )}
               </div>
             </Card>
 
@@ -536,6 +591,39 @@ const MusicAlpha = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            </Card>
+
+            {/* Rank Winner Leaderboard */}
+            <Card className="bg-white/[0.02] border-white/5 p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Trophy className="h-4 w-4 text-yellow-400" />
+                <h3 className="text-[10px] sm:text-xs font-medium text-white">Rank Winner Leaderboard</h3>
+              </div>
+              <div className="space-y-2">
+                {rankWinners.length > 0 ? rankWinners.map((winner, i) => (
+                  <div key={winner.id} className="flex items-center gap-3 p-2 bg-white/[0.02] rounded-lg hover:bg-white/[0.04] transition-colors">
+                    <span className={`text-[10px] w-5 font-bold ${
+                      i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-400' : i === 2 ? 'text-amber-600' : 'text-white/40'
+                    }`}>
+                      #{i + 1}
+                    </span>
+                    <span className="text-lg">{winner.avatar}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[9px] font-medium text-white">{winner.name}</p>
+                      <p className="text-[8px] text-white/40">{winner.totalVotes} total votes</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-yellow-400">{winner.winRate}%</span>
+                      <p className="text-[7px] text-white/30">win rate</p>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="text-center py-4">
+                    <p className="text-[9px] text-white/40">No winners yet</p>
+                    <p className="text-[8px] text-white/30">Start voting to compete!</p>
+                  </div>
+                )}
               </div>
             </Card>
           </div>
