@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
   Search, Star, TrendingUp, TrendingDown, ChevronRight, ChevronLeft,
   Zap, Users, Trophy, Brain, Clock, Target, Flame, Sparkles, Filter,
-  Play, Pause, Volume2
+  Play, Pause, Volume2, Plus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { Card } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useAlphaPredictions, PredictionMarket } from '@/hooks/useAlphaPredictions';
+import { supabase } from '@/integrations/supabase/client';
 
 // Platform Icons
 const SpotifyIcon = () => (
@@ -33,6 +34,20 @@ const AudiusIcon = () => (
 
 const horizons = ['24h', '7D', '30D'];
 
+interface UserPrediction {
+  id: string;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  song_title: string | null;
+  artist_name: string | null;
+  song_artwork: string | null;
+  yes_votes: number;
+  no_votes: number;
+  total_votes: number;
+  created_at: string;
+}
+
 const MusicAlpha = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -48,8 +63,26 @@ const MusicAlpha = () => {
   const [userPoints, setUserPoints] = useState(0);
   const [showPredictionForm, setShowPredictionForm] = useState<string | null>(null);
   const [predictionConfidence, setPredictionConfidence] = useState(50);
+  const [userPredictions, setUserPredictions] = useState<UserPrediction[]>([]);
 
   const { markets, aiModels, fanForecasters, stats, loading, error, submitPrediction } = useAlphaPredictions();
+
+  // Fetch user predictions from database
+  useEffect(() => {
+    const fetchUserPredictions = async () => {
+      const { data } = await supabase
+        .from('user_predictions')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      
+      if (data) {
+        setUserPredictions(data);
+      }
+    };
+    fetchUserPredictions();
+  }, []);
 
   const handleInteraction = (action: string, callback?: () => void) => {
     if (!user) {
@@ -104,26 +137,17 @@ const MusicAlpha = () => {
     }
   };
 
-  // Filter markets
-  const highProbability = markets.filter(m => m.probability >= 50).slice(0, 12);
-  const lowProbability = markets.filter(m => m.probability < 50).slice(0, 12);
+  // Filter markets - get different songs for high probability section
+  const highProbabilitySongs = markets.filter(m => m.probability >= 60).slice(0, 12);
+  const lowProbability = markets.filter(m => m.probability < 40).slice(0, 12);
   const filteredMarkets = horizon === '24h' 
     ? markets.filter(m => m.horizon === '24h')
     : horizon === '7D' 
     ? markets.filter(m => m.horizon === '7D' || m.horizon === '24h')
     : markets;
 
-  // Generate market events from top markets
-  const marketEvents = markets.slice(0, 4).map((market, i) => ({
-    id: i + 1,
-    market,
-    event: i === 0 ? 'AI Model predicts surge after viral TikTok detection' :
-           i === 1 ? 'Fan consensus rising rapidly - streaming velocity up' :
-           i === 2 ? 'Underground Scout AI detects breakout potential' :
-           'Cross-platform momentum building',
-    change: market.change24h / 100,
-    time: `${Math.floor(Math.random() * 60) + 5} min ago`
-  }));
+  // Hot predictions - 8 cards
+  const hotPredictions = markets.slice(0, 8);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -158,6 +182,15 @@ const MusicAlpha = () => {
                 className="pl-8 h-8 w-40 bg-white/5 border-white/10 text-xs placeholder:text-white/40 rounded-lg"
               />
             </div>
+            
+            <Button
+              size="sm"
+              onClick={() => navigate('/music-alpha/create')}
+              className="text-[9px] h-7 px-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Create Prediction
+            </Button>
             
             <Button
               size="sm"
@@ -213,14 +246,13 @@ const MusicAlpha = () => {
       
       {/* Main Content */}
       <main className="pt-24 sm:pt-28 pb-6 px-3 sm:px-6">
-        {/* Hot Predictions */}
+        {/* Hot Predictions - Cookie.fun Market Events Style */}
         <section className="mb-6">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <h2 className="text-[11px] sm:text-sm font-semibold text-white">🔥 Hot Predictions</h2>
-              <div className="hidden sm:flex items-center gap-1 px-2 py-1 bg-purple-500/10 rounded-full">
-                <span className="text-[9px] text-purple-400">AI + Crowd signals</span>
-              </div>
+              <Flame className="h-5 w-5 text-orange-500" />
+              <h2 className="text-sm sm:text-base font-bold text-white">Hot Predictions</h2>
+              <span className="text-[9px] text-green-400 animate-pulse">● LIVE</span>
             </div>
             <button 
               onClick={() => setShowAllHotPredictions(!showAllHotPredictions)}
@@ -230,103 +262,141 @@ const MusicAlpha = () => {
             </button>
           </div>
           
-          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 ${!showAllHotPredictions ? 'max-h-[200px] overflow-hidden' : ''}`}>
-            {(showAllHotPredictions ? markets : markets.slice(0, 6)).map((market) => (
-              <div
+          {/* Big Cards Grid - Market Events Style */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {hotPredictions.map((market, i) => (
+              <Card
                 key={market.id}
                 onClick={() => navigate(`/music-alpha/${market.id}`)}
-                className="flex items-center gap-2 sm:gap-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-xl p-2 sm:p-3 cursor-pointer transition-all group"
+                className="relative overflow-hidden bg-gradient-to-br from-white/[0.08] to-white/[0.02] hover:from-white/[0.12] hover:to-white/[0.05] border-white/10 cursor-pointer transition-all group"
               >
-                <div className="relative">
-                  <img src={market.artwork} alt={market.songTitle} className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover" />
+                {/* Background Image with Gradient Overlay */}
+                <div className="absolute inset-0">
+                  <img 
+                    src={market.artwork} 
+                    alt="" 
+                    className="w-full h-full object-cover opacity-40 group-hover:opacity-50 transition-opacity"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
+                </div>
+                
+                {/* Content */}
+                <div className="relative z-10 p-4 h-[180px] flex flex-col justify-between">
+                  {/* Top - Status Badge */}
+                  <div className="flex items-center justify-between">
+                    <span className={`text-[8px] px-2 py-0.5 rounded-full font-medium ${
+                      market.status === 'surging' ? 'bg-green-500/30 text-green-400' : 
+                      market.status === 'underground' ? 'bg-purple-500/30 text-purple-400' : 
+                      market.status === 'cooling' ? 'bg-red-500/30 text-red-400' :
+                      'bg-yellow-500/30 text-yellow-400'
+                    }`}>
+                      {market.status.toUpperCase()}
+                    </span>
+                    <span className={`text-[10px] font-bold ${market.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      {market.change24h >= 0 ? '+' : ''}{market.change24h.toFixed(1)}%
+                    </span>
+                  </div>
+                  
+                  {/* Middle - Song Info */}
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-bold text-white line-clamp-2">{market.songTitle}</h3>
+                    <p className="text-[10px] text-white/60">{market.artist}</p>
+                    <p className="text-[9px] text-white/40 line-clamp-1">{market.outcome}</p>
+                  </div>
+                  
+                  {/* Bottom - Probability Bar */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-[9px]">
+                      <span className="text-white/50">{(market.totalForecasts / 1000).toFixed(1)}k votes</span>
+                      <span className={`font-bold text-base ${market.probability >= 50 ? 'text-green-400' : 'text-red-400'}`}>
+                        {Math.round(market.probability)}%
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all ${market.probability >= 50 ? 'bg-gradient-to-r from-green-500 to-green-400' : 'bg-gradient-to-r from-red-500 to-red-400'}`}
+                        style={{ width: `${market.probability}%` }}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Play Button */}
                   {market.previewUrl && (
                     <button
                       onClick={(e) => playTrack(market, e)}
-                      className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
+                      className="absolute top-4 right-4 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       {currentTrack?.id === market.id && isPlaying ? (
                         <Pause className="h-4 w-4 text-white" />
                       ) : (
-                        <Play className="h-4 w-4 text-white" />
+                        <Play className="h-4 w-4 text-white ml-0.5" />
                       )}
                     </button>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] sm:text-[10px] font-medium text-white truncate">{market.songTitle}</p>
-                  <p className="text-[8px] sm:text-[9px] text-white/50 truncate">{market.outcome}</p>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    {market.source === 'deezer' && <DeezerIcon />}
-                    {market.source === 'audius' && <AudiusIcon />}
-                    <span className="text-[7px] text-white/30">{market.listeners} listeners</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className={`text-[10px] sm:text-xs font-bold ${market.probability >= 50 ? 'text-[#4ade80]' : 'text-red-400'}`}>
-                    {Math.round(market.probability)}%
-                  </p>
-                  <p className="text-[7px] sm:text-[8px] text-white/40">probability</p>
-                </div>
-              </div>
+              </Card>
             ))}
           </div>
         </section>
 
-        {/* Prediction Signals */}
+        {/* Prediction Markets - 10 active */}
         <section className="mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[10px] sm:text-xs font-medium text-white">⚡ Prediction Signals</h3>
-            <div className="flex items-center gap-1 bg-white/5 rounded-lg p-0.5">
-              {horizons.map(t => (
-                <button
-                  key={t}
-                  onClick={() => setHorizon(t)}
-                  className={`text-[8px] sm:text-[9px] px-2 py-1 rounded-md transition-colors ${
-                    horizon === t ? 'bg-purple-500 text-white font-medium' : 'text-white/50 hover:text-white'
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-purple-400" />
+              <h3 className="text-[10px] sm:text-xs font-medium text-white">Prediction Markets</h3>
             </div>
+            <span className="text-[8px] text-white/40">{filteredMarkets.length} active markets</span>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-            {marketEvents.map((event) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            {filteredMarkets.slice(0, 10).map((market) => (
               <Card
-                key={event.id}
-                onClick={() => navigate(`/music-alpha/${event.market.id}`)}
-                className="bg-white/[0.02] hover:bg-white/[0.05] border-white/5 p-3 cursor-pointer transition-all group"
+                key={market.id}
+                onClick={() => navigate(`/music-alpha/${market.id}`)}
+                className="bg-white/[0.02] hover:bg-white/[0.05] border-white/5 p-3 transition-all cursor-pointer group"
               >
                 <div className="flex items-start gap-2 mb-2">
                   <div className="relative">
-                    <img src={event.market.artwork} alt="" className="w-10 h-10 rounded-lg object-cover" />
-                    {event.market.previewUrl && (
+                    <img src={market.artwork} alt={market.songTitle} className="w-10 h-10 rounded-lg object-cover" />
+                    {market.previewUrl && (
                       <button
-                        onClick={(e) => playTrack(event.market, e)}
+                        onClick={(e) => playTrack(market, e)}
                         className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
                       >
-                        <Play className="h-3 w-3 text-white" />
+                        {currentTrack?.id === market.id && isPlaying ? (
+                          <Pause className="h-3 w-3 text-white" />
+                        ) : (
+                          <Play className="h-3 w-3 text-white" />
+                        )}
                       </button>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] sm:text-[10px] font-medium text-white truncate">{event.market.songTitle}</span>
-                      <span className={`text-[8px] font-medium ${event.change >= 0 ? 'text-purple-400' : 'text-red-400'}`}>
-                        {event.change >= 0 ? '+' : ''}{(event.change * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                    <p className="text-[8px] text-white/40">{Math.round(event.market.probability)}% probability</p>
+                    <h4 className="text-[9px] font-medium text-white truncate">{market.songTitle}</h4>
+                    <p className="text-[8px] text-white/50 truncate">{market.artist}</p>
                   </div>
                 </div>
-                <p className="text-[9px] sm:text-[10px] text-white/70 line-clamp-2 mb-2">{event.event}</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <Brain className="h-3 w-3 text-purple-400" />
-                    <span className="text-[8px] text-purple-400">AI Signal</span>
+                
+                <p className="text-[8px] text-white/60 line-clamp-2 mb-2">{market.outcome}</p>
+                
+                {/* Vote Bar */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[8px]">
+                    <span className="text-green-400">Yes {Math.round(market.fanProbability)}%</span>
+                    <span className="text-red-400">No {Math.round(100 - market.fanProbability)}%</span>
                   </div>
-                  <span className="text-[8px] text-white/30">{event.time}</span>
+                  <div className="h-1 bg-white/10 rounded-full overflow-hidden flex">
+                    <div 
+                      className="h-full bg-green-500 transition-all"
+                      style={{ width: `${market.fanProbability}%` }}
+                    />
+                    <div 
+                      className="h-full bg-red-500 transition-all"
+                      style={{ width: `${100 - market.fanProbability}%` }}
+                    />
+                  </div>
+                  <p className="text-[7px] text-white/40 text-center">{(market.totalForecasts / 1000).toFixed(1)}k votes</p>
                 </div>
               </Card>
             ))}
@@ -335,17 +405,17 @@ const MusicAlpha = () => {
 
         {/* Probability Treemaps */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
-          {/* High Probability */}
+          {/* High Probability - Different Songs */}
           <div className="bg-white/[0.02] border border-white/5 rounded-xl p-3 sm:p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-[#4ade80]" />
-                <span className="text-[10px] sm:text-xs font-medium text-white">High probability</span>
+                <span className="text-[10px] sm:text-xs font-medium text-white">High Probability Songs</span>
                 <span className="text-[7px] text-[#4ade80] animate-pulse">● realtime</span>
               </div>
             </div>
             <div className="grid grid-cols-4 sm:grid-cols-5 gap-1">
-              {highProbability.map((market, i) => (
+              {highProbabilitySongs.map((market, i) => (
                 <div
                   key={market.id}
                   onClick={() => navigate(`/music-alpha/${market.id}`)}
@@ -375,7 +445,7 @@ const MusicAlpha = () => {
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <TrendingDown className="h-4 w-4 text-red-400" />
-                <span className="text-[10px] sm:text-xs font-medium text-white">Low probability</span>
+                <span className="text-[10px] sm:text-xs font-medium text-white">Low Probability Songs</span>
                 <span className="text-[7px] text-red-400 animate-pulse">● realtime</span>
               </div>
             </div>
@@ -406,122 +476,7 @@ const MusicAlpha = () => {
           </div>
         </div>
 
-        {/* Prediction Markets */}
-        <section className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[10px] sm:text-xs font-medium text-white">🎯 Prediction Markets</h3>
-            <span className="text-[8px] text-white/40">{filteredMarkets.length} active markets</span>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filteredMarkets.slice(0, 9).map((market) => (
-              <Card
-                key={market.id}
-                className="bg-white/[0.02] hover:bg-white/[0.05] border-white/5 p-3 transition-all"
-              >
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="relative group">
-                    <img src={market.artwork} alt={market.songTitle} className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg object-cover" />
-                    {market.previewUrl && (
-                      <button
-                        onClick={(e) => playTrack(market, e)}
-                        className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
-                      >
-                        {currentTrack?.id === market.id && isPlaying ? (
-                          <Pause className="h-5 w-5 text-white" />
-                        ) : (
-                          <Play className="h-5 w-5 text-white" />
-                        )}
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-[10px] sm:text-xs font-medium text-white truncate">{market.songTitle}</h4>
-                      <span className={`text-[7px] px-1.5 py-0.5 rounded-full ${
-                        market.status === 'surging' ? 'bg-[#4ade80]/20 text-[#4ade80]' : 
-                        market.status === 'underground' ? 'bg-purple-500/20 text-purple-400' : 
-                        market.status === 'cooling' ? 'bg-red-500/20 text-red-400' :
-                        'bg-yellow-500/20 text-yellow-400'
-                      }`}>
-                        {market.status}
-                      </span>
-                    </div>
-                    <p className="text-[8px] text-white/50">{market.artist}</p>
-                    <div className="flex items-center gap-1 mt-0.5">
-                      {market.source === 'deezer' && <DeezerIcon />}
-                      {market.source === 'audius' && <AudiusIcon />}
-                      <span className="text-[7px] text-white/30">{market.listeners}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <p className="text-[9px] text-white/70 mb-3">{market.outcome}</p>
-
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-3 w-3 text-white/40" />
-                    <span className="text-[8px] text-white/50">Fans: {Math.round(market.fanProbability)}%</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Brain className="h-3 w-3 text-purple-400" />
-                    <span className="text-[8px] text-purple-400">AI: {Math.round(market.aiProbability)}%</span>
-                  </div>
-                  <span className={`text-[11px] font-bold ${market.probability >= 50 ? 'text-[#4ade80]' : 'text-red-400'}`}>
-                    {Math.round(market.probability)}%
-                  </span>
-                </div>
-
-                {/* Prediction Form */}
-                {showPredictionForm === market.id ? (
-                  <div className="space-y-2 p-2 bg-white/5 rounded-lg">
-                    <p className="text-[8px] text-white/60">Your confidence: {predictionConfidence}%</p>
-                    <input 
-                      type="range" 
-                      min="10" 
-                      max="100" 
-                      value={predictionConfidence}
-                      onChange={(e) => setPredictionConfidence(parseInt(e.target.value))}
-                      className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer"
-                    />
-                    <div className="flex gap-2">
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleSubmitPrediction(market.id, 'will')}
-                        className="flex-1 h-6 text-[8px] bg-[#4ade80] hover:bg-[#4ade80]/80 text-black"
-                      >
-                        YES (+{Math.floor(predictionConfidence / 10)} pts)
-                      </Button>
-                      <Button 
-                        size="sm"
-                        onClick={() => handleSubmitPrediction(market.id, 'wont')}
-                        className="flex-1 h-6 text-[8px] bg-red-500 hover:bg-red-500/80 text-white"
-                      >
-                        NO (+{Math.floor(predictionConfidence / 10)} pts)
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <span className="text-[8px] text-white/40">{(market.totalForecasts / 1000).toFixed(1)}k forecasts</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[8px] text-white/40">{market.horizon}</span>
-                      <Button 
-                        size="sm"
-                        onClick={() => setShowPredictionForm(market.id)}
-                        className="h-5 text-[8px] px-2 bg-purple-500 hover:bg-purple-500/80"
-                      >
-                        Predict
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        {/* Leaderboard */}
+        {/* Leaderboards - Top Song Predictions instead of AI Models */}
         <section>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Fan Leaderboard */}
@@ -551,29 +506,33 @@ const MusicAlpha = () => {
               </div>
             </Card>
 
-            {/* AI Leaderboard */}
+            {/* Top Song Predictions */}
             <Card className="bg-white/[0.02] border-white/5 p-4">
               <div className="flex items-center gap-2 mb-4">
-                <Brain className="h-4 w-4 text-purple-400" />
-                <h3 className="text-[10px] sm:text-xs font-medium text-white">AI Models</h3>
-                <span className="text-[8px] text-white/40 ml-auto">Powered by Lovable AI</span>
+                <Target className="h-4 w-4 text-purple-400" />
+                <h3 className="text-[10px] sm:text-xs font-medium text-white">Top Song Predictions</h3>
+                <span className="text-[8px] text-white/40 ml-auto">By vote %</span>
               </div>
               <div className="space-y-2">
-                {aiModels.map((ai, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2 bg-white/[0.02] rounded-lg hover:bg-white/[0.04] transition-colors">
+                {markets.slice(0, 5).map((market, i) => (
+                  <div 
+                    key={market.id} 
+                    onClick={() => navigate(`/music-alpha/${market.id}`)}
+                    className="flex items-center gap-3 p-2 bg-white/[0.02] rounded-lg hover:bg-white/[0.04] transition-colors cursor-pointer"
+                  >
                     <span className={`text-[9px] w-4 font-bold ${i === 0 ? 'text-purple-400' : 'text-white/40'}`}>
                       {i + 1}
                     </span>
-                    <div className="w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center text-sm">
-                      {ai.icon}
-                    </div>
+                    <img src={market.artwork} alt="" className="w-8 h-8 rounded-lg object-cover" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[9px] font-medium text-white">{ai.name}</p>
-                      <p className="text-[8px] text-white/40">{ai.specialty}</p>
+                      <p className="text-[9px] font-medium text-white truncate">{market.songTitle}</p>
+                      <p className="text-[8px] text-white/40 truncate">{market.outcome}</p>
                     </div>
                     <div className="text-right">
-                      <span className="text-[9px] font-bold text-purple-400">{ai.accuracy}%</span>
-                      <p className="text-[7px] text-white/30">{ai.predictions} calls</p>
+                      <span className={`text-[10px] font-bold ${market.probability >= 50 ? 'text-green-400' : 'text-red-400'}`}>
+                        {Math.round(market.probability)}%
+                      </span>
+                      <p className="text-[7px] text-white/30">{(market.totalForecasts / 1000).toFixed(1)}k votes</p>
                     </div>
                   </div>
                 ))}

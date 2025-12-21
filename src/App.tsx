@@ -19,6 +19,7 @@ import CreatorProfile from "@/pages/CreatorProfile";
 import MusicResultPage from "@/pages/MusicResultPage";
 import GlobalHeatmap from "@/pages/GlobalHeatmap";
 import MusicAlpha from "@/pages/MusicAlpha";
+import CreatePrediction from "@/pages/CreatePrediction";
 import HeatmapDetail from "@/pages/HeatmapDetail";
 import AlphaDetail from "@/pages/AlphaDetail";
 import Analytics from "@/pages/Analytics";
@@ -44,6 +45,7 @@ const App = () => {
               <Route path="/global-heatmap" element={<GlobalHeatmap />} />
               <Route path="/global-heatmap/:id" element={<HeatmapDetail />} />
               <Route path="/music-alpha" element={<MusicAlpha />} />
+              <Route path="/music-alpha/create" element={<CreatePrediction />} />
               <Route path="/music-alpha/:id" element={<AlphaDetail />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/dashboard/settings" element={<DashboardSettings />} />
