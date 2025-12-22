@@ -25,6 +25,8 @@ import Analytics from "@/pages/Analytics";
 import Megashuffle from "@/pages/Megashuffle";
 import Upload from "@/pages/Upload";
 import ArtistProfile from "@/pages/ArtistProfile";
+import RadioStations from "@/pages/RadioStations";
+import Podcasts from "@/pages/Podcasts";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +60,8 @@ const App = () => {
               <Route path="/dashboard/artist/:id" element={<ArtistProfile />} />
               <Route path="/dashboard/music-result" element={<MusicResultPage />} />
               <Route path="/music-result" element={<MusicResultPage />} />
+              <Route path="/radio-stations" element={<RadioStations />} />
+              <Route path="/podcasts" element={<Podcasts />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

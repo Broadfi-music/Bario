@@ -107,25 +107,52 @@ async function searchSpotify(query: string, limit: number = 20): Promise<any[]> 
   }
 }
 
-// Deezer country playlist IDs
-const deezerCountryPlaylists: Record<string, string> = {
-  'US': '1313621735', 'UK': '1313616765', 'NG': '1362528775', 'BR': '1313620315',
-  'FR': '1109890291', 'DE': '1111143121', 'JP': '1314023803', 'KR': '1362525895',
-  'MX': '1313621165', 'IN': '1313627025', 'ZA': '1362526755', 'GH': '1362527195',
-  'KE': '1362527485', 'AU': '1313623995', 'CA': '1313619455', 'ES': '1116189381', 'IT': '1116187241'
+// Country-specific artist searches for authentic local music
+const countryArtistSearches: Record<string, string[]> = {
+  'NG': ['Wizkid', 'Burna Boy', 'Davido', 'Rema', 'Asake', 'Ayra Starr', 'Tems', 'Omah Lay', 'Ckay', 'Fireboy DML', 'Joeboy', 'Kizz Daniel', 'Olamide', 'Shallipopi', 'Young Jonn', 'Seyi Vibez', 'Spyro', 'Pheelz', 'BNXN'],
+  'US': ['Drake', 'Kendrick Lamar', 'Taylor Swift', 'The Weeknd', 'Bad Bunny', 'SZA', 'Post Malone', 'Travis Scott', 'Morgan Wallen', 'Billie Eilish', 'Doja Cat', 'Lil Baby', 'Future', 'Metro Boomin'],
+  'UK': ['Central Cee', 'Ed Sheeran', 'Dua Lipa', 'Dave', 'Stormzy', 'Little Simz', 'Tion Wayne', 'Headie One', 'Skepta', 'AJ Tracey', 'M Huncho', 'Jorja Smith'],
+  'GH': ['Sarkodie', 'Shatta Wale', 'Stonebwoy', 'Black Sherif', 'King Promise', 'Gyakie', 'Camidoh', 'Kuami Eugene', 'KiDi'],
+  'ZA': ['Tyla', 'Kabza De Small', 'DJ Maphorisa', 'Nasty C', 'Cassper Nyovest', 'A-Reece', 'Master KG', 'Focalistic'],
+  'KE': ['Sauti Sol', 'Nyashinski', 'Khaligraph Jones', 'Otile Brown', 'Nviiri The Storyteller', 'Bensoul'],
+  'BR': ['Anitta', 'Ludmilla', 'MC Livinho', 'Luisa Sonza', 'Pedro Sampaio', 'Zé Neto & Cristiano', 'Marília Mendonça'],
+  'MX': ['Peso Pluma', 'Natanael Cano', 'Junior H', 'Luis R Conriquez', 'Fuerza Regida', 'Grupo Frontera'],
+  'FR': ['Aya Nakamura', 'Jul', 'Ninho', 'Damso', 'Gazo', 'Tiakola', 'PLK', 'Laylow'],
+  'DE': ['Apache 207', 'Luciano', 'RAF Camora', 'Capital Bra', 'Bonez MC', 'Sido'],
+  'JP': ['YOASOBI', 'Ado', 'King Gnu', 'Official HIGE DANdism', 'Fujii Kaze', 'Mrs. GREEN APPLE', 'Kenshi Yonezu'],
+  'KR': ['BTS', 'BLACKPINK', 'Stray Kids', 'NewJeans', 'aespa', 'IVE', 'LE SSERAFIM', 'SEVENTEEN', 'NCT', 'TWICE'],
+  'IN': ['Arijit Singh', 'Diljit Dosanjh', 'AP Dhillon', 'Badshah', 'Divine', 'Raftaar', 'Sidhu Moosewala', 'Karan Aujla'],
+  'AU': ['The Kid LAROI', 'Tame Impala', 'Troye Sivan', 'Vance Joy', '5 Seconds of Summer'],
+  'CA': ['The Weeknd', 'Justin Bieber', 'Shawn Mendes', 'NAV', 'PartyNextDoor', 'Tory Lanez'],
+  'ES': ['Rosalía', 'Quevedo', 'Rauw Alejandro', 'Rels B', 'Mora', 'Omar Montes'],
+  'IT': ['Mahmood', 'Sfera Ebbasta', 'Geolier', 'Tedua', 'Guè', 'Blanco']
 };
 
-// Deezer API - Get country charts
+// Deezer API - Get country charts by searching for local artists
 async function getDeezerCountryChart(countryCode: string, limit: number = 50): Promise<any[]> {
-  const playlistId = deezerCountryPlaylists[countryCode];
+  const artists = countryArtistSearches[countryCode];
   
-  if (playlistId) {
+  if (artists && artists.length > 0) {
     try {
-      const response = await fetch(`https://api.deezer.com/playlist/${playlistId}/tracks?limit=${limit}`);
-      const data = await response.json();
-      if (data.data && data.data.length > 0) return data.data;
+      // Search for multiple artists in parallel
+      const searches = artists.slice(0, 8).map(artist => 
+        fetch(`https://api.deezer.com/search?q=${encodeURIComponent(artist)}&limit=6`)
+          .then(r => r.json())
+          .then(d => d.data || [])
+          .catch(() => [])
+      );
+      
+      const results = await Promise.all(searches);
+      const allTracks = results.flat();
+      
+      console.log(`Deezer country ${countryCode}: Found ${allTracks.length} tracks from ${artists.slice(0, 8).join(', ')}`);
+      
+      if (allTracks.length > 0) {
+        // Shuffle and return to get variety
+        return allTracks.sort(() => Math.random() - 0.5).slice(0, limit);
+      }
     } catch (e) {
-      console.error(`Deezer country chart error for ${countryCode}:`, e);
+      console.error(`Deezer country search error for ${countryCode}:`, e);
     }
   }
   
