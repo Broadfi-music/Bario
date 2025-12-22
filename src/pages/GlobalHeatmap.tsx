@@ -220,15 +220,6 @@ const GlobalHeatmap = () => {
             <Button
               size="sm"
               variant="outline"
-              onClick={() => navigate('/pass-the-plug')}
-              className="text-[9px] h-7 px-2 border-[#4ade80]/30 bg-[#4ade80]/10 text-[#4ade80] hover:bg-[#4ade80]/20"
-            >
-              <Zap className="h-3 w-3 mr-1" />
-              Pass the Plug
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
               onClick={() => navigate('/three-strike')}
               className="text-[9px] h-7 px-2 border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"
             >

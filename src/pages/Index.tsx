@@ -661,6 +661,104 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* Radio Station Section */}
+      <section className="py-12 lg:py-20 px-4 sm:px-6 border-t border-foreground/5">
+        <div className="container mx-auto max-w-7xl">
+          <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-12">
+            <div className="flex-1 space-y-4 lg:space-y-6 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-500/10 rounded-full">
+                <span className="text-red-500 text-sm animate-pulse">●</span>
+                <span className="text-red-400 text-xs font-medium">LIVE NOW</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
+                🎙️ Bario Radio
+              </h2>
+              <p className="text-sm sm:text-base lg:text-lg text-foreground/70 leading-relaxed">
+                24/7 live radio streaming the hottest tracks from around the world. AI-curated playlists, artist takeovers, and exclusive premieres. Tune in and discover your next favorite song.
+              </p>
+              <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
+                <button className="px-6 py-3 bg-red-500 text-white rounded-full font-semibold hover:bg-red-600 transition-colors text-sm flex items-center gap-2">
+                  <Play className="h-4 w-4 fill-white" />
+                  Listen Live
+                </button>
+                <button className="px-6 py-3 bg-foreground/10 text-foreground rounded-full font-semibold hover:bg-foreground/20 transition-colors text-sm">
+                  View Schedule
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 w-full max-w-md">
+              <div className="bg-gradient-to-br from-red-500/20 via-orange-500/10 to-yellow-500/20 rounded-2xl p-6 border border-foreground/10">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center animate-pulse">
+                    <span className="text-2xl">🎵</span>
+                  </div>
+                  <div>
+                    <p className="text-foreground font-semibold">Now Playing</p>
+                    <p className="text-foreground/60 text-sm">Afrobeats Takeover • DJ Spinall</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-foreground/50">
+                    <span>Live listeners</span>
+                    <span className="text-red-400">2.4K listening</span>
+                  </div>
+                  <div className="h-1 bg-foreground/10 rounded-full overflow-hidden">
+                    <div className="h-full w-3/4 bg-gradient-to-r from-red-500 to-orange-500 animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Podcast Section */}
+      <section className="py-12 lg:py-20 px-4 sm:px-6 border-t border-foreground/5">
+        <div className="container mx-auto max-w-7xl">
+          <div className="text-center mb-8 lg:mb-12">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
+              🎧 Bario Podcast
+            </h2>
+            <p className="text-sm sm:text-base lg:text-lg text-foreground/70 max-w-2xl mx-auto">
+              Weekly episodes featuring artist interviews, industry insights, and behind-the-scenes stories from the world of music.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+            {[
+              { title: 'The Rise of Afrobeats', guest: 'Burna Boy', duration: '45 min', episode: 'EP 24' },
+              { title: 'Breaking into K-Pop', guest: 'Industry Insider', duration: '38 min', episode: 'EP 23' },
+              { title: 'AI in Music Production', guest: 'Tech Panel', duration: '52 min', episode: 'EP 22' },
+            ].map((podcast, i) => (
+              <div key={i} className="bg-foreground/5 rounded-2xl p-5 hover:bg-foreground/10 transition-colors cursor-pointer group">
+                <div className="flex items-start gap-4">
+                  <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-purple-500/30 to-pink-500/30 flex items-center justify-center flex-shrink-0">
+                    <span className="text-3xl">🎙️</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-foreground/40 text-xs">{podcast.episode}</span>
+                    <h4 className="text-foreground font-semibold text-sm sm:text-base truncate">{podcast.title}</h4>
+                    <p className="text-foreground/60 text-xs">{podcast.guest}</p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="text-foreground/40 text-xs">{podcast.duration}</span>
+                      <button className="text-foreground/60 hover:text-foreground transition-colors">
+                        <Play className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center mt-8">
+            <button className="inline-flex items-center gap-2 px-6 py-3 bg-foreground/10 text-foreground rounded-full font-semibold hover:bg-foreground/20 transition-colors text-sm">
+              View All Episodes <ExternalLink className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </section>
       
       {/* Footer */}
       <footer className="border-t border-foreground/5 py-8 lg:py-16 px-4 sm:px-6">

@@ -176,6 +176,15 @@ const HeatmapDetail = () => {
           </button>
           
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate('/pass-the-plug')}
+              className="text-[9px] h-7 px-2 border-[#4ade80]/30 bg-[#4ade80]/10 text-[#4ade80] hover:bg-[#4ade80]/20"
+            >
+              <Zap className="h-3 w-3 mr-1" />
+              Pass the Plug
+            </Button>
             {user ? (
               <Link to="/dashboard">
                 <Button size="sm" className="bg-white text-black hover:bg-white/90 text-[10px] sm:text-xs h-7 sm:h-8 px-3 rounded-lg font-medium">

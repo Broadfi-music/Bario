@@ -107,7 +107,7 @@ const AlphaDetail = () => {
     setCurrentPrice(initialData[initialData.length - 1].price);
   }, []);
 
-  // Real-time price updates
+  // Real-time price updates with Supabase Realtime subscription for votes
   useEffect(() => {
     const interval = setInterval(() => {
       setChartData(prev => {
@@ -128,7 +128,40 @@ const AlphaDetail = () => {
         return [...prev.slice(1), newPoint];
       });
     }, 2000);
-    return () => clearInterval(interval);
+
+    // Subscribe to realtime vote updates
+    const channel = supabase
+      .channel('prediction-votes-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'prediction_votes'
+        },
+        (payload) => {
+          console.log('Vote update:', payload);
+          // Trigger chart update on new votes
+          setChartData(prev => {
+            const lastPrice = prev[prev.length - 1]?.price || 65;
+            const change = payload.eventType === 'INSERT' ? 
+              (payload.new.vote === 'yes' ? 1.5 : -1.5) : 0;
+            const newPrice = Math.max(10, Math.min(95, lastPrice + change));
+            
+            return [...prev.slice(1), {
+              time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+              price: newPrice,
+              volume: Math.floor(Math.random() * 1000) + 500,
+            }];
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleInteraction = (action: string, callback?: () => void) => {

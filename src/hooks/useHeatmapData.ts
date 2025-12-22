@@ -165,6 +165,9 @@ export function useHeatmapTracks(limit = 99) {
   }, [fetchTracks, currentCountry]);
 
   const filterByCountry = useCallback((country: string) => {
+    setCurrentCountry(country);
+    // Clear tracks and fetch fresh data for new country
+    setTracks([]);
     fetchTracks(undefined, undefined, country);
   }, [fetchTracks]);
 
