@@ -248,21 +248,12 @@ const MusicAlpha = () => {
             
             <Button
               size="sm"
-              onClick={() => navigate('/music-alpha/create')}
-              className="text-[9px] h-7 px-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Create Prediction
-            </Button>
-            
-            <Button
-              size="sm"
               variant="outline"
-              onClick={() => navigate('/music-alpha/head-to-head')}
-              className="text-[9px] h-7 px-2 border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+              onClick={() => navigate('/global-heatmap')}
+              className="text-[9px] h-7 px-2 border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20"
             >
-              <Users className="h-3 w-3 mr-1" />
-              Head to Head
+              <Zap className="h-3 w-3 mr-1" />
+              Heatmap
             </Button>
             
             {user && (
