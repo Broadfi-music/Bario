@@ -360,6 +360,242 @@ export type Database = {
           },
         ]
       }
+      podcast_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_emoji: boolean | null
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_emoji?: boolean | null
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_emoji?: boolean | null
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "podcast_comments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "podcast_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      podcast_episodes: {
+        Row: {
+          audio_url: string | null
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          duration_ms: number | null
+          host_id: string
+          id: string
+          like_count: number | null
+          play_count: number | null
+          session_id: string | null
+          title: string
+        }
+        Insert: {
+          audio_url?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          duration_ms?: number | null
+          host_id: string
+          id?: string
+          like_count?: number | null
+          play_count?: number | null
+          session_id?: string | null
+          title: string
+        }
+        Update: {
+          audio_url?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          duration_ms?: number | null
+          host_id?: string
+          id?: string
+          like_count?: number | null
+          play_count?: number | null
+          session_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "podcast_episodes_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "podcast_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      podcast_gifts: {
+        Row: {
+          created_at: string
+          gift_type: string
+          id: string
+          points_value: number
+          recipient_id: string
+          sender_id: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          gift_type: string
+          id?: string
+          points_value?: number
+          recipient_id: string
+          sender_id: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          gift_type?: string
+          id?: string
+          points_value?: number
+          recipient_id?: string
+          sender_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "podcast_gifts_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "podcast_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      podcast_participants: {
+        Row: {
+          hand_raised: boolean | null
+          id: string
+          is_muted: boolean | null
+          joined_at: string
+          role: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          hand_raised?: boolean | null
+          id?: string
+          is_muted?: boolean | null
+          joined_at?: string
+          role?: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          hand_raised?: boolean | null
+          id?: string
+          is_muted?: boolean | null
+          joined_at?: string
+          role?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "podcast_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "podcast_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      podcast_schedules: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          reminder_enabled: boolean | null
+          scheduled_at: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          reminder_enabled?: boolean | null
+          scheduled_at: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          reminder_enabled?: boolean | null
+          scheduled_at?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      podcast_sessions: {
+        Row: {
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          ended_at: string | null
+          host_id: string
+          id: string
+          is_recording: boolean | null
+          listener_count: number | null
+          started_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          ended_at?: string | null
+          host_id: string
+          id?: string
+          is_recording?: boolean | null
+          listener_count?: number | null
+          started_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          ended_at?: string | null
+          host_id?: string
+          id?: string
+          is_recording?: boolean | null
+          listener_count?: number | null
+          started_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       prediction_votes: {
         Row: {
           created_at: string
