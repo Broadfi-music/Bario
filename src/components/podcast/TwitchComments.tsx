@@ -95,6 +95,15 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
       return;
     }
 
+    // Ensure fresh auth session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+      if (expiresAt - Date.now() < 5 * 60 * 1000) {
+        await supabase.auth.refreshSession();
+      }
+    }
+
     const { error } = await supabase.from('podcast_comments').insert({
       session_id: sessionId,
       user_id: user.id,
@@ -103,6 +112,7 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
     });
 
     if (error) {
+      console.error('Send comment error:', error);
       toast.error('Failed to send message');
     } else {
       setNewComment('');

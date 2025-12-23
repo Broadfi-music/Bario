@@ -52,6 +52,18 @@ export const useLiveKitAudio = ({
 
   // Get LiveKit token from edge function
   const getToken = useCallback(async () => {
+    // Ensure fresh auth session before edge function call
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      // Check if token needs refresh
+      const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+      const now = Date.now();
+      const fiveMinutes = 5 * 60 * 1000;
+      if (expiresAt - now < fiveMinutes) {
+        await supabase.auth.refreshSession();
+      }
+    }
+
     const { data, error } = await supabase.functions.invoke('livekit-token', {
       body: { sessionId, userId, userName, isHost }
     });

@@ -33,6 +33,15 @@ const GiftModal = ({ isOpen, onClose, sessionId, hostId }: GiftModalProps) => {
 
     setSending(giftType);
 
+    // Ensure fresh auth session before database operations
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+      if (expiresAt - Date.now() < 5 * 60 * 1000) {
+        await supabase.auth.refreshSession();
+      }
+    }
+
     const { error } = await supabase.from('podcast_gifts').insert({
       session_id: sessionId,
       sender_id: user.id,
@@ -44,6 +53,7 @@ const GiftModal = ({ isOpen, onClose, sessionId, hostId }: GiftModalProps) => {
     setSending(null);
 
     if (error) {
+      console.error('Send gift error:', error);
       toast.error('Failed to send gift');
     } else {
       toast.success(`Sent ${giftType} to host!`);
