@@ -27,6 +27,7 @@ import Upload from "@/pages/Upload";
 import ArtistProfile from "@/pages/ArtistProfile";
 import RadioStations from "@/pages/RadioStations";
 import Podcasts from "@/pages/Podcasts";
+import PodcastHost from "@/pages/PodcastHost";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,6 +63,7 @@ const App = () => {
               <Route path="/music-result" element={<MusicResultPage />} />
               <Route path="/radio-stations" element={<RadioStations />} />
               <Route path="/podcasts" element={<Podcasts />} />
+              <Route path="/podcast-host/:hostId" element={<PodcastHost />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
