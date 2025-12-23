@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mic, UserPlus } from 'lucide-react';
+import { Mic, MicOff, Hand, UserPlus, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -13,8 +13,6 @@ interface Participant {
   is_muted: boolean;
   hand_raised: boolean;
   joined_at: string;
-  avatar?: string;
-  name?: string;
 }
 
 interface SpaceParticipantsProps {
@@ -41,7 +39,7 @@ const getAvatarColor = (id: string) => {
 };
 
 const getDisplayName = (userId: string) => {
-  const names = ['TNTR...', 'Raymond...', 'Teresa Pro', 'susana c...', 'Steven S...', 'BennyS...', 'Sheldon ...', 'Billy Sim...', 'Dan', 'CW MD', 'Ron Perry', 'JD Gonz...', 'OkieRPh', 'STARR3...', 'John F. H...', 'Lonnie ...'];
+  const names = ['TNTR', 'Raymond', 'Teresa', 'Susana', 'Steven', 'Benny', 'Sheldon', 'Billy', 'Dan', 'CW', 'Ron', 'JD', 'Okie', 'STARR', 'John', 'Lonnie'];
   const index = userId.charCodeAt(0) % names.length;
   return names[index];
 };
@@ -51,24 +49,9 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
   const navigate = useNavigate();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [myParticipation, setMyParticipation] = useState<Participant | null>(null);
+  const [isMuted, setIsMuted] = useState(true);
 
   useEffect(() => {
-    const fetchParticipants = async () => {
-      const { data } = await supabase
-        .from('podcast_participants')
-        .select('*')
-        .eq('session_id', sessionId)
-        .order('joined_at', { ascending: true });
-      
-      if (data) {
-        setParticipants(data as Participant[]);
-        if (user) {
-          const myP = data.find(p => p.user_id === user.id);
-          setMyParticipation(myP as Participant || null);
-        }
-      }
-    };
-
     fetchParticipants();
 
     const channel = supabase
@@ -90,9 +73,33 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     };
   }, [sessionId, user]);
 
+  const fetchParticipants = async () => {
+    const { data } = await supabase
+      .from('podcast_participants')
+      .select('*')
+      .eq('session_id', sessionId)
+      .order('joined_at', { ascending: true });
+    
+    if (data) {
+      setParticipants(data as Participant[]);
+      if (user) {
+        const myP = data.find(p => p.user_id === user.id);
+        setMyParticipation(myP as Participant || null);
+        if (myP) setIsMuted(myP.is_muted);
+      }
+    }
+  };
+
   const joinSession = async () => {
     if (!user) {
-      toast.error('Please login to join');
+      toast.error('Please sign in to join');
+      navigate('/auth');
+      return;
+    }
+
+    // Check if already joined
+    if (myParticipation) {
+      toast.info('You are already in this space');
       return;
     }
 
@@ -104,33 +111,70 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     });
 
     if (error) {
-      toast.error('Failed to join session');
+      if (error.code === '23505') {
+        toast.info('You are already in this space');
+      } else {
+        toast.error('Failed to join session');
+      }
     } else {
       toast.success('Joined the space!');
     }
   };
 
   const toggleHandRaise = async () => {
-    if (!myParticipation) return;
+    if (!user) {
+      toast.error('Please sign in first');
+      navigate('/auth');
+      return;
+    }
 
-    await supabase
+    if (!myParticipation) {
+      // Auto-join first then raise hand
+      await joinSession();
+      return;
+    }
+
+    const { error } = await supabase
       .from('podcast_participants')
       .update({ hand_raised: !myParticipation.hand_raised })
       .eq('id', myParticipation.id);
+
+    if (error) {
+      toast.error('Failed to update');
+    } else {
+      toast.success(myParticipation.hand_raised ? 'Hand lowered' : 'Hand raised!');
+    }
+  };
+
+  const toggleMute = async () => {
+    if (!myParticipation) return;
+    
+    // Only speakers and above can unmute
+    if (myParticipation.role === 'listener' && isMuted) {
+      toast.error('Request to speak first');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('podcast_participants')
+      .update({ is_muted: !isMuted })
+      .eq('id', myParticipation.id);
+
+    if (!error) {
+      setIsMuted(!isMuted);
+      toast(isMuted ? 'Microphone ON' : 'Microphone OFF');
+    }
   };
 
   const goToHostProfile = () => {
     navigate(`/podcast-host/${hostId}`);
   };
 
-  const hosts = participants.filter(p => p.role === 'host' || p.role === 'co_host');
-  const listeners = participants.filter(p => p.role === 'listener' || p.role === 'speaker');
-
   // Create demo participants if none exist
-  const demoParticipants = participants.length === 0 ? [
-    { id: 'demo-1', user_id: hostId, role: 'host' as const, is_muted: false, hand_raised: false, joined_at: '' },
-    { id: 'demo-2', user_id: 'cohost-1', role: 'co_host' as const, is_muted: true, hand_raised: false, joined_at: '' },
-    ...Array.from({ length: 12 }, (_, i) => ({
+  const demoParticipants: Participant[] = participants.length === 0 ? [
+    { id: 'demo-1', user_id: hostId, role: 'host', is_muted: false, hand_raised: false, joined_at: '' },
+    { id: 'demo-2', user_id: 'cohost-1', role: 'co_host', is_muted: true, hand_raised: false, joined_at: '' },
+    ...Array.from({ length: 10 }, (_, i) => ({
       id: `demo-${i + 3}`,
       user_id: `user-${i}`,
       role: 'listener' as const,
@@ -138,25 +182,28 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       hand_raised: false,
       joined_at: ''
     }))
-  ] : [...hosts, ...listeners];
+  ] : participants;
 
   const displayParticipants = demoParticipants;
+  const listenerCount = displayParticipants.filter(p => p.role === 'listener').length;
 
   return (
-    <div className="flex flex-col h-full bg-black px-4 py-2">
+    <div className="flex flex-col h-full bg-black px-3 py-2">
       {/* Title */}
-      <div className="mb-3">
-        <h1 className="text-lg font-bold text-white line-clamp-2">
+      <div className="mb-2">
+        <h1 className="text-base font-bold text-white line-clamp-2">
           {title || 'Live Podcast Session'}
         </h1>
+        <p className="text-xs text-white/40">{listenerCount} listeners</p>
       </div>
 
-      {/* Participants Grid - Twitter Space Style */}
+      {/* Participants Grid - Compact Twitter Space Style */}
       <div className="flex-1 overflow-y-auto min-h-0">
-        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3">
-          {displayParticipants.map((p, index) => {
+        <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 gap-2">
+          {displayParticipants.map((p) => {
             const isHostRole = p.role === 'host';
             const isCoHost = p.role === 'co_host';
+            const isSpeaker = p.role === 'speaker';
             const name = isHostRole && hostName ? hostName : getDisplayName(p.user_id);
             const avatarColor = getAvatarColor(p.user_id);
             const avatarUrl = isHostRole && hostAvatar ? hostAvatar : null;
@@ -164,56 +211,45 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
             return (
               <div 
                 key={p.id} 
-                className="flex flex-col items-center gap-1 cursor-pointer"
+                className="flex flex-col items-center gap-0.5 cursor-pointer"
                 onClick={isHostRole ? goToHostProfile : undefined}
               >
                 <div className="relative">
                   {/* Avatar */}
-                  <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-br ${avatarColor} flex items-center justify-center overflow-hidden ${isHostRole ? 'ring-2 ring-purple-500 ring-offset-2 ring-offset-black' : ''}`}>
+                  <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${avatarColor} flex items-center justify-center overflow-hidden ${isHostRole ? 'ring-2 ring-purple-500 ring-offset-1 ring-offset-black' : ''}`}>
                     {avatarUrl ? (
-                      <img 
-                        src={avatarUrl} 
-                        alt="" 
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-white text-sm font-bold">
+                      <span className="text-white text-xs font-bold">
                         {name.charAt(0).toUpperCase()}
                       </span>
                     )}
                   </div>
                   
-                  {/* Verified badge for host */}
-                  {isHostRole && (
-                    <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 bg-blue-500 rounded-full p-0.5">
-                      <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
-                      </svg>
+                  {/* Speaking indicator */}
+                  {!p.is_muted && (isHostRole || isCoHost || isSpeaker) && (
+                    <div className="absolute -bottom-0.5 -right-0.5 bg-green-500 rounded-full p-0.5">
+                      <Volume2 className="w-2 h-2 text-white" />
+                    </div>
+                  )}
+
+                  {/* Hand raised indicator */}
+                  {p.hand_raised && (
+                    <div className="absolute -top-1 -right-1 animate-bounce">
+                      <span className="text-sm">✋</span>
                     </div>
                   )}
                 </div>
                 
                 {/* Name */}
-                <span className="text-[10px] text-white font-medium text-center truncate w-full">
+                <span className="text-[9px] text-white/80 font-medium text-center truncate w-full">
                   {name}
                 </span>
                 
                 {/* Role Label */}
                 {(isHostRole || isCoHost) && (
-                  <span className={`text-[9px] ${
-                    isHostRole ? 'text-purple-400' : 'text-white/60'
-                  }`}>
-                    {isHostRole && (
-                      <span className="flex items-center gap-0.5">
-                        <span className="inline-flex gap-0.5">
-                          <span className="w-0.5 h-2 bg-purple-500 rounded-full animate-pulse" />
-                          <span className="w-0.5 h-1.5 bg-purple-500 rounded-full animate-pulse delay-75" />
-                          <span className="w-0.5 h-2 bg-purple-500 rounded-full animate-pulse delay-150" />
-                        </span>
-                        Host
-                      </span>
-                    )}
-                    {isCoHost && 'Co-host'}
+                  <span className={`text-[8px] ${isHostRole ? 'text-purple-400' : 'text-white/50'}`}>
+                    {isHostRole ? '🎙️ Host' : 'Co-host'}
                   </span>
                 )}
               </div>
@@ -222,29 +258,41 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
         </div>
       </div>
 
-      {/* Listeners count & Request */}
-      <div className="flex items-center justify-between py-2 mt-1">
-        <div className="flex items-center gap-3">
-          {/* Mic/Request button */}
-          <button 
-            onClick={toggleHandRaise}
-            className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+      {/* Bottom Controls - All in one compact row */}
+      <div className="flex items-center justify-between py-2 gap-2 border-t border-white/5 mt-2">
+        {/* Audio control */}
+        {myParticipation && myParticipation.role !== 'listener' && (
+          <Button
+            onClick={toggleMute}
+            size="icon"
+            variant="ghost"
+            className={`h-9 w-9 rounded-full border ${isMuted ? 'border-red-500/50 text-red-400' : 'border-green-500/50 text-green-400'}`}
           >
-            <div className="w-10 h-10 rounded-full border border-white/30 flex items-center justify-center">
-              <Mic className="h-4 w-4" />
-            </div>
-            <span className="text-xs">Request</span>
-          </button>
-        </div>
+            {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+          </Button>
+        )}
+
+        {/* Request button */}
+        <button 
+          onClick={toggleHandRaise}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-colors ${
+            myParticipation?.hand_raised 
+              ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400' 
+              : 'border-white/20 text-white/60 hover:text-white hover:border-white/40'
+          }`}
+        >
+          <Hand className="h-3.5 w-3.5" />
+          <span className="text-xs">{myParticipation?.hand_raised ? 'Requested' : 'Request'}</span>
+        </button>
 
         {/* Join Space button */}
         {!myParticipation && (
           <Button
             onClick={joinSession}
             size="sm"
-            className="bg-purple-600 hover:bg-purple-500 rounded-full px-6"
+            className="bg-purple-600 hover:bg-purple-500 rounded-full px-4 h-8 text-xs"
           >
-            <UserPlus className="h-4 w-4 mr-2" />
+            <UserPlus className="h-3.5 w-3.5 mr-1.5" />
             Join Space
           </Button>
         )}
