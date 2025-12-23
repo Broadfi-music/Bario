@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Send, Gift, Smile } from 'lucide-react';
+import { Send, Gift, Smile, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 
 interface Comment {
   id: string;
@@ -11,8 +12,6 @@ interface Comment {
   content: string;
   is_emoji: boolean;
   created_at: string;
-  username?: string;
-  avatar?: string;
 }
 
 interface TwitchCommentsProps {
@@ -30,7 +29,6 @@ const TwitchComments = ({ sessionId, onSendGift }: TwitchCommentsProps) => {
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Fetch initial comments
     const fetchComments = async () => {
       const { data } = await supabase
         .from('podcast_comments')
@@ -44,7 +42,6 @@ const TwitchComments = ({ sessionId, onSendGift }: TwitchCommentsProps) => {
 
     fetchComments();
 
-    // Subscribe to new comments
     const channel = supabase
       .channel(`comments-${sessionId}`)
       .on(
@@ -89,31 +86,31 @@ const TwitchComments = ({ sessionId, onSendGift }: TwitchCommentsProps) => {
     sendComment(newComment);
   };
 
+  const sharePodcast = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast.success('Link copied!');
+  };
+
   return (
-    <div className="flex flex-col h-full bg-gradient-to-t from-black/90 via-black/60 to-transparent">
-      {/* Comments List - Twitch style */}
-      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 scrollbar-hide">
+    <div className="flex flex-col h-full">
+      {/* Comments List - Twitch style overlay */}
+      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5 scrollbar-hide bg-gradient-to-t from-black/80 via-black/40 to-transparent">
         {comments.map((comment) => (
           <div
             key={comment.id}
-            className={`flex items-start gap-2 animate-fade-in ${
-              comment.is_emoji ? 'justify-center' : ''
-            }`}
+            className={`animate-fade-in ${comment.is_emoji ? 'text-center' : ''}`}
           >
             {comment.is_emoji ? (
-              <span className="text-3xl animate-bounce">{comment.content}</span>
+              <span className="text-3xl animate-bounce inline-block">{comment.content}</span>
             ) : (
-              <>
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-[10px] text-purple-400 font-medium mr-1">
-                    User{comment.user_id.slice(0, 4)}
-                  </span>
-                  <span className="text-xs text-white/90 break-words">
-                    {comment.content}
-                  </span>
-                </div>
-              </>
+              <div className="flex items-start gap-1.5 py-0.5">
+                <span className="text-xs font-bold text-purple-400">
+                  User{comment.user_id.slice(0, 4)}:
+                </span>
+                <span className="text-xs text-white/90 break-words">
+                  {comment.content}
+                </span>
+              </div>
             )}
           </div>
         ))}
@@ -122,7 +119,7 @@ const TwitchComments = ({ sessionId, onSendGift }: TwitchCommentsProps) => {
 
       {/* Emoji Picker */}
       {showEmojis && (
-        <div className="flex gap-2 px-3 py-2 bg-white/5 backdrop-blur-sm">
+        <div className="flex gap-2 px-3 py-2 bg-black/80 backdrop-blur-sm">
           {EMOJIS.map((emoji) => (
             <button
               key={emoji}
@@ -135,16 +132,26 @@ const TwitchComments = ({ sessionId, onSendGift }: TwitchCommentsProps) => {
         </div>
       )}
 
-      {/* Input Area */}
-      <form onSubmit={handleSubmit} className="flex items-center gap-2 p-3 bg-black/80 backdrop-blur-sm">
+      {/* Input Area - Twitch style */}
+      <form onSubmit={handleSubmit} className="flex items-center gap-2 p-3 bg-black/90 backdrop-blur-sm">
         <Button
           type="button"
           size="icon"
           variant="ghost"
           onClick={() => setShowEmojis(!showEmojis)}
-          className="text-white/60 hover:text-white"
+          className="text-white/60 hover:text-white h-9 w-9"
         >
           <Smile className="h-5 w-5" />
+        </Button>
+
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          onClick={sharePodcast}
+          className="text-white/60 hover:text-white h-9 w-9"
+        >
+          <Share2 className="h-5 w-5" />
         </Button>
         
         <Input
@@ -152,7 +159,7 @@ const TwitchComments = ({ sessionId, onSendGift }: TwitchCommentsProps) => {
           onChange={(e) => setNewComment(e.target.value)}
           placeholder={user ? "Send a message..." : "Login to chat"}
           disabled={!user}
-          className="flex-1 bg-white/10 border-white/10 text-white placeholder:text-white/40 text-sm"
+          className="flex-1 bg-white/10 border-white/10 text-white placeholder:text-white/40 text-sm h-9"
         />
         
         <Button
@@ -160,16 +167,26 @@ const TwitchComments = ({ sessionId, onSendGift }: TwitchCommentsProps) => {
           size="icon"
           variant="ghost"
           onClick={onSendGift}
-          className="text-yellow-400 hover:text-yellow-300"
+          className="text-yellow-400 hover:text-yellow-300 h-9 w-9"
         >
           <Gift className="h-5 w-5" />
+        </Button>
+
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          onClick={sharePodcast}
+          className="text-white/60 hover:text-white h-9 w-9"
+        >
+          <Share2 className="h-5 w-5" />
         </Button>
         
         <Button
           type="submit"
           size="icon"
           disabled={!user || !newComment.trim()}
-          className="bg-purple-600 hover:bg-purple-500"
+          className="bg-purple-600 hover:bg-purple-500 h-9 w-9"
         >
           <Send className="h-4 w-4" />
         </Button>
