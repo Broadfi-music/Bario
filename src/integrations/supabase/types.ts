@@ -360,6 +360,41 @@ export type Database = {
           },
         ]
       }
+      podcast_banned_users: {
+        Row: {
+          banned_by: string
+          created_at: string
+          id: string
+          reason: string | null
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          banned_by: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          banned_by?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "podcast_banned_users_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "podcast_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       podcast_comments: {
         Row: {
           content: string
@@ -633,6 +668,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           created_at: string
+          current_session_id: string | null
           full_name: string | null
           id: string
           instagram_url: string | null
@@ -648,6 +684,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          current_session_id?: string | null
           full_name?: string | null
           id?: string
           instagram_url?: string | null
@@ -663,6 +700,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          current_session_id?: string | null
           full_name?: string | null
           id?: string
           instagram_url?: string | null
@@ -674,7 +712,15 @@ export type Database = {
           username?: string | null
           youtube_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_current_session_id_fkey"
+            columns: ["current_session_id"]
+            isOneToOne: false
+            referencedRelation: "podcast_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       remixes: {
         Row: {
