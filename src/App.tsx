@@ -30,6 +30,7 @@ import ArtistProfile from "@/pages/ArtistProfile";
 import RadioStations from "@/pages/RadioStations";
 import Podcasts from "@/pages/Podcasts";
 import PodcastHost from "@/pages/PodcastHost";
+import HostProfile from "@/pages/HostProfile";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -67,6 +68,7 @@ const App = () => {
                 <Route path="/radio-stations" element={<RadioStations />} />
                 <Route path="/podcasts" element={<Podcasts />} />
                 <Route path="/podcast-host/:hostId" element={<PodcastHost />} />
+                <Route path="/host/:hostId" element={<HostProfile />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

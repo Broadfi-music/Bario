@@ -204,6 +204,8 @@ const Dashboard = () => {
 
   const topNavItems = [
     { label: 'Heatmap', path: '/global-heatmap' },
+    { label: 'Podcast', path: '/podcasts' },
+    { label: 'Radio Station', path: '/radio-stations' },
     { label: 'Alpha', path: '/music-alpha' },
   ];
 
