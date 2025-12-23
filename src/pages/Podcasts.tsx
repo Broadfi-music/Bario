@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
-  ChevronLeft, ChevronUp, ChevronDown, Play, Pause, Mic, 
-  Users, Heart, MessageSquare, Share2, Radio, Calendar,
-  Volume2, VolumeX, Headphones
+  ChevronLeft, Mic, Radio, Headphones
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,8 +11,7 @@ import TwitchComments from '@/components/podcast/TwitchComments';
 import SpaceParticipants from '@/components/podcast/SpaceParticipants';
 import GiftModal from '@/components/podcast/GiftModal';
 import HostStudio from '@/components/podcast/HostStudio';
-import ScheduleManager from '@/components/podcast/ScheduleManager';
-import PodcastEpisodes from '@/components/podcast/PodcastEpisodes';
+import PodcastFeed from '@/components/podcast/PodcastFeed';
 import { toast } from 'sonner';
 
 interface PodcastSession {
@@ -26,18 +23,21 @@ interface PodcastSession {
   status: 'scheduled' | 'live' | 'ended';
   listener_count: number;
   started_at: string | null;
+  host_name?: string;
+  host_avatar?: string | null;
 }
 
 // Demo podcasts for TikTok-style feed
-const DEMO_PODCASTS = [
+const DEMO_PODCASTS: PodcastSession[] = [
   {
     id: 'demo-1',
     host_id: 'host-1',
     title: 'The Rise of Afrobeats in America',
     description: 'Discussing how Afrobeats is taking over the US music scene',
     cover_image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800',
-    status: 'live' as const,
+    status: 'live',
     listener_count: 1247,
+    started_at: null,
     host_name: 'DJ Akademiks',
     host_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100'
   },
@@ -47,8 +47,9 @@ const DEMO_PODCASTS = [
     title: 'Producer Secrets: Making Hits',
     description: 'Metro Boomin reveals his production techniques',
     cover_image_url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800',
-    status: 'live' as const,
+    status: 'live',
     listener_count: 892,
+    started_at: null,
     host_name: 'Metro Boomin',
     host_avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100'
   },
@@ -58,8 +59,9 @@ const DEMO_PODCASTS = [
     title: 'K-Pop Global Domination',
     description: 'How K-Pop conquered the world music industry',
     cover_image_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800',
-    status: 'live' as const,
+    status: 'live',
     listener_count: 2341,
+    started_at: null,
     host_name: 'Eric Nam',
     host_avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100'
   },
@@ -69,8 +71,9 @@ const DEMO_PODCASTS = [
     title: 'Latin Music Revolution',
     description: 'Reggaeton and its impact on global charts',
     cover_image_url: 'https://images.unsplash.com/photo-1504898770365-14faca6a7320?w=800',
-    status: 'live' as const,
+    status: 'live',
     listener_count: 1567,
+    started_at: null,
     host_name: 'J Balvin',
     host_avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100'
   },
@@ -80,8 +83,9 @@ const DEMO_PODCASTS = [
     title: 'Indie Artist Spotlight',
     description: 'Underground artists you need to know',
     cover_image_url: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800',
-    status: 'live' as const,
+    status: 'live',
     listener_count: 654,
+    started_at: null,
     host_name: 'Phoebe Bridgers',
     host_avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100'
   }
@@ -91,28 +95,21 @@ const Podcasts = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
   const [showGiftModal, setShowGiftModal] = useState(false);
+  const [giftSessionId, setGiftSessionId] = useState('');
+  const [giftHostId, setGiftHostId] = useState('');
   const [showHostStudio, setShowHostStudio] = useState(false);
-  const [liked, setLiked] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState('live');
   const containerRef = useRef<HTMLDivElement>(null);
   const [touchStart, setTouchStart] = useState(0);
   const [liveSessions, setLiveSessions] = useState<PodcastSession[]>([]);
 
-  const podcasts = [...DEMO_PODCASTS, ...liveSessions.map(s => ({
-    ...s,
-    host_name: 'Host',
-    host_avatar: null
-  }))];
-
+  const podcasts = [...DEMO_PODCASTS, ...liveSessions];
   const currentPodcast = podcasts[currentIndex];
 
   useEffect(() => {
     fetchLiveSessions();
     
-    // Subscribe to new sessions
     const channel = supabase
       .channel('live-sessions')
       .on(
@@ -138,7 +135,11 @@ const Podcasts = () => {
       .eq('status', 'live')
       .order('listener_count', { ascending: false });
     
-    if (data) setLiveSessions(data as PodcastSession[]);
+    if (data) setLiveSessions(data.map(s => ({
+      ...s,
+      host_name: 'Host',
+      host_avatar: null
+    })) as PodcastSession[]);
   };
 
   const goToNext = useCallback(() => {
@@ -149,7 +150,6 @@ const Podcasts = () => {
     setCurrentIndex(prev => (prev - 1 + podcasts.length) % podcasts.length);
   }, [podcasts.length]);
 
-  // Handle touch swipe
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.touches[0].clientY);
   };
@@ -167,22 +167,16 @@ const Podcasts = () => {
     }
   };
 
-  // Handle keyboard
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowUp') goToPrev();
       if (e.key === 'ArrowDown') goToNext();
-      if (e.key === ' ') {
-        e.preventDefault();
-        setIsPlaying(!isPlaying);
-      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToNext, goToPrev, isPlaying]);
+  }, [goToNext, goToPrev]);
 
-  // Handle scroll wheel
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
     if (e.deltaY > 30) {
@@ -200,21 +194,10 @@ const Podcasts = () => {
     }
   }, [handleWheel]);
 
-  const toggleLike = (id: string) => {
-    setLiked(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
-      return newSet;
-    });
-  };
-
-  const sharePodcast = () => {
-    navigator.clipboard.writeText(window.location.href);
-    toast.success('Link copied!');
+  const handleOpenGift = (sessionId: string, hostId: string) => {
+    setGiftSessionId(sessionId);
+    setGiftHostId(hostId);
+    setShowGiftModal(true);
   };
 
   return (
@@ -233,13 +216,9 @@ const Podcasts = () => {
                 <Radio className="h-3 w-3 mr-1" />
                 Live
               </TabsTrigger>
-              <TabsTrigger value="episodes" className="text-xs px-4">
+              <TabsTrigger value="feed" className="text-xs px-4">
                 <Headphones className="h-3 w-3 mr-1" />
-                Episodes
-              </TabsTrigger>
-              <TabsTrigger value="schedule" className="text-xs px-4">
-                <Calendar className="h-3 w-3 mr-1" />
-                Schedule
+                Podcast Feed
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -273,7 +252,7 @@ const Podcasts = () => {
       </header>
 
       {activeTab === 'live' ? (
-        /* TikTok-style Vertical Feed - Fitted height */
+        /* TikTok-style Vertical Feed - Each session has its own controls */
         <div 
           ref={containerRef}
           className="h-[100dvh] overflow-hidden"
@@ -282,26 +261,32 @@ const Podcasts = () => {
         >
           {currentPodcast && (
             <div className="relative h-full w-full flex flex-col bg-black">
-              {/* Twitter Space Style Participants - Takes most of the screen */}
-              <div className="flex-1 min-h-0 pt-14">
-                <SpaceParticipants 
-                  sessionId={currentPodcast.id}
-                  hostId={currentPodcast.host_id}
-                  isHost={user?.id === currentPodcast.host_id}
-                  title={currentPodcast.title}
-                />
-              </div>
+              {/* Full height session with self-contained controls */}
+              <div className="flex-1 min-h-0 pt-14 flex flex-col">
+                {/* Participants section */}
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  <SpaceParticipants 
+                    sessionId={currentPodcast.id}
+                    hostId={currentPodcast.host_id}
+                    isHost={user?.id === currentPodcast.host_id}
+                    title={currentPodcast.title}
+                    hostName={currentPodcast.host_name}
+                    hostAvatar={currentPodcast.host_avatar}
+                  />
+                </div>
 
-              {/* Bottom - Comments (Twitch Style) */}
-              <div className="h-48 md:h-56 shrink-0">
-                <TwitchComments 
-                  sessionId={currentPodcast.id}
-                  onSendGift={() => setShowGiftModal(true)}
-                />
+                {/* Comments section with controls - part of each session */}
+                <div className="shrink-0">
+                  <TwitchComments 
+                    sessionId={currentPodcast.id}
+                    hostId={currentPodcast.host_id}
+                    onSendGift={() => handleOpenGift(currentPodcast.id, currentPodcast.host_id)}
+                  />
+                </div>
               </div>
 
               {/* Navigation Indicators */}
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-1">
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-20">
                 {podcasts.map((_, i) => (
                   <div 
                     key={i}
@@ -313,29 +298,22 @@ const Podcasts = () => {
               </div>
 
               {/* Swipe hint */}
-              <div className="absolute bottom-52 md:bottom-60 left-1/2 -translate-x-1/2 text-[10px] text-white/40">
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-white/40 z-10">
                 Swipe for more
               </div>
             </div>
           )}
         </div>
-      ) : activeTab === 'episodes' ? (
-        <main className="pt-20 pb-6 px-4 max-w-2xl mx-auto">
-          <h2 className="text-xl font-bold mb-4">Podcast Episodes</h2>
-          <PodcastEpisodes />
-        </main>
       ) : (
-        <main className="pt-20 pb-6 px-4 max-w-2xl mx-auto">
-          <ScheduleManager />
-        </main>
+        <PodcastFeed />
       )}
 
       {/* Gift Modal */}
       <GiftModal
         isOpen={showGiftModal}
         onClose={() => setShowGiftModal(false)}
-        sessionId={currentPodcast?.id || ''}
-        hostId={currentPodcast?.host_id || ''}
+        sessionId={giftSessionId}
+        hostId={giftHostId}
       />
 
       {/* Host Studio */}

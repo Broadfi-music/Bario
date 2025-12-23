@@ -91,12 +91,22 @@ export const useFollowSystem = () => {
     }
   };
 
+  const getFollowerCount = async (hostId: string) => {
+    const { count } = await supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('following_id', hostId);
+    
+    return count || 0;
+  };
+
   return {
     following,
     loading,
     followHost,
     unfollowHost,
     isFollowing,
-    toggleFollow
+    toggleFollow,
+    getFollowerCount
   };
 };
