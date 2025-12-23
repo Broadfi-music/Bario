@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mic, MicOff, Hand, UserPlus, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Hand, UserPlus, Volume2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useLiveKitAudio } from '@/hooks/useLiveKitAudio';
 
 interface Participant {
   id: string;
@@ -49,7 +50,23 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
   const navigate = useNavigate();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [myParticipation, setMyParticipation] = useState<Participant | null>(null);
-  const [isMuted, setIsMuted] = useState(true);
+
+  // LiveKit Audio Hook
+  const {
+    isConnected: isAudioConnected,
+    isConnecting: isAudioConnecting,
+    isMuted,
+    participants: audioParticipants,
+    connect: connectAudio,
+    disconnect: disconnectAudio,
+    toggleMute,
+    enableMicrophone,
+  } = useLiveKitAudio({
+    sessionId,
+    userId: user?.id || '',
+    userName: user?.email?.split('@')[0] || 'Listener',
+    isHost,
+  });
 
   useEffect(() => {
     fetchParticipants();
@@ -70,8 +87,18 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
 
     return () => {
       supabase.removeChannel(channel);
+      disconnectAudio();
     };
   }, [sessionId, user]);
+
+  // Check if user was promoted to speaker and enable mic
+  useEffect(() => {
+    if (myParticipation && (myParticipation.role === 'speaker' || myParticipation.role === 'co_host')) {
+      if (isAudioConnected) {
+        enableMicrophone();
+      }
+    }
+  }, [myParticipation?.role, isAudioConnected]);
 
   const fetchParticipants = async () => {
     const { data } = await supabase
@@ -85,7 +112,6 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       if (user) {
         const myP = data.find(p => p.user_id === user.id);
         setMyParticipation(myP as Participant || null);
-        if (myP) setIsMuted(myP.is_muted);
       }
     }
   };
@@ -118,6 +144,8 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       }
     } else {
       toast.success('Joined the space!');
+      // Connect to audio room
+      await connectAudio();
     }
   };
 
@@ -146,7 +174,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     }
   };
 
-  const toggleMute = async () => {
+  const handleToggleMute = async () => {
     if (!myParticipation) return;
     
     // Only speakers and above can unmute
@@ -155,19 +183,23 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       return;
     }
 
-    const { error } = await supabase
+    await toggleMute();
+
+    // Update in database
+    await supabase
       .from('podcast_participants')
       .update({ is_muted: !isMuted })
       .eq('id', myParticipation.id);
-
-    if (!error) {
-      setIsMuted(!isMuted);
-      toast(isMuted ? 'Microphone ON' : 'Microphone OFF');
-    }
   };
 
   const goToHostProfile = () => {
     navigate(`/podcast-host/${hostId}`);
+  };
+
+  // Merge database participants with audio participants for speaking indicators
+  const getParticipantAudioState = (userId: string) => {
+    const audioP = audioParticipants.find(ap => ap.identity === userId);
+    return audioP || null;
   };
 
   // Create demo participants if none exist
@@ -191,9 +223,16 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     <div className="flex flex-col h-full bg-black px-3 py-2">
       {/* Title */}
       <div className="mb-2">
-        <h1 className="text-base font-bold text-white line-clamp-2">
-          {title || 'Live Podcast Session'}
-        </h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-base font-bold text-white line-clamp-2 flex-1">
+            {title || 'Live Podcast Session'}
+          </h1>
+          {isAudioConnected && (
+            <span className="text-[8px] px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded-full shrink-0">
+              Audio Live
+            </span>
+          )}
+        </div>
         <p className="text-xs text-white/40">{listenerCount} listeners</p>
       </div>
 
@@ -208,6 +247,11 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
             const avatarColor = getAvatarColor(p.user_id);
             const avatarUrl = isHostRole && hostAvatar ? hostAvatar : null;
             
+            // Get real-time audio state
+            const audioState = getParticipantAudioState(p.user_id);
+            const isSpeaking = audioState?.isSpeaking || false;
+            const isParticipantMuted = audioState ? audioState.isMuted : p.is_muted;
+            
             return (
               <div 
                 key={p.id} 
@@ -215,8 +259,10 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
                 onClick={isHostRole ? goToHostProfile : undefined}
               >
                 <div className="relative">
-                  {/* Avatar */}
-                  <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${avatarColor} flex items-center justify-center overflow-hidden ${isHostRole ? 'ring-2 ring-purple-500 ring-offset-1 ring-offset-black' : ''}`}>
+                  {/* Avatar with speaking ring */}
+                  <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${avatarColor} flex items-center justify-center overflow-hidden transition-all ${
+                    isHostRole ? 'ring-2 ring-purple-500 ring-offset-1 ring-offset-black' : ''
+                  } ${isSpeaking ? 'ring-2 ring-green-500 ring-offset-1 ring-offset-black animate-pulse' : ''}`}>
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -227,8 +273,8 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
                   </div>
                   
                   {/* Speaking indicator */}
-                  {!p.is_muted && (isHostRole || isCoHost || isSpeaker) && (
-                    <div className="absolute -bottom-0.5 -right-0.5 bg-green-500 rounded-full p-0.5">
+                  {!isParticipantMuted && (isHostRole || isCoHost || isSpeaker) && (
+                    <div className={`absolute -bottom-0.5 -right-0.5 rounded-full p-0.5 ${isSpeaking ? 'bg-green-500' : 'bg-green-500/50'}`}>
                       <Volume2 className="w-2 h-2 text-white" />
                     </div>
                   )}
@@ -263,7 +309,8 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
         {/* Audio control */}
         {myParticipation && myParticipation.role !== 'listener' && (
           <Button
-            onClick={toggleMute}
+            onClick={handleToggleMute}
+            disabled={!isAudioConnected}
             size="icon"
             variant="ghost"
             className={`h-9 w-9 rounded-full border ${isMuted ? 'border-red-500/50 text-red-400' : 'border-green-500/50 text-green-400'}`}
@@ -289,11 +336,18 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
         {!myParticipation && (
           <Button
             onClick={joinSession}
+            disabled={isAudioConnecting}
             size="sm"
             className="bg-purple-600 hover:bg-purple-500 rounded-full px-4 h-8 text-xs"
           >
-            <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-            Join Space
+            {isAudioConnecting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <>
+                <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+                Join Space
+              </>
+            )}
           </Button>
         )}
       </div>
