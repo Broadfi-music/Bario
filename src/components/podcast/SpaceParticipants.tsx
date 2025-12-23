@@ -204,6 +204,8 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     toast.success('Participant banned from session');
   };
 
+  const MAX_PARTICIPANTS = 12; // Limit for free LiveKit tier
+
   const joinSession = async () => {
     if (!user) {
       toast.error('Please sign in to join');
@@ -220,6 +222,12 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     // Check if already joined
     if (myParticipation) {
       toast.info('You are already in this space');
+      return;
+    }
+
+    // Check participant limit
+    if (participants.length >= MAX_PARTICIPANTS) {
+      toast.error(`Session is full (max ${MAX_PARTICIPANTS} participants)`);
       return;
     }
 
@@ -338,7 +346,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
             </span>
           )}
         </div>
-        <p className="text-xs text-white/40">{listenerCount} listeners</p>
+        <p className="text-xs text-white/40">{listenerCount} listeners • {participants.length}/{MAX_PARTICIPANTS} capacity</p>
       </div>
 
       {/* Participants Grid - Compact Twitter Space Style */}

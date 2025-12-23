@@ -153,50 +153,52 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
         </div>
       )}
 
-      {/* Input Area - All icons very close together */}
-      <form onSubmit={handleSubmit} className="flex items-center gap-0.5 px-2 py-1.5 bg-black">
-        {/* Action icons row */}
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          onClick={() => setShowEmojis(!showEmojis)}
-          className="text-white/60 hover:text-white h-7 w-7 shrink-0"
-        >
-          <Smile className="h-3.5 w-3.5" />
-        </Button>
-
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          onClick={() => setShowShareModal(true)}
-          className="text-white/60 hover:text-white h-7 w-7 shrink-0"
-        >
-          <Share2 className="h-3.5 w-3.5" />
-        </Button>
-
-        <Button
-          type="button"
-          size="icon"
-          variant="ghost"
-          onClick={onSendGift}
-          className="text-yellow-400 hover:text-yellow-300 h-7 w-7 shrink-0"
-        >
-          <Gift className="h-3.5 w-3.5" />
-        </Button>
-
-        {isHost && (
+      {/* Input Area - Icons and input grouped tightly */}
+      <form onSubmit={handleSubmit} className="flex items-center gap-0 px-1 py-1 bg-black">
+        {/* Action icons group - no spacing */}
+        <div className="flex items-center gap-0">
           <Button
             type="button"
             size="icon"
             variant="ghost"
-            onClick={() => setShowParticipantModal(true)}
-            className="text-purple-400 hover:text-purple-300 h-7 w-7 shrink-0"
+            onClick={() => setShowEmojis(!showEmojis)}
+            className="text-white/60 hover:text-white h-6 w-6 shrink-0"
           >
-            <UserPlus className="h-3.5 w-3.5" />
+            <Smile className="h-3 w-3" />
           </Button>
-        )}
+
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={() => setShowShareModal(true)}
+            className="text-white/60 hover:text-white h-6 w-6 shrink-0"
+          >
+            <Share2 className="h-3 w-3" />
+          </Button>
+
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={onSendGift}
+            className="text-yellow-400 hover:text-yellow-300 h-6 w-6 shrink-0"
+          >
+            <Gift className="h-3 w-3" />
+          </Button>
+
+          {isHost && (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => setShowParticipantModal(true)}
+              className="text-purple-400 hover:text-purple-300 h-6 w-6 shrink-0"
+            >
+              <UserPlus className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
         
         {/* Comment input */}
         <Input
@@ -204,7 +206,7 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
           onChange={(e) => setNewComment(e.target.value)}
           placeholder={user ? "Message..." : "Login to chat"}
           disabled={!user}
-          className="flex-1 bg-white/10 border-white/10 text-white placeholder:text-white/40 text-xs h-7 min-w-0 px-2"
+          className="flex-1 bg-white/10 border-white/10 text-white placeholder:text-white/40 text-xs h-6 min-w-0 px-2 mx-0.5"
         />
         
         {/* Send button */}
@@ -212,9 +214,9 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
           type="submit"
           size="icon"
           disabled={!user || !newComment.trim()}
-          className="bg-green-600 hover:bg-green-500 h-7 w-7 shrink-0"
+          className="bg-green-600 hover:bg-green-500 h-6 w-6 shrink-0"
         >
-          <Send className="h-3 w-3" />
+          <Send className="h-2.5 w-2.5" />
         </Button>
       </form>
 
