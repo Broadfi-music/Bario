@@ -174,20 +174,20 @@ const PodcastFeed = () => {
   }, [heroHosts.length]);
 
   return (
-    <div className="min-h-screen bg-[#0e0e10] text-white">
+    <div className="min-h-screen bg-[#0e0e10] text-white pb-16 lg:pb-0">
       {/* Sidebar - Desktop Only */}
-      <aside className="hidden lg:flex fixed left-0 top-12 bottom-0 w-60 flex-col bg-[#18181b] border-r border-white/5 overflow-y-auto z-40">
-        <div className="p-4">
-          <h3 className="text-xs font-semibold text-white/50 uppercase mb-3">Recommended</h3>
-          <div className="space-y-1">
+      <aside className="hidden lg:flex fixed left-0 top-12 bottom-0 w-56 flex-col bg-[#18181b] border-r border-white/5 overflow-y-auto z-40">
+        <div className="p-3">
+          <h3 className="text-[10px] font-semibold text-white/50 uppercase mb-2 tracking-wider">Recommended</h3>
+          <div className="space-y-0.5">
             {liveHosts.slice(0, 10).map((host) => (
               <Link
                 key={`sidebar-${host.id}`}
                 to={`/podcasts?session=${host.id}`}
-                className="flex items-center gap-2 p-2 rounded hover:bg-white/5 transition-colors group"
+                className="flex items-center gap-2 p-1.5 rounded hover:bg-white/5 transition-colors group"
               >
                 <div className="relative flex-shrink-0">
-                  <div className="w-8 h-8 rounded-full overflow-hidden bg-neutral-700">
+                  <div className="w-7 h-7 rounded-full overflow-hidden bg-neutral-700">
                     {host.host_avatar ? (
                       <img src={host.host_avatar} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -213,19 +213,19 @@ const PodcastFeed = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="lg:ml-60 pt-14 pb-8">
-        {/* Hero Carousel - Kick.com Style */}
+      <main className="lg:ml-56 pt-14 pb-8 px-0">
+        {/* Hero Carousel - Kick.com Style - Mobile Optimized */}
         {currentHero && (
-          <div className="relative px-4 lg:px-6 mb-6">
+          <div className="relative px-3 lg:px-6 mb-4 lg:mb-6">
             <div 
               ref={heroRef}
               className="relative rounded-lg overflow-hidden bg-gradient-to-r from-purple-900/50 to-pink-900/50"
             >
-              <div className="flex items-start gap-6 p-4 lg:p-6">
+              <div className="flex flex-col sm:flex-row items-start gap-3 lg:gap-6 p-3 lg:p-6">
                 {/* Hero Info */}
-                <div className="flex-1 min-w-0 z-10">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-[#53fc18]">
+                <div className="flex-1 min-w-0 z-10 order-2 sm:order-1">
+                  <div className="flex items-center gap-2 lg:gap-3 mb-2 lg:mb-3">
+                    <div className="w-8 h-8 lg:w-12 lg:h-12 rounded-full overflow-hidden ring-2 ring-[#53fc18]">
                       {currentHero.host_avatar ? (
                         <img src={currentHero.host_avatar} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -233,83 +233,84 @@ const PodcastFeed = () => {
                       )}
                     </div>
                     <div>
-                      <h2 className="text-lg font-bold flex items-center gap-2">
+                      <h2 className="text-sm lg:text-lg font-bold flex items-center gap-2">
                         {currentHero.host_name}
-                        <span className="flex items-center gap-1 text-sm font-normal text-white/60">
-                          <Users className="h-3.5 w-3.5" />
+                        <span className="flex items-center gap-1 text-[10px] lg:text-sm font-normal text-white/60">
+                          <Users className="h-3 w-3 lg:h-3.5 lg:w-3.5" />
                           {formatViewers(currentHero.listener_count)} listening
                         </span>
                       </h2>
                     </div>
                   </div>
-                  <h3 className="text-base lg:text-lg font-medium mb-2 line-clamp-2">{currentHero.title}</h3>
-                  <p className="text-sm text-white/60 line-clamp-2 mb-3">{currentHero.description}</p>
+                  <h3 className="text-sm lg:text-lg font-medium mb-1 lg:mb-2 line-clamp-2">{currentHero.title}</h3>
+                  <p className="text-xs lg:text-sm text-white/60 line-clamp-1 lg:line-clamp-2 mb-2 lg:mb-3">{currentHero.description}</p>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs bg-white/10 px-2 py-1 rounded">{currentHero.category}</span>
+                    <span className="text-[10px] lg:text-xs bg-white/10 px-2 py-0.5 lg:py-1 rounded">{currentHero.category}</span>
                   </div>
                 </div>
 
-                {/* Hero Thumbnail */}
+                {/* Hero Thumbnail - Show on mobile too */}
                 <Link 
                   to={`/podcasts?session=${currentHero.id}`}
-                  className="hidden sm:block relative w-48 lg:w-64 aspect-video rounded-lg overflow-hidden group flex-shrink-0"
+                  className="relative w-full sm:w-40 lg:w-64 aspect-video rounded-lg overflow-hidden group flex-shrink-0 order-1 sm:order-2"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-600/50 via-pink-500/50 to-orange-500/50" />
                   {currentHero.cover_image_url && (
                     <img src={currentHero.cover_image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
                   )}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Play className="h-10 w-10 text-white" fill="white" />
+                    <Play className="h-8 w-8 lg:h-10 lg:w-10 text-white" fill="white" />
                   </div>
-                  <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                  <div className="absolute top-1.5 left-1.5 lg:top-2 lg:left-2 bg-red-600 text-white text-[9px] lg:text-[10px] font-bold px-1.5 lg:px-2 py-0.5 rounded flex items-center gap-0.5 lg:gap-1">
+                    <span className="w-1 h-1 lg:w-1.5 lg:h-1.5 bg-white rounded-full animate-pulse" />
                     LIVE
                   </div>
                 </Link>
               </div>
 
               {/* Carousel Controls */}
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2">
-                <button onClick={prevHero} className="p-1 rounded-full bg-black/50 hover:bg-black/70">
-                  <ChevronLeft className="h-4 w-4" />
+              <div className="absolute bottom-2 lg:bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 lg:gap-2">
+                <button onClick={prevHero} className="p-0.5 lg:p-1 rounded-full bg-black/50 hover:bg-black/70">
+                  <ChevronLeft className="h-3 w-3 lg:h-4 lg:w-4" />
                 </button>
                 <div className="flex gap-1">
                   {heroHosts.map((_, i) => (
                     <button
                       key={i}
                       onClick={() => setHeroIndex(i)}
-                      className={`w-2 h-2 rounded-full transition-colors ${i === heroIndex ? 'bg-white' : 'bg-white/30'}`}
+                      className={`w-1.5 h-1.5 lg:w-2 lg:h-2 rounded-full transition-colors ${i === heroIndex ? 'bg-white' : 'bg-white/30'}`}
                     />
                   ))}
                 </div>
-                <button onClick={nextHero} className="p-1 rounded-full bg-black/50 hover:bg-black/70">
-                  <ChevronRight className="h-4 w-4" />
+                <button onClick={nextHero} className="p-0.5 lg:p-1 rounded-full bg-black/50 hover:bg-black/70">
+                  <ChevronRight className="h-3 w-3 lg:h-4 lg:w-4" />
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Top Live Categories - Kick.com Style */}
-        <section className="px-4 lg:px-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-bold">Top Live Categories</h2>
-            <button className="text-xs text-[#53fc18] hover:underline">View all</button>
+        {/* Top Live Categories - Kick.com Style - Mobile Scrollable */}
+        <section className="px-3 lg:px-6 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold">Top Live Categories</h2>
+            <button className="text-[10px] text-[#53fc18] hover:underline">View all</button>
           </div>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+          {/* Mobile: horizontal scroll, Desktop: grid */}
+          <div className="flex lg:grid lg:grid-cols-6 xl:grid-cols-8 gap-2 lg:gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-3 px-3 lg:mx-0 lg:px-0 lg:overflow-visible">
             {DEMO_CATEGORIES.map((cat) => (
-              <div key={cat.id} className="group cursor-pointer">
-                <div className="aspect-[3/4] rounded-lg overflow-hidden mb-2 relative">
+              <div key={cat.id} className="group cursor-pointer flex-shrink-0 w-24 lg:w-auto">
+                <div className="aspect-[3/4] rounded-lg overflow-hidden mb-1.5 relative">
                   <img src={cat.image} alt={cat.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                  <div className="absolute bottom-2 left-2 right-2">
-                    <p className="text-xs font-bold text-white truncate">{cat.name}</p>
+                  <div className="absolute bottom-1.5 left-1.5 right-1.5">
+                    <p className="text-[10px] lg:text-xs font-bold text-white truncate">{cat.name}</p>
                   </div>
                 </div>
-                <p className="text-[10px] text-white/50">{formatViewers(cat.listener_count)} listening</p>
-                <div className="flex gap-1 mt-1 flex-wrap">
+                <p className="text-[9px] lg:text-[10px] text-white/50 hidden lg:block">{formatViewers(cat.listener_count)} listening</p>
+                <div className="hidden lg:flex gap-1 mt-1 flex-wrap">
                   {cat.tags.map((tag) => (
-                    <span key={tag} className="text-[9px] bg-white/10 text-white/70 px-1.5 py-0.5 rounded">{tag}</span>
+                    <span key={tag} className="text-[8px] lg:text-[9px] bg-white/10 text-white/70 px-1 py-0.5 rounded">{tag}</span>
                   ))}
                 </div>
               </div>
@@ -317,13 +318,13 @@ const PodcastFeed = () => {
           </div>
         </section>
 
-        {/* Live Sessions - Category based */}
-        <section className="px-4 lg:px-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-bold">Music</h2>
-            <button className="text-xs text-[#53fc18] hover:underline">View all</button>
+        {/* Live Sessions - Mobile optimized */}
+        <section className="px-3 lg:px-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold">Music</h2>
+            <button className="text-[10px] text-[#53fc18] hover:underline">View all</button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 lg:gap-4">
             {liveHosts.map((host) => (
               <Link 
                 key={host.id}
@@ -331,7 +332,7 @@ const PodcastFeed = () => {
                 className="group block"
               >
                 {/* Thumbnail */}
-                <div className="relative aspect-video rounded-lg overflow-hidden bg-neutral-800 mb-2">
+                <div className="relative aspect-video rounded-lg overflow-hidden bg-neutral-800 mb-1.5">
                   {host.cover_image_url ? (
                     <img src={host.cover_image_url} alt="" className="w-full h-full object-cover" />
                   ) : (
@@ -339,25 +340,25 @@ const PodcastFeed = () => {
                   )}
                   
                   {/* Live badge */}
-                  <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                  <div className="absolute top-1 left-1 lg:top-2 lg:left-2 bg-red-600 text-white text-[8px] lg:text-[10px] font-bold px-1.5 lg:px-2 py-0.5 rounded flex items-center gap-0.5 lg:gap-1">
+                    <span className="w-1 h-1 lg:w-1.5 lg:h-1.5 bg-white rounded-full animate-pulse" />
                     LIVE
                   </div>
                   
                   {/* Listener count */}
-                  <div className="absolute bottom-2 left-2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded flex items-center gap-1">
+                  <div className="absolute bottom-1 left-1 lg:bottom-2 lg:left-2 bg-black/70 text-white text-[8px] lg:text-[10px] px-1.5 lg:px-2 py-0.5 rounded">
                     {formatViewers(host.listener_count)} listening
                   </div>
 
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  {/* Hover overlay - desktop only */}
+                  <div className="hidden lg:flex absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity items-center justify-center">
                     <Play className="h-10 w-10 text-white" fill="white" />
                   </div>
                 </div>
 
                 {/* Info */}
-                <div className="flex gap-2">
-                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-neutral-700">
+                <div className="flex gap-1.5 lg:gap-2">
+                  <div className="w-6 h-6 lg:w-8 lg:h-8 rounded-full overflow-hidden flex-shrink-0 bg-neutral-700">
                     {host.host_avatar ? (
                       <img src={host.host_avatar} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -365,11 +366,11 @@ const PodcastFeed = () => {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-medium text-white truncate group-hover:text-[#53fc18] transition-colors">
+                    <h3 className="text-[11px] lg:text-sm font-medium text-white truncate group-hover:text-[#53fc18] transition-colors">
                       {host.title}
                     </h3>
-                    <p className="text-xs text-white/50 truncate">{host.host_name}</p>
-                    <span className="inline-block mt-1 text-[10px] bg-white/10 text-white/70 px-1.5 py-0.5 rounded">
+                    <p className="text-[10px] lg:text-xs text-white/50 truncate">{host.host_name}</p>
+                    <span className="hidden lg:inline-block mt-1 text-[10px] bg-white/10 text-white/70 px-1.5 py-0.5 rounded">
                       {host.category}
                     </span>
                   </div>
