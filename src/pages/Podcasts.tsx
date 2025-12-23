@@ -273,174 +273,48 @@ const Podcasts = () => {
       </header>
 
       {activeTab === 'live' ? (
-        /* TikTok-style Vertical Feed */
+        /* TikTok-style Vertical Feed - Fitted height */
         <div 
           ref={containerRef}
-          className="h-screen overflow-hidden"
+          className="h-[100dvh] overflow-hidden"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
           {currentPodcast && (
-            <div className="relative h-full w-full">
-              {/* Background Image */}
-              <div 
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: `url(${currentPodcast.cover_image_url})` }}
-              >
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div className="relative h-full w-full flex flex-col bg-black">
+              {/* Twitter Space Style Participants - Takes most of the screen */}
+              <div className="flex-1 min-h-0 pt-14">
+                <SpaceParticipants 
+                  sessionId={currentPodcast.id}
+                  hostId={currentPodcast.host_id}
+                  isHost={user?.id === currentPodcast.host_id}
+                  title={currentPodcast.title}
+                />
               </div>
 
-              {/* Content */}
-              <div className="relative h-full flex">
-                {/* Main Content Area */}
-                <div className="flex-1 flex flex-col">
-                  {/* Top Section - Twitter Space Style Participants */}
-                  <div className="pt-20 px-4">
-                    <SpaceParticipants 
-                      sessionId={currentPodcast.id}
-                      hostId={currentPodcast.host_id}
-                      isHost={user?.id === currentPodcast.host_id}
-                    />
-                  </div>
+              {/* Bottom - Comments (Twitch Style) */}
+              <div className="h-48 md:h-56 shrink-0">
+                <TwitchComments 
+                  sessionId={currentPodcast.id}
+                  onSendGift={() => setShowGiftModal(true)}
+                />
+              </div>
 
-                  {/* Middle - Podcast Info */}
-                  <div className="flex-1 flex flex-col justify-center px-4 py-8">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="relative">
-                        <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-red-500 p-0.5">
-                          {currentPodcast.host_avatar ? (
-                            <img 
-                              src={currentPodcast.host_avatar} 
-                              alt=""
-                              className="w-full h-full rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full rounded-full bg-gradient-to-br from-purple-600 to-pink-500" />
-                          )}
-                        </div>
-                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-red-500 rounded-full">
-                          <span className="text-[8px] font-bold">LIVE</span>
-                        </div>
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold">{currentPodcast.title}</h2>
-                        <p className="text-sm text-white/60">{currentPodcast.host_name}</p>
-                      </div>
-                    </div>
-                    
-                    {currentPodcast.description && (
-                      <p className="text-white/80 text-sm mb-4">{currentPodcast.description}</p>
-                    )}
+              {/* Navigation Indicators */}
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-1">
+                {podcasts.map((_, i) => (
+                  <div 
+                    key={i}
+                    className={`w-1 rounded-full transition-all ${
+                      i === currentIndex ? 'h-4 bg-white' : 'h-1.5 bg-white/30'
+                    }`}
+                  />
+                ))}
+              </div>
 
-                    {/* Listener Stats */}
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1.5">
-                        <Users className="h-4 w-4 text-red-400" />
-                        <span className="text-sm font-medium">{currentPodcast.listener_count.toLocaleString()}</span>
-                        <span className="text-xs text-white/60">listening</span>
-                      </div>
-                      
-                      {/* Audio Visualization Placeholder */}
-                      <div className="flex items-center gap-0.5">
-                        {[...Array(8)].map((_, i) => (
-                          <div
-                            key={i}
-                            className="w-1 bg-green-400 rounded-full animate-pulse"
-                            style={{
-                              height: `${Math.random() * 20 + 10}px`,
-                              animationDelay: `${i * 0.1}s`
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bottom - Comments (Twitch Style) */}
-                  <div className="h-64">
-                    <TwitchComments 
-                      sessionId={currentPodcast.id}
-                      onSendGift={() => setShowGiftModal(true)}
-                    />
-                  </div>
-                </div>
-
-                {/* Right Side Actions */}
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-center gap-6">
-                  {/* Like */}
-                  <button 
-                    onClick={() => toggleLike(currentPodcast.id)}
-                    className="flex flex-col items-center gap-1"
-                  >
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      liked.has(currentPodcast.id) ? 'bg-red-500' : 'bg-white/10'
-                    }`}>
-                      <Heart className={`h-6 w-6 ${liked.has(currentPodcast.id) ? 'fill-white' : ''}`} />
-                    </div>
-                    <span className="text-xs">12.5K</span>
-                  </button>
-
-                  {/* Comments */}
-                  <button className="flex flex-col items-center gap-1">
-                    <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
-                      <MessageSquare className="h-6 w-6" />
-                    </div>
-                    <span className="text-xs">2.3K</span>
-                  </button>
-
-                  {/* Share */}
-                  <button 
-                    onClick={sharePodcast}
-                    className="flex flex-col items-center gap-1"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
-                      <Share2 className="h-6 w-6" />
-                    </div>
-                    <span className="text-xs">Share</span>
-                  </button>
-
-                  {/* Mute Toggle */}
-                  <button 
-                    onClick={() => setIsMuted(!isMuted)}
-                    className="flex flex-col items-center gap-1"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
-                      {isMuted ? <VolumeX className="h-6 w-6" /> : <Volume2 className="h-6 w-6" />}
-                    </div>
-                  </button>
-                </div>
-
-                {/* Navigation Arrows */}
-                <div className="absolute left-1/2 -translate-x-1/2 top-20 opacity-40 hover:opacity-100 transition-opacity">
-                  <button 
-                    onClick={goToPrev}
-                    disabled={currentIndex === 0}
-                    className="p-2 rounded-full bg-white/10 disabled:opacity-30"
-                  >
-                    <ChevronUp className="h-6 w-6" />
-                  </button>
-                </div>
-                <div className="absolute left-1/2 -translate-x-1/2 bottom-4 opacity-40 hover:opacity-100 transition-opacity">
-                  <button 
-                    onClick={goToNext}
-                    className="p-2 rounded-full bg-white/10 flex flex-col items-center"
-                  >
-                    <ChevronDown className="h-6 w-6" />
-                    <span className="text-[10px] text-white/60">Swipe for more</span>
-                  </button>
-                </div>
-
-                {/* Podcast Index Indicator */}
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-1">
-                  {podcasts.map((_, i) => (
-                    <div 
-                      key={i}
-                      className={`w-1 rounded-full transition-all ${
-                        i === currentIndex ? 'h-6 bg-white' : 'h-2 bg-white/30'
-                      }`}
-                    />
-                  ))}
-                </div>
+              {/* Swipe hint */}
+              <div className="absolute bottom-52 md:bottom-60 left-1/2 -translate-x-1/2 text-[10px] text-white/40">
+                Swipe for more
               </div>
             </div>
           )}
