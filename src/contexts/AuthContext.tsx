@@ -22,21 +22,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // Auto refresh token if expired
+        if (event === 'TOKEN_REFRESHED') {
+          console.log('Token refreshed');
+        }
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+    const initSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        // Try to refresh the session
+        const { data: refreshData } = await supabase.auth.refreshSession();
+        setSession(refreshData.session);
+        setUser(refreshData.session?.user ?? null);
+      } else {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
       setLoading(false);
-    });
+    };
+    
+    initSession();
 
-    return () => subscription.unsubscribe();
+    // Set up automatic token refresh interval
+    const refreshInterval = setInterval(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // Check if token expires soon (within 5 minutes)
+        const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+        const now = Date.now();
+        const fiveMinutes = 5 * 60 * 1000;
+        
+        if (expiresAt - now < fiveMinutes) {
+          await supabase.auth.refreshSession();
+        }
+      }
+    }, 60000); // Check every minute
+
+    return () => {
+      subscription.unsubscribe();
+      clearInterval(refreshInterval);
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
