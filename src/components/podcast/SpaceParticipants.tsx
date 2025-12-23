@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mic, MicOff, Hand, UserPlus, Volume2, Loader2 } from 'lucide-react';
+import { Mic, MicOff, Hand, UserPlus, Volume2, Loader2, LogOut, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useLiveKitAudio } from '@/hooks/useLiveKitAudio';
@@ -24,6 +24,7 @@ interface SpaceParticipantsProps {
   hostName?: string;
   hostAvatar?: string | null;
   onLeave?: () => void;
+  onSwitchSession?: () => void;
 }
 
 const getAvatarColor = (id: string) => {
@@ -45,11 +46,13 @@ const getDisplayName = (userId: string) => {
   return names[index];
 };
 
-const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAvatar, onLeave }: SpaceParticipantsProps) => {
+const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAvatar, onLeave, onSwitchSession }: SpaceParticipantsProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [myParticipation, setMyParticipation] = useState<Participant | null>(null);
+  const [isBanned, setIsBanned] = useState(false);
+  const [previousSessionId, setPreviousSessionId] = useState<string | null>(null);
 
   // LiveKit Audio Hook
   const {
@@ -68,8 +71,22 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     isHost,
   });
 
+  // Check if user is banned from this session
+  const checkBanStatus = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('podcast_banned_users')
+      .select('id')
+      .eq('session_id', sessionId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    
+    setIsBanned(!!data);
+  }, [sessionId, user]);
+
   useEffect(() => {
     fetchParticipants();
+    checkBanStatus();
 
     const channel = supabase
       .channel(`participants-${sessionId}`)
@@ -82,6 +99,28 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
           filter: `session_id=eq.${sessionId}`
         },
         () => fetchParticipants()
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'podcast_banned_users',
+          filter: `session_id=eq.${sessionId}`
+        },
+        () => {
+          checkBanStatus();
+          // If user gets kicked, disconnect and leave
+          if (user && myParticipation) {
+            checkBanStatus().then(() => {
+              if (isBanned) {
+                disconnectAudio();
+                setMyParticipation(null);
+                toast.error('You have been removed from this session');
+              }
+            });
+          }
+        }
       )
       .subscribe();
 
@@ -116,6 +155,55 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     }
   };
 
+  // Leave current session
+  const leaveSession = async () => {
+    if (!user || !myParticipation) return;
+
+    await disconnectAudio();
+    
+    await supabase
+      .from('podcast_participants')
+      .delete()
+      .eq('id', myParticipation.id);
+    
+    setMyParticipation(null);
+    toast.success('Left the space');
+    onLeave?.();
+  };
+
+  // Kick a participant (host only)
+  const kickParticipant = async (participantId: string, participantUserId: string) => {
+    if (!isHost) return;
+
+    await supabase
+      .from('podcast_participants')
+      .delete()
+      .eq('id', participantId);
+    
+    toast.success('Participant removed');
+  };
+
+  // Ban a participant (host only)
+  const banParticipant = async (participantId: string, participantUserId: string) => {
+    if (!isHost || !user) return;
+
+    // First kick them
+    await supabase
+      .from('podcast_participants')
+      .delete()
+      .eq('id', participantId);
+
+    // Then ban them
+    await supabase.from('podcast_banned_users').insert({
+      session_id: sessionId,
+      user_id: participantUserId,
+      banned_by: user.id,
+      reason: 'Removed by host'
+    });
+    
+    toast.success('Participant banned from session');
+  };
+
   const joinSession = async () => {
     if (!user) {
       toast.error('Please sign in to join');
@@ -123,10 +211,26 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       return;
     }
 
+    // Check if banned
+    if (isBanned) {
+      toast.error('You are banned from this session');
+      return;
+    }
+
     // Check if already joined
     if (myParticipation) {
       toast.info('You are already in this space');
       return;
+    }
+
+    // Leave previous session if in one
+    if (previousSessionId && previousSessionId !== sessionId) {
+      await supabase
+        .from('podcast_participants')
+        .delete()
+        .eq('session_id', previousSessionId)
+        .eq('user_id', user.id);
+      await disconnectAudio();
     }
 
     const { error } = await supabase.from('podcast_participants').insert({
@@ -143,6 +247,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
         toast.error('Failed to join session');
       }
     } else {
+      setPreviousSessionId(sessionId);
       toast.success('Joined the space!');
       // Connect to audio room
       await connectAudio();
@@ -252,10 +357,12 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
             const isSpeaking = audioState?.isSpeaking || false;
             const isParticipantMuted = audioState ? audioState.isMuted : p.is_muted;
             
+            const canKick = isHost && !isHostRole && p.user_id !== user?.id;
+            
             return (
               <div 
                 key={p.id} 
-                className="flex flex-col items-center gap-0.5 cursor-pointer"
+                className="flex flex-col items-center gap-0.5 cursor-pointer group relative"
                 onClick={isHostRole ? goToHostProfile : undefined}
               >
                 <div className="relative">
@@ -285,6 +392,26 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
                       <span className="text-sm">✋</span>
                     </div>
                   )}
+
+                  {/* Kick/Ban overlay for host */}
+                  {canKick && (
+                    <div className="absolute inset-0 bg-black/70 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center gap-0.5 transition-opacity">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); kickParticipant(p.id, p.user_id); }}
+                        className="p-1 bg-red-500/80 rounded-full hover:bg-red-500"
+                        title="Kick"
+                      >
+                        <LogOut className="w-2.5 h-2.5 text-white" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); banParticipant(p.id, p.user_id); }}
+                        className="p-1 bg-orange-500/80 rounded-full hover:bg-orange-500"
+                        title="Ban"
+                      >
+                        <Ban className="w-2.5 h-2.5 text-white" />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Name */}
@@ -305,7 +432,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       </div>
 
       {/* Bottom Controls - All in one compact row */}
-      <div className="flex items-center justify-between py-2 gap-2 border-t border-white/5 mt-2">
+      <div className="flex items-center justify-center py-2 gap-1.5 border-t border-white/5 mt-2 flex-wrap">
         {/* Audio control */}
         {myParticipation && myParticipation.role !== 'listener' && (
           <Button
@@ -313,42 +440,61 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
             disabled={!isAudioConnected}
             size="icon"
             variant="ghost"
-            className={`h-9 w-9 rounded-full border ${isMuted ? 'border-red-500/50 text-red-400' : 'border-green-500/50 text-green-400'}`}
+            className={`h-8 w-8 rounded-full border ${isMuted ? 'border-red-500/50 text-red-400' : 'border-green-500/50 text-green-400'}`}
           >
-            {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            {isMuted ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
           </Button>
         )}
 
         {/* Request button */}
         <button 
           onClick={toggleHandRaise}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-colors ${
+          disabled={isBanned}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-full border transition-colors text-xs ${
             myParticipation?.hand_raised 
               ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400' 
               : 'border-white/20 text-white/60 hover:text-white hover:border-white/40'
-          }`}
+          } ${isBanned ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
-          <Hand className="h-3.5 w-3.5" />
-          <span className="text-xs">{myParticipation?.hand_raised ? 'Requested' : 'Request'}</span>
+          <Hand className="h-3 w-3" />
+          <span>{myParticipation?.hand_raised ? 'Requested' : 'Request'}</span>
         </button>
 
         {/* Join Space button */}
-        {!myParticipation && (
+        {!myParticipation && !isBanned && (
           <Button
             onClick={joinSession}
             disabled={isAudioConnecting}
             size="sm"
-            className="bg-purple-600 hover:bg-purple-500 rounded-full px-4 h-8 text-xs"
+            className="bg-purple-600 hover:bg-purple-500 rounded-full px-3 h-7 text-xs"
           >
             {isAudioConnecting ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="h-3 w-3 animate-spin" />
             ) : (
               <>
-                <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-                Join Space
+                <UserPlus className="h-3 w-3 mr-1" />
+                Join
               </>
             )}
           </Button>
+        )}
+
+        {/* Leave Session button */}
+        {myParticipation && (
+          <Button
+            onClick={leaveSession}
+            size="sm"
+            variant="ghost"
+            className="rounded-full px-2.5 h-7 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
+          >
+            <LogOut className="h-3 w-3 mr-1" />
+            Leave
+          </Button>
+        )}
+
+        {/* Banned indicator */}
+        {isBanned && (
+          <span className="text-xs text-red-400 px-2">Banned from session</span>
         )}
       </div>
     </div>
