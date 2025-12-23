@@ -3,12 +3,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   Mic, MicOff, Radio, Users, Music, Share2, 
-  HandMetal, Volume2, X, Plus, MessageSquare, Play, Pause
+  HandMetal, Volume2, X, Plus, MessageSquare, Play, Pause,
+  Circle, StopCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useLiveKitAudio } from '@/hooks/useLiveKitAudio';
 
 interface HostStudioProps {
   isOpen: boolean;
@@ -38,7 +40,6 @@ const CURATED_MUSIC = [
 
 const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
   const { user } = useAuth();
-  const [isMuted, setIsMuted] = useState(true);
   const [isLive, setIsLive] = useState(false);
   const [listenerCount, setListenerCount] = useState(0);
   const [showMusicPicker, setShowMusicPicker] = useState(false);
@@ -49,7 +50,25 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
   const [raisedHands, setRaisedHands] = useState<any[]>([]);
   const [comments, setComments] = useState<any[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
+
+  // LiveKit Audio Hook
+  const {
+    isConnected: isAudioConnected,
+    isConnecting: isAudioConnecting,
+    isMuted,
+    isRecording,
+    participants: audioParticipants,
+    connect: connectAudio,
+    disconnect: disconnectAudio,
+    toggleMute,
+    startRecording,
+    saveEpisode,
+  } = useLiveKitAudio({
+    sessionId: sessionId || session?.id || '',
+    userId: user?.id || '',
+    userName: user?.email?.split('@')[0] || 'Host',
+    isHost: true,
+  });
 
   useEffect(() => {
     if (session?.id) {
@@ -60,7 +79,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       subscribeToUpdates(session.id);
     }
     return () => {
-      stopAudio();
+      disconnectAudio();
     };
   }, [session]);
 
@@ -121,15 +140,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       return;
     }
 
-    // Request microphone access
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
-    } catch (err) {
-      toast.error('Microphone access denied');
-      return;
-    }
-
     const { data, error } = await supabase
       .from('podcast_sessions')
       .insert({
@@ -156,13 +166,21 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
 
     setSessionId(data.id);
     setIsLive(true);
-    setIsMuted(false);
     subscribeToUpdates(data.id);
+
+    // Connect to LiveKit audio room
+    await connectAudio();
+    
     toast.success('You are now LIVE!');
   };
 
   const endSession = async () => {
     if (!sessionId) return;
+
+    // Save episode if recording
+    if (isRecording) {
+      await saveEpisode(title, `Recorded live session: ${title}`);
+    }
 
     await supabase
       .from('podcast_sessions')
@@ -170,7 +188,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       .eq('id', sessionId);
 
     // Create episode from session
-    if (user) {
+    if (user && !isRecording) {
       await supabase.from('podcast_episodes').insert({
         session_id: sessionId,
         host_id: user.id,
@@ -179,47 +197,13 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       });
     }
 
-    stopAudio();
+    await disconnectAudio();
     setIsLive(false);
     toast.success('Session ended & saved as episode');
     onClose();
   };
 
-  const stopAudio = () => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach(track => track.stop());
-      mediaStreamRef.current = null;
-    }
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-  };
-
-  const toggleMute = async () => {
-    if (mediaStreamRef.current) {
-      const audioTrack = mediaStreamRef.current.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = isMuted;
-        setIsMuted(!isMuted);
-        toast(isMuted ? 'Microphone ON' : 'Microphone OFF');
-        
-        // Update in database
-        if (sessionId && user) {
-          await supabase
-            .from('podcast_participants')
-            .update({ is_muted: !isMuted })
-            .eq('session_id', sessionId)
-            .eq('user_id', user.id);
-        }
-      }
-    } else {
-      setIsMuted(!isMuted);
-      toast(isMuted ? 'Microphone ON' : 'Microphone OFF');
-    }
-  };
-
   const playSound = (soundId: string, label: string) => {
-    // Create audio context for sound effect
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
@@ -268,6 +252,14 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     toast(isMusicPlaying ? 'Music paused' : 'Music playing');
   };
 
+  const handleToggleRecording = async () => {
+    if (isRecording) {
+      await saveEpisode(title, `Recorded live session: ${title}`);
+    } else {
+      await startRecording();
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-black/95 border-white/10 max-w-lg max-h-[85vh] overflow-y-auto">
@@ -275,6 +267,11 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
           <DialogTitle className="text-white flex items-center gap-2 text-sm">
             <Radio className={`h-4 w-4 ${isLive ? 'text-red-500 animate-pulse' : 'text-white/60'}`} />
             Host Studio
+            {isAudioConnected && (
+              <span className="ml-auto text-[10px] px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full">
+                Audio Connected
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
 
@@ -296,6 +293,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
           <div className="flex items-center justify-center gap-3">
             <Button
               onClick={toggleMute}
+              disabled={!isLive || !isAudioConnected}
               size="lg"
               className={`rounded-full w-14 h-14 ${
                 isMuted ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
@@ -308,10 +306,17 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
               <Button
                 onClick={startSession}
                 size="lg"
+                disabled={isAudioConnecting}
                 className="bg-red-600 hover:bg-red-500 text-white px-6 h-12"
               >
-                <Radio className="h-4 w-4 mr-2" />
-                Go Live
+                {isAudioConnecting ? (
+                  <>Connecting...</>
+                ) : (
+                  <>
+                    <Radio className="h-4 w-4 mr-2" />
+                    Go Live
+                  </>
+                )}
               </Button>
             ) : (
               <Button
@@ -323,7 +328,30 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
                 End Session
               </Button>
             )}
+
+            {/* Recording button */}
+            {isLive && (
+              <Button
+                onClick={handleToggleRecording}
+                size="lg"
+                className={`rounded-full w-14 h-14 ${
+                  isRecording ? 'bg-red-500 animate-pulse' : 'bg-white/10'
+                }`}
+              >
+                {isRecording ? (
+                  <StopCircle className="h-5 w-5 text-white" />
+                ) : (
+                  <Circle className="h-5 w-5 text-red-400" />
+                )}
+              </Button>
+            )}
           </div>
+
+          {isRecording && (
+            <p className="text-center text-xs text-red-400 animate-pulse">
+              ● Recording in progress...
+            </p>
+          )}
 
           {isLive && (
             <>
@@ -331,7 +359,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
               <div className="flex items-center justify-center gap-4 py-2 bg-white/5 rounded-lg">
                 <div className="flex items-center gap-1.5">
                   <Users className="h-3.5 w-3.5 text-purple-400" />
-                  <span className="text-xs text-white">{listenerCount} listening</span>
+                  <span className="text-xs text-white">{audioParticipants.length || listenerCount} listening</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <HandMetal className="h-3.5 w-3.5 text-yellow-400" />
@@ -342,6 +370,30 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
                   Share
                 </Button>
               </div>
+
+              {/* Audio Participants */}
+              {audioParticipants.length > 0 && (
+                <div className="space-y-1.5">
+                  <h4 className="text-[10px] text-white/60 uppercase tracking-wider">Audio Participants</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {audioParticipants.map((p) => (
+                      <div
+                        key={p.identity}
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs ${
+                          p.isSpeaking ? 'bg-green-500/20 ring-1 ring-green-500' : 'bg-white/5'
+                        }`}
+                      >
+                        {p.isMuted ? (
+                          <MicOff className="h-3 w-3 text-red-400" />
+                        ) : (
+                          <Volume2 className={`h-3 w-3 ${p.isSpeaking ? 'text-green-400' : 'text-white/40'}`} />
+                        )}
+                        <span className="text-white">{p.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Sound Effects */}
               <div className="space-y-1.5">
