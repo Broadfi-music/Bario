@@ -1,8 +1,8 @@
 import { Navbar } from '@/components/Navbar';
 import { Hero } from '@/components/Hero';
-import { Play, Pause, TrendingUp, ExternalLink } from 'lucide-react';
+import { Play, Pause, TrendingUp, ExternalLink, Users, Calendar, ChevronRight } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import track1 from '@/assets/track-1.jpeg';
 import track2 from '@/assets/track-2.jpeg';
 import track3 from '@/assets/track-3.jpeg';
@@ -15,19 +15,78 @@ import card1 from '@/assets/card-1.png';
 import card2 from '@/assets/card-2.png';
 import card3 from '@/assets/card-3.png';
 import card4 from '@/assets/card-4.png';
-import card5 from '@/assets/card-5.png';
 import AnimatedDice from '@/components/AnimatedDice';
 import globe from '@/assets/globe.png';
-import download4 from '@/assets/download_4.gif';
 import exploreInspire from '@/assets/explore-inspire.gif';
 import { useHeatmapTracks } from '@/hooks/useHeatmapData';
+import { supabase } from '@/integrations/supabase/client';
+
+// Demo data for podcast section
+const DEMO_CATEGORIES = [
+  { id: 'music', name: 'Music', image: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400', listener_count: 308200 },
+  { id: 'hiphop', name: 'Hip-Hop', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400', listener_count: 149600 },
+  { id: 'production', name: 'Production', image: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=400', listener_count: 51500 },
+  { id: 'kpop', name: 'K-Pop', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400', listener_count: 50900 },
+  { id: 'latin', name: 'Latin', image: 'https://images.unsplash.com/photo-1504898770365-14faca6a7320?w=400', listener_count: 36300 },
+  { id: 'indie', name: 'Indie', image: 'https://images.unsplash.com/photo-1485579149621-3123dd979571?w=400', listener_count: 27100 },
+];
+
+const DEMO_SCHEDULES = [
+  { id: 'sch-1', host_id: 'host-1', host_name: 'DJ Akademiks', host_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400', title: 'Weekly Hip-Hop Roundup', scheduled_at: new Date(Date.now() + 3600000 * 3).toISOString() },
+  { id: 'sch-2', host_id: 'host-2', host_name: 'Metro Boomin', host_avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400', title: 'Production Masterclass', scheduled_at: new Date(Date.now() + 3600000 * 8).toISOString() },
+  { id: 'sch-3', host_id: 'host-3', host_name: 'Eric Nam', host_avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400', title: 'K-Pop Deep Dive', scheduled_at: new Date(Date.now() + 3600000 * 24).toISOString() },
+];
+
+const formatViewers = (count: number) => {
+  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+  if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+  return count.toString();
+};
+
+const formatScheduleTime = (dateStr: string) => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diff = date.getTime() - now.getTime();
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  if (hours < 1) return 'Starting soon';
+  if (hours < 24) return `In ${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `In ${days}d`;
+};
 const Index = () => {
+  const navigate = useNavigate();
   const [playingTrack, setPlayingTrack] = useState<number | null>(null);
   const [heatmapPlayingId, setHeatmapPlayingId] = useState<string | null>(null);
   const heatmapAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioRefs = useRef<{
     [key: number]: HTMLAudioElement | null;
   }>({});
+  const [liveHosts, setLiveHosts] = useState<any[]>([]);
+
+  // Fetch live podcast sessions
+  useEffect(() => {
+    const fetchLiveSessions = async () => {
+      const { data } = await supabase
+        .from('podcast_sessions')
+        .select(`*, profiles:host_id (full_name, avatar_url, username)`)
+        .eq('status', 'live')
+        .order('listener_count', { ascending: false })
+        .limit(6);
+      
+      if (data) {
+        setLiveHosts(data.map(s => ({
+          id: s.id,
+          host_id: s.host_id,
+          title: s.title,
+          listener_count: s.listener_count || 0,
+          host_name: (s.profiles as any)?.full_name || (s.profiles as any)?.username || 'Host',
+          host_avatar: (s.profiles as any)?.avatar_url,
+          cover_image_url: s.cover_image_url
+        })));
+      }
+    };
+    fetchLiveSessions();
+  }, []);
   
   // Fetch real heatmap data
   const { tracks: heatmapTracks, summary, loading: heatmapLoading } = useHeatmapTracks(20);
@@ -85,11 +144,6 @@ const Index = () => {
     title: "Unlimited Creative Freedom",
     description: "Experiment with countless genres and styles. Create unlimited variations until you find the perfect sound for your vision.",
     image: card4
-  }, {
-    id: 5,
-    title: "Easy Export & Share",
-    description: "Download your remixes in high-quality formats and share them directly to your favorite platforms. Your music, your way.",
-    image: card5
   }];
   useEffect(() => {
     // Cleanup audio on unmount
@@ -172,13 +226,13 @@ const Index = () => {
             <span className="sm:hidden"> </span>and make music your career
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
-            {featureCards.slice(0, 4).map(card => <div key={card.id} className="bg-black rounded-2xl p-4 sm:p-6 lg:p-8 flex flex-col items-start space-y-4 lg:space-y-6 hover:scale-[1.02] transition-transform duration-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+            {featureCards.map(card => <div key={card.id} className="bg-black rounded-2xl p-4 sm:p-6 flex flex-col items-start space-y-4 hover:scale-[1.02] transition-transform duration-200">
                 <div className="w-full aspect-square flex items-center justify-center">
                   <img src={card.image} alt={card.title} className="w-2/3 sm:w-3/4 h-2/3 sm:h-3/4 object-contain" />
                 </div>
-                <div className="space-y-2 lg:space-y-3">
-                  <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-foreground">
+                <div className="space-y-2">
+                  <h3 className="text-base sm:text-lg font-semibold text-foreground">
                     {card.title}
                   </h3>
                   <p className="text-foreground/70 text-xs sm:text-sm leading-relaxed">
@@ -187,36 +241,94 @@ const Index = () => {
                 </div>
               </div>)}
           </div>
+        </div>
+      </section>
 
-          {/* Easy Export & Share with GIF */}
-          <div className="mt-8 lg:mt-12 flex flex-col lg:flex-row items-center gap-4 lg:gap-8">
-            <div className="flex-1 w-full bg-black rounded-2xl p-4 sm:p-6 lg:p-8 flex flex-col items-start space-y-4 lg:space-y-6">
-              <div className="w-full aspect-square flex items-center justify-center">
-                <img src={card5} alt="Easy Export & Share" className="w-2/3 sm:w-3/4 h-2/3 sm:h-3/4 object-contain" />
-              </div>
-              <div className="space-y-2 lg:space-y-3">
-                <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-foreground">
-                  Easy Export & Share
-                </h3>
-                <p className="text-foreground/70 text-xs sm:text-sm leading-relaxed">
-                  Download your remixes in high-quality formats and share them directly to your favorite platforms. Your music, your way.
-                </p>
-              </div>
+      {/* Podcast Feed Section */}
+      <section className="py-8 lg:py-12 px-4 sm:px-6 border-t border-foreground/5 bg-[#0e0e10]">
+        <div className="container mx-auto max-w-7xl">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1">🎙️ Live Podcasts</h2>
+              <p className="text-sm text-white/60">Tune into live music discussions and shows</p>
             </div>
-            <div className="flex-1 w-full flex items-center justify-center">
-              <img src={download4} alt="Animation" className="w-full h-auto rounded-2xl" />
+            <Link to="/podcasts" className="flex items-center gap-1 text-sm text-[#53fc18] hover:underline">
+              View all <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          {/* Top Live Categories */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-white">Top Live Categories</h3>
+              <Link to="/podcasts" className="text-[10px] text-[#53fc18] hover:underline">View all</Link>
+            </div>
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
+              {DEMO_CATEGORIES.map((cat) => (
+                <div
+                  key={cat.id}
+                  onClick={() => navigate('/podcasts')}
+                  className="flex-shrink-0 w-28 sm:w-32 cursor-pointer group"
+                >
+                  <div className="relative aspect-[4/5] rounded-lg overflow-hidden mb-1.5">
+                    <img src={cat.image} alt={cat.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                    <div className="absolute bottom-2 left-2 right-2">
+                      <p className="text-xs font-bold text-white truncate">{cat.name}</p>
+                      <p className="text-[9px] text-white/60">{formatViewers(cat.listener_count)} viewers</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Upcoming Schedules */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-[#53fc18]" />
+                Upcoming Schedules
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {DEMO_SCHEDULES.map((schedule) => (
+                <div
+                  key={schedule.id}
+                  className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/host/${schedule.host_id}`)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-700 flex-shrink-0">
+                      {schedule.host_avatar ? (
+                        <img src={schedule.host_avatar} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-green-500 to-teal-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{schedule.title}</p>
+                      <p className="text-xs text-white/50">{schedule.host_name}</p>
+                    </div>
+                    <span className="text-[10px] bg-[#53fc18]/20 text-[#53fc18] px-2 py-0.5 rounded">
+                      {formatScheduleTime(schedule.scheduled_at)}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Snap Campaign & Market Events Section */}
+      {/* Heatmap Campaign & Market Events Section */}
       <section className="py-8 lg:py-12 px-4 sm:px-6 border-t border-foreground/5">
         <div className="container mx-auto max-w-7xl">
           <div className="flex items-center justify-between mb-8">
             <div className="text-center flex-1">
               <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-                🎵 SNAPS Campaign
+                🔥 Heatmap Campaign
               </h2>
               <p className="text-sm sm:text-base lg:text-lg text-foreground/70 max-w-2xl mx-auto">
                 Real-time music market events and top performing tracks. Stay ahead with live data on trending songs.
@@ -304,22 +416,35 @@ const Index = () => {
                 </span>
               )}
             </div>
-            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
               {(heatmapTracks.filter(t => t.metrics.change24h > 0).slice(0, 12).length > 0 
                 ? heatmapTracks.filter(t => t.metrics.change24h > 0).slice(0, 12)
-                : ['Die With A Smile', 'APT.', 'Timeless', 'Who', 'Luther', 'Birds of a Feather', 'Taste', 'Too Sweet'].map((title, i) => ({
+                : ['Die With A Smile', 'APT.', 'Timeless', 'Who', 'Luther', 'Birds of a Feather', 'Taste', 'Too Sweet', 'Blinding Lights', 'Shape of You', 'Bad Guy', 'Old Town Road'].map((title, i) => ({
                     id: `fallback-${i}`,
                     title,
-                    metrics: { change24h: 15 - i * 1.5 }
+                    artwork: `https://images.unsplash.com/photo-${1493225457124 + i * 100000}-a3eb161ffa5f?w=200`,
+                    metrics: { change24h: 15 - i * 1.2 }
                   }))
               ).map((track, i) => (
                 <Link
                   to="/global-heatmap"
                   key={track.id} 
-                  className={`bg-green-500/20 hover:bg-green-500/30 rounded-lg p-2 cursor-pointer transition-all ${i < 2 ? 'col-span-2 row-span-2' : ''}`}
+                  className="bg-foreground/5 hover:bg-foreground/10 rounded-lg overflow-hidden cursor-pointer transition-all group"
                 >
-                  <p className="text-[9px] font-semibold text-foreground truncate">{track.title.slice(0, 12)}</p>
-                  <p className="text-[8px] text-green-400">+{track.metrics.change24h.toFixed(1)}%</p>
+                  <div className="aspect-square relative">
+                    {'artwork' in track && track.artwork ? (
+                      <img src={track.artwork} alt={track.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-green-500/30 to-teal-500/30 flex items-center justify-center">
+                        <TrendingUp className="h-8 w-8 text-green-400" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                    <div className="absolute bottom-2 left-2 right-2">
+                      <p className="text-[10px] font-semibold text-white truncate">{track.title}</p>
+                      <p className="text-[9px] text-green-400">+{track.metrics.change24h.toFixed(1)}%</p>
+                    </div>
+                  </div>
                 </Link>
               ))}
             </div>
