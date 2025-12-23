@@ -355,25 +355,19 @@ const Dashboard = () => {
               <Button onClick={() => setSearchOpen(true)} variant="ghost" size="icon" className="h-8 w-8">
                 <Search className="h-4 w-4" />
               </Button>
-              <Link to="/dashboard/new-remix">
+              <Link to="/dashboard/new-remix" className="hidden sm:block">
                 <Button className="bg-black text-white hover:bg-black/90 text-xs px-3 h-8">
                   <Plus className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">New Remix</span>
-                  <span className="sm:hidden">New</span>
+                  New Remix
                 </Button>
               </Link>
               {topNavItems.map((item) => (
-                <Link key={item.label} to={item.path} className="hidden sm:block">
-                  <Button variant="ghost" className="text-xs h-8 px-3 text-muted-foreground hover:text-foreground">
+                <Link key={item.label} to={item.path}>
+                  <Button variant="ghost" className="text-xs h-8 px-2 sm:px-3 text-muted-foreground hover:text-foreground">
                     {item.label}
                   </Button>
                 </Link>
               ))}
-              <Link to="/music-alpha" className="sm:hidden">
-                <Button variant="ghost" className="text-xs h-8 px-2 text-muted-foreground hover:text-foreground">
-                  Alpha
-                </Button>
-              </Link>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 flex-shrink-0">

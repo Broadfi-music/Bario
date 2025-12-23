@@ -231,6 +231,15 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       return;
     }
 
+    // Ensure fresh auth session before database operations
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+      if (expiresAt - Date.now() < 5 * 60 * 1000) {
+        await supabase.auth.refreshSession();
+      }
+    }
+
     // Leave previous session if in one
     if (previousSessionId && previousSessionId !== sessionId) {
       await supabase
@@ -249,6 +258,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     });
 
     if (error) {
+      console.error('Join session error:', error);
       if (error.code === '23505') {
         toast.info('You are already in this space');
       } else {

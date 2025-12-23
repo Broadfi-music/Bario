@@ -140,6 +140,15 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       return;
     }
 
+    // Ensure fresh auth session before database operations
+    const { data: { session: authSession } } = await supabase.auth.getSession();
+    if (authSession) {
+      const expiresAt = authSession.expires_at ? authSession.expires_at * 1000 : 0;
+      if (expiresAt - Date.now() < 5 * 60 * 1000) {
+        await supabase.auth.refreshSession();
+      }
+    }
+
     const { data, error } = await supabase
       .from('podcast_sessions')
       .insert({
@@ -152,6 +161,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       .single();
 
     if (error) {
+      console.error('Start session error:', error);
       toast.error('Failed to start session');
       return;
     }
