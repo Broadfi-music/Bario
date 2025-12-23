@@ -298,18 +298,18 @@ const Podcasts = () => {
               <ChevronLeft className="h-5 w-5" />
             </button>
             <Link to="/" className="hidden lg:flex items-center">
-              <span className="text-[#53fc18] font-bold text-xl">PULSE</span>
+              <span className="text-white font-bold text-xl">BARIO</span>
             </Link>
           </div>
 
           {/* Center: Tabs */}
           <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === 'feed') setSelectedSession(null); }} className="w-auto">
             <TabsList className="bg-white/5 h-8">
-              <TabsTrigger value="feed" className="text-xs px-3 data-[state=active]:bg-[#53fc18] data-[state=active]:text-black h-7">
+              <TabsTrigger value="feed" className="text-xs px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7">
                 <Home className="h-3 w-3 mr-1.5" />
-                Home
+                Podcast Feed
               </TabsTrigger>
-              <TabsTrigger value="live" className="text-xs px-3 data-[state=active]:bg-red-500 h-7">
+              <TabsTrigger value="live" className="text-xs px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7">
                 <Radio className="h-3 w-3 mr-1.5" />
                 Live
               </TabsTrigger>
@@ -322,10 +322,10 @@ const Podcasts = () => {
               <Button
                 onClick={() => setShowHostStudio(true)}
                 size="sm"
-                className="bg-[#53fc18] hover:bg-[#53fc18]/90 text-black text-xs h-8 px-3 font-semibold"
+                className="bg-black hover:bg-black/90 text-white text-xs h-8 px-3 font-semibold"
               >
                 <Mic className="h-3 w-3 mr-1.5" />
-                <span className="hidden sm:inline">Go Live</span>
+                <span className="hidden sm:inline text-white">Go Live</span>
               </Button>
             )}
             {user ? (
@@ -334,7 +334,7 @@ const Podcasts = () => {
               </Link>
             ) : (
               <Link to="/auth">
-                <Button size="sm" className="bg-[#53fc18] text-black hover:bg-[#53fc18]/90 text-xs h-8 px-3 font-semibold">
+                <Button size="sm" className="bg-black text-white hover:bg-black/90 text-xs h-8 px-3 font-semibold">
                   Log In
                 </Button>
               </Link>
@@ -421,37 +421,7 @@ const Podcasts = () => {
         session={null}
       />
 
-      {/* Mobile Bottom Navigation - Kick.com style */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#18181b] border-t border-white/5 safe-area-pb">
-        <div className="flex items-center justify-around h-14">
-          <button 
-            onClick={() => setActiveTab('feed')}
-            className={`flex flex-col items-center gap-0.5 px-4 py-2 ${activeTab === 'feed' ? 'text-[#53fc18]' : 'text-white/50'}`}
-          >
-            <Home className="h-5 w-5" />
-            <span className="text-[10px]">Home</span>
-          </button>
-          <button className="flex flex-col items-center gap-0.5 px-4 py-2 text-white/50">
-            <Search className="h-5 w-5" />
-            <span className="text-[10px]">Browse</span>
-          </button>
-          <button 
-            onClick={() => setActiveTab('live')}
-            className={`flex flex-col items-center gap-0.5 px-4 py-2 ${activeTab === 'live' ? 'text-red-500' : 'text-white/50'}`}
-          >
-            <Radio className="h-5 w-5" />
-            <span className="text-[10px]">Live</span>
-          </button>
-          <button className="flex flex-col items-center gap-0.5 px-4 py-2 text-white/50">
-            <Heart className="h-5 w-5" />
-            <span className="text-[10px]">Following</span>
-          </button>
-          <button className="flex flex-col items-center gap-0.5 px-4 py-2 text-white/50">
-            <Menu className="h-5 w-5" />
-            <span className="text-[10px]">More</span>
-          </button>
-        </div>
-      </nav>
+      {/* Mobile Bottom Navigation removed as requested */}
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronLeft, ChevronRight, Users, Play } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, Play, Calendar, Headphones } from 'lucide-react';
 
 interface LiveHost {
   id: string;
@@ -105,12 +105,53 @@ const DEMO_LIVE_HOSTS: LiveHost[] = [
   }
 ];
 
+// Demo schedules
+const DEMO_SCHEDULES = [
+  { id: 'sch-1', host_id: 'host-1', host_name: 'DJ Akademiks', host_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400', title: 'Weekly Hip-Hop Roundup', description: 'Breaking down the week\'s biggest stories', scheduled_at: new Date(Date.now() + 3600000 * 3).toISOString() },
+  { id: 'sch-2', host_id: 'host-2', host_name: 'Metro Boomin', host_avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400', title: 'Production Masterclass', description: 'Learn beat-making techniques', scheduled_at: new Date(Date.now() + 3600000 * 8).toISOString() },
+  { id: 'sch-3', host_id: 'host-3', host_name: 'Eric Nam', host_avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400', title: 'K-Pop Deep Dive', description: 'Exploring the latest K-Pop trends', scheduled_at: new Date(Date.now() + 3600000 * 24).toISOString() },
+  { id: 'sch-4', host_id: 'host-4', host_name: 'J Balvin', host_avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400', title: 'Latin Music Hour', description: 'Celebrating Latin rhythms', scheduled_at: new Date(Date.now() + 3600000 * 48).toISOString() },
+];
+
+// Demo episodes
+const DEMO_EPISODES = [
+  { id: 'ep-1', host_id: 'host-1', host_name: 'DJ Akademiks', host_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400', title: 'The Evolution of Hip-Hop', cover_image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400', play_count: 125000, duration_ms: 3600000 },
+  { id: 'ep-2', host_id: 'host-2', host_name: 'Metro Boomin', host_avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400', title: 'Behind the Beats', cover_image_url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=400', play_count: 98000, duration_ms: 2700000 },
+  { id: 'ep-3', host_id: 'host-3', host_name: 'Eric Nam', host_avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400', title: 'K-Pop Global Impact', cover_image_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400', play_count: 87000, duration_ms: 3200000 },
+  { id: 'ep-4', host_id: 'host-4', host_name: 'J Balvin', host_avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400', title: 'Reggaeton Revolution', cover_image_url: 'https://images.unsplash.com/photo-1504898770365-14faca6a7320?w=400', play_count: 156000, duration_ms: 4200000 },
+  { id: 'ep-5', host_id: 'host-5', host_name: 'Phoebe Bridgers', host_avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400', title: 'Indie Discoveries', cover_image_url: 'https://images.unsplash.com/photo-1485579149621-3123dd979571?w=400', play_count: 67000, duration_ms: 2400000 },
+  { id: 'ep-6', host_id: 'host-1', host_name: 'DJ Akademiks', host_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400', title: 'Industry Secrets', cover_image_url: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400', play_count: 142000, duration_ms: 3900000 },
+];
+
 const formatViewers = (count: number) => {
+  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
   if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
   return count.toString();
 };
 
+const formatDuration = (ms: number) => {
+  const minutes = Math.floor(ms / 60000);
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ${minutes % 60}m`;
+  }
+  return `${minutes}m`;
+};
+
+const formatScheduleTime = (dateStr: string) => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diff = date.getTime() - now.getTime();
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  
+  if (hours < 1) return 'Starting soon';
+  if (hours < 24) return `In ${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `In ${days}d`;
+};
+
 const PodcastFeed = () => {
+  const navigate = useNavigate();
   const [liveHosts, setLiveHosts] = useState<LiveHost[]>(DEMO_LIVE_HOSTS);
   const [heroIndex, setHeroIndex] = useState(0);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -181,12 +222,14 @@ const PodcastFeed = () => {
           <h3 className="text-[10px] font-semibold text-white/50 uppercase mb-2 tracking-wider">Recommended</h3>
           <div className="space-y-0.5">
             {liveHosts.slice(0, 10).map((host) => (
-              <Link
+              <div
                 key={`sidebar-${host.id}`}
-                to={`/podcasts?session=${host.id}`}
-                className="flex items-center gap-2 p-1.5 rounded hover:bg-white/5 transition-colors group"
+                className="flex items-center gap-2 p-1.5 rounded hover:bg-white/5 transition-colors group cursor-pointer"
               >
-                <div className="relative flex-shrink-0">
+                <div 
+                  className="relative flex-shrink-0"
+                  onClick={() => navigate(`/host/${host.host_id}`)}
+                >
                   <div className="w-7 h-7 rounded-full overflow-hidden bg-neutral-700">
                     {host.host_avatar ? (
                       <img src={host.host_avatar} alt="" className="w-full h-full object-cover" />
@@ -196,17 +239,20 @@ const PodcastFeed = () => {
                   </div>
                   <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#18181b]" />
                 </div>
-                <div className="flex-1 min-w-0">
+                <Link 
+                  to={`/podcasts?session=${host.id}`}
+                  className="flex-1 min-w-0"
+                >
                   <p className="text-sm font-medium text-white truncate group-hover:text-[#53fc18]">
                     {host.host_name}
                   </p>
                   <p className="text-xs text-white/40 truncate">{host.category}</p>
-                </div>
+                </Link>
                 <div className="flex items-center gap-1 text-xs text-white/40">
                   <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
                   {formatViewers(host.listener_count)}
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         </div>
@@ -225,7 +271,10 @@ const PodcastFeed = () => {
                 {/* Hero Info */}
                 <div className="flex-1 min-w-0 z-10 order-2 sm:order-1">
                   <div className="flex items-center gap-2 lg:gap-3 mb-2 lg:mb-3">
-                    <div className="w-8 h-8 lg:w-12 lg:h-12 rounded-full overflow-hidden ring-2 ring-[#53fc18]">
+                    <div 
+                      className="w-8 h-8 lg:w-12 lg:h-12 rounded-full overflow-hidden ring-2 ring-[#53fc18] cursor-pointer hover:ring-white transition-colors"
+                      onClick={() => navigate(`/host/${currentHero.host_id}`)}
+                    >
                       {currentHero.host_avatar ? (
                         <img src={currentHero.host_avatar} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -234,7 +283,12 @@ const PodcastFeed = () => {
                     </div>
                     <div>
                       <h2 className="text-sm lg:text-lg font-bold flex items-center gap-2">
-                        {currentHero.host_name}
+                        <span 
+                          className="cursor-pointer hover:text-[#53fc18] transition-colors"
+                          onClick={() => navigate(`/host/${currentHero.host_id}`)}
+                        >
+                          {currentHero.host_name}
+                        </span>
                         <span className="flex items-center gap-1 text-[10px] lg:text-sm font-normal text-white/60">
                           <Users className="h-3 w-3 lg:h-3.5 lg:w-3.5" />
                           {formatViewers(currentHero.listener_count)} listening
@@ -358,7 +412,13 @@ const PodcastFeed = () => {
 
                 {/* Info */}
                 <div className="flex gap-1.5 lg:gap-2">
-                  <div className="w-6 h-6 lg:w-8 lg:h-8 rounded-full overflow-hidden flex-shrink-0 bg-neutral-700">
+                  <div 
+                    className="w-6 h-6 lg:w-8 lg:h-8 rounded-full overflow-hidden flex-shrink-0 bg-neutral-700 cursor-pointer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      navigate(`/host/${host.host_id}`);
+                    }}
+                  >
                     {host.host_avatar ? (
                       <img src={host.host_avatar} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -376,6 +436,74 @@ const PodcastFeed = () => {
                   </div>
                 </div>
               </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Schedules Section */}
+        <section className="px-3 lg:px-6 mt-8">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-[#53fc18]" />
+              Upcoming Schedules
+            </h2>
+            <button className="text-[10px] text-[#53fc18] hover:underline">View all</button>
+          </div>
+          <div className="flex lg:grid lg:grid-cols-4 gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-3 px-3 lg:mx-0 lg:px-0 lg:overflow-visible">
+            {DEMO_SCHEDULES.map((schedule) => (
+              <div 
+                key={schedule.id}
+                className="flex-shrink-0 w-64 lg:w-auto bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-colors cursor-pointer"
+                onClick={() => navigate(`/host/${schedule.host_id}`)}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-neutral-700">
+                    <img src={schedule.host_avatar} alt="" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{schedule.host_name}</p>
+                    <p className="text-[10px] text-[#53fc18]">{formatScheduleTime(schedule.scheduled_at)}</p>
+                  </div>
+                </div>
+                <h3 className="text-sm font-medium line-clamp-1 mb-1">{schedule.title}</h3>
+                <p className="text-[10px] text-white/50 line-clamp-2">{schedule.description}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Episodes Section */}
+        <section className="px-3 lg:px-6 mt-8 mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold flex items-center gap-2">
+              <Headphones className="h-4 w-4 text-[#53fc18]" />
+              Episodes
+            </h2>
+            <button className="text-[10px] text-[#53fc18] hover:underline">View all</button>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+            {DEMO_EPISODES.map((episode) => (
+              <div 
+                key={episode.id}
+                className="group cursor-pointer"
+                onClick={() => navigate(`/host/${episode.host_id}`)}
+              >
+                <div className="relative aspect-square rounded-lg overflow-hidden bg-neutral-800 mb-2">
+                  <img src={episode.cover_image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Play className="h-8 w-8 text-white" fill="white" />
+                  </div>
+                  <div className="absolute bottom-1.5 right-1.5 bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded">
+                    {formatDuration(episode.duration_ms)}
+                  </div>
+                </div>
+                <h3 className="text-xs font-medium line-clamp-2 mb-1 group-hover:text-[#53fc18] transition-colors">{episode.title}</h3>
+                <p className="text-[10px] text-white/50 truncate">{episode.host_name}</p>
+                <p className="text-[10px] text-white/40 flex items-center gap-1 mt-0.5">
+                  <Play className="h-2.5 w-2.5" />
+                  {formatViewers(episode.play_count)}
+                </p>
+              </div>
             ))}
           </div>
         </section>
