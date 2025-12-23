@@ -1,73 +1,107 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Play, Users, Radio } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, Play } from 'lucide-react';
 
 interface LiveHost {
   id: string;
   host_id: string;
   title: string;
+  description?: string;
   listener_count: number;
   host_name?: string;
   host_avatar?: string;
   category?: string;
+  cover_image_url?: string;
 }
 
-// Demo live hosts for the feed
+interface Category {
+  id: string;
+  name: string;
+  image: string;
+  listener_count: number;
+  tags: string[];
+}
+
+// Demo categories matching Kick.com style
+const DEMO_CATEGORIES: Category[] = [
+  { id: 'music', name: 'Music', image: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400', listener_count: 308200, tags: ['Live', 'Casual'] },
+  { id: 'hiphop', name: 'Hip-Hop', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400', listener_count: 149600, tags: ['Beats', 'Culture'] },
+  { id: 'production', name: 'Production', image: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=400', listener_count: 51500, tags: ['Studio'] },
+  { id: 'kpop', name: 'K-Pop', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400', listener_count: 50900, tags: ['Dance', 'Culture'] },
+  { id: 'latin', name: 'Latin', image: 'https://images.unsplash.com/photo-1504898770365-14faca6a7320?w=400', listener_count: 36300, tags: ['Reggaeton', 'Salsa'] },
+  { id: 'indie', name: 'Indie', image: 'https://images.unsplash.com/photo-1485579149621-3123dd979571?w=400', listener_count: 27100, tags: ['Alternative'] },
+  { id: 'irl', name: 'IRL', image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400', listener_count: 24400, tags: ['Podcast', 'Talk'] },
+  { id: 'jazz', name: 'Jazz', image: 'https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=400', listener_count: 21100, tags: ['Smooth', 'Live'] },
+];
+
+// Demo live hosts
 const DEMO_LIVE_HOSTS: LiveHost[] = [
   {
     id: 'demo-1',
     host_id: 'host-1',
     title: 'The Rise of Afrobeats in America',
+    description: 'Discussing how Afrobeats is taking over the US music scene with special guests',
     listener_count: 1247,
     host_name: 'DJ Akademiks',
     host_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-    category: 'Music'
+    category: 'Music',
+    cover_image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800'
   },
   {
     id: 'demo-2',
     host_id: 'host-2',
     title: 'Producer Secrets: Making Hits',
+    description: 'Live production session and Q&A',
     listener_count: 892,
     host_name: 'Metro Boomin',
     host_avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400',
-    category: 'Production'
+    category: 'Production',
+    cover_image_url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800'
   },
   {
     id: 'demo-3',
     host_id: 'host-3',
     title: 'K-Pop Global Domination',
+    description: 'How K-Pop conquered the world',
     listener_count: 2341,
     host_name: 'Eric Nam',
     host_avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
-    category: 'K-Pop'
+    category: 'K-Pop',
+    cover_image_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800'
   },
   {
     id: 'demo-4',
     host_id: 'host-4',
     title: 'Latin Music Revolution',
+    description: 'Reggaeton and its global impact',
     listener_count: 1567,
     host_name: 'J Balvin',
     host_avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400',
-    category: 'Latin'
+    category: 'Latin',
+    cover_image_url: 'https://images.unsplash.com/photo-1504898770365-14faca6a7320?w=800'
   },
   {
     id: 'demo-5',
     host_id: 'host-5',
     title: 'Indie Artist Spotlight',
+    description: 'Underground artists you need to know',
     listener_count: 654,
     host_name: 'Phoebe Bridgers',
     host_avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
-    category: 'Indie'
+    category: 'Indie',
+    cover_image_url: 'https://images.unsplash.com/photo-1485579149621-3123dd979571?w=800'
   },
   {
     id: 'demo-6',
     host_id: 'host-1',
     title: 'Hip-Hop News Daily',
+    description: 'Breaking news and hot takes',
     listener_count: 3200,
     host_name: 'DJ Akademiks',
     host_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-    category: 'Hip-Hop'
+    category: 'Hip-Hop',
+    cover_image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800'
   }
 ];
 
@@ -78,166 +112,273 @@ const formatViewers = (count: number) => {
 
 const PodcastFeed = () => {
   const [liveHosts, setLiveHosts] = useState<LiveHost[]>(DEMO_LIVE_HOSTS);
-  const [categories] = useState(['All', 'Music', 'Hip-Hop', 'K-Pop', 'Latin', 'Indie', 'Production']);
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [heroIndex, setHeroIndex] = useState(0);
+  const heroRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchLiveSessions();
+    
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('podcast-feed-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'podcast_sessions' }, () => {
+        fetchLiveSessions();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchLiveSessions = async () => {
     const { data } = await supabase
       .from('podcast_sessions')
-      .select('*')
+      .select(`
+        *,
+        profiles:host_id (
+          full_name,
+          avatar_url,
+          username
+        )
+      `)
       .eq('status', 'live')
       .order('listener_count', { ascending: false });
 
     if (data && data.length > 0) {
-      setLiveHosts([...DEMO_LIVE_HOSTS, ...data.map(s => ({
+      const realSessions = data.map(s => ({
         id: s.id,
         host_id: s.host_id,
         title: s.title,
+        description: s.description || '',
         listener_count: s.listener_count || 0,
-        host_name: 'Host',
-        category: 'Music'
-      }))]);
+        host_name: (s.profiles as any)?.full_name || (s.profiles as any)?.username || 'Host',
+        host_avatar: (s.profiles as any)?.avatar_url || null,
+        category: 'Music',
+        cover_image_url: s.cover_image_url
+      }));
+      setLiveHosts([...realSessions, ...DEMO_LIVE_HOSTS]);
     }
   };
 
-  const filteredHosts = selectedCategory === 'All' 
-    ? liveHosts 
-    : liveHosts.filter(h => h.category === selectedCategory);
+  const heroHosts = liveHosts.slice(0, 5);
+  const currentHero = heroHosts[heroIndex];
+
+  const nextHero = () => setHeroIndex((prev) => (prev + 1) % heroHosts.length);
+  const prevHero = () => setHeroIndex((prev) => (prev - 1 + heroHosts.length) % heroHosts.length);
+
+  // Auto-rotate hero
+  useEffect(() => {
+    const timer = setInterval(nextHero, 8000);
+    return () => clearInterval(timer);
+  }, [heroHosts.length]);
 
   return (
-    <div className="pt-20 pb-6 px-4">
-      {/* Categories */}
-      <div className="flex gap-2 overflow-x-auto scrollbar-hide mb-6">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-              selectedCategory === cat 
-                ? 'bg-green-500 text-black' 
-                : 'bg-white/10 text-white hover:bg-white/20'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
+    <div className="min-h-screen bg-[#0e0e10] text-white">
+      {/* Sidebar - Desktop Only */}
+      <aside className="hidden lg:flex fixed left-0 top-12 bottom-0 w-60 flex-col bg-[#18181b] border-r border-white/5 overflow-y-auto z-40">
+        <div className="p-4">
+          <h3 className="text-xs font-semibold text-white/50 uppercase mb-3">Recommended</h3>
+          <div className="space-y-1">
+            {liveHosts.slice(0, 10).map((host) => (
+              <Link
+                key={`sidebar-${host.id}`}
+                to={`/podcasts?session=${host.id}`}
+                className="flex items-center gap-2 p-2 rounded hover:bg-white/5 transition-colors group"
+              >
+                <div className="relative flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-neutral-700">
+                    {host.host_avatar ? (
+                      <img src={host.host_avatar} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-green-500 to-teal-500" />
+                    )}
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#18181b]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate group-hover:text-[#53fc18]">
+                    {host.host_name}
+                  </p>
+                  <p className="text-xs text-white/40 truncate">{host.category}</p>
+                </div>
+                <div className="flex items-center gap-1 text-xs text-white/40">
+                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
+                  {formatViewers(host.listener_count)}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </aside>
 
-      {/* Recommended Section */}
-      <div className="mb-8">
-        <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
-          <Radio className="h-5 w-5 text-red-500" />
-          Live Now
-        </h2>
-        
-        {/* Grid - Kick.com style */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredHosts.map((host) => (
-            <Link 
-              key={host.id}
-              to={`/podcast-host/${host.host_id}`}
-              className="group block"
+      {/* Main Content */}
+      <main className="lg:ml-60 pt-14 pb-8">
+        {/* Hero Carousel - Kick.com Style */}
+        {currentHero && (
+          <div className="relative px-4 lg:px-6 mb-6">
+            <div 
+              ref={heroRef}
+              className="relative rounded-lg overflow-hidden bg-gradient-to-r from-purple-900/50 to-pink-900/50"
             >
-              {/* Thumbnail */}
-              <div className="relative aspect-video rounded-lg overflow-hidden bg-neutral-800 mb-2">
-                {/* Gradient background as placeholder */}
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-600/50 via-pink-500/50 to-orange-500/50" />
-                
-                {/* Host avatar as center focus */}
-                {host.host_avatar && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-20 h-20 rounded-full overflow-hidden ring-4 ring-white/20">
-                      <img 
-                        src={host.host_avatar} 
-                        alt={host.host_name}
-                        className="w-full h-full object-cover"
-                      />
+              <div className="flex items-start gap-6 p-4 lg:p-6">
+                {/* Hero Info */}
+                <div className="flex-1 min-w-0 z-10">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-[#53fc18]">
+                      {currentHero.host_avatar ? (
+                        <img src={currentHero.host_avatar} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-green-500 to-teal-500" />
+                      )}
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold flex items-center gap-2">
+                        {currentHero.host_name}
+                        <span className="flex items-center gap-1 text-sm font-normal text-white/60">
+                          <Users className="h-3.5 w-3.5" />
+                          {formatViewers(currentHero.listener_count)} listening
+                        </span>
+                      </h2>
                     </div>
                   </div>
-                )}
-                
-                {/* Live badge */}
-                <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                  LIVE
-                </div>
-                
-                {/* Viewer count */}
-                <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  {formatViewers(host.listener_count)} watching
+                  <h3 className="text-base lg:text-lg font-medium mb-2 line-clamp-2">{currentHero.title}</h3>
+                  <p className="text-sm text-white/60 line-clamp-2 mb-3">{currentHero.description}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs bg-white/10 px-2 py-1 rounded">{currentHero.category}</span>
+                  </div>
                 </div>
 
-                {/* Hover overlay */}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Play className="h-12 w-12 text-white" />
-                </div>
+                {/* Hero Thumbnail */}
+                <Link 
+                  to={`/podcasts?session=${currentHero.id}`}
+                  className="hidden sm:block relative w-48 lg:w-64 aspect-video rounded-lg overflow-hidden group flex-shrink-0"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-600/50 via-pink-500/50 to-orange-500/50" />
+                  {currentHero.cover_image_url && (
+                    <img src={currentHero.cover_image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Play className="h-10 w-10 text-white" fill="white" />
+                  </div>
+                  <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                    LIVE
+                  </div>
+                </Link>
               </div>
 
-              {/* Info */}
-              <div className="flex gap-2">
-                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-neutral-700">
-                  {host.host_avatar ? (
-                    <img src={host.host_avatar} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-green-500 to-teal-500" />
-                  )}
+              {/* Carousel Controls */}
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2">
+                <button onClick={prevHero} className="p-1 rounded-full bg-black/50 hover:bg-black/70">
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <div className="flex gap-1">
+                  {heroHosts.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setHeroIndex(i)}
+                      className={`w-2 h-2 rounded-full transition-colors ${i === heroIndex ? 'bg-white' : 'bg-white/30'}`}
+                    />
+                  ))}
                 </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-medium text-white truncate group-hover:text-green-400 transition-colors">
-                    {host.title}
-                  </h3>
-                  <p className="text-xs text-white/60 truncate">{host.host_name}</p>
-                  {host.category && (
-                    <span className="inline-block mt-1 text-[10px] bg-white/10 text-white/80 px-2 py-0.5 rounded">
+                <button onClick={nextHero} className="p-1 rounded-full bg-black/50 hover:bg-black/70">
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Top Live Categories - Kick.com Style */}
+        <section className="px-4 lg:px-6 mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-bold">Top Live Categories</h2>
+            <button className="text-xs text-[#53fc18] hover:underline">View all</button>
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+            {DEMO_CATEGORIES.map((cat) => (
+              <div key={cat.id} className="group cursor-pointer">
+                <div className="aspect-[3/4] rounded-lg overflow-hidden mb-2 relative">
+                  <img src={cat.image} alt={cat.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                  <div className="absolute bottom-2 left-2 right-2">
+                    <p className="text-xs font-bold text-white truncate">{cat.name}</p>
+                  </div>
+                </div>
+                <p className="text-[10px] text-white/50">{formatViewers(cat.listener_count)} listening</p>
+                <div className="flex gap-1 mt-1 flex-wrap">
+                  {cat.tags.map((tag) => (
+                    <span key={tag} className="text-[9px] bg-white/10 text-white/70 px-1.5 py-0.5 rounded">{tag}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Live Sessions - Category based */}
+        <section className="px-4 lg:px-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-bold">Music</h2>
+            <button className="text-xs text-[#53fc18] hover:underline">View all</button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {liveHosts.map((host) => (
+              <Link 
+                key={host.id}
+                to={`/podcasts?session=${host.id}`}
+                className="group block"
+              >
+                {/* Thumbnail */}
+                <div className="relative aspect-video rounded-lg overflow-hidden bg-neutral-800 mb-2">
+                  {host.cover_image_url ? (
+                    <img src={host.cover_image_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-600/50 via-pink-500/50 to-orange-500/50" />
+                  )}
+                  
+                  {/* Live badge */}
+                  <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                    LIVE
+                  </div>
+                  
+                  {/* Listener count */}
+                  <div className="absolute bottom-2 left-2 bg-black/70 text-white text-[10px] px-2 py-0.5 rounded flex items-center gap-1">
+                    {formatViewers(host.listener_count)} listening
+                  </div>
+
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Play className="h-10 w-10 text-white" fill="white" />
+                  </div>
+                </div>
+
+                {/* Info */}
+                <div className="flex gap-2">
+                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-neutral-700">
+                    {host.host_avatar ? (
+                      <img src={host.host_avatar} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-green-500 to-teal-500" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-medium text-white truncate group-hover:text-[#53fc18] transition-colors">
+                      {host.title}
+                    </h3>
+                    <p className="text-xs text-white/50 truncate">{host.host_name}</p>
+                    <span className="inline-block mt-1 text-[10px] bg-white/10 text-white/70 px-1.5 py-0.5 rounded">
                       {host.category}
                     </span>
-                  )}
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-
-      {/* Recommended Channels */}
-      <div>
-        <h2 className="text-lg font-bold mb-4">Recommended Channels</h2>
-        <div className="space-y-2">
-          {DEMO_LIVE_HOSTS.slice(0, 8).map((host) => (
-            <Link
-              key={`sidebar-${host.id}`}
-              to={`/podcast-host/${host.host_id}`}
-              className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors group"
-            >
-              <div className="relative">
-                <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-700">
-                  {host.host_avatar ? (
-                    <img src={host.host_avatar} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-green-500 to-teal-500" />
-                  )}
-                </div>
-                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full border-2 border-black" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate group-hover:text-green-400 transition-colors">
-                  {host.host_name}
-                </p>
-                <p className="text-xs text-white/40 truncate">{host.category}</p>
-              </div>
-              <div className="flex items-center gap-1 text-xs text-white/40">
-                <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
-                {formatViewers(host.listener_count)}
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      </main>
     </div>
   );
 };
