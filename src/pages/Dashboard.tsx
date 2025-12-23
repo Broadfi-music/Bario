@@ -205,7 +205,7 @@ const Dashboard = () => {
   const topNavItems = [
     { label: 'Heatmap', path: '/global-heatmap' },
     { label: 'Podcast', path: '/podcasts' },
-    { label: 'Radio Station', path: '/radio-stations' },
+    { label: 'Radio', path: '/radio-stations' },
     { label: 'Alpha', path: '/music-alpha' },
   ];
 
@@ -363,15 +363,20 @@ const Dashboard = () => {
                 </Button>
               </Link>
               {topNavItems.map((item) => (
-                <Link key={item.label} to={item.path}>
+                <Link key={item.label} to={item.path} className="hidden sm:block">
                   <Button variant="ghost" className="text-xs h-8 px-3 text-muted-foreground hover:text-foreground">
                     {item.label}
                   </Button>
                 </Link>
               ))}
+              <Link to="/music-alpha" className="sm:hidden">
+                <Button variant="ghost" className="text-xs h-8 px-2 text-muted-foreground hover:text-foreground">
+                  Alpha
+                </Button>
+              </Link>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full h-8 w-8">
+                  <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 flex-shrink-0">
                     <Avatar className="h-7 w-7">
                       <AvatarImage src="/src/assets/track-1.jpeg" />
                       <AvatarFallback>U</AvatarFallback>

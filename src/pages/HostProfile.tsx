@@ -166,7 +166,8 @@ const HostProfile = () => {
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   
-  const isOwner = user?.id === hostId || user?.id === host?.user_id;
+  // isOwner: true if user is viewing their own profile OR viewing a demo host (for testing edit functionality)
+  const isOwner = user?.id === hostId || user?.id === host?.user_id || (user && hostId?.startsWith('host-'));
 
   useEffect(() => {
     if (hostId) {
