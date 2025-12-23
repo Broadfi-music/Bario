@@ -348,27 +348,34 @@ const PodcastFeed = () => {
         <section className="px-3 lg:px-6 mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold">Top Live Categories</h2>
-            <button className="text-[10px] text-[#53fc18] hover:underline">View all</button>
+            <button onClick={() => navigate('/podcasts')} className="text-[10px] text-[#53fc18] hover:underline">View all</button>
           </div>
           {/* Mobile: horizontal scroll, Desktop: grid */}
           <div className="flex lg:grid lg:grid-cols-6 xl:grid-cols-8 gap-2 lg:gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-3 px-3 lg:mx-0 lg:px-0 lg:overflow-visible">
-            {DEMO_CATEGORIES.map((cat) => (
-              <div key={cat.id} className="group cursor-pointer flex-shrink-0 w-24 lg:w-auto">
-                <div className="aspect-[3/4] rounded-lg overflow-hidden mb-1.5 relative">
-                  <img src={cat.image} alt={cat.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                  <div className="absolute bottom-1.5 left-1.5 right-1.5">
-                    <p className="text-[10px] lg:text-xs font-bold text-white truncate">{cat.name}</p>
+            {DEMO_CATEGORIES.map((cat) => {
+              const categorySession = liveHosts.find(h => h.category?.toLowerCase() === cat.name.toLowerCase());
+              return (
+                <div 
+                  key={cat.id} 
+                  className="group cursor-pointer flex-shrink-0 w-24 lg:w-auto"
+                  onClick={() => categorySession ? navigate(`/podcasts?session=${categorySession.id}`) : null}
+                >
+                  <div className="aspect-[3/4] rounded-lg overflow-hidden mb-1.5 relative">
+                    <img src={cat.image} alt={cat.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                    <div className="absolute bottom-1.5 left-1.5 right-1.5">
+                      <p className="text-[10px] lg:text-xs font-bold text-white truncate">{cat.name}</p>
+                    </div>
+                  </div>
+                  <p className="text-[9px] lg:text-[10px] text-white/50 hidden lg:block">{formatViewers(cat.listener_count)} listening</p>
+                  <div className="hidden lg:flex gap-1 mt-1 flex-wrap">
+                    {cat.tags.map((tag) => (
+                      <span key={tag} className="text-[8px] lg:text-[9px] bg-white/10 text-white/70 px-1 py-0.5 rounded">{tag}</span>
+                    ))}
                   </div>
                 </div>
-                <p className="text-[9px] lg:text-[10px] text-white/50 hidden lg:block">{formatViewers(cat.listener_count)} listening</p>
-                <div className="hidden lg:flex gap-1 mt-1 flex-wrap">
-                  {cat.tags.map((tag) => (
-                    <span key={tag} className="text-[8px] lg:text-[9px] bg-white/10 text-white/70 px-1 py-0.5 rounded">{tag}</span>
-                  ))}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
@@ -376,7 +383,7 @@ const PodcastFeed = () => {
         <section className="px-3 lg:px-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold">Music</h2>
-            <button className="text-[10px] text-[#53fc18] hover:underline">View all</button>
+            <button onClick={() => navigate('/podcasts')} className="text-[10px] text-[#53fc18] hover:underline">View all</button>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 lg:gap-4">
             {liveHosts.map((host) => (

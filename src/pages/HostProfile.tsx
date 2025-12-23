@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Users, Play, Calendar, Radio, Heart, Share2 } from 'lucide-react';
+import { ChevronLeft, Users, Play, Calendar, Radio, Heart, Share2, Edit, MoreVertical, Pause } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { EditProfileModal } from '@/components/podcast/EditProfileModal';
+import { EditEpisodeModal } from '@/components/podcast/EditEpisodeModal';
+import { EditScheduleModal } from '@/components/podcast/EditScheduleModal';
+import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
 
 interface HostData {
   id: string;
@@ -24,6 +29,7 @@ interface Episode {
   title: string;
   description: string | null;
   cover_image_url: string | null;
+  audio_url: string | null;
   duration_ms: number | null;
   play_count: number;
   created_at: string;
@@ -96,10 +102,10 @@ const DEMO_HOSTS: Record<string, HostData> = {
 };
 
 const DEMO_EPISODES: Episode[] = [
-  { id: 'ep-1', title: 'The Evolution of Hip-Hop', description: 'A deep dive into how hip-hop has changed over the decades', cover_image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400', duration_ms: 3600000, play_count: 125000, created_at: '2024-01-15' },
-  { id: 'ep-2', title: 'Industry Secrets Revealed', description: 'What they don\'t tell you about the music business', cover_image_url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=400', duration_ms: 2700000, play_count: 98000, created_at: '2024-01-10' },
-  { id: 'ep-3', title: 'Behind the Hits', description: 'The making of chart-topping songs', cover_image_url: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400', duration_ms: 3200000, play_count: 87000, created_at: '2024-01-05' },
-  { id: 'ep-4', title: 'Artist Interviews Vol. 1', description: 'Exclusive conversations with rising artists', cover_image_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400', duration_ms: 4200000, play_count: 156000, created_at: '2024-01-01' },
+  { id: 'ep-1', title: 'The Evolution of Hip-Hop', description: 'A deep dive into how hip-hop has changed over the decades', cover_image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400', audio_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', duration_ms: 3600000, play_count: 125000, created_at: '2024-01-15' },
+  { id: 'ep-2', title: 'Industry Secrets Revealed', description: 'What they don\'t tell you about the music business', cover_image_url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=400', audio_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', duration_ms: 2700000, play_count: 98000, created_at: '2024-01-10' },
+  { id: 'ep-3', title: 'Behind the Hits', description: 'The making of chart-topping songs', cover_image_url: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400', audio_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', duration_ms: 3200000, play_count: 87000, created_at: '2024-01-05' },
+  { id: 'ep-4', title: 'Artist Interviews Vol. 1', description: 'Exclusive conversations with rising artists', cover_image_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400', audio_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3', duration_ms: 4200000, play_count: 156000, created_at: '2024-01-01' },
 ];
 
 const DEMO_SCHEDULES: Schedule[] = [
@@ -144,18 +150,65 @@ const HostProfile = () => {
   const { hostId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { playTrack, currentTrack, isPlaying, pauseTrack, resumeTrack } = useAudioPlayer();
   const [host, setHost] = useState<HostData | null>(null);
   const [episodes, setEpisodes] = useState<Episode[]>(DEMO_EPISODES);
   const [schedules, setSchedules] = useState<Schedule[]>(DEMO_SCHEDULES);
   const [isFollowing, setIsFollowing] = useState(false);
   const [activeTab, setActiveTab] = useState('episodes');
   const [loading, setLoading] = useState(true);
+  const [followerCount, setFollowerCount] = useState(0);
+  
+  // Edit modals
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showEditEpisode, setShowEditEpisode] = useState(false);
+  const [showEditSchedule, setShowEditSchedule] = useState(false);
+  const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
+  const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
+  
+  const isOwner = user?.id === hostId || user?.id === host?.user_id;
 
   useEffect(() => {
     if (hostId) {
       fetchHostData();
+      setupRealtimeSubscription();
     }
   }, [hostId]);
+
+  const setupRealtimeSubscription = () => {
+    // Subscribe to real-time follower count updates
+    const channel = supabase
+      .channel(`host-followers-${hostId}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'follows',
+        filter: `following_id=eq.${hostId}`
+      }, () => {
+        fetchFollowerCount();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
+  const fetchFollowerCount = async () => {
+    if (!hostId) return;
+    
+    const { count } = await supabase
+      .from('follows')
+      .select('*', { count: 'exact', head: true })
+      .eq('following_id', hostId);
+    
+    if (count !== null) {
+      setFollowerCount(count);
+      if (host) {
+        setHost(prev => prev ? { ...prev, follower_count: count } : null);
+      }
+    }
+  };
 
   const fetchHostData = async () => {
     setLoading(true);
@@ -163,6 +216,7 @@ const HostProfile = () => {
     // Check demo hosts first
     if (hostId && DEMO_HOSTS[hostId]) {
       setHost(DEMO_HOSTS[hostId]);
+      setFollowerCount(DEMO_HOSTS[hostId].follower_count);
       setLoading(false);
       return;
     }
@@ -180,6 +234,8 @@ const HostProfile = () => {
         .from('follows')
         .select('*', { count: 'exact', head: true })
         .eq('following_id', hostId);
+
+      setFollowerCount(count || 0);
 
       // Check if current user follows
       if (user) {
@@ -236,6 +292,7 @@ const HostProfile = () => {
       });
     } else if (hostId && DEMO_HOSTS[hostId]) {
       setHost(DEMO_HOSTS[hostId]);
+      setFollowerCount(DEMO_HOSTS[hostId].follower_count);
     }
     
     setLoading(false);
@@ -256,6 +313,7 @@ const HostProfile = () => {
         .eq('follower_id', user.id)
         .eq('following_id', host.user_id);
       setIsFollowing(false);
+      setFollowerCount(prev => Math.max(0, prev - 1));
       toast.success('Unfollowed');
     } else {
       await supabase
@@ -265,6 +323,7 @@ const HostProfile = () => {
           following_id: host.user_id
         });
       setIsFollowing(true);
+      setFollowerCount(prev => prev + 1);
       toast.success('Following');
     }
   };
@@ -278,6 +337,31 @@ const HostProfile = () => {
     if (host?.current_session_id) {
       navigate(`/podcasts?session=${host.current_session_id}`);
     }
+  };
+
+  const handlePlayEpisode = (episode: Episode) => {
+    if (currentTrack?.id === episode.id) {
+      isPlaying ? pauseTrack() : resumeTrack();
+    } else if (episode.audio_url) {
+      playTrack({
+        id: episode.id,
+        title: episode.title,
+        artist: host?.full_name || 'Host',
+        coverUrl: episode.cover_image_url || '',
+        audioUrl: episode.audio_url,
+        type: 'podcast'
+      });
+    }
+  };
+
+  const openEditEpisode = (episode: Episode) => {
+    setSelectedEpisode(episode);
+    setShowEditEpisode(true);
+  };
+
+  const openEditSchedule = (schedule: Schedule) => {
+    setSelectedSchedule(schedule);
+    setShowEditSchedule(true);
   };
 
   if (loading) {
@@ -353,13 +437,13 @@ const HostProfile = () => {
           <div className="flex items-center gap-6 mb-4">
             <div className="flex items-center gap-1.5">
               <Users className="h-4 w-4 text-white/50" />
-              <span className="font-semibold">{formatFollowers(host.follower_count)}</span>
+              <span className="font-semibold">{formatFollowers(followerCount)}</span>
               <span className="text-white/50 text-sm">Followers</span>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-6 flex-wrap">
             {host.is_live && (
               <Button 
                 onClick={goToLiveSession}
@@ -377,6 +461,16 @@ const HostProfile = () => {
               <Heart className={`h-4 w-4 mr-2 ${isFollowing ? 'fill-[#53fc18]' : ''}`} />
               {isFollowing ? 'Following' : 'Follow'}
             </Button>
+            {isOwner && (
+              <Button
+                onClick={() => setShowEditProfile(true)}
+                variant="outline"
+                className="border-white/20 text-white hover:bg-white/10"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Profile
+              </Button>
+            )}
           </div>
         </div>
 
@@ -399,35 +493,71 @@ const HostProfile = () => {
 
           <TabsContent value="episodes" className="mt-4">
             <div className="space-y-3">
-              {episodes.map((episode) => (
-                <Link 
-                  key={episode.id}
-                  to={`/podcasts?session=${episode.id}`}
-                  className="flex gap-3 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
-                >
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-800">
-                    {episode.cover_image_url ? (
-                      <img src={episode.cover_image_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-sm sm:text-base line-clamp-2 mb-1">{episode.title}</h3>
-                    {episode.description && (
-                      <p className="text-white/50 text-xs sm:text-sm line-clamp-2 mb-2">{episode.description}</p>
-                    )}
-                    <div className="flex items-center gap-3 text-white/40 text-xs">
-                      <span>{formatDate(episode.created_at)}</span>
-                      <span>{formatDuration(episode.duration_ms)}</span>
-                      <span className="flex items-center gap-1">
-                        <Play className="h-3 w-3" />
-                        {episode.play_count.toLocaleString()}
-                      </span>
+              {episodes.map((episode) => {
+                const isCurrentlyPlaying = currentTrack?.id === episode.id && isPlaying;
+                
+                return (
+                  <div 
+                    key={episode.id}
+                    className="flex gap-3 p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors"
+                  >
+                    <div 
+                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-800 relative cursor-pointer group"
+                      onClick={() => handlePlayEpisode(episode)}
+                    >
+                      {episode.cover_image_url ? (
+                        <img src={episode.cover_image_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500" />
+                      )}
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        {isCurrentlyPlaying ? (
+                          <Pause className="h-8 w-8 text-white" fill="white" />
+                        ) : (
+                          <Play className="h-8 w-8 text-white" fill="white" />
+                        )}
+                      </div>
+                      {isCurrentlyPlaying && (
+                        <div className="absolute bottom-1 left-1 bg-[#53fc18] text-black text-[8px] font-bold px-1.5 py-0.5 rounded">
+                          NOW PLAYING
+                        </div>
+                      )}
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-sm sm:text-base line-clamp-2 mb-1">{episode.title}</h3>
+                      {episode.description && (
+                        <p className="text-white/50 text-xs sm:text-sm line-clamp-2 mb-2">{episode.description}</p>
+                      )}
+                      <div className="flex items-center gap-3 text-white/40 text-xs">
+                        <span>{formatDate(episode.created_at)}</span>
+                        <span>{formatDuration(episode.duration_ms)}</span>
+                        <span className="flex items-center gap-1">
+                          <Play className="h-3 w-3" />
+                          {episode.play_count.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    {isOwner && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-white">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-[#18181b] border-white/10">
+                          <DropdownMenuItem 
+                            onClick={() => openEditEpisode(episode)}
+                            className="text-white hover:bg-white/10"
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit Episode
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
-                </Link>
-              ))}
+                );
+              })}
             </div>
           </TabsContent>
 
@@ -451,6 +581,24 @@ const HostProfile = () => {
                       {formatScheduleTime(schedule.scheduled_at)}
                     </div>
                   </div>
+                  {isOwner && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-white">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="bg-[#18181b] border-white/10">
+                        <DropdownMenuItem 
+                          onClick={() => openEditSchedule(schedule)}
+                          className="text-white hover:bg-white/10"
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Schedule
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
               ))}
               {schedules.length === 0 && (
@@ -462,6 +610,44 @@ const HostProfile = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Edit Profile Modal */}
+      {host && (
+        <EditProfileModal
+          open={showEditProfile}
+          onOpenChange={setShowEditProfile}
+          profile={{
+            user_id: host.user_id,
+            full_name: host.full_name,
+            username: host.username,
+            bio: host.bio,
+            avatar_url: host.avatar_url
+          }}
+          onUpdate={fetchHostData}
+        />
+      )}
+
+      {/* Edit Episode Modal */}
+      {selectedEpisode && (
+        <EditEpisodeModal
+          open={showEditEpisode}
+          onOpenChange={setShowEditEpisode}
+          episode={selectedEpisode}
+          userId={host?.user_id || ''}
+          onUpdate={fetchHostData}
+        />
+      )}
+
+      {/* Edit Schedule Modal */}
+      {selectedSchedule && (
+        <EditScheduleModal
+          open={showEditSchedule}
+          onOpenChange={setShowEditSchedule}
+          schedule={selectedSchedule}
+          userId={host?.user_id || ''}
+          onUpdate={fetchHostData}
+        />
+      )}
     </div>
   );
 };
