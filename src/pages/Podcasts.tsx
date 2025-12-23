@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  ChevronLeft, Mic, Radio, Headphones
-} from 'lucide-react';
+import { ChevronLeft, Mic, Radio, Headphones } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import TwitchComments from '@/components/podcast/TwitchComments';
@@ -159,11 +157,8 @@ const Podcasts = () => {
     const diff = touchStart - touchEnd;
 
     if (Math.abs(diff) > 50) {
-      if (diff > 0) {
-        goToNext();
-      } else {
-        goToPrev();
-      }
+      if (diff > 0) goToNext();
+      else goToPrev();
     }
   };
 
@@ -179,11 +174,8 @@ const Podcasts = () => {
 
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
-    if (e.deltaY > 30) {
-      goToNext();
-    } else if (e.deltaY < -30) {
-      goToPrev();
-    }
+    if (e.deltaY > 30) goToNext();
+    else if (e.deltaY < -30) goToPrev();
   }, [goToNext, goToPrev]);
 
   useEffect(() => {
@@ -202,47 +194,47 @@ const Podcasts = () => {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Header */}
+      {/* Header - Compact for mobile */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black via-black/80 to-transparent">
-        <div className="flex items-center justify-between h-14 px-4">
-          <button onClick={() => navigate('/')} className="flex items-center gap-1.5 text-white/60 hover:text-white">
+        <div className="flex items-center justify-between h-12 px-2 sm:px-4">
+          <button onClick={() => navigate('/')} className="flex items-center gap-1 text-white/60 hover:text-white">
             <ChevronLeft className="h-4 w-4" />
-            <span className="text-xs">Back</span>
+            <span className="text-[10px] sm:text-xs">Back</span>
           </button>
           
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
-            <TabsList className="bg-white/10 h-8">
-              <TabsTrigger value="live" className="text-xs px-4 data-[state=active]:bg-red-500">
-                <Radio className="h-3 w-3 mr-1" />
+            <TabsList className="bg-white/10 h-7">
+              <TabsTrigger value="live" className="text-[10px] px-2 sm:px-3 data-[state=active]:bg-red-500 h-6">
+                <Radio className="h-2.5 w-2.5 mr-1" />
                 Live
               </TabsTrigger>
-              <TabsTrigger value="feed" className="text-xs px-4">
-                <Headphones className="h-3 w-3 mr-1" />
-                Podcast Feed
+              <TabsTrigger value="feed" className="text-[10px] px-2 sm:px-3 h-6">
+                <Headphones className="h-2.5 w-2.5 mr-1" />
+                Feed
               </TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {user && (
               <Button
                 onClick={() => setShowHostStudio(true)}
                 size="sm"
-                className="bg-red-600 hover:bg-red-500 text-xs h-8"
+                className="bg-red-600 hover:bg-red-500 text-[10px] h-7 px-2"
               >
-                <Mic className="h-3 w-3 mr-1" />
-                Go Live
+                <Mic className="h-2.5 w-2.5 sm:mr-1" />
+                <span className="hidden sm:inline">Go Live</span>
               </Button>
             )}
             {user ? (
               <Link to="/dashboard">
-                <Button size="sm" variant="outline" className="text-xs h-8 border-white/20">
+                <Button size="sm" variant="outline" className="text-[10px] h-7 px-2 border-white/20">
                   Dashboard
                 </Button>
               </Link>
             ) : (
               <Link to="/auth">
-                <Button size="sm" className="bg-white text-black hover:bg-white/90 text-xs h-8">
+                <Button size="sm" className="bg-white text-black hover:bg-white/90 text-[10px] h-7 px-2">
                   Log In
                 </Button>
               </Link>
@@ -252,7 +244,7 @@ const Podcasts = () => {
       </header>
 
       {activeTab === 'live' ? (
-        /* TikTok-style Vertical Feed - Each session has its own controls */
+        /* TikTok-style Vertical Feed */
         <div 
           ref={containerRef}
           className="h-[100dvh] overflow-hidden"
@@ -262,7 +254,7 @@ const Podcasts = () => {
           {currentPodcast && (
             <div className="relative h-full w-full flex flex-col bg-black">
               {/* Full height session with self-contained controls */}
-              <div className="flex-1 min-h-0 pt-14 flex flex-col">
+              <div className="flex-1 min-h-0 pt-12 flex flex-col">
                 {/* Participants section */}
                 <div className="flex-1 min-h-0 overflow-hidden">
                   <SpaceParticipants 
@@ -275,30 +267,32 @@ const Podcasts = () => {
                   />
                 </div>
 
-                {/* Comments section with controls - part of each session */}
+                {/* Comments section with controls */}
                 <div className="shrink-0">
                   <TwitchComments 
                     sessionId={currentPodcast.id}
                     hostId={currentPodcast.host_id}
                     onSendGift={() => handleOpenGift(currentPodcast.id, currentPodcast.host_id)}
+                    sessionTitle={currentPodcast.title}
+                    isHost={user?.id === currentPodcast.host_id}
                   />
                 </div>
               </div>
 
               {/* Navigation Indicators */}
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-20">
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 z-20">
                 {podcasts.map((_, i) => (
                   <div 
                     key={i}
-                    className={`w-1 rounded-full transition-all ${
-                      i === currentIndex ? 'h-4 bg-white' : 'h-1.5 bg-white/30'
+                    className={`w-0.5 rounded-full transition-all ${
+                      i === currentIndex ? 'h-3 bg-white' : 'h-1 bg-white/30'
                     }`}
                   />
                 ))}
               </div>
 
               {/* Swipe hint */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-white/40 z-10">
+              <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[8px] text-white/40 z-10">
                 Swipe for more
               </div>
             </div>
