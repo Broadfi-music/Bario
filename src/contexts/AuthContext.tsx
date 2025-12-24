@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signUp = async (email: string, password: string, fullName: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -86,6 +86,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     });
+    
+    // Auto-create profile if user was created successfully
+    if (data?.user && !error) {
+      // Use setTimeout to defer the profile creation (avoid auth deadlock)
+      setTimeout(async () => {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            user_id: data.user!.id,
+            full_name: fullName,
+            username: email.split('@')[0],
+          }, { onConflict: 'user_id' });
+        
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+        }
+      }, 0);
+    }
+    
     return { error: error as Error | null };
   };
 

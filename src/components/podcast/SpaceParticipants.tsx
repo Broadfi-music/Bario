@@ -367,9 +367,9 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
         <p className="text-xs text-white/40">{listenerCount} listeners • {participants.length}/{MAX_PARTICIPANTS} capacity</p>
       </div>
 
-      {/* Participants Grid - Compact Twitter Space Style */}
-      <div className="flex-1 overflow-y-auto min-h-0">
-        <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 gap-2">
+      {/* Participants Grid - Compact Twitter Space Style with normal scroll */}
+      <div className="flex-1 overflow-y-auto min-h-0 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
+        <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 gap-2 pb-4">
           {displayParticipants.map((p) => {
             const isHostRole = p.role === 'host';
             const isCoHost = p.role === 'co_host';

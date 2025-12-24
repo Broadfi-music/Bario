@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 import { 
   Mic, MicOff, Radio, Users, Music, Share2, 
   HandMetal, Volume2, X, Plus, MessageSquare, Play, Pause,
@@ -119,6 +120,15 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     if (!sessionId && !session?.id) return;
     const sid = sessionId || session?.id;
     
+    // Skip DB calls for demo sessions
+    if (sid && isDemoSession(sid)) {
+      return;
+    }
+
+    // Ensure fresh session before DB call
+    const authSession = await getFreshSession();
+    if (!authSession) return;
+    
     const { data: participants } = await supabase
       .from('podcast_participants')
       .select('*')
@@ -140,13 +150,11 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       return;
     }
 
-    // Ensure fresh auth session before database operations
-    const { data: { session: authSession } } = await supabase.auth.getSession();
-    if (authSession) {
-      const expiresAt = authSession.expires_at ? authSession.expires_at * 1000 : 0;
-      if (expiresAt - Date.now() < 5 * 60 * 1000) {
-        await supabase.auth.refreshSession();
-      }
+    // Ensure fresh session before database operations
+    const authSession = await getFreshSession();
+    if (!authSession) {
+      toast.error('Session expired. Please sign in again.');
+      return;
     }
 
     const { data, error } = await supabase
@@ -235,6 +243,10 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
   };
 
   const promoteSpeaker = async (participantId: string) => {
+    // Ensure fresh session
+    const authSession = await getFreshSession();
+    if (!authSession) return;
+
     await supabase
       .from('podcast_participants')
       .update({ role: 'speaker', hand_raised: false, is_muted: false })
