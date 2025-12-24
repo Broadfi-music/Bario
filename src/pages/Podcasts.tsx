@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, Mic, Radio, Headphones, Home, Search, Heart, Menu } from 'lucide-react';
+import { ChevronLeft, Mic, Radio, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +11,7 @@ import GiftModal from '@/components/podcast/GiftModal';
 import HostStudio from '@/components/podcast/HostStudio';
 import PodcastFeed from '@/components/podcast/PodcastFeed';
 import { toast } from 'sonner';
+import { getFreshSession, isDemoSession, isValidUUID } from '@/lib/authUtils';
 
 interface PodcastSession {
   id: string;
@@ -130,20 +131,40 @@ const Podcasts = () => {
   }, [searchParams, liveSessions]);
 
   const fetchSessionById = async (sessionId: string) => {
+    // Handle demo sessions locally
+    if (isDemoSession(sessionId)) {
+      const demoSession = DEMO_PODCASTS.find(p => p.id === sessionId);
+      if (demoSession) {
+        setSelectedSession(demoSession);
+        setActiveTab('live');
+      }
+      return;
+    }
+
+    // Only query DB for valid UUIDs
+    if (!isValidUUID(sessionId)) {
+      return;
+    }
+
+    // Query session and profile separately to avoid foreign key issues
     const { data } = await supabase
       .from('podcast_sessions')
-      .select(`
-        *,
-        profiles:host_id (
-          full_name,
-          avatar_url,
-          username
-        )
-      `)
+      .select('*')
       .eq('id', sessionId)
       .single();
 
     if (data) {
+      // Fetch profile separately only if host_id is a valid UUID
+      let hostProfile = null;
+      if (isValidUUID(data.host_id)) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, avatar_url, username')
+          .eq('user_id', data.host_id)
+          .single();
+        hostProfile = profile;
+      }
+
       const session: PodcastSession = {
         id: data.id,
         host_id: data.host_id,
@@ -153,8 +174,8 @@ const Podcasts = () => {
         status: data.status as 'scheduled' | 'live' | 'ended',
         listener_count: data.listener_count || 0,
         started_at: data.started_at,
-        host_name: (data.profiles as any)?.full_name || (data.profiles as any)?.username || 'Host',
-        host_avatar: (data.profiles as any)?.avatar_url || null,
+        host_name: hostProfile?.full_name || hostProfile?.username || 'Host',
+        host_avatar: hostProfile?.avatar_url || null,
         category: 'Music'
       };
       setSelectedSession(session);
@@ -191,32 +212,52 @@ const Podcasts = () => {
   }, []);
 
   const fetchLiveSessions = async () => {
-    const { data } = await supabase
+    // Fetch sessions first
+    const { data: sessions } = await supabase
       .from('podcast_sessions')
-      .select(`
-        *,
-        profiles:host_id (
-          full_name,
-          avatar_url,
-          username
-        )
-      `)
+      .select('*')
       .eq('status', 'live')
       .order('listener_count', { ascending: false });
     
-    if (data) setLiveSessions(data.map(s => ({
-      id: s.id,
-      host_id: s.host_id,
-      title: s.title,
-      description: s.description,
-      cover_image_url: s.cover_image_url,
-      status: s.status as 'scheduled' | 'live' | 'ended',
-      listener_count: s.listener_count || 0,
-      started_at: s.started_at,
-      host_name: (s.profiles as any)?.full_name || (s.profiles as any)?.username || 'Host',
-      host_avatar: (s.profiles as any)?.avatar_url || null,
-      category: 'Music'
-    })));
+    if (!sessions) return;
+
+    // Fetch profiles separately for valid host IDs
+    const validHostIds = sessions.filter(s => isValidUUID(s.host_id)).map(s => s.host_id);
+    
+    interface ProfileInfo {
+      user_id: string;
+      full_name: string | null;
+      avatar_url: string | null;
+      username: string | null;
+    }
+    
+    let profiles: ProfileInfo[] = [];
+    if (validHostIds.length > 0) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url, username')
+        .in('user_id', validHostIds);
+      profiles = data || [];
+    }
+
+    const profileMap = new Map<string, ProfileInfo>(profiles.map(p => [p.user_id, p]));
+    
+    setLiveSessions(sessions.map(s => {
+      const profile = profileMap.get(s.host_id);
+      return {
+        id: s.id,
+        host_id: s.host_id,
+        title: s.title,
+        description: s.description,
+        cover_image_url: s.cover_image_url,
+        status: s.status as 'scheduled' | 'live' | 'ended',
+        listener_count: s.listener_count || 0,
+        started_at: s.started_at,
+        host_name: profile?.full_name || profile?.username || 'Host',
+        host_avatar: profile?.avatar_url || null,
+        category: 'Music'
+      };
+    }));
   };
 
   const goToNext = useCallback(() => {
@@ -376,24 +417,6 @@ const Podcasts = () => {
                   isHost={user?.id === currentPodcast.host_id}
                 />
               </div>
-            </div>
-
-            {/* Navigation Indicators */}
-            <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex flex-col gap-1 z-20">
-              {podcasts.slice(0, 10).map((p, i) => (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    setCurrentIndex(i);
-                    setSelectedSession(p);
-                  }}
-                  className={`w-1 rounded-full transition-all ${
-                    (selectedSession?.id === p.id || (!selectedSession && i === currentIndex)) 
-                      ? 'h-4 bg-[#53fc18]' 
-                      : 'h-1.5 bg-white/30 hover:bg-white/50'
-                  }`}
-                />
-              ))}
             </div>
 
             {/* Swipe hint */}

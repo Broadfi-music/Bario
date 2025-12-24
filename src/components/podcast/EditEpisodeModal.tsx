@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,19 +19,29 @@ interface Episode {
 interface EditEpisodeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  episode: Episode;
+  episode: Episode | null; // null for create mode
   userId: string;
   onUpdate: () => void;
 }
 
 export const EditEpisodeModal = ({ open, onOpenChange, episode, userId, onUpdate }: EditEpisodeModalProps) => {
-  const [title, setTitle] = useState(episode.title);
-  const [description, setDescription] = useState(episode.description || '');
-  const [coverUrl, setCoverUrl] = useState(episode.cover_image_url || '');
+  const isCreateMode = !episode;
+  const [title, setTitle] = useState(episode?.title || '');
+  const [description, setDescription] = useState(episode?.description || '');
+  const [coverUrl, setCoverUrl] = useState(episode?.cover_image_url || '');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   
   const coverInputRef = useRef<HTMLInputElement>(null);
+
+  // Reset form when modal opens/closes or episode changes
+  useEffect(() => {
+    if (open) {
+      setTitle(episode?.title || '');
+      setDescription(episode?.description || '');
+      setCoverUrl(episode?.cover_image_url || '');
+    }
+  }, [open, episode]);
 
   const handleCoverChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -40,7 +50,7 @@ export const EditEpisodeModal = ({ open, onOpenChange, episode, userId, onUpdate
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `episode-${episode.id}-${Date.now()}.${fileExt}`;
+      const fileName = `episode-${Date.now()}.${fileExt}`;
       const filePath = `episodes/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -63,36 +73,58 @@ export const EditEpisodeModal = ({ open, onOpenChange, episode, userId, onUpdate
   };
 
   const handleSave = async () => {
+    if (!title.trim()) {
+      toast.error('Please enter a title');
+      return;
+    }
+
     setSaving(true);
     
     try {
-      const { error } = await supabase
-        .from('podcast_episodes')
-        .update({
-          title,
-          description,
-          cover_image_url: coverUrl
-        })
-        .eq('id', episode.id);
+      if (isCreateMode) {
+        // Create new episode
+        const { error } = await supabase
+          .from('podcast_episodes')
+          .insert({
+            host_id: userId,
+            title,
+            description,
+            cover_image_url: coverUrl || null
+          });
 
-      if (error) throw error;
+        if (error) throw error;
+        toast.success('Episode created successfully');
+      } else {
+        // Update existing episode
+        const { error } = await supabase
+          .from('podcast_episodes')
+          .update({
+            title,
+            description,
+            cover_image_url: coverUrl
+          })
+          .eq('id', episode.id);
 
-      toast.success('Episode updated successfully');
+        if (error) throw error;
+        toast.success('Episode updated successfully');
+      }
+      
       onUpdate();
       onOpenChange(false);
     } catch (error) {
-      console.error('Error updating episode:', error);
-      toast.error('Failed to update episode');
+      console.error('Error saving episode:', error);
+      toast.error(isCreateMode ? 'Failed to create episode' : 'Failed to update episode');
     } finally {
       setSaving(false);
     }
   };
 
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-[#18181b] border-white/10 text-white max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-white">Edit Episode</DialogTitle>
+          <DialogTitle className="text-white">{isCreateMode ? 'Create Episode' : 'Edit Episode'}</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
@@ -165,7 +197,7 @@ export const EditEpisodeModal = ({ open, onOpenChange, episode, userId, onUpdate
               disabled={saving}
               className="bg-[#53fc18] text-black hover:bg-[#53fc18]/90"
             >
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? 'Saving...' : isCreateMode ? 'Create Episode' : 'Save Changes'}
             </Button>
           </div>
         </div>

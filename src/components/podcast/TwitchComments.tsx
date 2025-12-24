@@ -154,7 +154,7 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
   return (
     <div className="flex flex-col bg-gradient-to-t from-black via-black/95 to-transparent">
       {/* Comments List */}
-      <div className="h-20 overflow-y-auto px-3 py-1 scrollbar-hide">
+      <div className="h-28 overflow-y-auto px-3 py-1 scrollbar-hide">
         {comments.map((comment) => (
           <div key={comment.id} className="animate-fade-in py-0.5">
             {comment.is_emoji ? (
@@ -189,27 +189,38 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
         </div>
       )}
 
-      {/* Input Area */}
-      <form onSubmit={handleSubmit} className="flex items-center gap-0 px-1 py-1 bg-black">
-        <div className="flex items-center gap-0">
+      {/* Input Area with Request/Join buttons */}
+      <form onSubmit={handleSubmit} className="flex items-center gap-1.5 px-2 py-2 bg-black">
+        {/* Message Input with Emoji Icon inside */}
+        <div className="flex-1 min-w-0 relative">
+          <Input
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder={user ? "Message..." : "Login to chat"}
+            disabled={!user}
+            className="w-full bg-white/10 border-white/10 text-white placeholder:text-white/40 text-sm h-10 pl-10 pr-3"
+          />
           <Button
             type="button"
             size="icon"
             variant="ghost"
             onClick={() => setShowEmojis(!showEmojis)}
-            className="text-white/60 hover:text-white h-6 w-6 shrink-0"
+            className="absolute left-1 top-1/2 -translate-y-1/2 text-white/60 hover:text-white h-8 w-8"
           >
-            <Smile className="h-3 w-3" />
+            <Smile className="h-4 w-4" />
           </Button>
-
+        </div>
+        
+        {/* Action buttons in a row */}
+        <div className="flex items-center gap-1 shrink-0">
           <Button
             type="button"
             size="icon"
             variant="ghost"
             onClick={() => setShowShareModal(true)}
-            className="text-white/60 hover:text-white h-6 w-6 shrink-0"
+            className="text-white/60 hover:text-white h-8 w-8"
           >
-            <Share2 className="h-3 w-3" />
+            <Share2 className="h-4 w-4" />
           </Button>
 
           <Button
@@ -217,9 +228,9 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
             size="icon"
             variant="ghost"
             onClick={onSendGift}
-            className="text-yellow-400 hover:text-yellow-300 h-6 w-6 shrink-0"
+            className="text-yellow-400 hover:text-yellow-300 h-8 w-8"
           >
-            <Gift className="h-3 w-3" />
+            <Gift className="h-4 w-4" />
           </Button>
 
           {isHost && (
@@ -228,29 +239,21 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
               size="icon"
               variant="ghost"
               onClick={() => setShowParticipantModal(true)}
-              className="text-purple-400 hover:text-purple-300 h-6 w-6 shrink-0"
+              className="text-purple-400 hover:text-purple-300 h-8 w-8"
             >
-              <UserPlus className="h-3 w-3" />
+              <UserPlus className="h-4 w-4" />
             </Button>
           )}
+          
+          <Button
+            type="submit"
+            size="sm"
+            disabled={!user || !newComment.trim()}
+            className="bg-[#53fc18] hover:bg-[#53fc18]/90 text-black font-semibold h-8 px-3 text-xs"
+          >
+            <Send className="h-3.5 w-3.5" />
+          </Button>
         </div>
-        
-        <Input
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          placeholder={user ? "Message..." : "Login to chat"}
-          disabled={!user}
-          className="flex-1 bg-white/10 border-white/10 text-white placeholder:text-white/40 text-xs h-6 min-w-0 px-2 mx-0.5"
-        />
-        
-        <Button
-          type="submit"
-          size="icon"
-          disabled={!user || !newComment.trim()}
-          className="bg-green-600 hover:bg-green-500 h-6 w-6 shrink-0"
-        >
-          <Send className="h-2.5 w-2.5" />
-        </Button>
       </form>
 
       {/* Modals */}

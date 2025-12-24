@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,51 +18,95 @@ interface Schedule {
 interface EditScheduleModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  schedule: Schedule;
+  schedule: Schedule | null; // null for create mode
   userId: string;
   onUpdate: () => void;
 }
 
 export const EditScheduleModal = ({ open, onOpenChange, schedule, userId, onUpdate }: EditScheduleModalProps) => {
-  const [title, setTitle] = useState(schedule.title);
-  const [description, setDescription] = useState(schedule.description || '');
+  const isCreateMode = !schedule;
+  const [title, setTitle] = useState(schedule?.title || '');
+  const [description, setDescription] = useState(schedule?.description || '');
   const [scheduledAt, setScheduledAt] = useState(
-    new Date(schedule.scheduled_at).toISOString().slice(0, 16)
+    schedule ? new Date(schedule.scheduled_at).toISOString().slice(0, 16) : ''
   );
   const [coHost, setCoHost] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Reset form when modal opens/closes or schedule changes
+  useEffect(() => {
+    if (open) {
+      setTitle(schedule?.title || '');
+      setDescription(schedule?.description || '');
+      setScheduledAt(
+        schedule 
+          ? new Date(schedule.scheduled_at).toISOString().slice(0, 16) 
+          : new Date(Date.now() + 86400000).toISOString().slice(0, 16) // Default to tomorrow
+      );
+      setCoHost('');
+    }
+  }, [open, schedule]);
+
   const handleSave = async () => {
+    if (!title.trim()) {
+      toast.error('Please enter a title');
+      return;
+    }
+    if (!scheduledAt) {
+      toast.error('Please select a date and time');
+      return;
+    }
+
     setSaving(true);
     
     try {
-      const { error } = await supabase
-        .from('podcast_schedules')
-        .update({
-          title,
-          description: coHost ? `${description}\n\nCo-host: ${coHost}` : description,
-          scheduled_at: new Date(scheduledAt).toISOString()
-        })
-        .eq('id', schedule.id);
+      const descriptionWithCohost = coHost ? `${description}\n\nCo-host: ${coHost}` : description;
+      
+      if (isCreateMode) {
+        // Create new schedule
+        const { error } = await supabase
+          .from('podcast_schedules')
+          .insert({
+            user_id: userId,
+            title,
+            description: descriptionWithCohost,
+            scheduled_at: new Date(scheduledAt).toISOString()
+          });
 
-      if (error) throw error;
+        if (error) throw error;
+        toast.success('Schedule created successfully');
+      } else {
+        // Update existing schedule
+        const { error } = await supabase
+          .from('podcast_schedules')
+          .update({
+            title,
+            description: descriptionWithCohost,
+            scheduled_at: new Date(scheduledAt).toISOString()
+          })
+          .eq('id', schedule.id);
 
-      toast.success('Schedule updated successfully');
+        if (error) throw error;
+        toast.success('Schedule updated successfully');
+      }
+
       onUpdate();
       onOpenChange(false);
     } catch (error) {
-      console.error('Error updating schedule:', error);
-      toast.error('Failed to update schedule');
+      console.error('Error saving schedule:', error);
+      toast.error(isCreateMode ? 'Failed to create schedule' : 'Failed to update schedule');
     } finally {
       setSaving(false);
     }
   };
 
+  const isCreateModeLabel = !schedule;
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-[#18181b] border-white/10 text-white max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-white">Edit Schedule</DialogTitle>
+          <DialogTitle className="text-white">{isCreateModeLabel ? 'Create Schedule' : 'Edit Schedule'}</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
@@ -129,7 +173,7 @@ export const EditScheduleModal = ({ open, onOpenChange, schedule, userId, onUpda
               disabled={saving}
               className="bg-[#53fc18] text-black hover:bg-[#53fc18]/90"
             >
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? 'Saving...' : isCreateModeLabel ? 'Create Schedule' : 'Save Changes'}
             </Button>
           </div>
         </div>

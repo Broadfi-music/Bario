@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Users, Play, Calendar, Radio, Heart, Share2, Edit, MoreVertical, Pause } from 'lucide-react';
+import { ChevronLeft, Users, Play, Calendar, Radio, Heart, Share2, Edit, MoreVertical, Pause, Plus, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -463,14 +463,38 @@ const HostProfile = () => {
               {isFollowing ? 'Following' : 'Follow'}
             </Button>
             {isOwner && (
-              <Button
-                onClick={() => setShowEditProfile(true)}
-                variant="outline"
-                className="border-white/20 text-white hover:bg-white/10"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Profile
-              </Button>
+              <>
+                <Button
+                  onClick={() => setShowEditProfile(true)}
+                  variant="outline"
+                  className="border-white/20 text-white hover:bg-white/10"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Profile
+                </Button>
+                <Button
+                  onClick={() => {
+                    setSelectedEpisode(null);
+                    setShowEditEpisode(true);
+                  }}
+                  variant="outline"
+                  className="border-[#53fc18]/50 text-[#53fc18] hover:bg-[#53fc18]/10"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Episode
+                </Button>
+                <Button
+                  onClick={() => {
+                    setSelectedSchedule(null);
+                    setShowEditSchedule(true);
+                  }}
+                  variant="outline"
+                  className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Create Schedule
+                </Button>
+              </>
             )}
           </div>
         </div>
