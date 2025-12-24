@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import ShareModal from './ShareModal';
 import AddParticipantModal from './AddParticipantModal';
+import AuthPromptModal from './AuthPromptModal';
 import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 
 interface Comment {
@@ -47,6 +48,7 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
   const [showEmojis, setShowEmojis] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showParticipantModal, setShowParticipantModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
   // Demo comments for demo sessions
@@ -105,7 +107,10 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
 
   const sendComment = async (content: string, isEmoji = false) => {
     if (!user || !content.trim()) {
-      if (!user) toast.error('Please sign in to chat');
+      if (!user) {
+        setShowAuthModal(true);
+        return;
+      }
       return;
     }
 
@@ -269,6 +274,12 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
         onClose={() => setShowParticipantModal(false)}
         sessionId={sessionId}
         isHost={isHost}
+      />
+
+      <AuthPromptModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        action="send messages and reactions"
       />
     </div>
   );

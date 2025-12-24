@@ -5,7 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Mic, MicOff, Hand, UserPlus, Volume2, Loader2, LogOut, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useLiveKitAudio } from '@/hooks/useLiveKitAudio';
+import { useVoiceRoom } from '@/hooks/useVoiceRoom';
+import AuthPromptModal from './AuthPromptModal';
 import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 
 interface Participant {
@@ -54,8 +55,9 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
   const [myParticipation, setMyParticipation] = useState<Participant | null>(null);
   const [isBanned, setIsBanned] = useState(false);
   const [previousSessionId, setPreviousSessionId] = useState<string | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // LiveKit Audio Hook
+  // Voice Room Hook (with Jitsi fallback)
   const {
     isConnected: isAudioConnected,
     isConnecting: isAudioConnecting,
@@ -65,7 +67,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     disconnect: disconnectAudio,
     toggleMute,
     enableMicrophone,
-  } = useLiveKitAudio({
+  } = useVoiceRoom({
     sessionId,
     userId: user?.id || '',
     userName: user?.email?.split('@')[0] || 'Listener',
@@ -212,8 +214,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
 
   const joinSession = async () => {
     if (!user) {
-      toast.error('Please sign in to join');
-      navigate('/auth');
+      setShowAuthModal(true);
       return;
     }
 
@@ -282,8 +283,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
 
   const toggleHandRaise = async () => {
     if (!user) {
-      toast.error('Please sign in first');
-      navigate('/auth');
+      setShowAuthModal(true);
       return;
     }
 
@@ -523,6 +523,13 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
           <span className="text-xs text-red-400 px-2">Banned from session</span>
         )}
       </div>
+
+      {/* Auth Prompt Modal */}
+      <AuthPromptModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        action="join live podcast sessions"
+      />
     </div>
   );
 };
