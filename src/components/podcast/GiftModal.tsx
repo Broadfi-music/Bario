@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Flame, Heart, Star, Diamond, Crown } from 'lucide-react';
+import { getFreshSession, isDemoSession, isDemoUser } from '@/lib/authUtils';
 
 interface GiftModalProps {
   isOpen: boolean;
@@ -27,19 +27,25 @@ const GiftModal = ({ isOpen, onClose, sessionId, hostId }: GiftModalProps) => {
 
   const sendGift = async (giftType: string, points: number) => {
     if (!user) {
-      toast.error('Please login to send gifts');
+      toast.error('Please sign in to send gifts');
+      return;
+    }
+
+    // For demo sessions, just show success without database call
+    if (isDemoSession(sessionId) || isDemoUser(hostId)) {
+      toast.success(`Sent ${giftType} to host!`);
+      onClose();
       return;
     }
 
     setSending(giftType);
 
-    // Ensure fresh auth session before database operations
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
-      if (expiresAt - Date.now() < 5 * 60 * 1000) {
-        await supabase.auth.refreshSession();
-      }
+    // Ensure fresh auth session
+    const session = await getFreshSession();
+    if (!session) {
+      setSending(null);
+      toast.error('Session expired. Please sign in again.');
+      return;
     }
 
     const { error } = await supabase.from('podcast_gifts').insert({

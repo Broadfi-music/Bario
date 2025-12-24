@@ -6,6 +6,7 @@ import { Mic, MicOff, Hand, UserPlus, Volume2, Loader2, LogOut, Ban } from 'luci
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useLiveKitAudio } from '@/hooks/useLiveKitAudio';
+import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 
 interface Participant {
   id: string;
@@ -73,7 +74,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
 
   // Check if user is banned from this session
   const checkBanStatus = useCallback(async () => {
-    if (!user) return;
+    if (!user || isDemoSession(sessionId)) return;
     const { data } = await supabase
       .from('podcast_banned_users')
       .select('id')
@@ -140,6 +141,9 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
   }, [myParticipation?.role, isAudioConnected]);
 
   const fetchParticipants = async () => {
+    // Skip database calls for demo sessions
+    if (isDemoSession(sessionId)) return;
+    
     const { data } = await supabase
       .from('podcast_participants')
       .select('*')
@@ -213,6 +217,13 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       return;
     }
 
+    // For demo sessions, simulate joining
+    if (isDemoSession(sessionId)) {
+      toast.success('Joined the space!');
+      await connectAudio();
+      return;
+    }
+
     // Check if banned
     if (isBanned) {
       toast.error('You are banned from this session');
@@ -231,17 +242,15 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       return;
     }
 
-    // Ensure fresh auth session before database operations
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
-      if (expiresAt - Date.now() < 5 * 60 * 1000) {
-        await supabase.auth.refreshSession();
-      }
+    // Ensure fresh auth session
+    const session = await getFreshSession();
+    if (!session) {
+      toast.error('Session expired. Please sign in again.');
+      return;
     }
 
     // Leave previous session if in one
-    if (previousSessionId && previousSessionId !== sessionId) {
+    if (previousSessionId && previousSessionId !== sessionId && !isDemoSession(previousSessionId)) {
       await supabase
         .from('podcast_participants')
         .delete()
@@ -267,7 +276,6 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     } else {
       setPreviousSessionId(sessionId);
       toast.success('Joined the space!');
-      // Connect to audio room
       await connectAudio();
     }
   };

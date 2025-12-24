@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Send, Gift, Smile, Share2, UserPlus, Mic } from 'lucide-react';
+import { Send, Gift, Smile, Share2, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import ShareModal from './ShareModal';
 import AddParticipantModal from './AddParticipantModal';
+import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 
 interface Comment {
   id: string;
@@ -27,14 +28,12 @@ interface TwitchCommentsProps {
 
 const EMOJIS = ['🔥', '❤️', '👏', '😂', '🎵', '💯', '🙌', '✨'];
 
-// Random usernames for display
 const getRandomUsername = (userId: string) => {
   const names = ['CryptoKing', 'MusicLover', 'BeatDrop', 'VibeCheck', 'NightOwl', 'StarGazer', 'WaveRider', 'SoundWave'];
   const index = userId.charCodeAt(0) % names.length;
   return names[index] + userId.slice(0, 3);
 };
 
-// Random colors for usernames (Kick.com style)
 const getUserColor = (userId: string) => {
   const colors = ['text-green-400', 'text-pink-400', 'text-blue-400', 'text-yellow-400', 'text-purple-400', 'text-orange-400'];
   const index = userId.charCodeAt(0) % colors.length;
@@ -50,16 +49,31 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
   const [showParticipantModal, setShowParticipantModal] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
+  // Demo comments for demo sessions
+  const demoComments: Comment[] = [
+    { id: 'demo-1', user_id: 'user1', content: 'This is fire! 🔥', is_emoji: false, created_at: '' },
+    { id: 'demo-2', user_id: 'user2', content: 'Amazing show!', is_emoji: false, created_at: '' },
+    { id: 'demo-3', user_id: 'user3', content: '❤️', is_emoji: true, created_at: '' },
+  ];
+
   useEffect(() => {
+    // Skip database calls for demo sessions
+    if (isDemoSession(sessionId)) {
+      setComments(demoComments);
+      return;
+    }
+
     const fetchComments = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('podcast_comments')
         .select('*')
         .eq('session_id', sessionId)
         .order('created_at', { ascending: true })
         .limit(50);
       
-      if (data) setComments(data as Comment[]);
+      if (!error && data) {
+        setComments(data as Comment[]);
+      }
     };
 
     fetchComments();
@@ -95,13 +109,25 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
       return;
     }
 
+    // For demo sessions, add comment locally
+    if (isDemoSession(sessionId)) {
+      setComments(prev => [...prev, {
+        id: `local-${Date.now()}`,
+        user_id: user.id,
+        content: content.trim(),
+        is_emoji: isEmoji,
+        created_at: new Date().toISOString()
+      }]);
+      setNewComment('');
+      setShowEmojis(false);
+      return;
+    }
+
     // Ensure fresh auth session
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
-      if (expiresAt - Date.now() < 5 * 60 * 1000) {
-        await supabase.auth.refreshSession();
-      }
+    const session = await getFreshSession();
+    if (!session) {
+      toast.error('Session expired. Please sign in again.');
+      return;
     }
 
     const { error } = await supabase.from('podcast_comments').insert({
@@ -127,7 +153,7 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
 
   return (
     <div className="flex flex-col bg-gradient-to-t from-black via-black/95 to-transparent">
-      {/* Comments List - Kick.com style overlay */}
+      {/* Comments List */}
       <div className="h-20 overflow-y-auto px-3 py-1 scrollbar-hide">
         {comments.map((comment) => (
           <div key={comment.id} className="animate-fade-in py-0.5">
@@ -163,9 +189,8 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
         </div>
       )}
 
-      {/* Input Area - Icons and input grouped tightly */}
+      {/* Input Area */}
       <form onSubmit={handleSubmit} className="flex items-center gap-0 px-1 py-1 bg-black">
-        {/* Action icons group - no spacing */}
         <div className="flex items-center gap-0">
           <Button
             type="button"
@@ -210,7 +235,6 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
           )}
         </div>
         
-        {/* Comment input */}
         <Input
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
@@ -219,7 +243,6 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
           className="flex-1 bg-white/10 border-white/10 text-white placeholder:text-white/40 text-xs h-6 min-w-0 px-2 mx-0.5"
         />
         
-        {/* Send button */}
         <Button
           type="submit"
           size="icon"

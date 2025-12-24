@@ -4,15 +4,14 @@ import {
   RoomEvent,
   Track,
   Participant,
-  RemoteTrack,
   RemoteParticipant,
-  LocalParticipant,
   ConnectionState,
   RoomOptions,
   AudioPresets,
 } from 'livekit-client';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getFreshSession, isDemoSession, isValidUUID } from '@/lib/authUtils';
 
 interface UseLiveKitAudioProps {
   sessionId: string;
@@ -52,27 +51,40 @@ export const useLiveKitAudio = ({
 
   // Get LiveKit token from edge function
   const getToken = useCallback(async () => {
+    // Skip for demo sessions - they don't need real LiveKit connections
+    if (isDemoSession(sessionId)) {
+      console.log('Demo session detected, skipping LiveKit token request');
+      return null;
+    }
+
     // Ensure fresh auth session before edge function call
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      // Check if token needs refresh
-      const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
-      const now = Date.now();
-      const fiveMinutes = 5 * 60 * 1000;
-      if (expiresAt - now < fiveMinutes) {
-        await supabase.auth.refreshSession();
+    const session = await getFreshSession();
+    if (!session) {
+      setError('Please sign in to join audio');
+      toast.error('Please sign in to continue');
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('livekit-token', {
+        body: { sessionId, userId, userName, isHost }
+      });
+
+      if (error) {
+        console.error('LiveKit token error:', error);
+        throw new Error(error.message || 'Failed to get token');
       }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      return data as { token: string; url: string; roomName: string };
+    } catch (err) {
+      console.error('Failed to get LiveKit token:', err);
+      setError('Failed to connect to audio');
+      return null;
     }
-
-    const { data, error } = await supabase.functions.invoke('livekit-token', {
-      body: { sessionId, userId, userName, isHost }
-    });
-
-    if (error) {
-      throw new Error(error.message || 'Failed to get token');
-    }
-
-    return data as { token: string; url: string; roomName: string };
   }, [sessionId, userId, userName, isHost]);
 
   // Update participants list
@@ -114,11 +126,22 @@ export const useLiveKitAudio = ({
   const connect = useCallback(async () => {
     if (roomRef.current || isConnecting) return;
 
+    // For demo sessions, simulate connection
+    if (isDemoSession(sessionId)) {
+      console.log('Demo session - simulating audio connection');
+      setIsConnected(true);
+      return;
+    }
+
     setIsConnecting(true);
     setError(null);
 
     try {
-      const { token, url } = await getToken();
+      const tokenData = await getToken();
+      if (!tokenData) {
+        setIsConnecting(false);
+        return;
+      }
 
       const roomOptions: RoomOptions = {
         audioCaptureDefaults: {
@@ -165,7 +188,6 @@ export const useLiveKitAudio = ({
 
       room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
         if (track.kind === Track.Kind.Audio) {
-          // Attach audio track to play
           const audioElement = track.attach();
           document.body.appendChild(audioElement);
           console.log('Subscribed to audio from:', participant.identity);
@@ -178,10 +200,7 @@ export const useLiveKitAudio = ({
         updateParticipants();
       });
 
-      room.on(RoomEvent.ActiveSpeakersChanged, () => {
-        updateParticipants();
-      });
-
+      room.on(RoomEvent.ActiveSpeakersChanged, () => updateParticipants());
       room.on(RoomEvent.TrackMuted, () => updateParticipants());
       room.on(RoomEvent.TrackUnmuted, () => updateParticipants());
 
@@ -194,12 +213,11 @@ export const useLiveKitAudio = ({
       });
 
       // Connect to room
-      await room.connect(url, token);
+      await room.connect(tokenData.url, tokenData.token);
 
       // Enable microphone for hosts/speakers (muted by default)
       if (isHost) {
         await room.localParticipant.setMicrophoneEnabled(true);
-        // Immediately mute
         const micPub = room.localParticipant.getTrackPublication(Track.Source.Microphone);
         if (micPub) {
           await micPub.mute();
@@ -214,7 +232,7 @@ export const useLiveKitAudio = ({
       setIsConnecting(false);
       toast.error('Failed to connect to audio room');
     }
-  }, [getToken, isHost, updateParticipants, onParticipantJoined, onParticipantLeft, isConnecting]);
+  }, [getToken, isHost, updateParticipants, onParticipantJoined, onParticipantLeft, isConnecting, sessionId]);
 
   // Disconnect from room
   const disconnect = useCallback(async () => {
@@ -224,10 +242,21 @@ export const useLiveKitAudio = ({
       setIsConnected(false);
       setParticipants([]);
     }
-  }, []);
+    // Also reset demo state
+    if (isDemoSession(sessionId)) {
+      setIsConnected(false);
+    }
+  }, [sessionId]);
 
   // Toggle microphone
   const toggleMute = useCallback(async () => {
+    // For demo sessions, just toggle state
+    if (isDemoSession(sessionId)) {
+      setIsMuted(prev => !prev);
+      toast(isMuted ? 'Microphone ON' : 'Microphone OFF');
+      return;
+    }
+
     if (!roomRef.current) return;
 
     const room = roomRef.current;
@@ -235,7 +264,6 @@ export const useLiveKitAudio = ({
 
     try {
       if (isMuted) {
-        // Unmute - enable microphone if not already
         await localParticipant.setMicrophoneEnabled(true);
         const micPub = localParticipant.getTrackPublication(Track.Source.Microphone);
         if (micPub) {
@@ -244,7 +272,6 @@ export const useLiveKitAudio = ({
         setIsMuted(false);
         toast('Microphone ON');
       } else {
-        // Mute
         const micPub = localParticipant.getTrackPublication(Track.Source.Microphone);
         if (micPub) {
           await micPub.mute();
@@ -257,10 +284,15 @@ export const useLiveKitAudio = ({
       console.error('Failed to toggle mute:', err);
       toast.error('Failed to toggle microphone');
     }
-  }, [isMuted, updateParticipants]);
+  }, [isMuted, updateParticipants, sessionId]);
 
-  // Enable microphone for participant (for when promoted to speaker)
+  // Enable microphone for participant
   const enableMicrophone = useCallback(async () => {
+    if (isDemoSession(sessionId)) {
+      setIsMuted(false);
+      return;
+    }
+
     if (!roomRef.current) return;
 
     try {
@@ -272,30 +304,27 @@ export const useLiveKitAudio = ({
       console.error('Failed to enable microphone:', err);
       toast.error('Failed to enable microphone');
     }
-  }, [updateParticipants]);
+  }, [updateParticipants, sessionId]);
 
   // Start recording (host only)
   const startRecording = useCallback(async () => {
     if (!roomRef.current || isRecording) return;
 
     try {
-      // Create an audio context to mix all audio
       const audioContext = new AudioContext();
       const destination = audioContext.createMediaStreamDestination();
 
-      // Get all audio elements and connect them
       const audioElements = document.querySelectorAll('audio');
       audioElements.forEach(audio => {
         try {
           const source = audioContext.createMediaElementSource(audio);
           source.connect(destination);
-          source.connect(audioContext.destination); // Still play audio
+          source.connect(audioContext.destination);
         } catch {
           // Element may already be connected
         }
       });
 
-      // Also capture local microphone if available
       const localMic = roomRef.current.localParticipant.getTrackPublication(Track.Source.Microphone);
       if (localMic?.track) {
         const micStream = (localMic.track as any).mediaStream as MediaStream;
@@ -317,14 +346,16 @@ export const useLiveKitAudio = ({
         }
       };
 
-      mediaRecorder.start(1000); // Capture every second
+      mediaRecorder.start(1000);
       mediaRecorderRef.current = mediaRecorder;
       setIsRecording(true);
 
-      // Notify backend
-      await supabase.functions.invoke('podcast-recording', {
-        body: { action: 'start-recording', sessionId }
-      });
+      // Only call backend if it's a real session
+      if (!isDemoSession(sessionId)) {
+        await supabase.functions.invoke('podcast-recording', {
+          body: { action: 'start-recording', sessionId }
+        });
+      }
 
       toast.success('Recording started');
     } catch (err) {
@@ -343,7 +374,6 @@ export const useLiveKitAudio = ({
       mediaRecorder.onstop = async () => {
         const blob = new Blob(recordedChunksRef.current, { type: 'audio/webm' });
         
-        // Convert to base64
         const reader = new FileReader();
         reader.onloadend = () => {
           const base64 = (reader.result as string).split(',')[1];
@@ -355,10 +385,11 @@ export const useLiveKitAudio = ({
         mediaRecorderRef.current = null;
         setIsRecording(false);
 
-        // Notify backend
-        await supabase.functions.invoke('podcast-recording', {
-          body: { action: 'stop-recording', sessionId }
-        });
+        if (!isDemoSession(sessionId)) {
+          await supabase.functions.invoke('podcast-recording', {
+            body: { action: 'stop-recording', sessionId }
+          });
+        }
 
         toast.success('Recording stopped');
       };
@@ -369,26 +400,38 @@ export const useLiveKitAudio = ({
 
   // Save episode
   const saveEpisode = useCallback(async (title: string, description?: string) => {
-    const audioData = await stopRecording();
-    
-    const { data, error } = await supabase.functions.invoke('podcast-recording', {
-      body: {
-        action: 'save-episode',
-        sessionId,
-        userId,
-        title,
-        description,
-        audioData
-      }
-    });
-
-    if (error) {
-      toast.error('Failed to save episode');
+    // Check for fresh session first
+    const session = await getFreshSession();
+    if (!session) {
+      toast.error('Please sign in to save episode');
       return null;
     }
 
-    toast.success('Episode saved!');
-    return data.episode;
+    const audioData = await stopRecording();
+    
+    if (!isDemoSession(sessionId)) {
+      const { data, error } = await supabase.functions.invoke('podcast-recording', {
+        body: {
+          action: 'save-episode',
+          sessionId,
+          userId,
+          title,
+          description,
+          audioData
+        }
+      });
+
+      if (error) {
+        toast.error('Failed to save episode');
+        return null;
+      }
+
+      toast.success('Episode saved!');
+      return data?.episode;
+    }
+
+    toast.success('Demo episode saved!');
+    return { id: 'demo-episode' };
   }, [sessionId, userId, stopRecording]);
 
   // Cleanup on unmount
