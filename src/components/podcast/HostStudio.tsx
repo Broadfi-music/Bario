@@ -5,13 +5,17 @@ import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 import { 
   Mic, MicOff, Radio, Users, Music, Share2, 
   HandMetal, Volume2, X, Plus, MessageSquare, Play, Pause,
-  Circle, StopCircle
+  Circle, StopCircle, Upload
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useLiveKitAudio } from '@/hooks/useLiveKitAudio';
+import { useVoiceRoom } from '@/hooks/useVoiceRoom';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useVoiceRoom } from '@/hooks/useVoiceRoom';
 
 interface HostStudioProps {
   isOpen: boolean;
@@ -33,38 +37,51 @@ const SOUND_EFFECTS = [
 ];
 
 const CURATED_MUSIC = [
-  { id: '1', title: 'Lo-Fi Beats', artist: 'ChillHop', url: 'https://example.com/lofi.mp3' },
-  { id: '2', title: 'Jazz Vibes', artist: 'Smooth Jazz', url: 'https://example.com/jazz.mp3' },
-  { id: '3', title: 'Afrobeats Mix', artist: 'Various', url: 'https://example.com/afro.mp3' },
-  { id: '4', title: 'Hip-Hop Classics', artist: 'Various', url: 'https://example.com/hiphop.mp3' },
+  { id: '1', title: 'Lo-Fi Beats', artist: 'ChillHop', url: '' },
+  { id: '2', title: 'Jazz Vibes', artist: 'Smooth Jazz', url: '' },
+  { id: '3', title: 'Afrobeats Mix', artist: 'Various', url: '' },
+  { id: '4', title: 'Hip-Hop Classics', artist: 'Various', url: '' },
 ];
+
+interface UploadedMusic {
+  id: string;
+  title: string;
+  artist: string;
+  url: string;
+  type: 'background' | 'playlist';
+}
 
 const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
   const { user } = useAuth();
   const [isLive, setIsLive] = useState(false);
   const [listenerCount, setListenerCount] = useState(0);
   const [showMusicPicker, setShowMusicPicker] = useState(false);
-  const [currentMusic, setCurrentMusic] = useState<typeof CURATED_MUSIC[0] | null>(null);
+  const [currentMusic, setCurrentMusic] = useState<(typeof CURATED_MUSIC[0] & { url?: string }) | null>(null);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const [title, setTitle] = useState(session?.title || '');
   const [sessionId, setSessionId] = useState(session?.id || '');
   const [raisedHands, setRaisedHands] = useState<any[]>([]);
   const [comments, setComments] = useState<any[]>([]);
+  const [uploadedMusic, setUploadedMusic] = useState<UploadedMusic[]>([]);
+  const [isUploadingMusic, setIsUploadingMusic] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // LiveKit Audio Hook
+  // Voice Room Hook with Jitsi fallback
   const {
     isConnected: isAudioConnected,
     isConnecting: isAudioConnecting,
     isMuted,
     isRecording,
     participants: audioParticipants,
+    provider: audioProvider,
     connect: connectAudio,
     disconnect: disconnectAudio,
     toggleMute,
+    enableMicrophone,
     startRecording,
     saveEpisode,
-  } = useLiveKitAudio({
+  } = useVoiceRoom({
     sessionId: sessionId || session?.id || '',
     userId: user?.id || '',
     userName: user?.email?.split('@')[0] || 'Host',
@@ -120,12 +137,8 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     if (!sessionId && !session?.id) return;
     const sid = sessionId || session?.id;
     
-    // Skip DB calls for demo sessions
-    if (sid && isDemoSession(sid)) {
-      return;
-    }
+    if (sid && isDemoSession(sid)) return;
 
-    // Ensure fresh session before DB call
     const authSession = await getFreshSession();
     if (!authSession) return;
     
@@ -136,7 +149,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     
     if (participants) {
       setListenerCount(participants.length);
-      setRaisedHands(participants.filter(p => p.hand_raised));
+      setRaisedHands(participants.filter((p: any) => p.hand_raised));
     }
   };
 
@@ -150,7 +163,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       return;
     }
 
-    // Ensure fresh session before database operations
     const authSession = await getFreshSession();
     if (!authSession) {
       toast.error('Session expired. Please sign in again.');
@@ -174,7 +186,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       return;
     }
 
-    // Join as host
     await supabase.from('podcast_participants').insert({
       session_id: data.id,
       user_id: user.id,
@@ -186,7 +197,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     setIsLive(true);
     subscribeToUpdates(data.id);
 
-    // Connect to LiveKit audio room
     await connectAudio();
     
     toast.success('You are now LIVE!');
@@ -195,7 +205,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
   const endSession = async () => {
     if (!sessionId) return;
 
-    // Save episode if recording
     if (isRecording) {
       await saveEpisode(title, `Recorded live session: ${title}`);
     }
@@ -205,7 +214,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       .update({ status: 'ended', ended_at: new Date().toISOString() })
       .eq('id', sessionId);
 
-    // Create episode from session
     if (user && !isRecording) {
       await supabase.from('podcast_episodes').insert({
         session_id: sessionId,
@@ -243,7 +251,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
   };
 
   const promoteSpeaker = async (participantId: string) => {
-    // Ensure fresh session
     const authSession = await getFreshSession();
     if (!authSession) return;
 
@@ -262,14 +269,28 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     toast.success('Session link copied!');
   };
 
-  const playMusic = (music: typeof CURATED_MUSIC[0]) => {
+  const playMusic = (music: typeof CURATED_MUSIC[0] | UploadedMusic) => {
     setCurrentMusic(music);
     setShowMusicPicker(false);
-    setIsMusicPlaying(true);
+    
+    if (music.url && audioRef.current) {
+      audioRef.current.src = music.url;
+      audioRef.current.play();
+      setIsMusicPlaying(true);
+    } else {
+      setIsMusicPlaying(true);
+    }
     toast(`Now playing: ${music.title}`);
   };
 
   const toggleMusic = () => {
+    if (audioRef.current) {
+      if (isMusicPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+    }
     setIsMusicPlaying(!isMusicPlaying);
     toast(isMusicPlaying ? 'Music paused' : 'Music playing');
   };
@@ -282,6 +303,72 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     }
   };
 
+  const handleMusicUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('audio/')) {
+      toast.error('Please upload an audio file');
+      return;
+    }
+
+    setIsUploadingMusic(true);
+    
+    try {
+      const authSession = await getFreshSession();
+      if (!authSession) {
+        toast.error('Please sign in to upload music');
+        return;
+      }
+
+      const fileName = `${user?.id}/${Date.now()}-${file.name}`;
+      const { data, error } = await supabase.storage
+        .from('user-uploads')
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('user-uploads')
+        .getPublicUrl(fileName);
+
+      const newMusic: UploadedMusic = {
+        id: Date.now().toString(),
+        title: file.name.replace(/\.[^/.]+$/, ''),
+        artist: 'Uploaded',
+        url: publicUrl,
+        type: 'playlist'
+      };
+
+      setUploadedMusic(prev => [...prev, newMusic]);
+      toast.success('Music uploaded successfully!');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload music');
+    } finally {
+      setIsUploadingMusic(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleAudioIconClick = async () => {
+    if (!isLive) {
+      // Test microphone before going live
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+        toast.success('Microphone is ready!');
+      } catch (error) {
+        console.error('Microphone error:', error);
+        toast.error('Unable to access microphone. Please check permissions.');
+      }
+    } else {
+      await toggleMute();
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-black/95 border-white/10 max-w-lg max-h-[85vh] overflow-y-auto">
@@ -291,11 +378,23 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
             Host Studio
             {isAudioConnected && (
               <span className="ml-auto text-[10px] px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full">
-                Audio Connected
+                {audioProvider === 'jitsi' ? 'Jitsi' : 'LiveKit'} Connected
               </span>
             )}
           </DialogTitle>
         </DialogHeader>
+
+        {/* Hidden audio element for music playback */}
+        <audio ref={audioRef} className="hidden" onEnded={() => setIsMusicPlaying(false)} />
+        
+        {/* Hidden file input for music upload */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="audio/*"
+          className="hidden"
+          onChange={handleMusicUpload}
+        />
 
         <div className="space-y-4">
           {/* Session Title */}
@@ -313,15 +412,17 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
 
           {/* Live Controls */}
           <div className="flex items-center justify-center gap-3">
+            {/* Audio/Mic button - always clickable for testing */}
             <Button
-              onClick={toggleMute}
-              disabled={!isLive || !isAudioConnected}
+              onClick={handleAudioIconClick}
               size="lg"
               className={`rounded-full w-14 h-14 ${
-                isMuted ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
+                isLive 
+                  ? (isMuted ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400')
+                  : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'
               }`}
             >
-              {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              {isMuted || !isLive ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
             </Button>
 
             {!isLive ? (
@@ -437,15 +538,27 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <h4 className="text-[10px] text-white/60 uppercase tracking-wider">Background Music</h4>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowMusicPicker(true)}
-                    className="h-6 text-xs"
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Add
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingMusic}
+                      className="h-6 text-xs"
+                    >
+                      <Upload className="h-3 w-3 mr-1" />
+                      {isUploadingMusic ? 'Uploading...' : 'Upload'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowMusicPicker(true)}
+                      className="h-6 text-xs"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add
+                    </Button>
+                  </div>
                 </div>
                 
                 {currentMusic && (
@@ -523,6 +636,30 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
                   <X className="h-3 w-3" />
                 </Button>
               </div>
+              
+              {/* Uploaded Music */}
+              {uploadedMusic.length > 0 && (
+                <>
+                  <p className="text-[10px] text-white/40 uppercase">Your Uploads</p>
+                  {uploadedMusic.map((music) => (
+                    <button
+                      key={music.id}
+                      onClick={() => playMusic(music)}
+                      className="w-full flex items-center gap-2 p-2 bg-purple-500/10 rounded-lg hover:bg-purple-500/20 transition-colors text-left"
+                    >
+                      <div className="w-8 h-8 rounded bg-purple-500/30 flex items-center justify-center">
+                        <Music className="h-4 w-4 text-purple-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-white">{music.title}</p>
+                        <p className="text-[10px] text-white/60">{music.artist}</p>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              <p className="text-[10px] text-white/40 uppercase">Curated</p>
               {CURATED_MUSIC.map((music) => (
                 <button
                   key={music.id}
