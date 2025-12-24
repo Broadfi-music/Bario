@@ -14,7 +14,13 @@ export const getFreshSession = async (): Promise<Session | null> => {
     
     if (error) {
       console.error('Error getting session:', error);
-      return null;
+      // Try to refresh
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.error('Failed to refresh after getSession error:', refreshError);
+        return null;
+      }
+      return refreshData.session;
     }
     
     if (!session) {
@@ -54,6 +60,52 @@ export const getFreshSession = async (): Promise<Session | null> => {
 export const getFreshAccessToken = async (): Promise<string | null> => {
   const session = await getFreshSession();
   return session?.access_token ?? null;
+};
+
+/**
+ * Force refresh the session and return it.
+ * Use this when you get a JWT expired error.
+ */
+export const forceRefreshSession = async (): Promise<Session | null> => {
+  try {
+    const { data, error } = await supabase.auth.refreshSession();
+    if (error) {
+      console.error('Force refresh failed:', error);
+      await supabase.auth.signOut();
+      return null;
+    }
+    return data.session;
+  } catch (error) {
+    console.error('Unexpected error in forceRefreshSession:', error);
+    return null;
+  }
+};
+
+/**
+ * Execute a Supabase operation with automatic retry on JWT expired.
+ * This will refresh the token and retry once if JWT is expired.
+ */
+export const withAuthRetry = async <T>(
+  operation: () => Promise<{ data: T | null; error: any }>
+): Promise<{ data: T | null; error: any }> => {
+  const result = await operation();
+  
+  // Check if error is JWT related
+  if (result.error?.code === 'PGRST303' || 
+      result.error?.message?.includes('JWT expired') ||
+      result.error?.message?.includes('JWT')) {
+    console.log('JWT error detected, refreshing and retrying...');
+    
+    const session = await forceRefreshSession();
+    if (!session) {
+      return { data: null, error: { message: 'Session expired. Please sign in again.' } };
+    }
+    
+    // Retry the operation
+    return await operation();
+  }
+  
+  return result;
 };
 
 /**
