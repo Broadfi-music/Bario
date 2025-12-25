@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, Mic, Radio, Home } from 'lucide-react';
+import { ChevronLeft, Mic, Radio, Home, Flame, Music } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
@@ -348,7 +348,7 @@ const Podcasts = () => {
             <TabsList className="bg-white/5 h-8">
               <TabsTrigger value="feed" className="text-xs px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7">
                 <Home className="h-3 w-3 mr-1.5" />
-                Podcast Feed
+                Feed
               </TabsTrigger>
               <TabsTrigger value="live" className="text-xs px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7">
                 <Radio className="h-3 w-3 mr-1.5" />
@@ -356,6 +356,22 @@ const Podcasts = () => {
               </TabsTrigger>
             </TabsList>
           </Tabs>
+
+          {/* Additional nav links */}
+          <div className="hidden sm:flex items-center gap-1 ml-2">
+            <Link to="/global-heatmap">
+              <Button variant="ghost" size="sm" className="text-white/60 hover:text-white h-8 px-2 text-xs">
+                <Flame className="h-3 w-3 mr-1" />
+                Heatmap
+              </Button>
+            </Link>
+            <Link to="/radio-stations">
+              <Button variant="ghost" size="sm" className="text-white/60 hover:text-white h-8 px-2 text-xs">
+                <Music className="h-3 w-3 mr-1" />
+                Radio
+              </Button>
+            </Link>
+          </div>
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2">

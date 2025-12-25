@@ -206,7 +206,6 @@ const Dashboard = () => {
     { label: 'Heatmap', path: '/global-heatmap' },
     { label: 'Podcast', path: '/podcasts' },
     { label: 'Radio', path: '/radio-stations' },
-    { label: 'Alpha', path: '/music-alpha' },
   ];
 
   const sections = [
