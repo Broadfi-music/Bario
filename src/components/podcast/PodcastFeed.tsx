@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronLeft, ChevronRight, Users, Play, Calendar, Headphones } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, Play, Calendar, Headphones, Search, User } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface LiveHost {
   id: string;
@@ -152,9 +155,21 @@ const formatScheduleTime = (dateStr: string) => {
 
 const PodcastFeed = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [liveHosts, setLiveHosts] = useState<LiveHost[]>(DEMO_LIVE_HOSTS);
   const [heroIndex, setHeroIndex] = useState(0);
   const heroRef = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+
+  // Filter hosts based on search
+  const filteredHosts = searchQuery.trim() 
+    ? liveHosts.filter(h => 
+        h.host_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        h.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        h.category?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : liveHosts;
 
   useEffect(() => {
     fetchLiveSessions();
@@ -221,7 +236,7 @@ const PodcastFeed = () => {
         <div className="p-3">
           <h3 className="text-[10px] font-semibold text-white/50 uppercase mb-2 tracking-wider">Recommended</h3>
           <div className="space-y-0.5">
-            {liveHosts.slice(0, 10).map((host) => (
+            {filteredHosts.slice(0, 10).map((host) => (
               <div
                 key={`sidebar-${host.id}`}
                 className="flex items-center gap-2 p-1.5 rounded hover:bg-white/5 transition-colors group cursor-pointer"
@@ -254,12 +269,56 @@ const PodcastFeed = () => {
                 </div>
               </div>
             ))}
+
+            {/* My Page - for logged in users */}
+            {user && (
+              <div
+                onClick={() => navigate(`/host/${user.id}`)}
+                className="flex items-center gap-2 p-1.5 rounded hover:bg-white/5 transition-colors group cursor-pointer mt-3 border-t border-white/10 pt-3"
+              >
+                <div className="relative flex-shrink-0">
+                  <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-[#53fc18] to-green-600 flex items-center justify-center">
+                    <User className="w-4 h-4 text-black" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-[#53fc18] truncate group-hover:text-white">
+                    My Page
+                  </p>
+                  <p className="text-xs text-white/40 truncate">Your host profile</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="lg:ml-56 pt-14 pb-8 px-0">
+        {/* Search Bar */}
+        <div className="px-3 lg:px-6 mb-4">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+              <Input
+                placeholder="Search podcasts, hosts..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40 h-9"
+              />
+            </div>
+            {user && (
+              <Button
+                size="sm"
+                onClick={() => navigate(`/host/${user.id}`)}
+                className="bg-[#53fc18] hover:bg-[#53fc18]/80 text-black font-semibold h-9"
+              >
+                <User className="h-4 w-4 mr-1" />
+                My Page
+              </Button>
+            )}
+          </div>
+        </div>
         {/* Hero Carousel - Kick.com Style - Mobile Optimized */}
         {currentHero && (
           <div className="relative px-3 lg:px-6 mb-4 lg:mb-6">

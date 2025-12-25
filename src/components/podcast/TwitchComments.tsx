@@ -17,6 +17,8 @@ interface Comment {
   is_emoji: boolean;
   created_at: string;
   user_name?: string;
+  isVisible?: boolean;
+  fadeTimeout?: NodeJS.Timeout;
 }
 
 interface TwitchCommentsProps {
@@ -51,11 +53,24 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
   const [showAuthModal, setShowAuthModal] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
+  // Fade out comment after 5 seconds (Twitch style)
+  const scheduleCommentFade = (commentId: string) => {
+    setTimeout(() => {
+      setComments(prev => prev.map(c => 
+        c.id === commentId ? { ...c, isVisible: false } : c
+      ));
+      // Remove after fade animation completes
+      setTimeout(() => {
+        setComments(prev => prev.filter(c => c.id !== commentId));
+      }, 500);
+    }, 5000);
+  };
+
   // Demo comments for demo sessions
   const demoComments: Comment[] = [
-    { id: 'demo-1', user_id: 'user1', content: 'This is fire! 🔥', is_emoji: false, created_at: '' },
-    { id: 'demo-2', user_id: 'user2', content: 'Amazing show!', is_emoji: false, created_at: '' },
-    { id: 'demo-3', user_id: 'user3', content: '❤️', is_emoji: true, created_at: '' },
+    { id: 'demo-1', user_id: 'user1', content: 'This is fire! 🔥', is_emoji: false, created_at: '', isVisible: true },
+    { id: 'demo-2', user_id: 'user2', content: 'Amazing show!', is_emoji: false, created_at: '', isVisible: true },
+    { id: 'demo-3', user_id: 'user3', content: '❤️', is_emoji: true, created_at: '', isVisible: true },
   ];
 
   useEffect(() => {
@@ -71,10 +86,14 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
         .select('*')
         .eq('session_id', sessionId)
         .order('created_at', { ascending: true })
-        .limit(50);
+        .limit(20);
       
       if (!error && data) {
-        setComments(data as Comment[]);
+        // Mark all as visible initially
+        const visibleComments = (data as Comment[]).map(c => ({ ...c, isVisible: true }));
+        setComments(visibleComments);
+        // Schedule fade for existing comments
+        visibleComments.forEach(c => scheduleCommentFade(c.id));
       }
     };
 
@@ -91,7 +110,9 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
           filter: `session_id=eq.${sessionId}`
         },
         (payload) => {
-          setComments(prev => [...prev.slice(-49), payload.new as Comment]);
+          const newComment = { ...payload.new as Comment, isVisible: true };
+          setComments(prev => [...prev.slice(-19), newComment]);
+          scheduleCommentFade(newComment.id);
         }
       )
       .subscribe();
@@ -116,13 +137,16 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
 
     // For demo sessions, add comment locally
     if (isDemoSession(sessionId)) {
-      setComments(prev => [...prev, {
+      const newLocalComment = {
         id: `local-${Date.now()}`,
         user_id: user.id,
         content: content.trim(),
         is_emoji: isEmoji,
-        created_at: new Date().toISOString()
-      }]);
+        created_at: new Date().toISOString(),
+        isVisible: true
+      };
+      setComments(prev => [...prev, newLocalComment]);
+      scheduleCommentFade(newLocalComment.id);
       setNewComment('');
       setShowEmojis(false);
       return;
@@ -158,15 +182,20 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
 
   return (
     <div className="flex flex-col bg-gradient-to-t from-black via-black/95 to-transparent">
-      {/* Comments List */}
-      <div className="h-28 overflow-y-auto px-3 py-1 scrollbar-hide">
+      {/* Comments List - Twitch style with fade */}
+      <div className="h-32 overflow-y-auto px-3 py-1 scrollbar-hide relative">
         {comments.map((comment) => (
-          <div key={comment.id} className="animate-fade-in py-0.5">
+          <div 
+            key={comment.id} 
+            className={`py-0.5 transition-all duration-500 ${
+              comment.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
+            }`}
+          >
             {comment.is_emoji ? (
-              <span className="text-xl inline-block">{comment.content}</span>
+              <span className="text-2xl inline-block animate-bounce">{comment.content}</span>
             ) : (
-              <div className="flex items-start gap-1">
-                <span className={`text-xs font-bold ${getUserColor(comment.user_id)}`}>
+              <div className="flex items-start gap-1 bg-black/40 rounded px-2 py-1 backdrop-blur-sm">
+                <span className={`text-xs font-bold ${getUserColor(comment.user_id)} shrink-0`}>
                   {getRandomUsername(comment.user_id)}:
                 </span>
                 <span className="text-xs text-white break-words">
