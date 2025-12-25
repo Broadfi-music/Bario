@@ -331,6 +331,68 @@ export type Database = {
           },
         ]
       }
+      host_playlist_tracks: {
+        Row: {
+          audio_url: string
+          created_at: string
+          duration_ms: number | null
+          id: string
+          playlist_id: string
+          position: number
+          title: string
+        }
+        Insert: {
+          audio_url: string
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          playlist_id: string
+          position?: number
+          title: string
+        }
+        Update: {
+          audio_url?: string
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          playlist_id?: string
+          position?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "host_playlist_tracks_playlist_id_fkey"
+            columns: ["playlist_id"]
+            isOneToOne: false
+            referencedRelation: "host_playlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      host_playlists: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       likes: {
         Row: {
           created_at: string

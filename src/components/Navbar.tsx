@@ -31,11 +31,6 @@ export const Navbar = () => {
                 Podcast
               </Button>
             </Link>
-            <Link to="/music-alpha">
-              <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 text-[10px] sm:text-xs px-2 sm:px-3 h-7 sm:h-8">
-                Alpha
-              </Button>
-            </Link>
             {user ? (
               <Link to="/dashboard">
                 <Button className="bg-[#4ade80] text-black hover:bg-[#4ade80]/90 rounded-full text-[10px] sm:text-xs px-3 sm:px-4 h-7 sm:h-8 font-medium">
