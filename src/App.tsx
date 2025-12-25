@@ -20,9 +20,7 @@ import Pricing from "@/pages/Pricing";
 import CreatorProfile from "@/pages/CreatorProfile";
 import MusicResultPage from "@/pages/MusicResultPage";
 import GlobalHeatmap from "@/pages/GlobalHeatmap";
-import MusicAlpha from "@/pages/MusicAlpha";
 import HeatmapDetail from "@/pages/HeatmapDetail";
-import AlphaDetail from "@/pages/AlphaDetail";
 import Analytics from "@/pages/Analytics";
 import Megashuffle from "@/pages/Megashuffle";
 import Upload from "@/pages/Upload";
@@ -50,8 +48,6 @@ const App = () => {
                 <Route path="/advanced" element={<Advanced />} />
                 <Route path="/global-heatmap" element={<GlobalHeatmap />} />
                 <Route path="/global-heatmap/:id" element={<HeatmapDetail />} />
-                <Route path="/music-alpha" element={<MusicAlpha />} />
-                <Route path="/music-alpha/:id" element={<AlphaDetail />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/dashboard/settings" element={<DashboardSettings />} />
                 <Route path="/dashboard/profile" element={<DashboardProfile />} />

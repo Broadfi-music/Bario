@@ -21,9 +21,6 @@ verify_jwt = false
 [functions.megashuffle-music]
 verify_jwt = false
 
-[functions.alpha-predictions]
-verify_jwt = false
-
 [functions.music-search]
 verify_jwt = false
 
