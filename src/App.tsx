@@ -26,9 +26,11 @@ import Megashuffle from "@/pages/Megashuffle";
 import Upload from "@/pages/Upload";
 import ArtistProfile from "@/pages/ArtistProfile";
 import RadioStations from "@/pages/RadioStations";
+import RadioDetail from "@/pages/RadioDetail";
 import Podcasts from "@/pages/Podcasts";
 import PodcastHost from "@/pages/PodcastHost";
 import HostProfile from "@/pages/HostProfile";
+import BarioMusic from "@/pages/BarioMusic";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,9 +64,11 @@ const App = () => {
                 <Route path="/dashboard/music-result" element={<MusicResultPage />} />
                 <Route path="/music-result" element={<MusicResultPage />} />
                 <Route path="/radio-stations" element={<RadioStations />} />
+                <Route path="/radio/:stationId" element={<RadioDetail />} />
                 <Route path="/podcasts" element={<Podcasts />} />
                 <Route path="/podcast-host/:hostId" element={<PodcastHost />} />
                 <Route path="/host/:hostId" element={<HostProfile />} />
+                <Route path="/bario-music" element={<BarioMusic />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
