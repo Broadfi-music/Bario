@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Play, Pause, Radio, Heart, Volume2, Users, Search, X, Eye } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ChevronLeft, Play, Pause, Radio, Heart, Search, X, Eye, Tv } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,12 +37,14 @@ const RadioStations = () => {
   const [selectedCategory, setSelectedCategory] = useState('top');
 
   const categories = [
-    { id: 'top', label: 'Top Stations' },
+    { id: 'top', label: 'Top' },
     { id: 'trending', label: 'Trending' },
     { id: 'music', label: 'Music' },
     { id: 'hip-hop', label: 'Hip-Hop' },
     { id: 'pop', label: 'Pop' },
     { id: 'rock', label: 'Rock' },
+    { id: 'jazz', label: 'Jazz' },
+    { id: 'electronic', label: 'Electronic' },
   ];
 
   useEffect(() => {
@@ -52,7 +54,7 @@ const RadioStations = () => {
   const fetchStations = async () => {
     setLoading(true);
     try {
-      let body: any = { limit: 30 };
+      let body: any = { limit: 40 };
       
       if (selectedCategory === 'top') {
         body.action = 'topvote';
@@ -90,7 +92,7 @@ const RadioStations = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('radio-browser', {
-        body: { action: 'search', name: searchQuery, limit: 30 }
+        body: { action: 'search', name: searchQuery, limit: 40 }
       });
 
       if (error) throw error;
@@ -102,7 +104,8 @@ const RadioStations = () => {
     }
   };
 
-  const togglePlay = (station: RadioStation) => {
+  const togglePlay = (station: RadioStation, e: React.MouseEvent) => {
+    e.stopPropagation();
     if (playingStation === station.stationuuid) {
       audioRef.current?.pause();
       setPlayingStation(null);
@@ -117,7 +120,8 @@ const RadioStations = () => {
     }
   };
 
-  const toggleFavorite = (id: string) => {
+  const toggleFavorite = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     setFavorites(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id]);
   };
 
@@ -135,68 +139,71 @@ const RadioStations = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#0e0e10] text-white">
+    <div className="min-h-screen bg-black text-white">
       <audio ref={audioRef} />
       
       {/* Header - Kick.com style */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#18181b] border-b border-white/5">
-        <div className="flex items-center h-14 px-4">
-          <button onClick={() => navigate('/')} className="flex items-center gap-1.5 text-white/60 hover:text-white mr-6">
-            <ChevronLeft className="h-4 w-4" />
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#0e0e10]">
+        <div className="flex items-center h-12 px-2 sm:px-4 gap-2">
+          <button onClick={() => navigate('/')} className="text-white/60 hover:text-white p-1">
+            <ChevronLeft className="h-5 w-5" />
           </button>
           
-          <div className="flex items-center gap-2 mr-6">
-            <Radio className="h-5 w-5 text-[#53fc18]" />
-            <span className="font-bold text-lg">Radio</span>
-          </div>
-
-          {/* Search Bar */}
-          <div className="flex-1 max-w-md mx-auto relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+          {/* Search Bar - Full width on mobile */}
+          <div className="flex-1 relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40" />
             <Input
-              placeholder="Search radio stations..."
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && searchStations()}
-              className="pl-10 pr-10 h-9 bg-[#26262c] border-none text-sm placeholder:text-white/40 rounded-full"
+              className="pl-8 pr-8 h-8 bg-[#1f1f23] border-none text-xs placeholder:text-white/40 rounded-md w-full"
             />
             {searchQuery && (
               <button
                 onClick={() => { setSearchQuery(''); fetchStations(); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
 
-          <div className="ml-auto">
-            {user ? (
-              <Link to="/dashboard">
-                <Button size="sm" className="bg-[#53fc18] text-black hover:bg-[#53fc18]/90 text-xs h-8 px-4 rounded font-semibold">
-                  Dashboard
-                </Button>
-              </Link>
-            ) : (
-              <Link to="/auth">
-                <Button size="sm" className="bg-[#53fc18] text-black hover:bg-[#53fc18]/90 text-xs h-8 px-4 rounded font-semibold">
-                  Log In
-                </Button>
-              </Link>
-            )}
-          </div>
+          {/* Studio Button */}
+          <Button
+            onClick={() => navigate('/podcasts')}
+            size="sm"
+            className="bg-black hover:bg-black/80 text-white text-[10px] h-8 px-2 sm:px-3 font-semibold border border-white/10"
+          >
+            <Tv className="h-3 w-3 sm:mr-1" />
+            <span className="hidden sm:inline">Studio</span>
+          </Button>
+
+          {user ? (
+            <Link to="/dashboard">
+              <Button size="sm" className="bg-black hover:bg-black/80 text-white text-[10px] h-8 px-2 sm:px-3 font-semibold border border-white/10">
+                Dashboard
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/auth">
+              <Button size="sm" className="bg-black hover:bg-black/80 text-white text-[10px] h-8 px-2 sm:px-3 font-semibold border border-white/10">
+                Log In
+              </Button>
+            </Link>
+          )}
         </div>
 
-        {/* Categories */}
-        <div className="flex items-center gap-1 px-4 py-2 overflow-x-auto border-t border-white/5">
+        {/* Categories - Scrollable */}
+        <div className="flex items-center gap-1 px-2 py-1.5 overflow-x-auto border-t border-white/5 scrollbar-hide">
           {categories.map(cat => (
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-4 py-1.5 rounded text-xs font-medium whitespace-nowrap transition-colors ${
+              className={`px-3 py-1 rounded text-[10px] font-medium whitespace-nowrap transition-colors ${
                 selectedCategory === cat.id 
-                  ? 'bg-[#53fc18] text-black' 
-                  : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                  ? 'bg-black text-white border border-white/20' 
+                  : 'bg-transparent text-white/60 hover:text-white'
               }`}
             >
               {cat.label}
@@ -207,35 +214,35 @@ const RadioStations = () => {
 
       {/* Currently Playing Bar */}
       {currentPlayingStation && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#18181b] border-t border-white/10 p-3">
-          <div className="max-w-7xl mx-auto flex items-center gap-4">
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#18181b] border-t border-white/10 p-2 sm:p-3">
+          <div className="flex items-center gap-3">
             <div className="relative">
               <img 
                 src={currentPlayingStation.favicon || 'https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=100'} 
                 alt="" 
-                className="w-12 h-12 rounded-lg object-cover"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded object-cover"
                 onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=100'; }}
               />
-              <div className="absolute -top-1 -right-1 flex items-center gap-0.5 px-1.5 py-0.5 bg-red-500 rounded-full">
-                <span className="animate-pulse w-1.5 h-1.5 bg-white rounded-full"></span>
-                <span className="text-[8px] text-white font-medium">LIVE</span>
+              <div className="absolute -top-1 -right-1 flex items-center gap-0.5 px-1 py-0.5 bg-red-500 rounded">
+                <span className="animate-pulse w-1 h-1 bg-white rounded-full"></span>
+                <span className="text-[7px] text-white font-medium">LIVE</span>
               </div>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{currentPlayingStation.name}</p>
-              <p className="text-xs text-white/50 truncate">{currentPlayingStation.tags?.split(',')[0] || 'Radio'}</p>
+              <p className="text-xs font-medium text-white truncate">{currentPlayingStation.name}</p>
+              <p className="text-[10px] text-white/50 truncate">{currentPlayingStation.tags?.split(',')[0] || 'Radio'}</p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-white/50">
-                <Eye className="h-4 w-4" />
-                <span className="text-xs">{formatListeners(currentPlayingStation.clickcount)}</span>
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-1 text-white/50">
+                <Eye className="h-3 w-3" />
+                <span className="text-[10px]">{formatListeners(currentPlayingStation.clickcount)}</span>
               </div>
               <Button
-                onClick={() => togglePlay(currentPlayingStation)}
+                onClick={(e) => togglePlay(currentPlayingStation, e)}
                 size="icon"
-                className="h-10 w-10 rounded-full bg-[#53fc18] hover:bg-[#53fc18]/90"
+                className="h-9 w-9 rounded-full bg-black hover:bg-black/80 border border-white/20"
               >
-                <Pause className="h-5 w-5 text-black" />
+                <Pause className="h-4 w-4 text-white" />
               </Button>
             </div>
           </div>
@@ -243,100 +250,97 @@ const RadioStations = () => {
       )}
 
       {/* Main Content */}
-      <main className={`pt-28 ${currentPlayingStation ? 'pb-24' : 'pb-6'} px-4`}>
-        <div className="max-w-7xl mx-auto">
-          {/* Featured/Live Stations - Twitch style grid */}
-          {loading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {Array(12).fill(0).map((_, i) => (
-                <div key={i} className="aspect-video bg-white/5 rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredStations.map(station => (
-                <div
-                  key={station.stationuuid}
-                  className="group cursor-pointer"
-                  onClick={() => navigate(`/radio/${station.stationuuid}`, { state: { station } })}
-                >
-                  {/* Thumbnail */}
-                  <div className="relative aspect-video rounded-lg overflow-hidden bg-gradient-to-br from-purple-900/50 to-blue-900/50">
-                    <img 
-                      src={station.favicon || 'https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=400'} 
-                      alt={station.name}
-                      className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                      onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=400'; }}
-                    />
-                    
-                    {/* Live Badge */}
-                    <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 bg-red-600 rounded text-[10px] font-semibold">
-                      <span className="animate-pulse w-1.5 h-1.5 bg-white rounded-full"></span>
-                      LIVE
-                    </div>
+      <main className={`pt-24 ${currentPlayingStation ? 'pb-20' : 'pb-4'} px-2 sm:px-4`}>
+        {/* Station Grid - Kick.com mobile style */}
+        {loading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
+            {Array(12).fill(0).map((_, i) => (
+              <div key={i} className="aspect-video bg-white/5 rounded animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
+            {filteredStations.map(station => (
+              <div
+                key={station.stationuuid}
+                className="group cursor-pointer"
+                onClick={() => navigate(`/radio/${station.stationuuid}`, { state: { station } })}
+              >
+                {/* Thumbnail - Smaller on mobile */}
+                <div className="relative aspect-video rounded overflow-hidden bg-gradient-to-br from-purple-900/50 to-blue-900/50">
+                  <img 
+                    src={station.favicon || 'https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=400'} 
+                    alt={station.name}
+                    className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+                    onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=400'; }}
+                  />
+                  
+                  {/* Live Badge */}
+                  <div className="absolute top-1 left-1 flex items-center gap-0.5 px-1.5 py-0.5 bg-red-600 rounded text-[8px] font-semibold">
+                    <span className="animate-pulse w-1 h-1 bg-white rounded-full"></span>
+                    LIVE
+                  </div>
 
-                    {/* Viewer Count */}
-                    <div className="absolute bottom-2 left-2 flex items-center gap-1 px-2 py-0.5 bg-black/70 rounded text-[10px]">
-                      <Eye className="h-3 w-3" />
-                      {formatListeners(station.clickcount)} viewers
-                    </div>
+                  {/* Viewer Count */}
+                  <div className="absolute bottom-1 left-1 flex items-center gap-0.5 px-1.5 py-0.5 bg-black/80 rounded text-[8px]">
+                    <Eye className="h-2.5 w-2.5" />
+                    {formatListeners(station.clickcount)}
+                  </div>
 
-                    {/* Play Overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); togglePlay(station); }}
-                        className="w-14 h-14 rounded-full bg-[#53fc18] flex items-center justify-center"
-                      >
-                        {playingStation === station.stationuuid ? (
-                          <Pause className="h-6 w-6 text-black" />
-                        ) : (
-                          <Play className="h-6 w-6 text-black ml-1" />
-                        )}
-                      </button>
-                    </div>
-
-                    {/* Favorite Button */}
+                  {/* Play Overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
-                      onClick={(e) => { e.stopPropagation(); toggleFavorite(station.stationuuid); }}
-                      className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => togglePlay(station, e)}
+                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black flex items-center justify-center border border-white/20"
                     >
-                      <Heart className={`h-4 w-4 ${favorites.includes(station.stationuuid) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                      {playingStation === station.stationuuid ? (
+                        <Pause className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                      ) : (
+                        <Play className="h-4 w-4 sm:h-5 sm:w-5 text-white ml-0.5" />
+                      )}
                     </button>
                   </div>
 
-                  {/* Info */}
-                  <div className="flex gap-3 mt-2">
-                    <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-purple-500 to-blue-500">
-                      <img 
-                        src={station.favicon || ''} 
-                        alt=""
-                        className="w-full h-full object-cover"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate group-hover:text-[#53fc18] transition-colors">
-                        {station.name}
-                      </p>
-                      <p className="text-xs text-white/50 truncate">{station.country || 'Worldwide'}</p>
-                      <p className="text-xs text-white/40 truncate">{station.tags?.split(',').slice(0, 2).join(', ') || 'Music'}</p>
-                    </div>
+                  {/* Favorite Button */}
+                  <button
+                    onClick={(e) => toggleFavorite(station.stationuuid, e)}
+                    className="absolute top-1 right-1 p-1 bg-black/50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Heart className={`h-3 w-3 ${favorites.includes(station.stationuuid) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                  </button>
+                </div>
+
+                {/* Info - Compact on mobile */}
+                <div className="flex gap-2 mt-1.5">
+                  <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-purple-500 to-blue-500">
+                    <img 
+                      src={station.favicon || ''} 
+                      alt=""
+                      className="w-full h-full object-cover"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] sm:text-xs font-medium text-white truncate">
+                      {station.name}
+                    </p>
+                    <p className="text-[9px] sm:text-[10px] text-white/50 truncate">{station.country || 'Worldwide'}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            ))}
+          </div>
+        )}
 
-          {!loading && filteredStations.length === 0 && (
-            <div className="text-center py-16">
-              <Radio className="h-12 w-12 text-white/20 mx-auto mb-4" />
-              <p className="text-white/50">No stations found</p>
-              <Button onClick={fetchStations} variant="ghost" className="mt-4">
-                Load Stations
-              </Button>
-            </div>
-          )}
-        </div>
+        {!loading && filteredStations.length === 0 && (
+          <div className="text-center py-12">
+            <Radio className="h-10 w-10 text-white/20 mx-auto mb-3" />
+            <p className="text-white/50 text-sm">No stations found</p>
+            <Button onClick={fetchStations} variant="ghost" className="mt-3 text-xs">
+              Load Stations
+            </Button>
+          </div>
+        )}
       </main>
     </div>
   );
