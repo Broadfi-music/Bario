@@ -226,6 +226,15 @@ const GlobalHeatmap = () => {
               <Flame className="h-3 w-3 mr-1" />
               Three Strike
             </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate('/bario-music')}
+              className="text-[9px] h-7 px-2 border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+            >
+              <Sparkles className="h-3 w-3 mr-1" />
+              Bario Music
+            </Button>
             
             {/* Search Input */}
             <div className="relative">

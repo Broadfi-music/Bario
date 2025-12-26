@@ -5,7 +5,7 @@ import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 import { 
   Mic, MicOff, Radio, Users, Music, Share2, 
   HandMetal, Volume2, X, Plus, MessageSquare, Play, Pause,
-  Circle, StopCircle, Upload, List, Trash2
+  Circle, StopCircle, Upload, List, Trash2, Minimize2, Maximize2, VolumeX
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,12 +25,12 @@ interface HostStudioProps {
 }
 
 const SOUND_EFFECTS = [
-  { id: 'clap', label: '👏', name: 'Clap' },
-  { id: 'airhorn', label: '📢', name: 'Airhorn' },
-  { id: 'drum', label: '🥁', name: 'Drum' },
-  { id: 'laugh', label: '😂', name: 'Laugh' },
-  { id: 'wow', label: '😮', name: 'Wow' },
-  { id: 'boo', label: '👎', name: 'Boo' },
+  { id: 'clap', label: '👏', name: 'Clap', frequency: 800, duration: 150 },
+  { id: 'airhorn', label: '📢', name: 'Airhorn', frequency: 400, duration: 300 },
+  { id: 'drum', label: '🥁', name: 'Drum', frequency: 150, duration: 200 },
+  { id: 'laugh', label: '😂', name: 'Laugh', frequency: 500, duration: 400 },
+  { id: 'wow', label: '😮', name: 'Wow', frequency: 300, duration: 250 },
+  { id: 'boo', label: '👎', name: 'Boo', frequency: 200, duration: 350 },
 ];
 
 const CURATED_MUSIC = [
@@ -48,16 +48,26 @@ interface UploadedMusic {
   type: 'background' | 'playlist';
 }
 
+interface ParticipantInfo {
+  id: string;
+  user_id: string;
+  role: string;
+  is_muted: boolean;
+  hand_raised: boolean;
+}
+
 const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
   const { user } = useAuth();
   const [isLive, setIsLive] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
   const [listenerCount, setListenerCount] = useState(0);
   const [showMusicPicker, setShowMusicPicker] = useState(false);
   const [currentMusic, setCurrentMusic] = useState<(typeof CURATED_MUSIC[0] & { url?: string }) | null>(null);
   const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const [title, setTitle] = useState(session?.title || '');
   const [sessionId, setSessionId] = useState(session?.id || '');
-  const [raisedHands, setRaisedHands] = useState<any[]>([]);
+  const [raisedHands, setRaisedHands] = useState<ParticipantInfo[]>([]);
+  const [allParticipants, setAllParticipants] = useState<ParticipantInfo[]>([]);
   const [comments, setComments] = useState<any[]>([]);
   const [uploadedMusic, setUploadedMusic] = useState<UploadedMusic[]>([]);
   const [isUploadingMusic, setIsUploadingMusic] = useState(false);
@@ -159,8 +169,23 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     
     if (participants) {
       setListenerCount(participants.length);
-      setRaisedHands(participants.filter((p: any) => p.hand_raised));
+      setAllParticipants(participants as ParticipantInfo[]);
+      setRaisedHands(participants.filter((p: any) => p.hand_raised) as ParticipantInfo[]);
     }
+  };
+
+  // Host mute a participant
+  const muteParticipant = async (participantId: string, shouldMute: boolean) => {
+    const authSession = await getFreshSession();
+    if (!authSession) return;
+
+    await supabase
+      .from('podcast_participants')
+      .update({ is_muted: shouldMute })
+      .eq('id', participantId);
+    
+    toast.success(shouldMute ? 'Participant muted' : 'Participant unmuted');
+    fetchRaisedHands();
   };
 
   const startSession = async () => {
@@ -239,7 +264,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     onClose();
   };
 
-  const playSound = (soundId: string, label: string) => {
+  const playSound = (sound: typeof SOUND_EFFECTS[0]) => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
@@ -247,17 +272,18 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
     
-    oscillator.frequency.value = soundId === 'airhorn' ? 400 : 600;
-    oscillator.type = 'sine';
-    gainNode.gain.value = 0.1;
+    oscillator.frequency.value = sound.frequency;
+    oscillator.type = sound.id === 'drum' ? 'triangle' : sound.id === 'airhorn' ? 'sawtooth' : 'sine';
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + sound.duration / 1000);
     
     oscillator.start();
     setTimeout(() => {
       oscillator.stop();
       audioContext.close();
-    }, 200);
+    }, sound.duration);
     
-    toast(`${label} played!`);
+    toast(`${sound.label} played!`);
   };
 
   const promoteSpeaker = async (participantId: string) => {
@@ -313,12 +339,14 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     }
   };
 
+  // Multi-file upload handler
   const handleMusicUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    if (!file.type.startsWith('audio/')) {
-      toast.error('Please upload an audio file');
+    const audioFiles = Array.from(files).filter(file => file.type.startsWith('audio/'));
+    if (audioFiles.length === 0) {
+      toast.error('Please upload audio files');
       return;
     }
 
@@ -331,27 +359,36 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
         return;
       }
 
-      const fileName = `${user?.id}/${Date.now()}-${file.name}`;
-      const { data, error } = await supabase.storage
-        .from('user-uploads')
-        .upload(fileName, file);
+      const uploadedTracks: UploadedMusic[] = [];
 
-      if (error) throw error;
+      for (const file of audioFiles) {
+        const fileName = `${user?.id}/${Date.now()}-${file.name}`;
+        const { data, error } = await supabase.storage
+          .from('user-uploads')
+          .upload(fileName, file);
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('user-uploads')
-        .getPublicUrl(fileName);
+        if (error) {
+          console.error('Upload error:', error);
+          continue;
+        }
 
-      const newMusic: UploadedMusic = {
-        id: Date.now().toString(),
-        title: file.name.replace(/\.[^/.]+$/, ''),
-        artist: 'Uploaded',
-        url: publicUrl,
-        type: 'playlist'
-      };
+        const { data: { publicUrl } } = supabase.storage
+          .from('user-uploads')
+          .getPublicUrl(fileName);
 
-      setUploadedMusic(prev => [...prev, newMusic]);
-      toast.success('Music uploaded successfully!');
+        uploadedTracks.push({
+          id: Date.now().toString() + Math.random(),
+          title: file.name.replace(/\.[^/.]+$/, ''),
+          artist: 'Uploaded',
+          url: publicUrl,
+          type: 'playlist'
+        });
+      }
+
+      if (uploadedTracks.length > 0) {
+        setUploadedMusic(prev => [...prev, ...uploadedTracks]);
+        toast.success(`${uploadedTracks.length} track(s) uploaded successfully!`);
+      }
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload music');
@@ -379,6 +416,43 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     }
   };
 
+  // Minimized view when live
+  if (isMinimized && isLive) {
+    return (
+      <div className="fixed bottom-4 right-4 z-50 bg-black/95 border border-white/10 rounded-xl p-3 shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className="animate-pulse w-2 h-2 bg-red-500 rounded-full"></span>
+            <span className="text-xs text-white font-medium">LIVE</span>
+          </div>
+          <span className="text-xs text-white/60">{listenerCount} listeners</span>
+          <Button
+            onClick={toggleMute}
+            size="icon"
+            className={`h-8 w-8 rounded-full ${isMuted ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}
+          >
+            {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+          </Button>
+          <Button
+            onClick={() => setIsMinimized(false)}
+            size="icon"
+            className="h-8 w-8 bg-white/10"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
+          <Button
+            onClick={endSession}
+            size="sm"
+            variant="destructive"
+            className="h-8 px-3 text-xs"
+          >
+            End
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-black/95 border-white/10 max-w-lg max-h-[85vh] overflow-y-auto">
@@ -387,9 +461,19 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
             <Radio className={`h-4 w-4 ${isLive ? 'text-red-500 animate-pulse' : 'text-white/60'}`} />
             Host Studio
             {isAudioConnected && (
-              <span className="ml-auto text-[10px] px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full">
+              <span className="ml-2 text-[10px] px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full">
                 {audioProvider === 'jitsi' ? 'Jitsi' : 'LiveKit'} Connected
               </span>
+            )}
+            {isLive && (
+              <Button
+                onClick={() => { setIsMinimized(true); onClose(); }}
+                size="icon"
+                variant="ghost"
+                className="ml-auto h-6 w-6"
+              >
+                <Minimize2 className="h-4 w-4" />
+              </Button>
             )}
           </DialogTitle>
         </DialogHeader>
@@ -397,11 +481,12 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
         {/* Hidden audio element for music playback */}
         <audio ref={audioRef} className="hidden" onEnded={() => setIsMusicPlaying(false)} />
         
-        {/* Hidden file input for music upload */}
+        {/* Hidden file input for multi-file music upload */}
         <input
           ref={fileInputRef}
           type="file"
           accept="audio/*"
+          multiple
           className="hidden"
           onChange={handleMusicUpload}
         />
@@ -535,14 +620,44 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
                   {SOUND_EFFECTS.map((sound) => (
                     <button
                       key={sound.id}
-                      onClick={() => playSound(sound.id, sound.label)}
-                      className="p-2.5 bg-white/5 rounded-lg hover:bg-white/10 transition-colors text-center"
+                      onClick={() => playSound(sound)}
+                      className="p-2.5 bg-white/5 rounded-lg hover:bg-white/10 transition-colors text-center active:scale-95"
                     >
                       <span className="text-lg">{sound.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
+
+              {/* All Participants with Mute Controls */}
+              {allParticipants.filter(p => p.role !== 'host').length > 0 && (
+                <div className="space-y-1.5">
+                  <h4 className="text-[10px] text-white/60 uppercase tracking-wider">Participants ({allParticipants.length - 1})</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {allParticipants.filter(p => p.role !== 'host').map((p) => (
+                      <div
+                        key={p.id}
+                        className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs ${
+                          p.hand_raised ? 'bg-yellow-500/20 ring-1 ring-yellow-500' : 'bg-white/5'
+                        }`}
+                      >
+                        {p.hand_raised && <HandMetal className="h-3 w-3 text-yellow-400" />}
+                        <span className="text-white">User {p.user_id.slice(0, 4)}</span>
+                        <button
+                          onClick={() => muteParticipant(p.id, !p.is_muted)}
+                          className={`p-1 rounded-full ${p.is_muted ? 'bg-red-500/20' : 'bg-green-500/20'}`}
+                        >
+                          {p.is_muted ? (
+                            <VolumeX className="h-3 w-3 text-red-400" />
+                          ) : (
+                            <Volume2 className="h-3 w-3 text-green-400" />
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Music Section */}
               <div className="space-y-1.5">
