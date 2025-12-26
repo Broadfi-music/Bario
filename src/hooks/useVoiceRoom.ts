@@ -17,6 +17,7 @@ export interface AudioParticipant {
   isMuted: boolean;
   isSpeaking: boolean;
   audioLevel: number;
+  handRaised?: boolean;
 }
 
 interface UseVoiceRoomProps {
@@ -51,10 +52,15 @@ export const useVoiceRoom = ({
   // Jitsi refs
   const jitsiApiRef = useRef<any>(null);
   const jitsiContainerRef = useRef<HTMLDivElement | null>(null);
+  const jitsiScriptLoaded = useRef(false);
   
   // Recording refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
+  
+  // Connection stability
+  const connectionAttemptRef = useRef(0);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const getVoiceRoomToken = async (): Promise<VoiceRoomProvider | null> => {
     try {
@@ -184,112 +190,168 @@ export const useVoiceRoom = ({
     }
   };
 
-  const connectJitsi = async (config: VoiceRoomProvider) => {
-    return new Promise<boolean>((resolve, reject) => {
-      // Load Jitsi external API
+  const loadJitsiScript = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if (jitsiScriptLoaded.current || (window as any).JitsiMeetExternalAPI) {
+        jitsiScriptLoaded.current = true;
+        resolve();
+        return;
+      }
+
+      const existingScript = document.querySelector('script[src="https://meet.jit.si/external_api.js"]');
+      if (existingScript) {
+        existingScript.addEventListener('load', () => {
+          jitsiScriptLoaded.current = true;
+          resolve();
+        });
+        existingScript.addEventListener('error', () => reject(new Error('Failed to load Jitsi API')));
+        return;
+      }
+
       const script = document.createElement('script');
       script.src = 'https://meet.jit.si/external_api.js';
       script.async = true;
       
       script.onload = () => {
-        try {
-          // Create a hidden container for Jitsi
-          let container = document.getElementById('jitsi-container') as HTMLDivElement | null;
-          if (!container) {
-            container = document.createElement('div');
-            container.id = 'jitsi-container';
-            container.style.cssText = 'position:fixed;bottom:0;right:0;width:1px;height:1px;overflow:hidden;z-index:-1;';
-            document.body.appendChild(container);
-          }
-          jitsiContainerRef.current = container;
-
-          const domain = 'meet.jit.si';
-          const options = {
-            roomName: config.roomName,
-            parentNode: container,
-            width: 1,
-            height: 1,
-            configOverwrite: {
-              startWithAudioMuted: !config.canPublish,
-              startWithVideoMuted: true,
-              disableDeepLinking: true,
-              startAudioOnly: true,
-              prejoinPageEnabled: false,
-              enableClosePage: false,
-              disableVideo: true,
-              ...config.config?.configOverwrite,
-            },
-            interfaceConfigOverwrite: {
-              SHOW_JITSI_WATERMARK: false,
-              SHOW_WATERMARK_FOR_GUESTS: false,
-              TOOLBAR_BUTTONS: [],
-              filmStripOnly: false,
-              DISABLE_VIDEO_BACKGROUND: true,
-              ...config.config?.interfaceConfigOverwrite,
-            },
-            userInfo: {
-              displayName: userName,
-            },
-          };
-
-          const api = new (window as any).JitsiMeetExternalAPI(domain, options);
-          jitsiApiRef.current = api;
-
-          api.addEventListener('videoConferenceJoined', () => {
-            console.log('Jitsi conference joined');
-            // Disable video immediately
-            api.executeCommand('toggleVideo');
-            
-            // Add self to participants
-            const selfParticipant: AudioParticipant = {
-              identity: userId,
-              name: userName,
-              isMuted: !config.canPublish,
-              isSpeaking: false,
-              audioLevel: 0,
-            };
-            setParticipants([selfParticipant]);
-            resolve(true);
-          });
-
-          api.addEventListener('participantJoined', (data: any) => {
-            const audioParticipant: AudioParticipant = {
-              identity: data.id,
-              name: data.displayName || 'Participant',
-              isMuted: true,
-              isSpeaking: false,
-              audioLevel: 0,
-            };
-            setParticipants(prev => [...prev, audioParticipant]);
-            onParticipantJoined?.(audioParticipant);
-          });
-
-          api.addEventListener('participantLeft', (data: any) => {
-            setParticipants(prev => prev.filter(p => p.identity !== data.id));
-            onParticipantLeft?.(data.id);
-          });
-
-          api.addEventListener('audioMuteStatusChanged', (data: any) => {
-            if (data.id === 'local') {
-              setIsMuted(data.muted);
-            }
-          });
-
-          api.addEventListener('videoConferenceLeft', () => {
-            console.log('Left Jitsi conference');
-          });
-
-        } catch (err) {
-          console.error('Jitsi init error:', err);
-          reject(err);
-        }
+        jitsiScriptLoaded.current = true;
+        resolve();
       };
-
-      script.onerror = () => {
-        reject(new Error('Failed to load Jitsi API'));
-      };
-
+      
+      script.onerror = () => reject(new Error('Failed to load Jitsi API'));
+      
       document.head.appendChild(script);
+    });
+  };
+
+  const connectJitsi = async (config: VoiceRoomProvider) => {
+    await loadJitsiScript();
+
+    return new Promise<boolean>((resolve, reject) => {
+      try {
+        // Create a hidden container for Jitsi
+        let container = document.getElementById('jitsi-container') as HTMLDivElement | null;
+        if (!container) {
+          container = document.createElement('div');
+          container.id = 'jitsi-container';
+          container.style.cssText = 'position:fixed;bottom:0;right:0;width:1px;height:1px;overflow:hidden;z-index:-1;';
+          document.body.appendChild(container);
+        }
+        jitsiContainerRef.current = container;
+
+        const domain = 'meet.jit.si';
+        const options = {
+          roomName: config.roomName,
+          parentNode: container,
+          width: 1,
+          height: 1,
+          configOverwrite: {
+            startWithAudioMuted: !config.canPublish,
+            startWithVideoMuted: true,
+            disableDeepLinking: true,
+            startAudioOnly: true,
+            prejoinPageEnabled: false,
+            enableClosePage: false,
+            disableVideo: true,
+            disableThirdPartyRequests: true,
+            enableWelcomePage: false,
+            ...config.config?.configOverwrite,
+          },
+          interfaceConfigOverwrite: {
+            SHOW_JITSI_WATERMARK: false,
+            SHOW_WATERMARK_FOR_GUESTS: false,
+            TOOLBAR_BUTTONS: [],
+            filmStripOnly: false,
+            DISABLE_VIDEO_BACKGROUND: true,
+            MOBILE_APP_PROMO: false,
+            ...config.config?.interfaceConfigOverwrite,
+          },
+          userInfo: {
+            displayName: userName,
+          },
+        };
+
+        const api = new (window as any).JitsiMeetExternalAPI(domain, options);
+        jitsiApiRef.current = api;
+
+        let joined = false;
+
+        api.addEventListener('videoConferenceJoined', () => {
+          console.log('Jitsi conference joined successfully');
+          joined = true;
+          
+          // Disable video immediately
+          api.executeCommand('toggleVideo');
+          
+          // Set initial audio state based on canPublish
+          if (!config.canPublish) {
+            api.executeCommand('toggleAudio'); // Mute if can't publish
+          }
+          
+          // Add self to participants
+          const selfParticipant: AudioParticipant = {
+            identity: userId,
+            name: userName,
+            isMuted: !config.canPublish,
+            isSpeaking: false,
+            audioLevel: 0,
+          };
+          setParticipants([selfParticipant]);
+          setIsMuted(!config.canPublish);
+          resolve(true);
+        });
+
+        api.addEventListener('participantJoined', (data: any) => {
+          console.log('Jitsi participant joined:', data);
+          const audioParticipant: AudioParticipant = {
+            identity: data.id,
+            name: data.displayName || 'Participant',
+            isMuted: true,
+            isSpeaking: false,
+            audioLevel: 0,
+          };
+          setParticipants(prev => [...prev, audioParticipant]);
+          onParticipantJoined?.(audioParticipant);
+        });
+
+        api.addEventListener('participantLeft', (data: any) => {
+          console.log('Jitsi participant left:', data);
+          setParticipants(prev => prev.filter(p => p.identity !== data.id));
+          onParticipantLeft?.(data.id);
+        });
+
+        api.addEventListener('audioMuteStatusChanged', (data: any) => {
+          console.log('Audio mute status changed:', data);
+          if (data.id === 'local') {
+            setIsMuted(data.muted);
+          } else {
+            setParticipants(prev => prev.map(p => 
+              p.identity === data.id ? { ...p, isMuted: data.muted } : p
+            ));
+          }
+        });
+
+        api.addEventListener('dominantSpeakerChanged', (data: any) => {
+          setParticipants(prev => prev.map(p => ({
+            ...p,
+            isSpeaking: p.identity === data.id,
+          })));
+        });
+
+        api.addEventListener('videoConferenceLeft', () => {
+          console.log('Left Jitsi conference');
+        });
+
+        // Timeout for join
+        setTimeout(() => {
+          if (!joined) {
+            reject(new Error('Jitsi join timeout'));
+          }
+        }, 15000);
+
+      } catch (err) {
+        console.error('Jitsi init error:', err);
+        reject(err);
+      }
     });
   };
 
@@ -298,11 +360,19 @@ export const useVoiceRoom = ({
 
     setIsConnecting(true);
     setError(null);
+    connectionAttemptRef.current++;
+    const currentAttempt = connectionAttemptRef.current;
 
     try {
       const config = await getVoiceRoomToken();
       if (!config) {
         throw new Error('Failed to get voice room configuration');
+      }
+
+      // Check if this attempt is still valid
+      if (currentAttempt !== connectionAttemptRef.current) {
+        console.log('Connection attempt superseded');
+        return;
       }
 
       console.log('Voice room config:', config.provider);
@@ -319,13 +389,30 @@ export const useVoiceRoom = ({
     } catch (err) {
       console.error('Connection error:', err);
       setError(err instanceof Error ? err.message : 'Failed to connect');
+      
+      // Retry connection after delay
+      if (currentAttempt === connectionAttemptRef.current && connectionAttemptRef.current < 3) {
+        reconnectTimeoutRef.current = setTimeout(() => {
+          console.log('Retrying connection...');
+          setIsConnecting(false);
+          connect();
+        }, 2000);
+      }
     } finally {
-      setIsConnecting(false);
+      if (currentAttempt === connectionAttemptRef.current) {
+        setIsConnecting(false);
+      }
     }
   }, [sessionId, userId, userName, isHost, isConnected, isConnecting]);
 
   const disconnect = useCallback(async () => {
     try {
+      // Clear any pending reconnect
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+
       if (roomRef.current) {
         await roomRef.current.disconnect();
         roomRef.current = null;
@@ -345,6 +432,7 @@ export const useVoiceRoom = ({
       setIsConnected(false);
       setParticipants([]);
       setProvider(null);
+      connectionAttemptRef.current = 0;
     } catch (err) {
       console.error('Disconnect error:', err);
     }
@@ -375,12 +463,31 @@ export const useVoiceRoom = ({
         localTrackRef.current = roomRef.current.localParticipant.audioTrackPublications.values().next().value?.track;
         setIsMuted(false);
       } else if (provider === 'jitsi' && jitsiApiRef.current) {
-        jitsiApiRef.current.executeCommand('toggleAudio');
+        if (isMuted) {
+          jitsiApiRef.current.executeCommand('toggleAudio');
+        }
       }
     } catch (err) {
       console.error('Enable mic error:', err);
     }
-  }, [provider]);
+  }, [provider, isMuted]);
+
+  // Host can mute a specific participant
+  const muteParticipant = useCallback(async (participantId: string) => {
+    if (!isHost) return;
+    
+    try {
+      if (provider === 'jitsi' && jitsiApiRef.current) {
+        jitsiApiRef.current.executeCommand('muteParticipant', participantId);
+      }
+      // Update local state
+      setParticipants(prev => prev.map(p => 
+        p.identity === participantId ? { ...p, isMuted: true } : p
+      ));
+    } catch (err) {
+      console.error('Mute participant error:', err);
+    }
+  }, [isHost, provider]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -464,6 +571,7 @@ export const useVoiceRoom = ({
     disconnect,
     toggleMute,
     enableMicrophone,
+    muteParticipant,
     startRecording,
     stopRecording,
     saveEpisode,

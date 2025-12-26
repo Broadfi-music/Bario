@@ -31,6 +31,9 @@ interface TwitchCommentsProps {
 
 const EMOJIS = ['🔥', '❤️', '👏', '😂', '🎵', '💯', '🙌', '✨'];
 
+// Comment display duration in milliseconds (0.7 seconds = 700ms as requested)
+const COMMENT_DISPLAY_DURATION = 700;
+
 const getRandomUsername = (userId: string) => {
   const names = ['CryptoKing', 'MusicLover', 'BeatDrop', 'VibeCheck', 'NightOwl', 'StarGazer', 'WaveRider', 'SoundWave'];
   const index = userId.charCodeAt(0) % names.length;
@@ -53,17 +56,17 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
   const [showAuthModal, setShowAuthModal] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
-  // Fade out comment after 5 seconds (Twitch style)
+  // Fade out comment after COMMENT_DISPLAY_DURATION (Twitch style - fast fade)
   const scheduleCommentFade = (commentId: string) => {
     setTimeout(() => {
       setComments(prev => prev.map(c => 
         c.id === commentId ? { ...c, isVisible: false } : c
       ));
-      // Remove after fade animation completes
+      // Remove after fade animation completes (300ms for smooth animation)
       setTimeout(() => {
         setComments(prev => prev.filter(c => c.id !== commentId));
-      }, 500);
-    }, 5000);
+      }, 300);
+    }, COMMENT_DISPLAY_DURATION);
   };
 
   // Demo comments for demo sessions
@@ -182,12 +185,12 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
 
   return (
     <div className="flex flex-col bg-gradient-to-t from-black via-black/95 to-transparent">
-      {/* Comments List - Twitch style with fade */}
+      {/* Comments List - Twitch style with fast fade */}
       <div className="h-32 overflow-y-auto px-3 py-1 scrollbar-hide relative">
         {comments.map((comment) => (
           <div 
             key={comment.id} 
-            className={`py-0.5 transition-all duration-500 ${
+            className={`py-0.5 transition-all duration-300 ${
               comment.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
             }`}
           >
