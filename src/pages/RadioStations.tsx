@@ -40,9 +40,9 @@ const RadioStations = () => {
     { id: 'top', label: 'Top Stations' },
     { id: 'trending', label: 'Trending' },
     { id: 'music', label: 'Music' },
-    { id: 'news', label: 'News' },
-    { id: 'talk', label: 'Talk' },
-    { id: 'sports', label: 'Sports' },
+    { id: 'hip-hop', label: 'Hip-Hop' },
+    { id: 'pop', label: 'Pop' },
+    { id: 'rock', label: 'Rock' },
   ];
 
   useEffect(() => {
@@ -52,20 +52,30 @@ const RadioStations = () => {
   const fetchStations = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('radio-browser', {
-        body: { 
-          action: selectedCategory === 'top' ? 'topvote' : 
-                  selectedCategory === 'trending' ? 'topclick' : 'bytag',
-          tag: selectedCategory !== 'top' && selectedCategory !== 'trending' ? selectedCategory : undefined,
-          limit: 30 
-        }
-      });
+      let body: any = { limit: 30 };
+      
+      if (selectedCategory === 'top') {
+        body.action = 'topvote';
+      } else if (selectedCategory === 'trending') {
+        body.action = 'topclick';
+      } else {
+        body.action = 'bytag';
+        body.tag = selectedCategory;
+      }
 
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke('radio-browser', { body });
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('Radio data:', data);
       setStations(data?.stations || []);
     } catch (error) {
       console.error('Error fetching stations:', error);
       toast.error('Failed to load radio stations');
+      setStations([]);
     } finally {
       setLoading(false);
     }
