@@ -412,10 +412,10 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
                     </div>
                   )}
 
-                  {/* Hand raised indicator */}
+                  {/* Hand raised indicator - Twitter Spaces style */}
                   {p.hand_raised && (
-                    <div className="absolute -top-1 -right-1 animate-bounce">
-                      <span className="text-sm">✋</span>
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg animate-bounce ring-2 ring-black">
+                      <span className="text-[10px]">✋</span>
                     </div>
                   )}
 
