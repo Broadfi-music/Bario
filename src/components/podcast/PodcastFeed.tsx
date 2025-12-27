@@ -38,93 +38,8 @@ const DEMO_CATEGORIES: Category[] = [
   { id: 'jazz', name: 'Jazz', image: 'https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=400', listener_count: 21100, tags: ['Smooth', 'Live'] },
 ];
 
-// Demo live hosts
-const DEMO_LIVE_HOSTS: LiveHost[] = [
-  {
-    id: 'demo-1',
-    host_id: 'host-1',
-    title: 'The Rise of Afrobeats in America',
-    description: 'Discussing how Afrobeats is taking over the US music scene with special guests',
-    listener_count: 1247,
-    host_name: 'DJ Akademiks',
-    host_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-    category: 'Music',
-    cover_image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800'
-  },
-  {
-    id: 'demo-2',
-    host_id: 'host-2',
-    title: 'Producer Secrets: Making Hits',
-    description: 'Live production session and Q&A',
-    listener_count: 892,
-    host_name: 'Metro Boomin',
-    host_avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400',
-    category: 'Production',
-    cover_image_url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800'
-  },
-  {
-    id: 'demo-3',
-    host_id: 'host-3',
-    title: 'K-Pop Global Domination',
-    description: 'How K-Pop conquered the world',
-    listener_count: 2341,
-    host_name: 'Eric Nam',
-    host_avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
-    category: 'K-Pop',
-    cover_image_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800'
-  },
-  {
-    id: 'demo-4',
-    host_id: 'host-4',
-    title: 'Latin Music Revolution',
-    description: 'Reggaeton and its global impact',
-    listener_count: 1567,
-    host_name: 'J Balvin',
-    host_avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400',
-    category: 'Latin',
-    cover_image_url: 'https://images.unsplash.com/photo-1504898770365-14faca6a7320?w=800'
-  },
-  {
-    id: 'demo-5',
-    host_id: 'host-5',
-    title: 'Indie Artist Spotlight',
-    description: 'Underground artists you need to know',
-    listener_count: 654,
-    host_name: 'Phoebe Bridgers',
-    host_avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
-    category: 'Indie',
-    cover_image_url: 'https://images.unsplash.com/photo-1485579149621-3123dd979571?w=800'
-  },
-  {
-    id: 'demo-6',
-    host_id: 'host-1',
-    title: 'Hip-Hop News Daily',
-    description: 'Breaking news and hot takes',
-    listener_count: 3200,
-    host_name: 'DJ Akademiks',
-    host_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-    category: 'Hip-Hop',
-    cover_image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800'
-  }
-];
-
-// Demo schedules
-const DEMO_SCHEDULES = [
-  { id: 'sch-1', host_id: 'host-1', host_name: 'DJ Akademiks', host_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400', title: 'Weekly Hip-Hop Roundup', description: 'Breaking down the week\'s biggest stories', scheduled_at: new Date(Date.now() + 3600000 * 3).toISOString() },
-  { id: 'sch-2', host_id: 'host-2', host_name: 'Metro Boomin', host_avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400', title: 'Production Masterclass', description: 'Learn beat-making techniques', scheduled_at: new Date(Date.now() + 3600000 * 8).toISOString() },
-  { id: 'sch-3', host_id: 'host-3', host_name: 'Eric Nam', host_avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400', title: 'K-Pop Deep Dive', description: 'Exploring the latest K-Pop trends', scheduled_at: new Date(Date.now() + 3600000 * 24).toISOString() },
-  { id: 'sch-4', host_id: 'host-4', host_name: 'J Balvin', host_avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400', title: 'Latin Music Hour', description: 'Celebrating Latin rhythms', scheduled_at: new Date(Date.now() + 3600000 * 48).toISOString() },
-];
-
-// Demo episodes
-const DEMO_EPISODES = [
-  { id: 'ep-1', host_id: 'host-1', host_name: 'DJ Akademiks', host_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400', title: 'The Evolution of Hip-Hop', cover_image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400', play_count: 125000, duration_ms: 3600000 },
-  { id: 'ep-2', host_id: 'host-2', host_name: 'Metro Boomin', host_avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400', title: 'Behind the Beats', cover_image_url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=400', play_count: 98000, duration_ms: 2700000 },
-  { id: 'ep-3', host_id: 'host-3', host_name: 'Eric Nam', host_avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400', title: 'K-Pop Global Impact', cover_image_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400', play_count: 87000, duration_ms: 3200000 },
-  { id: 'ep-4', host_id: 'host-4', host_name: 'J Balvin', host_avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400', title: 'Reggaeton Revolution', cover_image_url: 'https://images.unsplash.com/photo-1504898770365-14faca6a7320?w=400', play_count: 156000, duration_ms: 4200000 },
-  { id: 'ep-5', host_id: 'host-5', host_name: 'Phoebe Bridgers', host_avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400', title: 'Indie Discoveries', cover_image_url: 'https://images.unsplash.com/photo-1485579149621-3123dd979571?w=400', play_count: 67000, duration_ms: 2400000 },
-  { id: 'ep-6', host_id: 'host-1', host_name: 'DJ Akademiks', host_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400', title: 'Industry Secrets', cover_image_url: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400', play_count: 142000, duration_ms: 3900000 },
-];
+// Only show real users - no demo data
+// These will be populated from database only
 
 const formatViewers = (count: number) => {
   if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
@@ -153,14 +68,36 @@ const formatScheduleTime = (dateStr: string) => {
   return `In ${days}d`;
 };
 
+interface ScheduleItem {
+  id: string;
+  host_id: string;
+  host_name?: string;
+  host_avatar?: string;
+  title: string;
+  description?: string;
+  scheduled_at: string;
+}
+
+interface EpisodeItem {
+  id: string;
+  host_id: string;
+  host_name?: string;
+  host_avatar?: string;
+  title: string;
+  cover_image_url?: string;
+  play_count: number;
+  duration_ms: number;
+}
+
 const PodcastFeed = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [liveHosts, setLiveHosts] = useState<LiveHost[]>(DEMO_LIVE_HOSTS);
+  const [liveHosts, setLiveHosts] = useState<LiveHost[]>([]);
+  const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
+  const [episodes, setEpisodes] = useState<EpisodeItem[]>([]);
   const [heroIndex, setHeroIndex] = useState(0);
   const heroRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
 
   // Filter hosts based on search
   const filteredHosts = searchQuery.trim() 
@@ -173,6 +110,8 @@ const PodcastFeed = () => {
 
   useEffect(() => {
     fetchLiveSessions();
+    fetchSchedules();
+    fetchEpisodes();
     
     // Subscribe to real-time updates
     const channel = supabase
@@ -186,6 +125,80 @@ const PodcastFeed = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  const fetchSchedules = async () => {
+    const { data } = await supabase
+      .from('podcast_schedules')
+      .select('*')
+      .gte('scheduled_at', new Date().toISOString())
+      .order('scheduled_at', { ascending: true })
+      .limit(10);
+
+    if (data) {
+      // Fetch host profiles for schedules
+      const hostIds = [...new Set(data.map(s => s.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url, username')
+        .in('user_id', hostIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      setSchedules(data.map(s => ({
+        id: s.id,
+        host_id: s.user_id,
+        host_name: profileMap.get(s.user_id)?.full_name || profileMap.get(s.user_id)?.username || 'Host',
+        host_avatar: profileMap.get(s.user_id)?.avatar_url || undefined,
+        title: s.title,
+        description: s.description || undefined,
+        scheduled_at: s.scheduled_at
+      })));
+    }
+  };
+
+  const fetchEpisodes = async () => {
+    // Try fetching from the edge function first (Deezer API)
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/podcast-episodes`);
+      const result = await response.json();
+      
+      if (result.episodes && result.episodes.length > 0) {
+        setEpisodes(result.episodes.slice(0, 12));
+        return;
+      }
+    } catch (error) {
+      console.log('Edge function not available, fetching from database');
+    }
+
+    // Fallback to database
+    const { data } = await supabase
+      .from('podcast_episodes')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(12);
+
+    if (data) {
+      // Fetch host profiles for episodes
+      const hostIds = [...new Set(data.map(e => e.host_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url, username')
+        .in('user_id', hostIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      setEpisodes(data.map(e => ({
+        id: e.id,
+        host_id: e.host_id,
+        host_name: profileMap.get(e.host_id)?.full_name || profileMap.get(e.host_id)?.username || 'Host',
+        host_avatar: profileMap.get(e.host_id)?.avatar_url || undefined,
+        title: e.title,
+        cover_image_url: e.cover_image_url || undefined,
+        play_count: e.play_count || 0,
+        duration_ms: e.duration_ms || 0
+      })));
+    }
+  };
 
   const fetchLiveSessions = async () => {
     const { data } = await supabase
@@ -213,7 +226,7 @@ const PodcastFeed = () => {
         category: 'Music',
         cover_image_url: s.cover_image_url
       }));
-      setLiveHosts([...realSessions, ...DEMO_LIVE_HOSTS]);
+      setLiveHosts(realSessions);
     }
   };
 
@@ -516,7 +529,7 @@ const PodcastFeed = () => {
             <button className="text-[10px] text-[#53fc18] hover:underline">View all</button>
           </div>
           <div className="flex lg:grid lg:grid-cols-4 gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-3 px-3 lg:mx-0 lg:px-0 lg:overflow-visible">
-            {DEMO_SCHEDULES.map((schedule) => (
+            {schedules.length > 0 ? schedules.map((schedule) => (
               <div 
                 key={schedule.id}
                 className="flex-shrink-0 w-64 lg:w-auto bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-colors cursor-pointer"
@@ -534,7 +547,7 @@ const PodcastFeed = () => {
                 <h3 className="text-sm font-medium line-clamp-1 mb-1">{schedule.title}</h3>
                 <p className="text-[10px] text-white/50 line-clamp-2">{schedule.description}</p>
               </div>
-            ))}
+            )) : <p className="text-white/40 text-xs">No upcoming schedules</p>}
           </div>
         </section>
 
@@ -548,7 +561,7 @@ const PodcastFeed = () => {
             <button className="text-[10px] text-[#53fc18] hover:underline">View all</button>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-            {DEMO_EPISODES.map((episode) => (
+            {episodes.length > 0 ? episodes.map((episode) => (
               <div 
                 key={episode.id}
                 className="group cursor-pointer"
@@ -570,7 +583,7 @@ const PodcastFeed = () => {
                   {formatViewers(episode.play_count)}
                 </p>
               </div>
-            ))}
+            )) : <p className="text-white/40 text-xs col-span-full text-center py-8">No episodes yet</p>}
           </div>
         </section>
       </main>
