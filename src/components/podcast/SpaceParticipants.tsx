@@ -63,6 +63,8 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     isConnecting: isAudioConnecting,
     isMuted,
     participants: audioParticipants,
+    error: audioError,
+    micPermissionGranted,
     connect: connectAudio,
     disconnect: disconnectAudio,
     toggleMute,
@@ -73,6 +75,16 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     userName: user?.email?.split('@')[0] || 'Listener',
     isHost,
   });
+
+  // Show mic permission error
+  useEffect(() => {
+    if (audioError && audioError.includes('Microphone')) {
+      toast.error(audioError, {
+        duration: 5000,
+        description: 'Click the lock icon in your address bar to allow microphone access'
+      });
+    }
+  }, [audioError]);
 
   // Check if user is banned from this session
   const checkBanStatus = useCallback(async () => {
