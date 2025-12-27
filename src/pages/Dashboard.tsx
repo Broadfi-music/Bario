@@ -93,10 +93,46 @@ const Dashboard = () => {
     });
   };
 
-  const handleLike = (trackId: string | number, e?: React.MouseEvent) => {
+  const handleLike = async (track: DashboardTrack, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    toggleLike(trackId);
-    toast.success(likedTracks.has(trackId) ? 'Removed from favorites' : 'Added to favorites');
+    
+    if (!user) {
+      toast.error('Please sign in to add favorites');
+      return;
+    }
+    
+    const trackId = track.id.toString();
+    const isCurrentlyLiked = likedTracks.has(track.id);
+    toggleLike(track.id);
+    
+    if (!isCurrentlyLiked) {
+      try {
+        await supabase.from('user_favorites').insert({
+          user_id: user.id,
+          track_id: trackId,
+          track_title: track.title,
+          artist_name: track.artist,
+          cover_image_url: track.artwork,
+          preview_url: track.preview || '',
+          source: 'dashboard',
+        });
+        toast.success('Added to favorites');
+      } catch (err) {
+        console.error('Failed to save favorite:', err);
+        toast.error('Failed to save favorite');
+      }
+    } else {
+      // Remove from database
+      try {
+        await supabase.from('user_favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('track_id', trackId);
+        toast.success('Removed from favorites');
+      } catch (err) {
+        console.error('Failed to remove favorite:', err);
+      }
+    }
   };
 
   const handlePlay = (track: DashboardTrack) => {
@@ -513,7 +549,7 @@ const Dashboard = () => {
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={(e) => handleLike(track.id, e)}
+                            onClick={(e) => handleLike(track, e)}
                             className={`h-6 w-6 ${likedTracks.has(track.id) ? "text-red-500" : "text-muted-foreground"}`}
                           >
                             <Heart className={`h-3 w-3 ${likedTracks.has(track.id) ? "fill-current" : ""}`} />
@@ -558,7 +594,7 @@ const Dashboard = () => {
                           variant="ghost"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleLike(track.id);
+                            handleLike(track, e);
                           }}
                           className={`absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity ${likedTracks.has(track.id) ? "text-red-500" : "text-white"}`}
                         >
