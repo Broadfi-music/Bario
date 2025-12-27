@@ -39,12 +39,33 @@ const FALLBACK_STATIONS = [
   { stationuuid: 'fb-20', name: 'SomaFM Beat Blender', url: 'https://ice2.somafm.com/beatblender-128-mp3', url_resolved: 'https://ice2.somafm.com/beatblender-128-mp3', favicon: 'https://images.unsplash.com/photo-1571609866754-77a6ad4a8d8c?w=400', tags: 'electronic,chill,deep,house', country: 'United States', countrycode: 'US', language: 'English', votes: 19000, clickcount: 48000, clicktrend: 190, codec: 'MP3', bitrate: 128, homepage: 'https://somafm.com' },
 ];
 
+// Test if a stream URL is reachable (quick HEAD request)
+async function isStreamReachable(url: string): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+    
+    const response = await fetch(url, {
+      method: 'HEAD',
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'BarioRadio/1.0'
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    return response.ok || response.status === 200 || response.status === 302 || response.status === 206;
+  } catch {
+    return false;
+  }
+}
+
 async function fetchFromRadioBrowser(action: string, params: Record<string, string | number> = {}): Promise<any[]> {
   const server = getRandomServer();
   let endpoint = '';
   
   const queryParams = new URLSearchParams({
-    limit: String(params.limit || 30),
+    limit: String(Math.min(Number(params.limit || 50), 100)), // Request more to filter
     hidebroken: 'true',
     order: 'clickcount',
     reverse: 'true',
@@ -85,15 +106,23 @@ async function fetchFromRadioBrowser(action: string, params: Record<string, stri
 
     const data = await response.json();
     
-    // Filter and map stations
-    return data
-      .filter((s: any) => s.url_resolved && s.name)
+    // Filter stations with valid URLs and common audio codecs
+    const validCodecs = ['MP3', 'AAC', 'OGG', 'OPUS', 'FLAC'];
+    const filteredStations = data
+      .filter((s: any) => {
+        if (!s.url_resolved || !s.name) return false;
+        // Filter by codec if available
+        if (s.codec && !validCodecs.includes(s.codec.toUpperCase())) return false;
+        // Must have reasonable bitrate
+        if (s.bitrate && s.bitrate < 32) return false;
+        return true;
+      })
       .map((s: any) => ({
         stationuuid: s.stationuuid,
         name: s.name,
         url: s.url,
         url_resolved: s.url_resolved,
-        favicon: s.favicon || `https://source.unsplash.com/400x400/?${encodeURIComponent(s.tags?.split(',')[0] || 'radio')},music`,
+        favicon: s.favicon || `https://images.unsplash.com/photo-1614680376593-902f74cf0d41?w=400`,
         tags: s.tags || '',
         country: s.country || 'Unknown',
         countrycode: s.countrycode || 'XX',
@@ -105,6 +134,8 @@ async function fetchFromRadioBrowser(action: string, params: Record<string, stri
         bitrate: s.bitrate || 128,
         homepage: s.homepage || '',
       }));
+    
+    return filteredStations;
   } catch (error) {
     console.error('Radio Browser API error:', error);
     return [];

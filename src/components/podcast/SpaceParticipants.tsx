@@ -222,7 +222,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     toast.success('Participant banned from session');
   };
 
-  const MAX_PARTICIPANTS = 12; // Limit for free LiveKit tier
+  const MAX_PARTICIPANTS = 50; // Increased limit for more listeners
 
   const joinSession = async () => {
     if (!user) {
@@ -245,7 +245,10 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
 
     // Check if already joined
     if (myParticipation) {
-      toast.info('You are already in this space');
+      // Already in session, just connect to audio if not connected
+      if (!isAudioConnected && !isAudioConnecting) {
+        await connectAudio();
+      }
       return;
     }
 
@@ -272,25 +275,33 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       await disconnectAudio();
     }
 
+    // Insert as listener - NO HOST APPROVAL NEEDED
     const { error } = await supabase.from('podcast_participants').insert({
       session_id: sessionId,
       user_id: user.id,
-      role: 'listener',
+      role: 'listener', // Listeners can join freely
       is_muted: true
     });
 
     if (error) {
       console.error('Join session error:', error);
       if (error.code === '23505') {
-        toast.info('You are already in this space');
+        // Already in session, just connect audio
+        if (!isAudioConnected && !isAudioConnecting) {
+          await connectAudio();
+        }
+        return;
       } else {
         toast.error('Failed to join session');
+        return;
       }
-    } else {
-      setPreviousSessionId(sessionId);
-      toast.success('Joined the space!');
-      await connectAudio();
     }
+    
+    setPreviousSessionId(sessionId);
+    toast.success('Joined the space! You can now hear the host.');
+    
+    // Immediately connect to audio so listener can hear the host
+    await connectAudio();
   };
 
   const toggleHandRaise = async () => {

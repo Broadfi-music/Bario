@@ -90,6 +90,7 @@ serve(async (req) => {
 
     const roomName = `podcast-${sessionId}`;
     let canPublish = isHost;
+    let canSubscribe = true; // ALL users can subscribe (hear others)
 
     // Check if user is a speaker/host in the session (skip for demo sessions)
     if (!sessionId.startsWith('demo-')) {
@@ -101,9 +102,13 @@ serve(async (req) => {
         .single();
 
       if (participant) {
+        // Hosts, co-hosts, and speakers can publish (speak)
         canPublish = ['host', 'co_host', 'speaker'].includes(participant.role);
       }
+      // ALL listeners can subscribe (hear) - no approval needed
     }
+    
+    console.log('Voice room permissions:', { userId, isHost, canPublish, canSubscribe });
 
     // Try LiveKit first
     if (isLiveKitAvailable()) {

@@ -521,9 +521,9 @@ export const useVoiceRoom = ({
     const currentAttempt = connectionAttemptRef.current;
 
     try {
-      // Request mic permission upfront for hosts/speakers
+      // Only request mic permission for hosts - listeners don't need it to hear
       if (isHost) {
-        console.log('Requesting microphone permission...');
+        console.log('Requesting microphone permission for host...');
         const stream = await requestMicrophonePermission();
         if (stream) {
           localStreamRef.current = stream;
@@ -531,9 +531,11 @@ export const useVoiceRoom = ({
           // Stop the test stream - LiveKit will create its own
           stream.getTracks().forEach(track => track.stop());
         } else {
-          // Even if mic is blocked, listeners can still hear
-          console.log('Mic permission not granted, continuing as listener...');
+          console.log('Mic permission not granted for host');
         }
+      } else {
+        // Listeners don't need mic permission - they just need to hear
+        console.log('Connecting as listener (no mic needed to hear host)');
       }
 
       const config = await getVoiceRoomToken();
@@ -558,7 +560,12 @@ export const useVoiceRoom = ({
 
       setIsConnected(true);
       setIsMuted(true); // Always start muted
-      toast.success('Connected to audio room');
+      
+      if (isHost) {
+        toast.success('Connected! Unmute to start speaking.');
+      } else {
+        toast.success('Connected! You can now hear the host.');
+      }
     } catch (err) {
       console.error('Connection error:', err);
       setError(err instanceof Error ? err.message : 'Failed to connect');
