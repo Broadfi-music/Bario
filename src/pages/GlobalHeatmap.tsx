@@ -207,82 +207,89 @@ const GlobalHeatmap = () => {
       
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-sm border-b border-white/5">
-        <div className="flex items-center justify-between h-12 sm:h-14 px-3 sm:px-6">
+        <div className="flex items-center justify-between h-12 sm:h-14 px-2 sm:px-6">
+          {/* Left side - Back button */}
           <button 
             onClick={() => navigate('/')} 
-            className="flex items-center gap-1.5 text-white/60 hover:text-white transition-colors"
+            className="flex items-center gap-1 text-white/60 hover:text-white transition-colors"
           >
             <ChevronLeft className="h-4 w-4" />
-            <span className="text-[10px] sm:text-xs">Back</span>
+            <span className="hidden sm:inline text-xs">Back</span>
           </button>
           
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Center - Search (visible on all screens) */}
+          <div className="relative flex-1 max-w-xs sm:max-w-md mx-2 sm:mx-4">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40" />
+            <Input
+              ref={searchInputRef}
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 pr-8 h-8 w-full bg-white/5 border-white/10 text-xs placeholder:text-white/40 rounded-lg"
+            />
+            {searchQuery && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+            
+            {/* Search Results Dropdown */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-black/95 border border-white/10 rounded-lg shadow-xl max-h-64 overflow-y-auto z-50">
+                {searchResults.slice(0, 10).map((track) => (
+                  <div
+                    key={track.id}
+                    onClick={() => {
+                      navigate(`/global-heatmap/${track.id}`);
+                      clearSearch();
+                    }}
+                    className="flex items-center gap-2 p-2 hover:bg-white/10 cursor-pointer"
+                  >
+                    <img src={track.artwork} alt="" className="w-8 h-8 rounded object-cover" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] text-white truncate">{track.title}</p>
+                      <p className="text-[9px] text-white/50 truncate">{track.artist}</p>
+                    </div>
+                    <span className="text-[8px] text-white/40">{formatListeners(track.metrics.lastfmListeners)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {/* Right side - Buttons */}
+          <div className="flex items-center gap-1 sm:gap-2">
+            {/* Three Strike - Hidden on very small screens */}
             <Button
               size="sm"
               variant="outline"
               onClick={() => navigate('/three-strike')}
-              className="text-[9px] h-7 px-2 border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"
+              className="hidden xs:flex text-[8px] sm:text-[9px] h-7 px-1.5 sm:px-2 border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"
             >
-              <Flame className="h-3 w-3 mr-1" />
-              Three Strike
+              <Flame className="h-3 w-3 sm:mr-1" />
+              <span className="hidden sm:inline">Three Strike</span>
             </Button>
+            
+            {/* Bario Music - Hidden on mobile */}
             <Button
               size="sm"
               variant="outline"
               onClick={() => navigate('/bario-music')}
-              className="text-[9px] h-7 px-2 border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+              className="hidden sm:flex text-[9px] h-7 px-2 border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
             >
               <Sparkles className="h-3 w-3 mr-1" />
               Bario Music
             </Button>
             
-            {/* Search Input */}
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40" />
-              <Input
-                ref={searchInputRef}
-                placeholder="Search any music..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 pr-8 h-8 w-32 sm:w-48 bg-white/5 border-white/10 text-xs placeholder:text-white/40 rounded-lg"
-              />
-              {searchQuery && (
-                <button
-                  onClick={clearSearch}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
-              
-              {/* Search Results Dropdown */}
-              {showSearchResults && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-black/95 border border-white/10 rounded-lg shadow-xl max-h-64 overflow-y-auto z-50">
-                  {searchResults.slice(0, 10).map((track) => (
-                    <div
-                      key={track.id}
-                      onClick={() => {
-                        navigate(`/global-heatmap/${track.id}`);
-                        clearSearch();
-                      }}
-                      className="flex items-center gap-2 p-2 hover:bg-white/10 cursor-pointer"
-                    >
-                      <img src={track.artwork} alt="" className="w-8 h-8 rounded object-cover" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] text-white truncate">{track.title}</p>
-                        <p className="text-[9px] text-white/50 truncate">{track.artist}</p>
-                      </div>
-                      <span className="text-[8px] text-white/40">{formatListeners(track.metrics.lastfmListeners)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            
+            {/* Dashboard/Login - Always visible */}
             {user ? (
               <Link to="/dashboard">
                 <Button size="sm" className="bg-white text-black hover:bg-white/90 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 rounded-lg font-medium">
-                  Dashboard
+                  <span className="hidden sm:inline">Dashboard</span>
+                  <span className="sm:hidden">Dash</span>
                 </Button>
               </Link>
             ) : (

@@ -122,26 +122,44 @@ const ArtistProfile = () => {
     setArtistLoading(true);
     
     try {
-      // Try Deezer API first
+      // First, try to fetch directly by ID (if it's a valid Deezer ID)
       const response = await fetch(`https://api.deezer.com/artist/${id}`);
       const data = await response.json();
       
-      if (data.error) {
-        // Fallback: search by name
-        const searchResponse = await fetch(`https://api.deezer.com/search/artist?q=${encodeURIComponent(id)}&limit=1`);
-        const searchData = await searchResponse.json();
-        
-        if (searchData.data && searchData.data.length > 0) {
-          const artistId = searchData.data[0].id;
-          await fetchArtistById(artistId);
-        } else {
-          setArtist(null);
-        }
-        setArtistLoading(false);
+      if (!data.error && data.id) {
+        // Successfully found by ID
+        await fetchArtistById(data.id);
         return;
       }
       
-      await fetchArtistById(data.id);
+      // If not found by ID, search by name (decode URI component for encoded names)
+      const searchName = decodeURIComponent(id);
+      const searchResponse = await fetch(`https://api.deezer.com/search/artist?q=${encodeURIComponent(searchName)}&limit=5`);
+      const searchData = await searchResponse.json();
+      
+      if (searchData.data && searchData.data.length > 0) {
+        // Find exact match or closest match
+        const exactMatch = searchData.data.find((a: any) => 
+          a.name.toLowerCase() === searchName.toLowerCase()
+        );
+        const artistToUse = exactMatch || searchData.data[0];
+        await fetchArtistById(artistToUse.id);
+      } else {
+        // Last resort: try a broader search
+        const broaderSearch = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(searchName)}&limit=10`);
+        const broaderData = await broaderSearch.json();
+        
+        if (broaderData.data && broaderData.data.length > 0) {
+          const artistId = broaderData.data[0].artist?.id;
+          if (artistId) {
+            await fetchArtistById(artistId);
+          } else {
+            setArtist(null);
+          }
+        } else {
+          setArtist(null);
+        }
+      }
     } catch (error) {
       console.error('Error fetching artist:', error);
       setArtist(null);
@@ -419,20 +437,24 @@ const ArtistProfile = () => {
                           <div className="relative w-10 h-10 flex-shrink-0 group">
                             <img src={track.artwork} alt={track.title} className="w-full h-full object-cover rounded" onError={(e) => { (e.target as HTMLImageElement).src = '/src/assets/card-1.png'; }} />
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded">
-                              {currentTrack?.id === track.id && isPlaying ? <Pause className="h-4 w-4 text-white" /> : <Play className="h-4 w-4 text-white" />}
+                              {currentTrack?.id === track.id && isPlaying ? (
+                                <Pause className="h-4 w-4 text-white" />
+                              ) : (
+                                <Play className="h-4 w-4 text-white" />
+                              )}
                             </div>
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-foreground truncate">{track.title}</p>
                             <p className="text-[10px] text-muted-foreground truncate">{track.album}</p>
                           </div>
-                          <span className="text-[10px] text-muted-foreground hidden sm:block">{track.plays} plays</span>
+                          <span className="text-[10px] text-muted-foreground">{track.plays} plays</span>
                           <span className="text-[10px] text-muted-foreground">{track.duration}</span>
                           <Button
                             size="icon"
                             variant="ghost"
+                            className={`h-6 w-6 ${likedTracks.has(track.id) ? 'text-red-500' : 'text-muted-foreground'}`}
                             onClick={(e) => { e.stopPropagation(); handleLike(track); }}
-                            className={`h-7 w-7 ${likedTracks.has(track.id) ? 'text-red-500' : 'text-muted-foreground'}`}
                           >
                             <Heart className={`h-3 w-3 ${likedTracks.has(track.id) ? 'fill-current' : ''}`} />
                           </Button>
@@ -444,25 +466,12 @@ const ArtistProfile = () => {
 
                 {/* Albums */}
                 <TabsContent value="albums">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {artist.albums_list.map((album) => (
-                      <Card key={album.id} className="bg-card hover:bg-accent/50 transition-colors overflow-hidden group cursor-pointer">
-                        <div className="aspect-square bg-muted relative">
-                          <img src={album.cover} alt={album.title} className="absolute inset-0 w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/src/assets/card-1.png'; }} />
-                        </div>
-                        <div className="p-3">
-                          <h3 className="font-medium text-foreground truncate text-xs">{album.title}</h3>
-                          <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {album.releaseDate.split('-')[0]}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Music className="h-3 w-3" />
-                              {album.trackCount} tracks
-                            </span>
-                          </div>
-                        </div>
+                      <Card key={album.id} className="bg-card hover:bg-accent/50 transition-colors cursor-pointer p-2">
+                        <img src={album.cover} alt={album.title} className="w-full aspect-square object-cover rounded mb-2" onError={(e) => { (e.target as HTMLImageElement).src = '/src/assets/card-1.png'; }} />
+                        <p className="text-xs font-medium text-foreground truncate">{album.title}</p>
+                        <p className="text-[10px] text-muted-foreground">{album.releaseDate} • {album.trackCount} tracks</p>
                       </Card>
                     ))}
                   </div>
@@ -470,17 +479,15 @@ const ArtistProfile = () => {
 
                 {/* Related Artists */}
                 <TabsContent value="related">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                     {artist.relatedArtists.map((relatedArtist) => (
-                      <Link key={relatedArtist.id} to={`/dashboard/artist/${relatedArtist.id}`}>
-                        <Card className="bg-card hover:bg-accent/50 transition-colors p-4 text-center group cursor-pointer">
-                          <Avatar className="w-20 h-20 mx-auto mb-3 ring-2 ring-transparent group-hover:ring-primary transition-all">
-                            <AvatarImage src={relatedArtist.avatar} />
-                            <AvatarFallback>{relatedArtist.name?.[0]}</AvatarFallback>
-                          </Avatar>
-                          <h3 className="font-medium text-foreground truncate text-xs">{relatedArtist.name}</h3>
-                          <p className="text-[10px] text-muted-foreground">{relatedArtist.followers} followers</p>
-                        </Card>
+                      <Link key={relatedArtist.id} to={`/dashboard/artist/${relatedArtist.id}`} className="text-center group">
+                        <Avatar className="w-16 h-16 mx-auto mb-2 ring-2 ring-transparent group-hover:ring-primary transition-all">
+                          <AvatarImage src={relatedArtist.avatar} />
+                          <AvatarFallback>{relatedArtist.name?.[0]}</AvatarFallback>
+                        </Avatar>
+                        <p className="text-xs font-medium text-foreground truncate">{relatedArtist.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{relatedArtist.followers} fans</p>
                       </Link>
                     ))}
                   </div>
@@ -489,40 +496,48 @@ const ArtistProfile = () => {
             </div>
           ) : (
             <div className="text-center py-12">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                <User className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">Artist Not Found</h3>
-              <p className="text-sm text-muted-foreground mb-4">We couldn't find this artist. Try searching for another one.</p>
-              <Button onClick={() => navigate('/dashboard/megashuffle')}>
-                Go to Megashuffle
-              </Button>
+              <div className="text-muted-foreground mb-4">Artist not found</div>
+              <Button onClick={() => navigate('/dashboard/megashuffle')}>Back to Megashuffle</Button>
             </div>
           )}
         </div>
 
-        {/* Audio Player */}
+        {/* Now Playing Bar */}
         {currentTrack && (
-          <div className="fixed bottom-0 left-0 right-0 lg:left-48 bg-card border-t border-border p-3 z-40">
-            <div className="flex items-center gap-3">
-              <img src={currentTrack.artwork} alt={currentTrack.title} className="w-10 h-10 rounded object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '/src/assets/card-1.png'; }} />
+          <div className="fixed bottom-0 left-0 right-0 lg:left-48 bg-card border-t border-border p-2 z-40">
+            <div className="flex items-center gap-3 max-w-4xl mx-auto">
+              <img src={currentTrack.artwork} alt={currentTrack.title} className="w-10 h-10 rounded object-cover" />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-foreground truncate">{currentTrack.title}</p>
                 <p className="text-[10px] text-muted-foreground truncate">{artist?.name}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={skipToPrevTrack}><SkipBack className="h-4 w-4" /></Button>
-                <Button size="icon" className="h-8 w-8 bg-foreground text-background hover:bg-foreground/90 rounded-full" onClick={togglePlayPause}>
-                  {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+              <div className="flex items-center gap-1">
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={skipToPrevTrack}>
+                  <SkipBack className="h-4 w-4" />
                 </Button>
-                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={skipToNextTrack}><SkipForward className="h-4 w-4" /></Button>
+                <Button size="icon" variant="ghost" className="h-10 w-10 bg-primary text-primary-foreground hover:bg-primary/90 rounded-full" onClick={togglePlayPause}>
+                  {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
+                </Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={skipToNextTrack}>
+                  <SkipForward className="h-4 w-4" />
+                </Button>
               </div>
               <div className="hidden sm:flex items-center gap-2 w-24">
                 <Volume2 className="h-4 w-4 text-muted-foreground" />
-                <Slider defaultValue={[80]} max={100} step={1} className="w-full" />
+                <Slider
+                  defaultValue={[100]}
+                  max={100}
+                  step={1}
+                  className="w-16"
+                  onValueChange={(v) => {
+                    if (audioRef.current) audioRef.current.volume = v[0] / 100;
+                  }}
+                />
               </div>
             </div>
-            <div className="mt-2"><Slider value={[progress]} max={100} step={0.1} className="w-full" /></div>
+            <div className="w-full bg-muted h-1 rounded-full mt-2">
+              <div className="bg-primary h-full rounded-full transition-all" style={{ width: `${progress}%` }} />
+            </div>
           </div>
         )}
       </main>
