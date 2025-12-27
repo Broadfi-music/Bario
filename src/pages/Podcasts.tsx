@@ -64,16 +64,6 @@ const Podcasts = () => {
   }, [searchParams, liveSessions]);
 
   const fetchSessionById = async (sessionId: string) => {
-    // Handle demo sessions locally
-    if (isDemoSession(sessionId)) {
-      const demoSession = DEMO_PODCASTS.find(p => p.id === sessionId);
-      if (demoSession) {
-        setSelectedSession(demoSession);
-        setActiveTab('live');
-      }
-      return;
-    }
-
     // Only query DB for valid UUIDs
     if (!isValidUUID(sessionId)) {
       return;
@@ -113,13 +103,6 @@ const Podcasts = () => {
       };
       setSelectedSession(session);
       setActiveTab('live');
-    } else {
-      // Session not found, check if it's a demo
-      const demoSession = DEMO_PODCASTS.find(p => p.id === sessionId);
-      if (demoSession) {
-        setSelectedSession(demoSession);
-        setActiveTab('live');
-      }
     }
   };
 
