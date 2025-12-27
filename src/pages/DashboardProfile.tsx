@@ -1,12 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Camera } from 'lucide-react';
+import { ArrowLeft, Camera, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -15,12 +15,14 @@ const DashboardProfile = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState({
     username: '',
     displayName: '',
     bio: '',
     email: '',
-    avatar: '/src/assets/track-1.jpeg',
+    avatar: '',
     spotify: '',
     soundcloud: '',
     twitter: '',
@@ -60,13 +62,70 @@ const DashboardProfile = () => {
         username: data.username || '',
         displayName: data.full_name || prev.displayName,
         bio: data.bio || '',
-        avatar: data.avatar_url || prev.avatar,
+        avatar: data.avatar_url || '',
         spotify: data.spotify_url || '',
         soundcloud: data.soundcloud_url || '',
         twitter: data.twitter_url || '',
         instagram: data.instagram_url || '',
         youtube: data.youtube_url || ''
       }));
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/avatar-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('user-uploads')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        toast.error('Failed to upload image');
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('user-uploads')
+        .getPublicUrl(fileName);
+
+      // Update profile with new avatar
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('user_id', user.id);
+
+      if (updateError) {
+        toast.error('Failed to update profile');
+        return;
+      }
+
+      setProfile(prev => ({ ...prev, avatar: publicUrl }));
+      toast.success('Profile picture updated!');
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setUploadingAvatar(false);
     }
   };
 
@@ -133,19 +192,41 @@ const DashboardProfile = () => {
               <div className="relative">
                 <Avatar className="h-20 w-20 sm:h-24 sm:w-24">
                   <AvatarImage src={profile.avatar} />
-                  <AvatarFallback>{profile.displayName[0]}</AvatarFallback>
+                  <AvatarFallback>{profile.displayName?.[0] || 'U'}</AvatarFallback>
                 </Avatar>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
+                />
                 <Button 
                   size="icon" 
                   variant="secondary" 
                   className="absolute bottom-0 right-0 rounded-full h-7 w-7"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={uploadingAvatar}
                 >
-                  <Camera className="h-3 w-3" />
+                  {uploadingAvatar ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Camera className="h-3 w-3" />
+                  )}
                 </Button>
               </div>
               <div>
                 <h3 className="font-semibold text-foreground text-sm">Profile Picture</h3>
                 <p className="text-xs text-muted-foreground">Click to upload a new picture</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2 text-xs"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                >
+                  {uploadingAvatar ? 'Uploading...' : 'Change Photo'}
+                </Button>
               </div>
             </div>
 

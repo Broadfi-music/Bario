@@ -37,114 +37,7 @@ interface Schedule {
   scheduled_at: string;
 }
 
-interface LiveSession {
-  id: string;
-  title: string;
-  listener_count: number;
-  status: string;
-}
-
-// Demo host data
-const DEMO_HOSTS: Record<string, HostProfile & { followerCount: number; isLive: boolean; liveSessionId?: string }> = {
-  'host-1': {
-    id: 'host-1',
-    username: 'DJ_Akademiks',
-    full_name: 'DJ Akademiks',
-    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-    bio: 'Music journalist & podcast host. Covering hip-hop culture and breaking news.',
-    followerCount: 245000,
-    isLive: true,
-    liveSessionId: 'demo-1'
-  },
-  'host-2': {
-    id: 'host-2',
-    username: 'MetroBoomin',
-    full_name: 'Metro Boomin',
-    avatar_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400',
-    bio: 'Grammy-winning producer. Creating beats that define a generation.',
-    followerCount: 890000,
-    isLive: true,
-    liveSessionId: 'demo-2'
-  },
-  'host-3': {
-    id: 'host-3',
-    username: 'EricNam',
-    full_name: 'Eric Nam',
-    avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
-    bio: 'K-Pop artist & host. Bridging cultures through music.',
-    followerCount: 567000,
-    isLive: true,
-    liveSessionId: 'demo-3'
-  },
-  'host-4': {
-    id: 'host-4',
-    username: 'JBalvin',
-    full_name: 'J Balvin',
-    avatar_url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400',
-    bio: 'Reggaeton pioneer. Bringing Latin vibes to the world.',
-    followerCount: 1200000,
-    isLive: true,
-    liveSessionId: 'demo-4'
-  },
-  'host-5': {
-    id: 'host-5',
-    username: 'PhoebeBridgers',
-    full_name: 'Phoebe Bridgers',
-    avatar_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
-    bio: 'Singer-songwriter. Indie rock enthusiast.',
-    followerCount: 340000,
-    isLive: true,
-    liveSessionId: 'demo-5'
-  }
-};
-
-const DEMO_EPISODES: Episode[] = [
-  {
-    id: 'ep-1',
-    title: 'The Evolution of Hip-Hop in 2024',
-    description: 'Breaking down the biggest trends in hip-hop this year',
-    cover_image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400',
-    duration_ms: 3600000,
-    play_count: 12500,
-    like_count: 890,
-    created_at: '2024-12-20T10:00:00Z'
-  },
-  {
-    id: 'ep-2',
-    title: 'Behind the Beats: Production Secrets',
-    description: 'Studio session breakdown with guest producers',
-    cover_image_url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=400',
-    duration_ms: 2700000,
-    play_count: 8900,
-    like_count: 654,
-    created_at: '2024-12-18T10:00:00Z'
-  },
-  {
-    id: 'ep-3',
-    title: 'Industry Insider: Label Deals Explained',
-    description: 'What artists need to know about record deals',
-    cover_image_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400',
-    duration_ms: 4200000,
-    play_count: 15600,
-    like_count: 1200,
-    created_at: '2024-12-15T10:00:00Z'
-  }
-];
-
-const DEMO_SCHEDULE: Schedule[] = [
-  {
-    id: 'sch-1',
-    title: 'Weekly Music Roundup',
-    description: 'New releases and chart updates',
-    scheduled_at: '2024-12-24T20:00:00Z'
-  },
-  {
-    id: 'sch-2',
-    title: 'Artist Interview: Special Guest',
-    description: 'Exclusive interview with a mystery artist',
-    scheduled_at: '2024-12-26T18:00:00Z'
-  }
-];
+// Only show real signed users - no demo data
 
 const PodcastHost = () => {
   const { hostId } = useParams<{ hostId: string }>();
@@ -161,17 +54,7 @@ const PodcastHost = () => {
   useEffect(() => {
     if (!hostId) return;
 
-    // Check if it's a demo host
-    if (DEMO_HOSTS[hostId]) {
-      setHost(DEMO_HOSTS[hostId]);
-      setEpisodes(DEMO_EPISODES);
-      setSchedule(DEMO_SCHEDULE);
-      setFollowerCount(DEMO_HOSTS[hostId].followerCount);
-      setLoading(false);
-      return;
-    }
-
-    // Fetch real host data
+    // Only fetch real host data from database
     const fetchHostData = async () => {
       const { data: profile } = await supabase
         .from('profiles')
@@ -275,8 +158,11 @@ const PodcastHost = () => {
 
   if (!host) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white">
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white gap-4">
         <p>Host not found</p>
+        <Button onClick={() => navigate('/podcasts')} variant="outline">
+          Back to Podcasts
+        </Button>
       </div>
     );
   }

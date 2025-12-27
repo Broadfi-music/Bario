@@ -27,74 +27,7 @@ interface PodcastSession {
   category?: string;
 }
 
-// Demo podcasts for TikTok-style feed
-const DEMO_PODCASTS: PodcastSession[] = [
-  {
-    id: 'demo-1',
-    host_id: 'host-1',
-    title: 'The Rise of Afrobeats in America',
-    description: 'Discussing how Afrobeats is taking over the US music scene',
-    cover_image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800',
-    status: 'live',
-    listener_count: 1247,
-    started_at: null,
-    host_name: 'DJ Akademiks',
-    host_avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
-    category: 'Music'
-  },
-  {
-    id: 'demo-2',
-    host_id: 'host-2',
-    title: 'Producer Secrets: Making Hits',
-    description: 'Metro Boomin reveals his production techniques',
-    cover_image_url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800',
-    status: 'live',
-    listener_count: 892,
-    started_at: null,
-    host_name: 'Metro Boomin',
-    host_avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100',
-    category: 'Production'
-  },
-  {
-    id: 'demo-3',
-    host_id: 'host-3',
-    title: 'K-Pop Global Domination',
-    description: 'How K-Pop conquered the world music industry',
-    cover_image_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800',
-    status: 'live',
-    listener_count: 2341,
-    started_at: null,
-    host_name: 'Eric Nam',
-    host_avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100',
-    category: 'K-Pop'
-  },
-  {
-    id: 'demo-4',
-    host_id: 'host-4',
-    title: 'Latin Music Revolution',
-    description: 'Reggaeton and its impact on global charts',
-    cover_image_url: 'https://images.unsplash.com/photo-1504898770365-14faca6a7320?w=800',
-    status: 'live',
-    listener_count: 1567,
-    started_at: null,
-    host_name: 'J Balvin',
-    host_avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100',
-    category: 'Latin'
-  },
-  {
-    id: 'demo-5',
-    host_id: 'host-5',
-    title: 'Indie Artist Spotlight',
-    description: 'Underground artists you need to know',
-    cover_image_url: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800',
-    status: 'live',
-    listener_count: 654,
-    started_at: null,
-    host_name: 'Phoebe Bridgers',
-    host_avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100',
-    category: 'Indie'
-  }
-];
+// Only show real signed users - no demo data
 
 const Podcasts = () => {
   const { user } = useAuth();
@@ -111,7 +44,7 @@ const Podcasts = () => {
   const [liveSessions, setLiveSessions] = useState<PodcastSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<PodcastSession | null>(null);
 
-  const podcasts = [...liveSessions, ...DEMO_PODCASTS];
+  const podcasts = liveSessions;
   const currentPodcast = selectedSession || podcasts[currentIndex];
 
   // Handle session URL parameter

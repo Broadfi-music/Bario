@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.radio-browser]
 verify_jwt = false
+
+[functions.podcast-episodes]
+verify_jwt = false

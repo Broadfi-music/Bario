@@ -333,21 +333,12 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     return audioP || null;
   };
 
-  // Create demo participants if none exist
-  const demoParticipants: Participant[] = participants.length === 0 ? [
-    { id: 'demo-1', user_id: hostId, role: 'host', is_muted: false, hand_raised: false, joined_at: '' },
-    { id: 'demo-2', user_id: 'cohost-1', role: 'co_host', is_muted: true, hand_raised: false, joined_at: '' },
-    ...Array.from({ length: 10 }, (_, i) => ({
-      id: `demo-${i + 3}`,
-      user_id: `user-${i}`,
-      role: 'listener' as const,
-      is_muted: true,
-      hand_raised: false,
-      joined_at: ''
-    }))
-  ] : participants;
+  // Only show real participants - no demo/dummy data
+  // If no participants, just show the host placeholder
+  const displayParticipants: Participant[] = participants.length === 0 
+    ? [{ id: 'host-placeholder', user_id: hostId, role: 'host', is_muted: false, hand_raised: false, joined_at: '' }]
+    : participants;
 
-  const displayParticipants = demoParticipants;
   const listenerCount = displayParticipants.filter(p => p.role === 'listener').length;
 
   return (
