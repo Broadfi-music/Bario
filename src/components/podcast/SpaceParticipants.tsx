@@ -86,6 +86,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     isMuted,
     participants: audioParticipants,
     error: audioError,
+    connectionQuality,
     connect: connectAudio,
     disconnect: disconnectAudio,
     toggleMute,
@@ -398,13 +399,24 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
             {title || 'Live Podcast Session'}
           </h1>
           {isAudioConnected && (
-            <span className="text-[8px] px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded-full shrink-0 animate-pulse">
-              🔊 Live Audio
+            <span className="text-[8px] px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded-full shrink-0 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+              Live Audio
             </span>
           )}
           {isAudioConnecting && (
-            <span className="text-[8px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full shrink-0">
-              <Loader2 className="w-3 h-3 animate-spin inline" /> Connecting...
+            <span className="text-[8px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full shrink-0 flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin" /> Connecting...
+            </span>
+          )}
+          {connectionQuality && isAudioConnected && (
+            <span className={`text-[8px] px-1.5 py-0.5 rounded-full shrink-0 ${
+              connectionQuality.status === 'excellent' ? 'bg-green-500/20 text-green-400' :
+              connectionQuality.status === 'good' ? 'bg-blue-500/20 text-blue-400' :
+              connectionQuality.status === 'poor' ? 'bg-yellow-500/20 text-yellow-400' :
+              'bg-red-500/20 text-red-400'
+            }`}>
+              {connectionQuality.status === 'good' ? '📶' : connectionQuality.status === 'poor' ? '⚠️' : ''}
             </span>
           )}
         </div>
