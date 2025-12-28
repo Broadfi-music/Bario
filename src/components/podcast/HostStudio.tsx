@@ -95,6 +95,8 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     isMuted,
     isRecording,
     participants: audioParticipants,
+    connectionQuality,
+    recordingDuration,
     connect: connectAudio,
     disconnect: disconnectAudio,
     toggleMute,
@@ -107,6 +109,13 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     userName: user?.email?.split('@')[0] || 'Host',
     isHost: true,
   });
+
+  // Format recording duration
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     if (session?.id) {
@@ -492,8 +501,27 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
             <Radio className={`h-4 w-4 ${isLive ? 'text-red-500 animate-pulse' : 'text-white/60'}`} />
             Host Studio
             {isAudioConnected && (
-              <span className="ml-2 text-[10px] px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full">
-                🔊 Audio Live
+              <span className="ml-2 text-[10px] px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                Audio Connected
+              </span>
+            )}
+            {isAudioConnecting && (
+              <span className="ml-2 text-[10px] px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Connecting...
+              </span>
+            )}
+            {connectionQuality && isAudioConnected && (
+              <span className={`ml-1 text-[10px] px-2 py-0.5 rounded-full ${
+                connectionQuality.status === 'excellent' ? 'bg-green-500/20 text-green-400' :
+                connectionQuality.status === 'good' ? 'bg-blue-500/20 text-blue-400' :
+                connectionQuality.status === 'poor' ? 'bg-yellow-500/20 text-yellow-400' :
+                'bg-red-500/20 text-red-400'
+              }`}>
+                {connectionQuality.status === 'excellent' ? '📶 Excellent' :
+                 connectionQuality.status === 'good' ? '📶 Good' :
+                 connectionQuality.status === 'poor' ? '📶 Poor' : '❌ Disconnected'}
               </span>
             )}
             {isLive && (
@@ -597,9 +625,10 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
           </div>
 
           {isRecording && (
-            <p className="text-center text-xs text-red-400 animate-pulse">
-              ● Recording in progress...
-            </p>
+            <div className="flex items-center justify-center gap-2 py-2 bg-red-500/10 rounded-lg border border-red-500/30">
+              <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+              <span className="text-xs text-red-400 font-medium">Recording: {formatDuration(recordingDuration)}</span>
+            </div>
           )}
 
           {isLive && (
