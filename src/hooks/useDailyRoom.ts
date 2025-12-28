@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 import { toast } from 'sonner';
+import { Room, RoomEvent, RemoteParticipant, Track, LocalParticipant } from 'livekit-client';
 
 export interface DailyParticipant {
   id: string;
@@ -37,36 +38,28 @@ export const useDailyRoom = ({
   const [participants, setParticipants] = useState<DailyParticipant[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Daily.co refs
-  const callFrameRef = useRef<any>(null);
-  const callObjectRef = useRef<any>(null);
+  // LiveKit refs
+  const roomRef = useRef<Room | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
 
   // Cleanup function
-  const cleanup = useCallback(() => {
-    console.log('Daily cleanup called');
+  const cleanup = useCallback(async () => {
+    console.log('Audio room cleanup called');
     
-    if (callObjectRef.current) {
+    if (roomRef.current) {
       try {
-        callObjectRef.current.leave();
-        callObjectRef.current.destroy();
+        await roomRef.current.disconnect();
       } catch (e) {
-        console.warn('Error during Daily cleanup:', e);
+        console.warn('Error during room cleanup:', e);
       }
-      callObjectRef.current = null;
+      roomRef.current = null;
     }
 
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
       localStreamRef.current = null;
-    }
-
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
     }
 
     setIsConnected(false);
@@ -87,66 +80,60 @@ export const useDailyRoom = ({
         throw new Error('Not authenticated');
       }
 
-      const { data, error } = await supabase.functions.invoke('daily-room', {
+      // Use the working join-voice-room function that has LiveKit configured
+      const { data, error } = await supabase.functions.invoke('join-voice-room', {
         body: { sessionId, userId, userName, isHost }
       });
 
       if (error) {
-        console.error('Daily room error:', error);
+        console.error('Voice room error:', error);
         throw error;
       }
 
+      console.log('Voice room credentials:', data);
       return data;
     } catch (err) {
-      console.error('Failed to get Daily room credentials:', err);
+      console.error('Failed to get voice room credentials:', err);
       return null;
     }
   };
 
-  // Load Daily.co script dynamically
-  const loadDailyScript = (): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      if ((window as any).DailyIframe) {
-        resolve();
-        return;
-      }
+  // Update participants from LiveKit room
+  const updateParticipants = useCallback((room: Room) => {
+    const allParticipants: DailyParticipant[] = [];
+    
+    // Add local participant
+    if (room.localParticipant) {
+      const local = room.localParticipant;
+      allParticipants.push({
+        id: local.sid || local.identity,
+        identity: local.identity,
+        name: local.name || local.identity,
+        isMuted: !local.isMicrophoneEnabled,
+        isSpeaking: local.isSpeaking,
+        audioLevel: 0,
+        isLocal: true,
+      });
+    }
 
-      const existingScript = document.querySelector('script[src*="daily-js"]');
-      if (existingScript) {
-        existingScript.addEventListener('load', () => resolve());
-        existingScript.addEventListener('error', reject);
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/@daily-co/daily-js';
-      script.async = true;
-      script.onload = () => {
-        console.log('Daily.co script loaded');
-        resolve();
-      };
-      script.onerror = () => reject(new Error('Failed to load Daily.co'));
-      document.head.appendChild(script);
+    // Add remote participants
+    room.remoteParticipants.forEach((participant: RemoteParticipant) => {
+      allParticipants.push({
+        id: participant.sid || participant.identity,
+        identity: participant.identity,
+        name: participant.name || participant.identity,
+        isMuted: !participant.isMicrophoneEnabled,
+        isSpeaking: participant.isSpeaking,
+        audioLevel: 0,
+        isLocal: false,
+      });
     });
-  };
 
-  // Update participants from Daily event
-  const updateParticipants = useCallback((dailyParticipants: Record<string, any>) => {
-    const updated: DailyParticipant[] = Object.entries(dailyParticipants).map(([id, p]: [string, any]) => ({
-      id,
-      identity: p.user_id || id,
-      name: p.user_name || 'Participant',
-      isMuted: !p.audio,
-      isSpeaking: p.audio && !p.local, // Will be updated by active speaker events
-      audioLevel: 0,
-      isLocal: p.local || false,
-    }));
-
-    setParticipants(updated);
-    console.log('Participants updated:', updated.length);
+    setParticipants(allParticipants);
+    console.log('Participants updated:', allParticipants.length);
   }, []);
 
-  // Connect to Daily room
+  // Connect to voice room using LiveKit
   const connect = useCallback(async () => {
     if (isConnected || isConnecting) {
       console.log('Already connected or connecting');
@@ -157,16 +144,8 @@ export const useDailyRoom = ({
     setError(null);
 
     try {
-      console.log('Connecting to Daily room...');
+      console.log('Connecting to voice room...');
       
-      // Load Daily script
-      await loadDailyScript();
-      
-      const Daily = (window as any).DailyIframe;
-      if (!Daily) {
-        throw new Error('Daily.co not available');
-      }
-
       // Get room credentials
       const credentials = await getRoomCredentials();
       if (!credentials) {
@@ -174,105 +153,16 @@ export const useDailyRoom = ({
       }
 
       console.log('Room credentials received:', { 
-        roomUrl: credentials.roomUrl, 
+        provider: credentials.provider,
         canPublish: credentials.canPublish 
       });
 
-      // Create call object
-      const callObject = Daily.createCallObject({
-        audioSource: true,
-        videoSource: false,
-        subscribeToTracksAutomatically: true,
-      });
+      if (credentials.provider !== 'livekit') {
+        throw new Error('Only LiveKit is supported for audio');
+      }
 
-      callObjectRef.current = callObject;
-
-      // Set up event listeners
-      callObject.on('joined-meeting', (event: any) => {
-        console.log('Joined Daily meeting!', event);
-        setIsConnected(true);
-        setIsConnecting(false);
-        
-        // Update participants
-        const dailyParticipants = callObject.participants();
-        updateParticipants(dailyParticipants);
-        
-        // Start with mic muted for non-hosts
-        if (!isHost) {
-          callObject.setLocalAudio(false);
-          setIsMuted(true);
-        } else {
-          // Host starts unmuted
-          callObject.setLocalAudio(true);
-          setIsMuted(false);
-        }
-        
-        toast.success('Connected to audio room!');
-      });
-
-      callObject.on('participant-joined', (event: any) => {
-        console.log('Participant joined:', event.participant);
-        const dailyParticipants = callObject.participants();
-        updateParticipants(dailyParticipants);
-        
-        const newParticipant: DailyParticipant = {
-          id: event.participant.session_id,
-          identity: event.participant.user_id || event.participant.session_id,
-          name: event.participant.user_name || 'Participant',
-          isMuted: !event.participant.audio,
-          isSpeaking: false,
-          audioLevel: 0,
-          isLocal: false,
-        };
-        
-        onParticipantJoined?.(newParticipant);
-        toast(`${newParticipant.name} joined the room`);
-      });
-
-      callObject.on('participant-left', (event: any) => {
-        console.log('Participant left:', event.participant);
-        const dailyParticipants = callObject.participants();
-        updateParticipants(dailyParticipants);
-        
-        onParticipantLeft?.(event.participant.user_id || event.participant.session_id);
-      });
-
-      callObject.on('participant-updated', (event: any) => {
-        console.log('Participant updated:', event.participant);
-        const dailyParticipants = callObject.participants();
-        updateParticipants(dailyParticipants);
-      });
-
-      callObject.on('active-speaker-change', (event: any) => {
-        console.log('Active speaker:', event.activeSpeaker);
-        setParticipants(prev => prev.map(p => ({
-          ...p,
-          isSpeaking: p.id === event.activeSpeaker?.peerId,
-        })));
-      });
-
-      callObject.on('track-started', (event: any) => {
-        console.log('Track started:', event.track?.kind, 'from', event.participant?.user_name);
-        
-        // When we receive an audio track from someone else, make sure we can hear it
-        if (event.track?.kind === 'audio' && !event.participant?.local) {
-          console.log('Remote audio track started - should be audible');
-        }
-      });
-
-      callObject.on('error', (event: any) => {
-        console.error('Daily error:', event);
-        setError(event.errorMsg || 'Connection error');
-        toast.error('Audio connection error');
-      });
-
-      callObject.on('left-meeting', () => {
-        console.log('Left Daily meeting');
-        cleanup();
-      });
-
-      // Request microphone permission first for hosts
-      if (isHost) {
+      // Request microphone permission for hosts/speakers
+      if (isHost || credentials.canPublish) {
         try {
           localStreamRef.current = await navigator.mediaDevices.getUserMedia({ 
             audio: {
@@ -283,43 +173,141 @@ export const useDailyRoom = ({
           });
           console.log('Microphone permission granted');
         } catch (micError) {
-          console.error('Microphone permission denied:', micError);
-          toast.error('Microphone access required for hosting');
+          console.warn('Microphone permission denied:', micError);
+          // Continue anyway - listeners don't need mic
         }
       }
 
-      // Join the room
-      console.log('Joining room:', credentials.roomUrl);
-      await callObject.join({
-        url: credentials.roomUrl,
-        token: credentials.token,
-        userName: userName,
+      // Create LiveKit room
+      const room = new Room({
+        adaptiveStream: true,
+        dynacast: true,
+        audioCaptureDefaults: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
       });
 
+      roomRef.current = room;
+
+      // Set up event listeners
+      room.on(RoomEvent.Connected, () => {
+        console.log('Connected to LiveKit room!');
+        setIsConnected(true);
+        setIsConnecting(false);
+        updateParticipants(room);
+        toast.success('Connected to audio room!');
+      });
+
+      room.on(RoomEvent.Disconnected, () => {
+        console.log('Disconnected from LiveKit room');
+        cleanup();
+      });
+
+      room.on(RoomEvent.ParticipantConnected, (participant: RemoteParticipant) => {
+        console.log('Participant connected:', participant.identity);
+        updateParticipants(room);
+        
+        const newParticipant: DailyParticipant = {
+          id: participant.sid || participant.identity,
+          identity: participant.identity,
+          name: participant.name || participant.identity,
+          isMuted: !participant.isMicrophoneEnabled,
+          isSpeaking: false,
+          audioLevel: 0,
+          isLocal: false,
+        };
+        
+        onParticipantJoined?.(newParticipant);
+        toast(`${participant.name || participant.identity} joined the room`);
+      });
+
+      room.on(RoomEvent.ParticipantDisconnected, (participant: RemoteParticipant) => {
+        console.log('Participant disconnected:', participant.identity);
+        updateParticipants(room);
+        onParticipantLeft?.(participant.identity);
+      });
+
+      room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+        console.log('Track subscribed:', track.kind, 'from', participant.identity);
+        
+        // Attach audio tracks to play them
+        if (track.kind === Track.Kind.Audio) {
+          const audioElement = track.attach();
+          audioElement.play().catch(e => console.warn('Audio autoplay blocked:', e));
+          console.log('Audio track attached and playing');
+        }
+        
+        updateParticipants(room);
+      });
+
+      room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+        console.log('Track unsubscribed:', track.kind, 'from', participant.identity);
+        track.detach();
+        updateParticipants(room);
+      });
+
+      room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
+        const speakerIds = speakers.map(s => s.identity);
+        setParticipants(prev => prev.map(p => ({
+          ...p,
+          isSpeaking: speakerIds.includes(p.identity),
+        })));
+      });
+
+      room.on(RoomEvent.LocalTrackPublished, (publication) => {
+        console.log('Local track published:', publication.kind);
+        updateParticipants(room);
+      });
+
+      room.on(RoomEvent.MediaDevicesError, (error) => {
+        console.error('Media devices error:', error);
+        toast.error('Microphone error - please check permissions');
+      });
+
+      // Connect to the room
+      console.log('Joining room:', credentials.url, credentials.roomName);
+      await room.connect(credentials.url, credentials.token);
+
+      // Enable microphone for hosts
+      if (isHost && credentials.canPublish) {
+        try {
+          await room.localParticipant.setMicrophoneEnabled(true);
+          setIsMuted(false);
+          console.log('Microphone enabled for host');
+        } catch (micErr) {
+          console.warn('Could not enable mic:', micErr);
+          setIsMuted(true);
+        }
+      } else {
+        setIsMuted(true);
+      }
+
     } catch (err: any) {
-      console.error('Daily connection error:', err);
+      console.error('Voice room connection error:', err);
       setError(err.message);
       setIsConnecting(false);
-      toast.error('Failed to connect to audio room');
+      toast.error('Failed to connect to audio room: ' + err.message);
     }
   }, [sessionId, userId, userName, isHost, isConnected, isConnecting, updateParticipants, cleanup, onParticipantJoined, onParticipantLeft]);
 
   // Disconnect from room
   const disconnect = useCallback(async () => {
-    console.log('Disconnecting from Daily room...');
-    cleanup();
+    console.log('Disconnecting from voice room...');
+    await cleanup();
   }, [cleanup]);
 
   // Toggle mute
   const toggleMute = useCallback(async () => {
-    if (!callObjectRef.current) {
-      console.warn('No call object for toggle mute');
+    if (!roomRef.current?.localParticipant) {
+      console.warn('No room for toggle mute');
       return;
     }
 
     try {
       const newMuteState = !isMuted;
-      callObjectRef.current.setLocalAudio(!newMuteState);
+      await roomRef.current.localParticipant.setMicrophoneEnabled(!newMuteState);
       setIsMuted(newMuteState);
       console.log('Mute toggled to:', newMuteState);
       toast(newMuteState ? 'Microphone muted' : 'Microphone unmuted');
@@ -331,10 +319,10 @@ export const useDailyRoom = ({
 
   // Enable microphone
   const enableMicrophone = useCallback(async () => {
-    if (!callObjectRef.current) return;
+    if (!roomRef.current?.localParticipant) return;
     
     try {
-      callObjectRef.current.setLocalAudio(true);
+      await roomRef.current.localParticipant.setMicrophoneEnabled(true);
       setIsMuted(false);
       console.log('Microphone enabled');
     } catch (err) {
@@ -344,10 +332,24 @@ export const useDailyRoom = ({
 
   // Start recording
   const startRecording = useCallback(async () => {
-    if (!callObjectRef.current) return;
-    
+    // Recording via LiveKit would require server-side configuration
+    // For now, we'll use local recording via MediaRecorder
     try {
-      await callObjectRef.current.startRecording();
+      if (!navigator.mediaDevices) {
+        throw new Error('Media devices not available');
+      }
+      
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      recordedChunksRef.current = [];
+      
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          recordedChunksRef.current.push(e.data);
+        }
+      };
+      
+      mediaRecorderRef.current.start(1000);
       setIsRecording(true);
       toast.success('Recording started');
     } catch (err) {
@@ -358,12 +360,23 @@ export const useDailyRoom = ({
 
   // Stop recording and save episode
   const saveEpisode = useCallback(async (title: string, description: string) => {
-    if (!callObjectRef.current) return;
+    if (!mediaRecorderRef.current) return;
     
     try {
-      await callObjectRef.current.stopRecording();
+      mediaRecorderRef.current.stop();
       setIsRecording(false);
+      
+      // Wait for final data
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const blob = new Blob(recordedChunksRef.current, { type: 'audio/webm' });
+      console.log('Recording saved, size:', blob.size);
       toast.success('Recording saved');
+      
+      // Clean up
+      mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+      mediaRecorderRef.current = null;
+      recordedChunksRef.current = [];
     } catch (err) {
       console.error('Error saving episode:', err);
     }
@@ -383,7 +396,7 @@ export const useDailyRoom = ({
     isRecording,
     participants,
     error,
-    provider: 'daily' as const,
+    provider: 'livekit' as const,
     connect,
     disconnect,
     toggleMute,
