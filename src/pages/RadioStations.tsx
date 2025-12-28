@@ -413,33 +413,6 @@ const RadioStations = () => {
 
       {/* Main Content */}
       <main className={`px-4 sm:px-6 py-6 ${currentPlayingStation ? 'pb-24' : ''}`}>
-        {/* Categories - Kick style horizontal scroll */}
-        <section className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Categories</h2>
-            <button className="text-[#53fc18] text-sm flex items-center gap-1 hover:underline">
-              View All <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`flex flex-col items-center justify-center gap-2 min-w-[100px] h-24 rounded-xl transition-all ${
-                  selectedCategory === cat.id 
-                    ? 'bg-[#53fc18]/20 border border-[#53fc18]/50' 
-                    : 'bg-white/5 hover:bg-white/10 border border-transparent'
-                }`}
-              >
-                <span className="text-2xl">{cat.icon}</span>
-                <span className={`text-xs font-medium ${selectedCategory === cat.id ? 'text-[#53fc18]' : 'text-white/80'}`}>
-                  {cat.label}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
 
         {/* Recommended Section */}
         <section className="mb-8">
