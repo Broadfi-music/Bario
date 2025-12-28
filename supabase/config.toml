@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.podcast-episodes]
 verify_jwt = false
+
+[functions.daily-room]
+verify_jwt = false
