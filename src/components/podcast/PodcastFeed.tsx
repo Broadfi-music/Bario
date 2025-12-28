@@ -18,28 +18,8 @@ interface LiveHost {
   cover_image_url?: string;
 }
 
-interface Category {
-  id: string;
-  name: string;
-  image: string;
-  listener_count: number;
-  tags: string[];
-}
-
-// Demo categories matching Kick.com style
-const DEMO_CATEGORIES: Category[] = [
-  { id: 'music', name: 'Music', image: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400', listener_count: 308200, tags: ['Live', 'Casual'] },
-  { id: 'hiphop', name: 'Hip-Hop', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400', listener_count: 149600, tags: ['Beats', 'Culture'] },
-  { id: 'production', name: 'Production', image: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=400', listener_count: 51500, tags: ['Studio'] },
-  { id: 'kpop', name: 'K-Pop', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400', listener_count: 50900, tags: ['Dance', 'Culture'] },
-  { id: 'latin', name: 'Latin', image: 'https://images.unsplash.com/photo-1504898770365-14faca6a7320?w=400', listener_count: 36300, tags: ['Reggaeton', 'Salsa'] },
-  { id: 'indie', name: 'Indie', image: 'https://images.unsplash.com/photo-1485579149621-3123dd979571?w=400', listener_count: 27100, tags: ['Alternative'] },
-  { id: 'irl', name: 'IRL', image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400', listener_count: 24400, tags: ['Podcast', 'Talk'] },
-  { id: 'jazz', name: 'Jazz', image: 'https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=400', listener_count: 21100, tags: ['Smooth', 'Live'] },
-];
-
 // Only show real users - no demo data
-// These will be populated from database only
+// All data comes from database only
 
 const formatViewers = (count: number) => {
   if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
@@ -416,108 +396,95 @@ const PodcastFeed = () => {
           </div>
         )}
 
-        {/* Top Live Categories - Kick.com Style - Mobile Scrollable */}
-        <section className="px-3 lg:px-6 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold">Top Live Categories</h2>
-            <button onClick={() => navigate('/podcasts')} className="text-[10px] text-[#53fc18] hover:underline">View all</button>
-          </div>
-          {/* Mobile: horizontal scroll, Desktop: grid */}
-          <div className="flex lg:grid lg:grid-cols-6 xl:grid-cols-8 gap-2 lg:gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-3 px-3 lg:mx-0 lg:px-0 lg:overflow-visible">
-            {DEMO_CATEGORIES.map((cat) => {
-              const categorySession = liveHosts.find(h => h.category?.toLowerCase() === cat.name.toLowerCase());
-              return (
-                <div 
-                  key={cat.id} 
-                  className="group cursor-pointer flex-shrink-0 w-24 lg:w-auto"
-                  onClick={() => categorySession ? navigate(`/podcasts?session=${categorySession.id}`) : null}
+        {/* Live Now Section - Only shows real live sessions */}
+        {liveHosts.length === 0 && (
+          <section className="px-3 lg:px-6 mb-6">
+            <div className="bg-white/5 rounded-xl p-8 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-white/10 flex items-center justify-center">
+                <Headphones className="w-8 h-8 text-white/40" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">No Live Sessions</h3>
+              <p className="text-white/50 text-sm mb-4">Be the first to go live and share your voice with the community!</p>
+              {user && (
+                <Button
+                  onClick={() => navigate('/podcasts')}
+                  className="bg-[#53fc18] hover:bg-[#53fc18]/80 text-black font-semibold"
                 >
-                  <div className="aspect-[3/4] rounded-lg overflow-hidden mb-1.5 relative">
-                    <img src={cat.image} alt={cat.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-                    <div className="absolute bottom-1.5 left-1.5 right-1.5">
-                      <p className="text-[10px] lg:text-xs font-bold text-white truncate">{cat.name}</p>
+                  Go Live Now
+                </Button>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Live Sessions - Only show when there are live hosts */}
+        {liveHosts.length > 0 && (
+          <section className="px-3 lg:px-6 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold flex items-center gap-2">
+                <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                Live Now
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 lg:gap-4">
+              {liveHosts.map((host) => (
+                <Link 
+                  key={host.id}
+                  to={`/podcasts?session=${host.id}`}
+                  className="group block"
+                >
+                  {/* Thumbnail */}
+                  <div className="relative aspect-video rounded-lg overflow-hidden bg-neutral-800 mb-1.5">
+                    {host.cover_image_url ? (
+                      <img src={host.cover_image_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-br from-purple-600/50 via-pink-500/50 to-orange-500/50" />
+                    )}
+                    
+                    {/* Live badge */}
+                    <div className="absolute top-1 left-1 lg:top-2 lg:left-2 bg-red-600 text-white text-[8px] lg:text-[10px] font-bold px-1.5 lg:px-2 py-0.5 rounded flex items-center gap-0.5 lg:gap-1">
+                      <span className="w-1 h-1 lg:w-1.5 lg:h-1.5 bg-white rounded-full animate-pulse" />
+                      LIVE
+                    </div>
+                    
+                    {/* Listener count */}
+                    <div className="absolute bottom-1 left-1 lg:bottom-2 lg:left-2 bg-black/70 text-white text-[8px] lg:text-[10px] px-1.5 lg:px-2 py-0.5 rounded">
+                      {formatViewers(host.listener_count)} listening
+                    </div>
+
+                    {/* Hover overlay - desktop only */}
+                    <div className="hidden lg:flex absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity items-center justify-center">
+                      <Play className="h-10 w-10 text-white" fill="white" />
                     </div>
                   </div>
-                  <p className="text-[9px] lg:text-[10px] text-white/50 hidden lg:block">{formatViewers(cat.listener_count)} listening</p>
-                  <div className="hidden lg:flex gap-1 mt-1 flex-wrap">
-                    {cat.tags.map((tag) => (
-                      <span key={tag} className="text-[8px] lg:text-[9px] bg-white/10 text-white/70 px-1 py-0.5 rounded">{tag}</span>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
 
-        {/* Live Sessions - Mobile optimized */}
-        <section className="px-3 lg:px-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold">Music</h2>
-            <button onClick={() => navigate('/podcasts')} className="text-[10px] text-[#53fc18] hover:underline">View all</button>
-          </div>
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 lg:gap-4">
-            {liveHosts.map((host) => (
-              <Link 
-                key={host.id}
-                to={`/podcasts?session=${host.id}`}
-                className="group block"
-              >
-                {/* Thumbnail */}
-                <div className="relative aspect-video rounded-lg overflow-hidden bg-neutral-800 mb-1.5">
-                  {host.cover_image_url ? (
-                    <img src={host.cover_image_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-600/50 via-pink-500/50 to-orange-500/50" />
-                  )}
-                  
-                  {/* Live badge */}
-                  <div className="absolute top-1 left-1 lg:top-2 lg:left-2 bg-red-600 text-white text-[8px] lg:text-[10px] font-bold px-1.5 lg:px-2 py-0.5 rounded flex items-center gap-0.5 lg:gap-1">
-                    <span className="w-1 h-1 lg:w-1.5 lg:h-1.5 bg-white rounded-full animate-pulse" />
-                    LIVE
+                  {/* Info */}
+                  <div className="flex gap-1.5 lg:gap-2">
+                    <div 
+                      className="w-6 h-6 lg:w-8 lg:h-8 rounded-full overflow-hidden flex-shrink-0 bg-neutral-700 cursor-pointer"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigate(`/host/${host.host_id}`);
+                      }}
+                    >
+                      {host.host_avatar ? (
+                        <img src={host.host_avatar} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-green-500 to-teal-500" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-[11px] lg:text-sm font-medium text-white truncate group-hover:text-[#53fc18] transition-colors">
+                        {host.title}
+                      </h3>
+                      <p className="text-[10px] lg:text-xs text-white/50 truncate">{host.host_name}</p>
+                    </div>
                   </div>
-                  
-                  {/* Listener count */}
-                  <div className="absolute bottom-1 left-1 lg:bottom-2 lg:left-2 bg-black/70 text-white text-[8px] lg:text-[10px] px-1.5 lg:px-2 py-0.5 rounded">
-                    {formatViewers(host.listener_count)} listening
-                  </div>
-
-                  {/* Hover overlay - desktop only */}
-                  <div className="hidden lg:flex absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity items-center justify-center">
-                    <Play className="h-10 w-10 text-white" fill="white" />
-                  </div>
-                </div>
-
-                {/* Info */}
-                <div className="flex gap-1.5 lg:gap-2">
-                  <div 
-                    className="w-6 h-6 lg:w-8 lg:h-8 rounded-full overflow-hidden flex-shrink-0 bg-neutral-700 cursor-pointer"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      navigate(`/host/${host.host_id}`);
-                    }}
-                  >
-                    {host.host_avatar ? (
-                      <img src={host.host_avatar} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-green-500 to-teal-500" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-[11px] lg:text-sm font-medium text-white truncate group-hover:text-[#53fc18] transition-colors">
-                      {host.title}
-                    </h3>
-                    <p className="text-[10px] lg:text-xs text-white/50 truncate">{host.host_name}</p>
-                    <span className="hidden lg:inline-block mt-1 text-[10px] bg-white/10 text-white/70 px-1.5 py-0.5 rounded">
-                      {host.category}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Schedules Section */}
         <section className="px-3 lg:px-6 mt-8">
