@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Mic, MicOff, Hand, Volume2, Loader2, LogOut, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useDailyAudio } from '@/hooks/useDailyAudio';
+import { useJitsiAudio } from '@/hooks/useJitsiAudio';
 import AuthPromptModal from './AuthPromptModal';
 import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 
@@ -79,7 +79,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
 
-  // Daily Room Hook - primary audio provider
+  // Jitsi Audio Hook - FREE, no API key needed!
   const {
     isConnected: isAudioConnected,
     isConnecting: isAudioConnecting,
@@ -90,18 +90,17 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     disconnect: disconnectAudio,
     toggleMute,
     enableMicrophone,
-  } = useDailyAudio({
+  } = useJitsiAudio({
     sessionId,
     userId: user?.id || '',
     userName: user?.email?.split('@')[0] || 'Listener',
     isHost,
-    onParticipantJoined: (participant) => {
-      console.log('Audio participant joined:', participant.name);
-      // Refresh database participants
+    onParticipantJoin: (participant) => {
+      console.log('[Jitsi] Audio participant joined:', participant.name);
       fetchParticipants();
     },
-    onParticipantLeft: (identity) => {
-      console.log('Audio participant left:', identity);
+    onParticipantLeave: (identity) => {
+      console.log('[Jitsi] Audio participant left:', identity);
       fetchParticipants();
     },
   });
@@ -380,7 +379,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
 
   // Get audio state for a participant
   const getParticipantAudioState = (odUserId: string) => {
-    return audioParticipants.find(ap => ap.identity === odUserId);
+    return audioParticipants.find(ap => ap.id === odUserId);
   };
 
   // Show real participants, or host placeholder if empty

@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useDailyAudio } from '@/hooks/useDailyAudio';
+import { useJitsiAudio } from '@/hooks/useJitsiAudio';
 import { useHostPlaylists } from '@/hooks/useHostPlaylists';
 
 interface HostStudioProps {
@@ -88,21 +88,20 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     deletePlaylist
   } = useHostPlaylists();
 
-  // Daily Room Hook - primary audio provider
+  // Jitsi Audio Hook - FREE, no API key needed!
   const {
     isConnected: isAudioConnected,
     isConnecting: isAudioConnecting,
     isMuted,
     isRecording,
     participants: audioParticipants,
-    provider: audioProvider,
     connect: connectAudio,
     disconnect: disconnectAudio,
     toggleMute,
     enableMicrophone,
     startRecording,
     saveEpisode,
-  } = useDailyAudio({
+  } = useJitsiAudio({
     sessionId: sessionId || session?.id || '',
     userId: user?.id || '',
     userName: user?.email?.split('@')[0] || 'Host',
@@ -494,7 +493,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
             Host Studio
             {isAudioConnected && (
               <span className="ml-2 text-[10px] px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full">
-                Daily.co Connected
+                🔊 Audio Live
               </span>
             )}
             {isLive && (
@@ -628,7 +627,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
                   <div className="flex flex-wrap gap-2">
                     {audioParticipants.map((p) => (
                       <div
-                        key={p.identity}
+                        key={p.id}
                         className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs ${
                           p.isSpeaking ? 'bg-green-500/20 ring-1 ring-green-500' : 'bg-white/5'
                         }`}
