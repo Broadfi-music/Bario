@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronLeft, ChevronRight, Users, Play, Calendar, Headphones, Search, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, Play, Pause, Calendar, Headphones, Search, User, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -65,8 +65,10 @@ interface EpisodeItem {
   host_avatar?: string;
   title: string;
   cover_image_url?: string;
+  audio_url?: string;
   play_count: number;
   duration_ms: number;
+  isRealUser?: boolean;
 }
 
 const PodcastFeed = () => {
@@ -78,6 +80,11 @@ const PodcastFeed = () => {
   const [heroIndex, setHeroIndex] = useState(0);
   const heroRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Audio player state
+  const [currentEpisode, setCurrentEpisode] = useState<EpisodeItem | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Filter hosts based on search
   const filteredHosts = searchQuery.trim() 
@@ -160,27 +167,15 @@ const PodcastFeed = () => {
   };
 
   const fetchEpisodes = async () => {
-    // Try fetching from the edge function first (Deezer API)
-    try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/podcast-episodes`);
-      const result = await response.json();
-      
-      if (result.episodes && result.episodes.length > 0) {
-        setEpisodes(result.episodes.slice(0, 12));
-        return;
-      }
-    } catch (error) {
-      console.log('Edge function not available, fetching from database');
-    }
-
-    // Fallback to database
+    // Try fetching from database - we want real episodes with audio
     const { data } = await supabase
       .from('podcast_episodes')
       .select('*')
+      .not('audio_url', 'is', null) // Only get episodes with audio
       .order('created_at', { ascending: false })
       .limit(12);
 
-    if (data) {
+    if (data && data.length > 0) {
       // Fetch host profiles for episodes
       const hostIds = [...new Set(data.map(e => e.host_id))];
       const { data: profiles } = await supabase
@@ -190,16 +185,54 @@ const PodcastFeed = () => {
 
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
-      setEpisodes(data.map(e => ({
-        id: e.id,
-        host_id: e.host_id,
-        host_name: profileMap.get(e.host_id)?.full_name || profileMap.get(e.host_id)?.username || 'Host',
-        host_avatar: profileMap.get(e.host_id)?.avatar_url || undefined,
-        title: e.title,
-        cover_image_url: e.cover_image_url || undefined,
-        play_count: e.play_count || 0,
-        duration_ms: e.duration_ms || 0
-      })));
+      setEpisodes(data.map(e => {
+        const profile = profileMap.get(e.host_id);
+        return {
+          id: e.id,
+          host_id: e.host_id,
+          host_name: profile?.full_name || profile?.username || 'Music Podcast',
+          host_avatar: profile?.avatar_url || undefined,
+          title: e.title,
+          cover_image_url: e.cover_image_url || undefined,
+          audio_url: e.audio_url || undefined,
+          play_count: e.play_count || 0,
+          duration_ms: e.duration_ms || 0,
+          isRealUser: !!profile
+        };
+      }));
+    } else {
+      // Fallback - get all episodes even without audio
+      const { data: allEpisodes } = await supabase
+        .from('podcast_episodes')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(12);
+        
+      if (allEpisodes) {
+        const hostIds = [...new Set(allEpisodes.map(e => e.host_id))];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, avatar_url, username')
+          .in('user_id', hostIds);
+
+        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+        setEpisodes(allEpisodes.map(e => {
+          const profile = profileMap.get(e.host_id);
+          return {
+            id: e.id,
+            host_id: e.host_id,
+            host_name: profile?.full_name || profile?.username || 'Music Podcast',
+            host_avatar: profile?.avatar_url || undefined,
+            title: e.title,
+            cover_image_url: e.cover_image_url || undefined,
+            audio_url: e.audio_url || undefined,
+            play_count: e.play_count || 0,
+            duration_ms: e.duration_ms || 0,
+            isRealUser: !!profile
+          };
+        }));
+      }
     }
   };
 
@@ -252,9 +285,61 @@ const PodcastFeed = () => {
 
   // Auto-rotate hero
   useEffect(() => {
+    if (heroHosts.length === 0) return;
     const timer = setInterval(nextHero, 8000);
     return () => clearInterval(timer);
   }, [heroHosts.length]);
+
+  // Audio player functions
+  const playEpisode = (episode: EpisodeItem) => {
+    if (!episode.audio_url) {
+      console.log('No audio URL for episode');
+      return;
+    }
+
+    if (currentEpisode?.id === episode.id && isPlaying) {
+      // Pause if same episode is playing
+      audioRef.current?.pause();
+      setIsPlaying(false);
+    } else {
+      // Play new episode or resume
+      if (currentEpisode?.id !== episode.id) {
+        setCurrentEpisode(episode);
+        if (audioRef.current) {
+          audioRef.current.src = episode.audio_url;
+          audioRef.current.load();
+        }
+      }
+      audioRef.current?.play();
+      setIsPlaying(true);
+    }
+  };
+
+  const stopAudio = () => {
+    audioRef.current?.pause();
+    setIsPlaying(false);
+    setCurrentEpisode(null);
+  };
+
+  // Handle audio end
+  useEffect(() => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+    }
+    
+    const audio = audioRef.current;
+    
+    const handleEnded = () => {
+      setIsPlaying(false);
+    };
+
+    audio.addEventListener('ended', handleEnded);
+    
+    return () => {
+      audio.removeEventListener('ended', handleEnded);
+      audio.pause();
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0e0e10] text-white pb-16 lg:pb-0">
@@ -562,20 +647,42 @@ const PodcastFeed = () => {
             <button className="text-[10px] text-[#53fc18] hover:underline">View all</button>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-            {episodes.length > 0 ? episodes.map((episode) => (
+            {episodes.slice(0, 6).length > 0 ? episodes.slice(0, 6).map((episode) => (
               <div 
                 key={episode.id}
                 className="group cursor-pointer"
-                onClick={() => navigate(`/host/${episode.host_id}`)}
+                onClick={() => {
+                  if (episode.audio_url) {
+                    playEpisode(episode);
+                  } else if (episode.isRealUser) {
+                    navigate(`/host/${episode.host_id}`);
+                  }
+                }}
               >
                 <div className="relative aspect-square rounded-lg overflow-hidden bg-neutral-800 mb-2">
-                  <img src={episode.cover_image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  {episode.cover_image_url ? (
+                    <img src={episode.cover_image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-purple-600 via-pink-500 to-orange-500" />
+                  )}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Play className="h-8 w-8 text-white" fill="white" />
+                    {currentEpisode?.id === episode.id && isPlaying ? (
+                      <Pause className="h-8 w-8 text-white" fill="white" />
+                    ) : (
+                      <Play className="h-8 w-8 text-white" fill="white" />
+                    )}
                   </div>
-                  <div className="absolute bottom-1.5 right-1.5 bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded">
-                    {formatDuration(episode.duration_ms)}
-                  </div>
+                  {currentEpisode?.id === episode.id && isPlaying && (
+                    <div className="absolute top-1.5 left-1.5 bg-[#53fc18] text-black text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse" />
+                      PLAYING
+                    </div>
+                  )}
+                  {episode.duration_ms > 0 && (
+                    <div className="absolute bottom-1.5 right-1.5 bg-black/70 text-white text-[9px] px-1.5 py-0.5 rounded">
+                      {formatDuration(episode.duration_ms)}
+                    </div>
+                  )}
                 </div>
                 <h3 className="text-xs font-medium line-clamp-2 mb-1 group-hover:text-[#53fc18] transition-colors">{episode.title}</h3>
                 <p className="text-[10px] text-white/50 truncate">{episode.host_name}</p>
@@ -587,6 +694,39 @@ const PodcastFeed = () => {
             )) : <p className="text-white/40 text-xs col-span-full text-center py-8">No episodes yet</p>}
           </div>
         </section>
+
+        {/* Floating Audio Player */}
+        {currentEpisode && (
+          <div className="fixed bottom-16 lg:bottom-4 left-0 right-0 lg:left-56 z-50 px-3 lg:px-6">
+            <div className="bg-[#18181b] border border-white/10 rounded-xl p-3 flex items-center gap-3 shadow-2xl">
+              <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                {currentEpisode.cover_image_url ? (
+                  <img src={currentEpisode.cover_image_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-purple-600 to-pink-500" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-medium truncate">{currentEpisode.title}</h4>
+                <p className="text-xs text-white/50 truncate">{currentEpisode.host_name}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => playEpisode(currentEpisode)}
+                  className="w-10 h-10 rounded-full bg-[#53fc18] text-black flex items-center justify-center hover:bg-[#45d914] transition-colors"
+                >
+                  {isPlaying ? <Pause className="h-5 w-5" fill="currentColor" /> : <Play className="h-5 w-5" fill="currentColor" />}
+                </button>
+                <button
+                  onClick={stopAudio}
+                  className="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
