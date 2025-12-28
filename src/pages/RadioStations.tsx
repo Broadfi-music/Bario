@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Play, Pause, Radio, Heart, Search, X, Eye, Tv, ChevronRight, Sparkles, Users } from 'lucide-react';
+import { ChevronLeft, Play, Pause, Radio, Heart, Search, X, Eye, Tv, ChevronRight, Sparkles, Users, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
@@ -279,11 +279,20 @@ const RadioStations = () => {
       {/* Kick-style Header */}
       <header className="sticky top-0 z-50 bg-[#0e0e10] border-b border-white/5">
         <div className="flex items-center h-14 px-4 gap-4">
-          {/* Logo */}
-          <button onClick={() => navigate('/')} className="flex items-center gap-2">
+          {/* Logo - just icon, no text */}
+          <button onClick={() => navigate('/')} className="flex items-center">
             <Radio className="h-6 w-6 text-[#53fc18]" />
-            <span className="text-lg font-bold hidden sm:inline">BARIO</span>
           </button>
+          
+          {/* Nav Links */}
+          <div className="flex items-center gap-4">
+            <button onClick={() => navigate('/heatmap')} className="text-sm text-white/60 hover:text-white transition-colors">
+              Heatmap
+            </button>
+            <button onClick={() => navigate('/podcasts')} className="text-sm text-white/60 hover:text-white transition-colors">
+              Podcast
+            </button>
+          </div>
           
           {/* Search Bar - Kick style */}
           <div className="flex-1 max-w-md relative">
@@ -306,27 +315,21 @@ const RadioStations = () => {
 
           {/* Right side buttons */}
           <div className="flex items-center gap-2">
-            <Button
-              onClick={() => navigate('/podcasts')}
-              size="sm"
-              className="bg-[#53fc18] hover:bg-[#53fc18]/90 text-black font-semibold h-9 px-4"
-            >
-              <Sparkles className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Go Live</span>
-            </Button>
-
             {user ? (
-              <Link to="/dashboard">
-                <Button size="sm" variant="ghost" className="h-9">
-                  Dashboard
-                </Button>
-              </Link>
+              <Button
+                onClick={() => navigate(`/host/${user.id}`)}
+                size="sm"
+                className="bg-black hover:bg-black/80 text-white border border-white/20 font-semibold h-9 px-4"
+              >
+                <User className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">My Page</span>
+              </Button>
             ) : (
               <>
                 <Button onClick={() => navigate('/auth')} size="sm" variant="ghost" className="h-9">
                   Log In
                 </Button>
-                <Button onClick={() => navigate('/auth')} size="sm" className="bg-[#53fc18] hover:bg-[#53fc18]/90 text-black font-semibold h-9">
+                <Button onClick={() => navigate('/auth')} size="sm" className="bg-black hover:bg-black/80 text-white border border-white/20 font-semibold h-9">
                   Sign Up
                 </Button>
               </>
@@ -379,7 +382,7 @@ const RadioStations = () => {
               <div className="flex gap-3">
                 <Button 
                   onClick={(e) => featuredStation && togglePlay(featuredStation, e)}
-                  className="bg-[#53fc18] hover:bg-[#53fc18]/90 text-black font-semibold h-10 px-6"
+                  className="bg-black hover:bg-black/80 text-white border border-white/20 font-semibold h-10 px-6"
                 >
                   {playingStation === featuredStation?.stationuuid ? (
                     <><Pause className="h-5 w-5 mr-2" />Pause</>
@@ -447,12 +450,12 @@ const RadioStations = () => {
                   <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={(e) => togglePlay(station, e)}
-                      className="w-12 h-12 rounded-full bg-[#53fc18] flex items-center justify-center"
+                      className="w-12 h-12 rounded-full bg-black border border-white/20 flex items-center justify-center"
                     >
                       {playingStation === station.stationuuid ? (
-                        <Pause className="h-6 w-6 text-black" />
+                        <Pause className="h-6 w-6 text-white" />
                       ) : (
-                        <Play className="h-6 w-6 text-black ml-1" />
+                        <Play className="h-6 w-6 text-white ml-1" />
                       )}
                     </button>
                   </div>

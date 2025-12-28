@@ -89,11 +89,12 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const roomName = `podcast-${sessionId}`;
-    let canPublish = isHost;
+    // CRITICAL: Hosts MUST be able to publish (speak) - this was the bug!
+    let canPublish = isHost === true;
     let canSubscribe = true; // ALL users can subscribe (hear others)
 
     // Check if user is a speaker/host in the session (skip for demo sessions)
-    if (!sessionId.startsWith('demo-')) {
+    if (!sessionId.startsWith('demo-') && !isHost) {
       const { data: participant } = await supabase
         .from('podcast_participants')
         .select('role')
@@ -105,10 +106,12 @@ serve(async (req) => {
         // Hosts, co-hosts, and speakers can publish (speak)
         canPublish = ['host', 'co_host', 'speaker'].includes(participant.role);
       }
-      // ALL listeners can subscribe (hear) - no approval needed
+    } else if (isHost) {
+      // Host always can publish - explicit check
+      canPublish = true;
     }
     
-    console.log('Voice room permissions:', { userId, isHost, canPublish, canSubscribe });
+    console.log('Voice room permissions:', { userId, isHost, canPublish, canSubscribe, roomName });
 
     // Try LiveKit first
     if (isLiveKitAvailable()) {
