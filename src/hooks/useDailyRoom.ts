@@ -48,6 +48,9 @@ export const useDailyRoom = ({
   const cleanup = useCallback(async () => {
     console.log('Audio room cleanup called');
     
+    // Remove all audio elements we created
+    document.querySelectorAll('[id^="audio-"]').forEach(el => el.remove());
+    
     if (roomRef.current) {
       try {
         await roomRef.current.disconnect();
@@ -232,11 +235,27 @@ export const useDailyRoom = ({
       room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
         console.log('Track subscribed:', track.kind, 'from', participant.identity);
         
-        // Attach audio tracks to play them
+        // Attach audio tracks to play them - MUST append to DOM
         if (track.kind === Track.Kind.Audio) {
           const audioElement = track.attach();
-          audioElement.play().catch(e => console.warn('Audio autoplay blocked:', e));
-          console.log('Audio track attached and playing');
+          audioElement.id = `audio-${participant.identity}`;
+          audioElement.autoplay = true;
+          (audioElement as HTMLVideoElement).playsInline = true;
+          // Remove any existing audio element for this participant
+          const existing = document.getElementById(audioElement.id);
+          if (existing) existing.remove();
+          // Append to body to ensure it plays
+          document.body.appendChild(audioElement);
+          audioElement.play().catch(e => {
+            console.warn('Audio autoplay blocked, retrying with user gesture:', e);
+            // Create a one-time click handler to resume playback
+            const resumeAudio = () => {
+              audioElement.play().catch(console.warn);
+              document.removeEventListener('click', resumeAudio);
+            };
+            document.addEventListener('click', resumeAudio, { once: true });
+          });
+          console.log('Audio track attached and playing for:', participant.identity);
         }
         
         updateParticipants(room);
@@ -244,7 +263,12 @@ export const useDailyRoom = ({
 
       room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
         console.log('Track unsubscribed:', track.kind, 'from', participant.identity);
-        track.detach();
+        // Properly detach and remove audio elements from DOM
+        const elements = track.detach();
+        elements.forEach(el => {
+          el.remove();
+          console.log('Removed audio element for:', participant.identity);
+        });
         updateParticipants(room);
       });
 

@@ -117,10 +117,37 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       fetchRaisedHands();
       subscribeToUpdates(session.id);
     }
-    return () => {
-      disconnectAudio();
+
+    // Handle browser/tab close - end session immediately
+    const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
+      if (isLive && sessionId) {
+        // Use sendBeacon for reliable cleanup on page unload
+        const data = JSON.stringify({ 
+          sessionId, 
+          action: 'end'
+        });
+        navigator.sendBeacon(
+          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/podcast_sessions?id=eq.${sessionId}`,
+          new Blob([JSON.stringify({ status: 'ended', ended_at: new Date().toISOString() })], { type: 'application/json' })
+        );
+      }
     };
-  }, [session]);
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      disconnectAudio();
+      // End session when component unmounts if live
+      if (isLive && sessionId) {
+        supabase
+          .from('podcast_sessions')
+          .update({ status: 'ended', ended_at: new Date().toISOString() })
+          .eq('id', sessionId)
+          .then(() => console.log('Session ended on unmount'));
+      }
+    };
+  }, [session, isLive, sessionId]);
 
   const subscribeToUpdates = (sid: string) => {
     const channel = supabase

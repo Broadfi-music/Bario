@@ -319,15 +319,21 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       return;
     }
 
+    // Optimistic update - immediately show the change
+    const newHandRaised = !myParticipation.hand_raised;
+    setMyParticipation(prev => prev ? { ...prev, hand_raised: newHandRaised } : null);
+    toast.success(newHandRaised ? 'Hand raised!' : 'Hand lowered');
+
+    // Then update database
     const { error } = await supabase
       .from('podcast_participants')
-      .update({ hand_raised: !myParticipation.hand_raised })
+      .update({ hand_raised: newHandRaised })
       .eq('id', myParticipation.id);
 
     if (error) {
+      // Revert on error
+      setMyParticipation(prev => prev ? { ...prev, hand_raised: !newHandRaised } : null);
       toast.error('Failed to update');
-    } else {
-      toast.success(myParticipation.hand_raised ? 'Hand lowered' : 'Hand raised!');
     }
   };
 
@@ -382,7 +388,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
             </span>
           )}
         </div>
-        <p className="text-xs text-white/40">{listenerCount} listeners • {participants.length}/{MAX_PARTICIPANTS} capacity</p>
+        <p className="text-xs text-white/40">{listenerCount} listeners</p>
       </div>
 
       {/* Participants Grid */}
