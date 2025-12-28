@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Users, Play, Calendar, Radio, Heart, Share2, Edit, MoreVertical, Pause, Plus, Mic } from 'lucide-react';
+import { ChevronLeft, Users, Play, Calendar, Radio, Heart, Share2, Edit, MoreVertical, Pause, Plus, Mic, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -101,18 +101,7 @@ const DEMO_HOSTS: Record<string, HostData> = {
   }
 };
 
-const DEMO_EPISODES: Episode[] = [
-  { id: 'ep-1', title: 'The Evolution of Hip-Hop', description: 'A deep dive into how hip-hop has changed over the decades', cover_image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400', audio_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', duration_ms: 3600000, play_count: 125000, created_at: '2024-01-15' },
-  { id: 'ep-2', title: 'Industry Secrets Revealed', description: 'What they don\'t tell you about the music business', cover_image_url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=400', audio_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3', duration_ms: 2700000, play_count: 98000, created_at: '2024-01-10' },
-  { id: 'ep-3', title: 'Behind the Hits', description: 'The making of chart-topping songs', cover_image_url: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400', audio_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3', duration_ms: 3200000, play_count: 87000, created_at: '2024-01-05' },
-  { id: 'ep-4', title: 'Artist Interviews Vol. 1', description: 'Exclusive conversations with rising artists', cover_image_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400', audio_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3', duration_ms: 4200000, play_count: 156000, created_at: '2024-01-01' },
-];
-
-const DEMO_SCHEDULES: Schedule[] = [
-  { id: 'sch-1', title: 'Weekly Hip-Hop Roundup', description: 'Breaking down the week\'s biggest stories', scheduled_at: new Date(Date.now() + 86400000).toISOString() },
-  { id: 'sch-2', title: 'Special Guest Interview', description: 'Exclusive interview with a surprise guest', scheduled_at: new Date(Date.now() + 172800000).toISOString() },
-  { id: 'sch-3', title: 'Listener Q&A Session', description: 'Answering your questions live', scheduled_at: new Date(Date.now() + 259200000).toISOString() },
-];
+// No demo data - only real user data from database
 
 const formatFollowers = (count: number) => {
   if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
@@ -152,8 +141,8 @@ const HostProfile = () => {
   const { user } = useAuth();
   const { playTrack, currentTrack, isPlaying, pauseTrack, resumeTrack } = useAudioPlayer();
   const [host, setHost] = useState<HostData | null>(null);
-  const [episodes, setEpisodes] = useState<Episode[]>(DEMO_EPISODES);
-  const [schedules, setSchedules] = useState<Schedule[]>(DEMO_SCHEDULES);
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
   const [activeTab, setActiveTab] = useState('episodes');
   const [loading, setLoading] = useState(true);
@@ -353,6 +342,48 @@ const HostProfile = () => {
         type: 'podcast'
       });
     }
+  };
+
+  const handleDeleteEpisode = async (episodeId: string) => {
+    if (!user) return;
+    
+    const confirmed = window.confirm('Are you sure you want to delete this episode?');
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from('podcast_episodes')
+      .delete()
+      .eq('id', episodeId)
+      .eq('host_id', user.id);
+
+    if (error) {
+      toast.error('Failed to delete episode');
+      return;
+    }
+
+    toast.success('Episode deleted');
+    setEpisodes(prev => prev.filter(e => e.id !== episodeId));
+  };
+
+  const handleDeleteSchedule = async (scheduleId: string) => {
+    if (!user) return;
+    
+    const confirmed = window.confirm('Are you sure you want to delete this schedule?');
+    if (!confirmed) return;
+
+    const { error } = await supabase
+      .from('podcast_schedules')
+      .delete()
+      .eq('id', scheduleId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      toast.error('Failed to delete schedule');
+      return;
+    }
+
+    toast.success('Schedule deleted');
+    setSchedules(prev => prev.filter(s => s.id !== scheduleId));
   };
 
   const openEditEpisode = (episode: Episode) => {
@@ -577,6 +608,13 @@ const HostProfile = () => {
                             <Edit className="h-4 w-4 mr-2" />
                             Edit Episode
                           </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteEpisode(episode.id)}
+                            className="text-red-400 hover:bg-red-500/10"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Episode
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
@@ -620,6 +658,13 @@ const HostProfile = () => {
                         >
                           <Edit className="h-4 w-4 mr-2" />
                           Edit Schedule
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleDeleteSchedule(schedule.id)}
+                          className="text-red-400 hover:bg-red-500/10"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Schedule
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
