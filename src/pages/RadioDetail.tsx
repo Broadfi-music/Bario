@@ -234,27 +234,7 @@ const RadioDetail = () => {
       
       {/* Desktop Layout */}
       <div className="hidden lg:flex h-screen">
-        {/* Left Sidebar - Recommended */}
-        <aside className="w-60 bg-[#1f1f23] border-r border-white/5 overflow-y-auto">
-          <div className="p-4">
-            <h3 className="text-sm font-semibold text-white/60 mb-3">Recommended Stations</h3>
-            {/* Placeholder for recommended */}
-            <div className="space-y-2">
-              {[1, 2, 3, 4, 5].map(i => (
-                <div key={i} className="flex items-center gap-2 p-2 rounded hover:bg-white/5 cursor-pointer">
-                  <div className="w-8 h-8 rounded bg-gradient-to-br from-purple-500 to-blue-500" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">Radio Station {i}</p>
-                    <p className="text-[10px] text-white/50">Music</p>
-                  </div>
-                  <span className="text-[10px] text-red-500">● LIVE</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </aside>
-
-        {/* Main Content */}
+        {/* Main Content - No sidebar */}
         <main className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
           <header className="h-14 bg-[#0e0e10] border-b border-white/5 flex items-center justify-between px-4">
@@ -307,12 +287,12 @@ const RadioDetail = () => {
               {/* Play Button */}
               <button
                 onClick={togglePlay}
-                className="w-20 h-20 rounded-full bg-[#53fc18] hover:bg-[#53fc18]/90 flex items-center justify-center transition-transform hover:scale-105"
+                className="w-20 h-20 rounded-full bg-black border border-white/20 hover:bg-black/80 flex items-center justify-center transition-transform hover:scale-105"
               >
                 {isPlaying ? (
-                  <Pause className="h-10 w-10 text-black" />
+                  <Pause className="h-10 w-10 text-white" />
                 ) : (
-                  <Play className="h-10 w-10 text-black ml-2" />
+                  <Play className="h-10 w-10 text-white ml-2" />
                 )}
               </button>
 
@@ -368,7 +348,7 @@ const RadioDetail = () => {
               </Button>
               <Button 
                 onClick={() => setIsSubscribed(!isSubscribed)}
-                className={isSubscribed ? 'bg-purple-600 hover:bg-purple-700' : 'bg-[#53fc18] hover:bg-[#53fc18]/90 text-black'}
+                className={isSubscribed ? 'bg-purple-600 hover:bg-purple-700' : 'bg-black hover:bg-black/80 text-white border border-white/20'}
               >
                 {isSubscribed ? 'Subscribed' : 'Subscribe'}
               </Button>
@@ -415,12 +395,12 @@ const RadioDetail = () => {
                   placeholder="Send a message"
                   className="flex-1 bg-[#0e0e10] border-white/10"
                 />
-                <Button onClick={sendChatMessage} className="bg-[#53fc18] hover:bg-[#53fc18]/90 text-black">
+                <Button onClick={sendChatMessage} className="bg-black hover:bg-black/80 text-white border border-white/20">
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
             ) : (
-              <Button onClick={() => navigate('/auth')} className="w-full bg-[#53fc18] text-black">
+              <Button onClick={() => navigate('/auth')} className="w-full bg-black text-white border border-white/20">
                 Log in to chat
               </Button>
             )}

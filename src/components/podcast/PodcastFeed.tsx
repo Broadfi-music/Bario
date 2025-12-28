@@ -304,7 +304,7 @@ const PodcastFeed = () => {
               <Button
                 size="sm"
                 onClick={() => navigate(`/host/${user.id}`)}
-                className="bg-[#53fc18] hover:bg-[#53fc18]/80 text-black font-semibold h-9"
+                className="bg-black hover:bg-black/80 text-white border border-white/20 font-semibold h-9"
               >
                 <User className="h-4 w-4 mr-1" />
                 My Page
@@ -408,7 +408,7 @@ const PodcastFeed = () => {
               {user && (
                 <Button
                   onClick={() => navigate('/podcasts')}
-                  className="bg-[#53fc18] hover:bg-[#53fc18]/80 text-black font-semibold"
+                  className="bg-black hover:bg-black/80 text-white border border-white/20 font-semibold"
                 >
                   Go Live Now
                 </Button>
