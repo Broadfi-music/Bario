@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mic, MicOff, Hand, UserPlus, Volume2, Loader2, LogOut, Ban } from 'lucide-react';
+import { Mic, MicOff, Hand, Volume2, Loader2, LogOut, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useVoiceRoom } from '@/hooks/useVoiceRoom';
+import { useDailyRoom } from '@/hooks/useDailyRoom';
 import AuthPromptModal from './AuthPromptModal';
 import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 
@@ -56,33 +56,39 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
   const [isBanned, setIsBanned] = useState(false);
   const [previousSessionId, setPreviousSessionId] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
 
-  // Voice Room Hook (with Jitsi fallback)
+  // Daily Room Hook - primary audio provider
   const {
     isConnected: isAudioConnected,
     isConnecting: isAudioConnecting,
     isMuted,
     participants: audioParticipants,
     error: audioError,
-    micPermissionGranted,
     connect: connectAudio,
     disconnect: disconnectAudio,
     toggleMute,
     enableMicrophone,
-  } = useVoiceRoom({
+  } = useDailyRoom({
     sessionId,
     userId: user?.id || '',
     userName: user?.email?.split('@')[0] || 'Listener',
     isHost,
+    onParticipantJoined: (participant) => {
+      console.log('Audio participant joined:', participant.name);
+      // Refresh database participants
+      fetchParticipants();
+    },
+    onParticipantLeft: (identity) => {
+      console.log('Audio participant left:', identity);
+      fetchParticipants();
+    },
   });
 
-  // Show mic permission error
+  // Show audio error
   useEffect(() => {
-    if (audioError && audioError.includes('Microphone')) {
-      toast.error(audioError, {
-        duration: 5000,
-        description: 'Click the lock icon in your address bar to allow microphone access'
-      });
+    if (audioError) {
+      toast.error(audioError, { duration: 5000 });
     }
   }, [audioError]);
 
@@ -125,7 +131,6 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
         },
         () => {
           checkBanStatus();
-          // If user gets kicked, disconnect and leave
           if (user && myParticipation) {
             checkBanStatus().then(() => {
               if (isBanned) {
@@ -155,7 +160,6 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
   }, [myParticipation?.role, isAudioConnected]);
 
   const fetchParticipants = async () => {
-    // Skip database calls for demo sessions
     if (isDemoSession(sessionId)) return;
     
     const { data } = await supabase
@@ -173,7 +177,6 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     }
   };
 
-  // Leave current session
   const leaveSession = async () => {
     if (!user || !myParticipation) return;
 
@@ -189,7 +192,6 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     onLeave?.();
   };
 
-  // Kick a participant (host only)
   const kickParticipant = async (participantId: string, participantUserId: string) => {
     if (!isHost) return;
 
@@ -201,17 +203,14 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     toast.success('Participant removed');
   };
 
-  // Ban a participant (host only)
   const banParticipant = async (participantId: string, participantUserId: string) => {
     if (!isHost || !user) return;
 
-    // First kick them
     await supabase
       .from('podcast_participants')
       .delete()
       .eq('id', participantId);
 
-    // Then ban them
     await supabase.from('podcast_banned_users').insert({
       session_id: sessionId,
       user_id: participantUserId,
@@ -222,7 +221,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     toast.success('Participant banned from session');
   };
 
-  const MAX_PARTICIPANTS = 50; // Increased limit for more listeners
+  const MAX_PARTICIPANTS = 100;
 
   const joinSession = async () => {
     if (!user) {
@@ -230,78 +229,83 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       return;
     }
 
-    // For demo sessions, simulate joining
-    if (isDemoSession(sessionId)) {
-      toast.success('Joined the space!');
-      await connectAudio();
-      return;
-    }
+    if (isJoining) return;
+    setIsJoining(true);
 
-    // Check if banned
-    if (isBanned) {
-      toast.error('You are banned from this session');
-      return;
-    }
-
-    // Check if already joined
-    if (myParticipation) {
-      // Already in session, just connect to audio if not connected
-      if (!isAudioConnected && !isAudioConnecting) {
+    try {
+      // For demo sessions, just connect audio
+      if (isDemoSession(sessionId)) {
         await connectAudio();
+        toast.success('Joined the space!');
+        return;
       }
-      return;
-    }
 
-    // Check participant limit
-    if (participants.length >= MAX_PARTICIPANTS) {
-      toast.error(`Session is full (max ${MAX_PARTICIPANTS} participants)`);
-      return;
-    }
+      if (isBanned) {
+        toast.error('You are banned from this session');
+        return;
+      }
 
-    // Ensure fresh auth session
-    const session = await getFreshSession();
-    if (!session) {
-      toast.error('Session expired. Please sign in again.');
-      return;
-    }
-
-    // Leave previous session if in one
-    if (previousSessionId && previousSessionId !== sessionId && !isDemoSession(previousSessionId)) {
-      await supabase
-        .from('podcast_participants')
-        .delete()
-        .eq('session_id', previousSessionId)
-        .eq('user_id', user.id);
-      await disconnectAudio();
-    }
-
-    // Insert as listener - NO HOST APPROVAL NEEDED
-    const { error } = await supabase.from('podcast_participants').insert({
-      session_id: sessionId,
-      user_id: user.id,
-      role: 'listener', // Listeners can join freely
-      is_muted: true
-    });
-
-    if (error) {
-      console.error('Join session error:', error);
-      if (error.code === '23505') {
-        // Already in session, just connect audio
+      // If already joined, just connect audio
+      if (myParticipation) {
         if (!isAudioConnected && !isAudioConnecting) {
           await connectAudio();
         }
         return;
-      } else {
+      }
+
+      if (participants.length >= MAX_PARTICIPANTS) {
+        toast.error(`Session is full (max ${MAX_PARTICIPANTS} participants)`);
+        return;
+      }
+
+      const session = await getFreshSession();
+      if (!session) {
+        toast.error('Session expired. Please sign in again.');
+        return;
+      }
+
+      // Leave previous session if needed
+      if (previousSessionId && previousSessionId !== sessionId && !isDemoSession(previousSessionId)) {
+        await supabase
+          .from('podcast_participants')
+          .delete()
+          .eq('session_id', previousSessionId)
+          .eq('user_id', user.id);
+        await disconnectAudio();
+      }
+
+      // Insert as listener - automatic join, no approval needed
+      const { error } = await supabase.from('podcast_participants').insert({
+        session_id: sessionId,
+        user_id: user.id,
+        role: 'listener',
+        is_muted: true
+      });
+
+      if (error) {
+        if (error.code === '23505') {
+          // Already in session
+          if (!isAudioConnected && !isAudioConnecting) {
+            await connectAudio();
+          }
+          return;
+        }
         toast.error('Failed to join session');
         return;
       }
+      
+      setPreviousSessionId(sessionId);
+      
+      // Immediately refresh participants to show user in the list
+      await fetchParticipants();
+      
+      // Connect to audio - user will hear host immediately
+      await connectAudio();
+      
+      toast.success('Joined! You can now hear everyone.');
+    } finally {
+      setIsJoining(false);
     }
-    
-    setPreviousSessionId(sessionId);
-    toast.success('Joined the space! You can now hear the host.');
-    
-    // Immediately connect to audio so listener can hear the host
-    await connectAudio();
   };
 
   const toggleHandRaise = async () => {
@@ -311,7 +315,6 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     }
 
     if (!myParticipation) {
-      // Auto-join first then raise hand
       await joinSession();
       return;
     }
@@ -331,7 +334,6 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
   const handleToggleMute = async () => {
     if (!myParticipation) return;
     
-    // Only speakers and above can unmute
     if (myParticipation.role === 'listener' && isMuted) {
       toast.error('Request to speak first');
       return;
@@ -339,7 +341,6 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
 
     await toggleMute();
 
-    // Update in database
     await supabase
       .from('podcast_participants')
       .update({ is_muted: !isMuted })
@@ -350,14 +351,12 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     navigate(`/podcast-host/${hostId}`);
   };
 
-  // Merge database participants with audio participants for speaking indicators
-  const getParticipantAudioState = (userId: string) => {
-    const audioP = audioParticipants.find(ap => ap.identity === userId);
-    return audioP || null;
+  // Get audio state for a participant
+  const getParticipantAudioState = (odUserId: string) => {
+    return audioParticipants.find(ap => ap.identity === odUserId);
   };
 
-  // Only show real participants - no demo/dummy data
-  // If no participants, just show the host placeholder
+  // Show real participants, or host placeholder if empty
   const displayParticipants: Participant[] = participants.length === 0 
     ? [{ id: 'host-placeholder', user_id: hostId, role: 'host', is_muted: false, hand_raised: false, joined_at: '' }]
     : participants;
@@ -373,15 +372,20 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
             {title || 'Live Podcast Session'}
           </h1>
           {isAudioConnected && (
-            <span className="text-[8px] px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded-full shrink-0">
-              Audio Live
+            <span className="text-[8px] px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded-full shrink-0 animate-pulse">
+              🔊 Live Audio
+            </span>
+          )}
+          {isAudioConnecting && (
+            <span className="text-[8px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full shrink-0">
+              <Loader2 className="w-3 h-3 animate-spin inline" /> Connecting...
             </span>
           )}
         </div>
         <p className="text-xs text-white/40">{listenerCount} listeners • {participants.length}/{MAX_PARTICIPANTS} capacity</p>
       </div>
 
-      {/* Participants Grid - Compact Twitter Space Style with normal scroll */}
+      {/* Participants Grid */}
       <div className="flex-1 overflow-y-auto min-h-0 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
         <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-7 gap-2 pb-4">
           {displayParticipants.map((p) => {
@@ -392,12 +396,12 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
             const avatarColor = getAvatarColor(p.user_id);
             const avatarUrl = isHostRole && hostAvatar ? hostAvatar : null;
             
-            // Get real-time audio state
             const audioState = getParticipantAudioState(p.user_id);
             const isSpeaking = audioState?.isSpeaking || false;
             const isParticipantMuted = audioState ? audioState.isMuted : p.is_muted;
             
             const canKick = isHost && !isHostRole && p.user_id !== user?.id;
+            const isMe = p.user_id === user?.id;
             
             return (
               <div 
@@ -406,10 +410,11 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
                 onClick={isHostRole ? goToHostProfile : undefined}
               >
                 <div className="relative">
-                  {/* Avatar with speaking ring */}
                   <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${avatarColor} flex items-center justify-center overflow-hidden transition-all ${
                     isHostRole ? 'ring-2 ring-purple-500 ring-offset-1 ring-offset-black' : ''
-                  } ${isSpeaking ? 'ring-2 ring-green-500 ring-offset-1 ring-offset-black animate-pulse' : ''}`}>
+                  } ${isSpeaking ? 'ring-2 ring-green-500 ring-offset-1 ring-offset-black animate-pulse' : ''} ${
+                    isMe ? 'ring-2 ring-blue-500 ring-offset-1 ring-offset-black' : ''
+                  }`}>
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -419,21 +424,18 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
                     )}
                   </div>
                   
-                  {/* Speaking indicator */}
                   {!isParticipantMuted && (isHostRole || isCoHost || isSpeaker) && (
                     <div className={`absolute -bottom-0.5 -right-0.5 rounded-full p-0.5 ${isSpeaking ? 'bg-green-500' : 'bg-green-500/50'}`}>
                       <Volume2 className="w-2 h-2 text-white" />
                     </div>
                   )}
 
-                  {/* Hand raised indicator - Twitter Spaces style */}
                   {p.hand_raised && (
                     <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg animate-bounce ring-2 ring-black">
                       <span className="text-[10px]">✋</span>
                     </div>
                   )}
 
-                  {/* Kick/Ban overlay for host */}
                   {canKick && (
                     <div className="absolute inset-0 bg-black/70 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center gap-0.5 transition-opacity">
                       <button
@@ -454,12 +456,10 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
                   )}
                 </div>
                 
-                {/* Name */}
                 <span className="text-[9px] text-white/80 font-medium text-center truncate w-full">
-                  {name}
+                  {isMe ? `${name} (You)` : name}
                 </span>
                 
-                {/* Role Label */}
                 {(isHostRole || isCoHost) && (
                   <span className={`text-[8px] ${isHostRole ? 'text-purple-400' : 'text-white/50'}`}>
                     {isHostRole ? '🎙️ Host' : 'Co-host'}
@@ -471,9 +471,9 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
         </div>
       </div>
 
-      {/* Bottom Controls - All in one compact row */}
+      {/* Bottom Controls */}
       <div className="flex items-center justify-center py-2 gap-1.5 border-t border-white/5 mt-2 flex-wrap">
-        {/* Audio control */}
+        {/* Mic control for speakers/hosts */}
         {myParticipation && myParticipation.role !== 'listener' && (
           <Button
             onClick={handleToggleMute}
@@ -486,7 +486,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
           </Button>
         )}
 
-        {/* Request button */}
+        {/* Request to speak button */}
         <button 
           onClick={toggleHandRaise}
           disabled={isBanned}
@@ -500,49 +500,38 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
           <span>{myParticipation?.hand_raised ? 'Requested' : 'Request'}</span>
         </button>
 
-        {/* Join Space button */}
-        {!myParticipation && !isBanned && (
+        {/* Join/Leave Button */}
+        {!myParticipation ? (
           <Button
             onClick={joinSession}
-            disabled={isAudioConnecting}
+            disabled={isBanned || isJoining || isAudioConnecting}
             size="sm"
-            className="bg-purple-600 hover:bg-purple-500 rounded-full px-3 h-7 text-xs"
+            className="h-7 px-3 text-xs bg-green-600 hover:bg-green-700"
           >
-            {isAudioConnecting ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
+            {isJoining || isAudioConnecting ? (
               <>
-                <UserPlus className="h-3 w-3 mr-1" />
-                Join
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                Joining...
               </>
+            ) : (
+              'Join Session'
             )}
           </Button>
-        )}
-
-        {/* Leave Session button */}
-        {myParticipation && (
+        ) : (
           <Button
             onClick={leaveSession}
             size="sm"
-            variant="ghost"
-            className="rounded-full px-2.5 h-7 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
+            variant="outline"
+            className="h-7 px-3 text-xs border-white/20 text-white/60 hover:text-red-400 hover:border-red-400/50"
           >
-            <LogOut className="h-3 w-3 mr-1" />
             Leave
           </Button>
         )}
-
-        {/* Banned indicator */}
-        {isBanned && (
-          <span className="text-xs text-red-400 px-2">Banned from session</span>
-        )}
       </div>
 
-      {/* Auth Prompt Modal */}
-      <AuthPromptModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        action="join live podcast sessions"
+      <AuthPromptModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
       />
     </div>
   );

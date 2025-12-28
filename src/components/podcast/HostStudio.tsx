@@ -5,13 +5,13 @@ import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 import { 
   Mic, MicOff, Radio, Users, Music, Share2, 
   HandMetal, Volume2, X, Plus, MessageSquare, Play, Pause,
-  Circle, StopCircle, Upload, List, Trash2, Minimize2, Maximize2, VolumeX
+  Circle, StopCircle, Upload, List, Trash2, Minimize2, Maximize2, VolumeX, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useVoiceRoom } from '@/hooks/useVoiceRoom';
+import { useDailyRoom } from '@/hooks/useDailyRoom';
 import { useHostPlaylists } from '@/hooks/useHostPlaylists';
 
 interface HostStudioProps {
@@ -74,6 +74,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
   const [showPlaylistManager, setShowPlaylistManager] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
+  const [isMicTesting, setIsMicTesting] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -87,7 +88,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     deletePlaylist
   } = useHostPlaylists();
 
-  // Voice Room Hook with Jitsi fallback
+  // Daily Room Hook - primary audio provider
   const {
     isConnected: isAudioConnected,
     isConnecting: isAudioConnecting,
@@ -101,7 +102,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     enableMicrophone,
     startRecording,
     saveEpisode,
-  } = useVoiceRoom({
+  } = useDailyRoom({
     sessionId: sessionId || session?.id || '',
     userId: user?.id || '',
     userName: user?.email?.split('@')[0] || 'Host',
@@ -403,6 +404,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
   const handleAudioIconClick = async () => {
     if (!isLive) {
       // Test microphone before going live
+      setIsMicTesting(true);
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         stream.getTracks().forEach(track => track.stop());
@@ -410,8 +412,11 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       } catch (error) {
         console.error('Microphone error:', error);
         toast.error('Unable to access microphone. Please check permissions.');
+      } finally {
+        setIsMicTesting(false);
       }
     } else {
+      // Toggle mute when live
       await toggleMute();
     }
   };
@@ -462,7 +467,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
             Host Studio
             {isAudioConnected && (
               <span className="ml-2 text-[10px] px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full">
-                {audioProvider === 'jitsi' ? 'Jitsi' : 'LiveKit'} Connected
+                Daily.co Connected
               </span>
             )}
             {isLive && (
