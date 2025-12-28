@@ -262,18 +262,18 @@ const GlobalHeatmap = () => {
           
           {/* Right side - Buttons */}
           <div className="flex items-center gap-1 sm:gap-2">
-            {/* Three Strike - Hidden on very small screens */}
+            {/* Three Strike - Always visible on desktop */}
             <Button
               size="sm"
               variant="outline"
               onClick={() => navigate('/three-strike')}
-              className="hidden xs:flex text-[8px] sm:text-[9px] h-7 px-1.5 sm:px-2 border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"
+              className="hidden sm:flex text-[9px] h-7 px-2 border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"
             >
-              <Flame className="h-3 w-3 sm:mr-1" />
-              <span className="hidden sm:inline">Three Strike</span>
+              <Flame className="h-3 w-3 mr-1" />
+              Three Strike
             </Button>
             
-            {/* Bario Music - Hidden on mobile */}
+            {/* Bario Music - Visible on desktop */}
             <Button
               size="sm"
               variant="outline"
@@ -300,6 +300,28 @@ const GlobalHeatmap = () => {
               </Link>
             )}
           </div>
+        </div>
+
+        {/* Mobile Navigation Buttons - Below search */}
+        <div className="sm:hidden border-t border-white/5 px-3 py-2 flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate('/three-strike')}
+            className="flex-1 text-[9px] h-7 border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"
+          >
+            <Flame className="h-3 w-3 mr-1" />
+            Three Strike
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate('/bario-music')}
+            className="flex-1 text-[9px] h-7 border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+          >
+            <Sparkles className="h-3 w-3 mr-1" />
+            Bario Music
+          </Button>
         </div>
 
         {/* Global Stats Bar */}
