@@ -5,9 +5,30 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Mic, MicOff, Hand, Volume2, Loader2, LogOut, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useDailyRoom } from '@/hooks/useDailyRoom';
+import { useDailyAudio } from '@/hooks/useDailyAudio';
 import AuthPromptModal from './AuthPromptModal';
 import { getFreshSession, isDemoSession } from '@/lib/authUtils';
+
+// Audio waveform animation component
+const AudioWaveform = ({ isActive }: { isActive: boolean }) => {
+  if (!isActive) return null;
+  
+  return (
+    <div className="flex items-center gap-[2px] h-3">
+      {[0, 1, 2, 3].map((i) => (
+        <div
+          key={i}
+          className="w-[3px] bg-green-500 rounded-full animate-pulse"
+          style={{
+            height: `${Math.random() * 8 + 4}px`,
+            animationDelay: `${i * 0.1}s`,
+            animationDuration: '0.4s',
+          }}
+        />
+      ))}
+    </div>
+  );
+};
 
 interface Participant {
   id: string;
@@ -69,7 +90,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     disconnect: disconnectAudio,
     toggleMute,
     enableMicrophone,
-  } = useDailyRoom({
+  } = useDailyAudio({
     sessionId,
     userId: user?.id || '',
     userName: user?.email?.split('@')[0] || 'Listener',
@@ -430,8 +451,16 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
                     )}
                   </div>
                   
-                  {!isParticipantMuted && (isHostRole || isCoHost || isSpeaker) && (
-                    <div className={`absolute -bottom-0.5 -right-0.5 rounded-full p-0.5 ${isSpeaking ? 'bg-green-500' : 'bg-green-500/50'}`}>
+                  {/* Audio waveform animation when speaking */}
+                  {isSpeaking && !isParticipantMuted && (
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
+                      <AudioWaveform isActive={true} />
+                    </div>
+                  )}
+                  
+                  {/* Mic status indicator */}
+                  {!isParticipantMuted && (isHostRole || isCoHost || isSpeaker) && !isSpeaking && (
+                    <div className="absolute -bottom-0.5 -right-0.5 rounded-full p-0.5 bg-green-500/50">
                       <Volume2 className="w-2 h-2 text-white" />
                     </div>
                   )}

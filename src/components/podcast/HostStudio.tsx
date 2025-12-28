@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useDailyRoom } from '@/hooks/useDailyRoom';
+import { useDailyAudio } from '@/hooks/useDailyAudio';
 import { useHostPlaylists } from '@/hooks/useHostPlaylists';
 
 interface HostStudioProps {
@@ -102,7 +102,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     enableMicrophone,
     startRecording,
     saveEpisode,
-  } = useDailyRoom({
+  } = useDailyAudio({
     sessionId: sessionId || session?.id || '',
     userId: user?.id || '',
     userName: user?.email?.split('@')[0] || 'Host',
