@@ -93,13 +93,36 @@ const PodcastFeed = () => {
     fetchSchedules();
     fetchEpisodes();
     
-    // Subscribe to real-time updates
+    // Subscribe to real-time updates for immediate live session visibility
     const channel = supabase
       .channel('podcast-feed-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'podcast_sessions' }, () => {
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'podcast_sessions' 
+      }, (payload) => {
+        console.log('New session inserted:', payload);
         fetchLiveSessions();
       })
-      .subscribe();
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'podcast_sessions' 
+      }, (payload) => {
+        console.log('Session updated:', payload);
+        fetchLiveSessions();
+      })
+      .on('postgres_changes', { 
+        event: 'DELETE', 
+        schema: 'public', 
+        table: 'podcast_sessions' 
+      }, () => {
+        console.log('Session deleted');
+        fetchLiveSessions();
+      })
+      .subscribe((status) => {
+        console.log('Podcast feed realtime subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -181,7 +204,8 @@ const PodcastFeed = () => {
   };
 
   const fetchLiveSessions = async () => {
-    const { data } = await supabase
+    console.log('Fetching live sessions...');
+    const { data, error } = await supabase
       .from('podcast_sessions')
       .select(`
         *,
@@ -194,6 +218,13 @@ const PodcastFeed = () => {
       .eq('status', 'live')
       .order('listener_count', { ascending: false });
 
+    if (error) {
+      console.error('Error fetching live sessions:', error);
+      return;
+    }
+
+    console.log('Live sessions fetched:', data?.length || 0);
+    
     if (data && data.length > 0) {
       const realSessions = data.map(s => ({
         id: s.id,
@@ -207,6 +238,9 @@ const PodcastFeed = () => {
         cover_image_url: s.cover_image_url
       }));
       setLiveHosts(realSessions);
+    } else {
+      // Clear live hosts if none are live
+      setLiveHosts([]);
     }
   };
 
