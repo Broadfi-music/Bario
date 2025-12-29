@@ -122,19 +122,25 @@ const ArtistProfile = () => {
     setArtistLoading(true);
     
     try {
-      // First, try to fetch directly by ID (if it's a valid Deezer ID)
-      const response = await fetch(`https://api.deezer.com/artist/${id}`);
-      const data = await response.json();
+      const searchName = decodeURIComponent(id);
       
-      if (!data.error && data.id) {
-        // Successfully found by ID
-        await fetchArtistById(data.id);
-        return;
+      // Check if it's a numeric Deezer ID
+      const isNumericId = /^\d+$/.test(id);
+      
+      if (isNumericId) {
+        // Try to fetch directly by ID
+        const response = await fetch(`https://api.deezer.com/artist/${id}`);
+        const data = await response.json();
+        
+        if (!data.error && data.id) {
+          await fetchArtistById(data.id);
+          return;
+        }
       }
       
-      // If not found by ID, search by name (decode URI component for encoded names)
-      const searchName = decodeURIComponent(id);
-      const searchResponse = await fetch(`https://api.deezer.com/search/artist?q=${encodeURIComponent(searchName)}&limit=5`);
+      // Search by name
+      console.log('Searching for artist:', searchName);
+      const searchResponse = await fetch(`https://api.deezer.com/search/artist?q=${encodeURIComponent(searchName)}&limit=10`);
       const searchData = await searchResponse.json();
       
       if (searchData.data && searchData.data.length > 0) {
@@ -143,26 +149,67 @@ const ArtistProfile = () => {
           a.name.toLowerCase() === searchName.toLowerCase()
         );
         const artistToUse = exactMatch || searchData.data[0];
+        console.log('Found artist:', artistToUse.name);
         await fetchArtistById(artistToUse.id);
-      } else {
-        // Last resort: try a broader search
-        const broaderSearch = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(searchName)}&limit=10`);
-        const broaderData = await broaderSearch.json();
+        return;
+      }
+      
+      // Try broader search with tracks
+      console.log('Trying broader search...');
+      const broaderSearch = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(searchName)}&limit=20`);
+      const broaderData = await broaderSearch.json();
+      
+      if (broaderData.data && broaderData.data.length > 0) {
+        // Find first track with matching artist name
+        const matchingTrack = broaderData.data.find((t: any) => 
+          t.artist?.name?.toLowerCase().includes(searchName.toLowerCase())
+        );
+        const artistId = matchingTrack?.artist?.id || broaderData.data[0].artist?.id;
         
-        if (broaderData.data && broaderData.data.length > 0) {
-          const artistId = broaderData.data[0].artist?.id;
-          if (artistId) {
-            await fetchArtistById(artistId);
-          } else {
-            setArtist(null);
-          }
-        } else {
-          setArtist(null);
+        if (artistId) {
+          console.log('Found artist from track search:', artistId);
+          await fetchArtistById(artistId);
+          return;
         }
       }
+      
+      // Create a minimal profile for artists not in Deezer
+      console.log('Artist not found in Deezer, creating minimal profile');
+      setArtist({
+        id: id,
+        name: searchName,
+        avatar: '/src/assets/card-1.png',
+        bio: `${searchName} is a music artist. Check them out on your favorite streaming platforms.`,
+        genre: 'Music',
+        followers: 0,
+        monthlyListeners: '0',
+        albums: 0,
+        socialLinks: {
+          spotify: `https://open.spotify.com/search/${encodeURIComponent(searchName)}`,
+          youtube: `https://youtube.com/results?search_query=${encodeURIComponent(searchName)}`,
+        },
+        tracks: [],
+        albums_list: [],
+        relatedArtists: [],
+      });
     } catch (error) {
       console.error('Error fetching artist:', error);
-      setArtist(null);
+      // Create minimal profile on error
+      const searchName = decodeURIComponent(id);
+      setArtist({
+        id: id,
+        name: searchName,
+        avatar: '/src/assets/card-1.png',
+        bio: `${searchName} is a music artist.`,
+        genre: 'Music',
+        followers: 0,
+        monthlyListeners: '0',
+        albums: 0,
+        socialLinks: {},
+        tracks: [],
+        albums_list: [],
+        relatedArtists: [],
+      });
     } finally {
       setArtistLoading(false);
     }
