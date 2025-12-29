@@ -239,37 +239,46 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       return;
     }
 
-    const { data, error } = await supabase
-      .from('podcast_sessions')
-      .insert({
-        host_id: user.id,
-        title: title.trim(),
-        status: 'live',
-        started_at: new Date().toISOString()
-      })
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('podcast_sessions')
+        .insert({
+          host_id: user.id,
+          title: title.trim(),
+          status: 'live',
+          started_at: new Date().toISOString()
+        })
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Start session error:', error);
+      if (error) {
+        console.error('Start session error:', error);
+        toast.error('Failed to start session');
+        return;
+      }
+
+      const newSessionId = data.id;
+      console.log('🎙️ Session created:', newSessionId);
+
+      await supabase.from('podcast_participants').insert({
+        session_id: newSessionId,
+        user_id: user.id,
+        role: 'host',
+        is_muted: false
+      });
+
+      setSessionId(newSessionId);
+      setIsLive(true);
+      subscribeToUpdates(newSessionId);
+
+      // Pass the session ID directly to connectAudio to avoid state timing issues
+      await connectAudio(newSessionId);
+      
+      toast.success('You are now LIVE!');
+    } catch (err) {
+      console.error('Failed to start session:', err);
       toast.error('Failed to start session');
-      return;
     }
-
-    await supabase.from('podcast_participants').insert({
-      session_id: data.id,
-      user_id: user.id,
-      role: 'host',
-      is_muted: false
-    });
-
-    setSessionId(data.id);
-    setIsLive(true);
-    subscribeToUpdates(data.id);
-
-    await connectAudio();
-    
-    toast.success('You are now LIVE!');
   };
 
   const endSession = async () => {
@@ -435,6 +444,9 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     }
   };
 
+  // Track mic permission state
+  const [micPermissionGranted, setMicPermissionGranted] = useState(false);
+
   const handleAudioIconClick = async () => {
     if (!isLive) {
       // Test microphone before going live
@@ -442,9 +454,11 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         stream.getTracks().forEach(track => track.stop());
-        toast.success('Microphone is ready!');
+        setMicPermissionGranted(true);
+        toast.success('Microphone is ready! Click "Go Live" to start.');
       } catch (error) {
         console.error('Microphone error:', error);
+        setMicPermissionGranted(false);
         toast.error('Unable to access microphone. Please check permissions.');
       } finally {
         setIsMicTesting(false);
@@ -558,17 +572,28 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
 
           {/* Live Controls */}
           <div className="flex items-center justify-center gap-3">
-            {/* Audio/Mic button - always clickable for testing */}
+            {/* Audio/Mic button - shows mic ready state before live */}
             <Button
               onClick={handleAudioIconClick}
+              disabled={isMicTesting}
               size="lg"
               className={`rounded-full w-14 h-14 ${
                 isLive 
-                  ? (isMuted ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400')
-                  : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'
+                  ? (isMuted ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' : 'bg-green-500/20 text-green-400 hover:bg-green-500/30')
+                  : micPermissionGranted 
+                    ? 'bg-green-500/20 text-green-400'
+                    : 'bg-white/10 text-white/60 hover:bg-white/20 hover:text-white'
               }`}
             >
-              {isMuted || !isLive ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+              {isMicTesting ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : isLive ? (
+                isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />
+              ) : micPermissionGranted ? (
+                <Mic className="h-5 w-5" />
+              ) : (
+                <MicOff className="h-5 w-5" />
+              )}
             </Button>
 
             {!isLive ? (

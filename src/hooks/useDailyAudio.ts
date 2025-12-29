@@ -113,8 +113,16 @@ export const useDailyAudio = ({
     }
   };
 
-  // Connect to Daily.co room
-  const connect = useCallback(async () => {
+  // Connect to Daily.co room - accepts optional overrideSessionId for immediate connection
+  const connect = useCallback(async (overrideSessionId?: string) => {
+    const targetSessionId = overrideSessionId || sessionId;
+    
+    if (!targetSessionId) {
+      console.error('No session ID provided for audio connection');
+      toast.error('No session to connect to');
+      return;
+    }
+
     if (isConnected || isConnecting) {
       console.log('Already connected or connecting');
       return;
@@ -124,15 +132,35 @@ export const useDailyAudio = ({
     setError(null);
 
     try {
-      console.log('Connecting to Daily.co audio room...');
+      console.log('🎙️ Connecting to Daily.co audio room for session:', targetSessionId);
       
-      // Get room credentials
-      const credentials = await getRoomCredentials();
-      if (!credentials) {
-        throw new Error('Failed to get room credentials');
+      // Get room credentials using the target session ID
+      if (isDemoSession(targetSessionId)) {
+        console.log('Demo session - skipping audio');
+        setIsConnecting(false);
+        return;
       }
 
-      console.log('Room credentials:', { 
+      const session = await getFreshSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
+
+      console.log('Requesting Daily room credentials...');
+      const { data: credentials, error: credError } = await supabase.functions.invoke('daily-room', {
+        body: { sessionId: targetSessionId, userId, userName, isHost }
+      });
+
+      if (credError) {
+        console.error('Daily room error:', credError);
+        throw credError;
+      }
+
+      if (!credentials || !credentials.roomUrl) {
+        throw new Error('Invalid room credentials received');
+      }
+
+      console.log('✅ Room credentials received:', { 
         url: credentials.roomUrl,
         canPublish: credentials.canPublish 
       });
@@ -206,7 +234,7 @@ export const useDailyAudio = ({
       });
 
       // Join the room
-      console.log('Joining room:', credentials.roomUrl);
+      console.log('🔗 Joining room:', credentials.roomUrl);
       await daily.join({
         url: credentials.roomUrl,
         token: credentials.token,
@@ -215,18 +243,21 @@ export const useDailyAudio = ({
         startAudioOff: !credentials.canPublish, // Muted if listener
       });
 
-      // Set initial mute state
-      setIsMuted(!credentials.canPublish);
+      // Set initial mute state based on permissions
+      const shouldBeMuted = !credentials.canPublish;
+      setIsMuted(shouldBeMuted);
       
-      // If host, make sure audio is on
-      if (isHost && credentials.canPublish) {
+      // If host or has publish permissions, enable audio
+      if (credentials.canPublish) {
         await daily.setLocalAudio(true);
         setIsMuted(false);
-        console.log('Host audio enabled');
+        console.log('🎤 Audio enabled for publishing');
       }
 
+      console.log('✅ Daily.co connection complete!');
+
     } catch (err: any) {
-      console.error('Daily connection error:', err);
+      console.error('❌ Daily connection error:', err);
       setError(err.message);
       setIsConnecting(false);
       toast.error('Failed to connect: ' + err.message);
