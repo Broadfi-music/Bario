@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Mic, MicOff, Hand, Volume2, Loader2, LogOut, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useJitsiAudio } from '@/hooks/useJitsiAudio';
+import { useDailyAudio } from '@/hooks/useDailyAudio';
 import AuthPromptModal from './AuthPromptModal';
 import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 
@@ -79,29 +79,28 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
 
-  // Jitsi Audio Hook - FREE, no API key needed!
+  // Daily.co Audio Hook - Reliable audio rooms
   const {
     isConnected: isAudioConnected,
     isConnecting: isAudioConnecting,
     isMuted,
     participants: audioParticipants,
     error: audioError,
-    connectionQuality,
     connect: connectAudio,
     disconnect: disconnectAudio,
     toggleMute,
     enableMicrophone,
-  } = useJitsiAudio({
+  } = useDailyAudio({
     sessionId,
     userId: user?.id || '',
     userName: user?.email?.split('@')[0] || 'Listener',
     isHost,
-    onParticipantJoin: (participant) => {
-      console.log('[Jitsi] Audio participant joined:', participant.name);
+    onParticipantJoined: (participant) => {
+      console.log('[Daily] Audio participant joined:', participant.name);
       fetchParticipants();
     },
-    onParticipantLeave: (identity) => {
-      console.log('[Jitsi] Audio participant left:', identity);
+    onParticipantLeft: (identity) => {
+      console.log('[Daily] Audio participant left:', identity);
       fetchParticipants();
     },
   });
@@ -407,16 +406,6 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
           {isAudioConnecting && (
             <span className="text-[8px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full shrink-0 flex items-center gap-1">
               <Loader2 className="w-3 h-3 animate-spin" /> Connecting...
-            </span>
-          )}
-          {connectionQuality && isAudioConnected && (
-            <span className={`text-[8px] px-1.5 py-0.5 rounded-full shrink-0 ${
-              connectionQuality.status === 'excellent' ? 'bg-green-500/20 text-green-400' :
-              connectionQuality.status === 'good' ? 'bg-blue-500/20 text-blue-400' :
-              connectionQuality.status === 'poor' ? 'bg-yellow-500/20 text-yellow-400' :
-              'bg-red-500/20 text-red-400'
-            }`}>
-              {connectionQuality.status === 'good' ? '📶' : connectionQuality.status === 'poor' ? '⚠️' : ''}
             </span>
           )}
         </div>

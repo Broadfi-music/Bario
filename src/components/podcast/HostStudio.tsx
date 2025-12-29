@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useJitsiAudio } from '@/hooks/useJitsiAudio';
+import { useDailyAudio } from '@/hooks/useDailyAudio';
 import { useHostPlaylists } from '@/hooks/useHostPlaylists';
 
 interface HostStudioProps {
@@ -88,22 +88,21 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     deletePlaylist
   } = useHostPlaylists();
 
-  // Jitsi Audio Hook - FREE, no API key needed!
+  // Daily.co Audio Hook - Reliable audio rooms
   const {
     isConnected: isAudioConnected,
     isConnecting: isAudioConnecting,
     isMuted,
     isRecording,
     participants: audioParticipants,
-    connectionQuality,
-    recordingDuration,
+    error: audioError,
     connect: connectAudio,
     disconnect: disconnectAudio,
     toggleMute,
     enableMicrophone,
     startRecording,
     saveEpisode,
-  } = useJitsiAudio({
+  } = useDailyAudio({
     sessionId: sessionId || session?.id || '',
     userId: user?.id || '',
     userName: user?.email?.split('@')[0] || 'Host',
@@ -512,16 +511,9 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
                 Connecting...
               </span>
             )}
-            {connectionQuality && isAudioConnected && (
-              <span className={`ml-1 text-[10px] px-2 py-0.5 rounded-full ${
-                connectionQuality.status === 'excellent' ? 'bg-green-500/20 text-green-400' :
-                connectionQuality.status === 'good' ? 'bg-blue-500/20 text-blue-400' :
-                connectionQuality.status === 'poor' ? 'bg-yellow-500/20 text-yellow-400' :
-                'bg-red-500/20 text-red-400'
-              }`}>
-                {connectionQuality.status === 'excellent' ? '📶 Excellent' :
-                 connectionQuality.status === 'good' ? '📶 Good' :
-                 connectionQuality.status === 'poor' ? '📶 Poor' : '❌ Disconnected'}
+            {isAudioConnected && (
+              <span className="ml-1 text-[10px] px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">
+                📶 Connected
               </span>
             )}
             {isLive && (
@@ -627,7 +619,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
           {isRecording && (
             <div className="flex items-center justify-center gap-2 py-2 bg-red-500/10 rounded-lg border border-red-500/30">
               <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-              <span className="text-xs text-red-400 font-medium">Recording: {formatDuration(recordingDuration)}</span>
+              <span className="text-xs text-red-400 font-medium">Recording in progress...</span>
             </div>
           )}
 

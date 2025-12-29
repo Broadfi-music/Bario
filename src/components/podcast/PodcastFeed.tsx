@@ -238,43 +238,52 @@ const PodcastFeed = () => {
 
   const fetchLiveSessions = async () => {
     console.log('Fetching live sessions...');
-    const { data, error } = await supabase
+    
+    // Step 1: Fetch live sessions
+    const { data: sessions, error: sessionsError } = await supabase
       .from('podcast_sessions')
-      .select(`
-        *,
-        profiles:host_id (
-          full_name,
-          avatar_url,
-          username
-        )
-      `)
+      .select('*')
       .eq('status', 'live')
       .order('listener_count', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching live sessions:', error);
+    if (sessionsError) {
+      console.error('Error fetching live sessions:', sessionsError);
       return;
     }
 
-    console.log('Live sessions fetched:', data?.length || 0);
+    console.log('Live sessions fetched:', sessions?.length || 0);
     
-    if (data && data.length > 0) {
-      const realSessions = data.map(s => ({
+    if (!sessions || sessions.length === 0) {
+      setLiveHosts([]);
+      return;
+    }
+
+    // Step 2: Fetch host profiles separately
+    const hostIds = [...new Set(sessions.map(s => s.host_id))];
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('user_id, full_name, avatar_url, username')
+      .in('user_id', hostIds);
+
+    const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+    // Step 3: Combine data
+    const realSessions = sessions.map(s => {
+      const profile = profileMap.get(s.host_id);
+      return {
         id: s.id,
         host_id: s.host_id,
         title: s.title,
         description: s.description || '',
         listener_count: s.listener_count || 0,
-        host_name: (s.profiles as any)?.full_name || (s.profiles as any)?.username || 'Host',
-        host_avatar: (s.profiles as any)?.avatar_url || null,
+        host_name: profile?.full_name || profile?.username || 'Host',
+        host_avatar: profile?.avatar_url || null,
         category: 'Music',
         cover_image_url: s.cover_image_url
-      }));
-      setLiveHosts(realSessions);
-    } else {
-      // Clear live hosts if none are live
-      setLiveHosts([]);
-    }
+      };
+    });
+    
+    setLiveHosts(realSessions);
   };
 
   const heroHosts = liveHosts.slice(0, 5);
