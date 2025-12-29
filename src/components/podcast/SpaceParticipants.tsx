@@ -255,7 +255,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     try {
       // For demo sessions, just connect audio
       if (isDemoSession(sessionId)) {
-        await connectAudio();
+        await connectAudio(sessionId);
         toast.success('Joined the space!');
         return;
       }
@@ -268,7 +268,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       // If already joined, just connect audio
       if (myParticipation) {
         if (!isAudioConnected && !isAudioConnecting) {
-          await connectAudio();
+          await connectAudio(sessionId);
         }
         return;
       }
@@ -304,9 +304,9 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
 
       if (error) {
         if (error.code === '23505') {
-          // Already in session
+          // Already in session - just connect audio
           if (!isAudioConnected && !isAudioConnecting) {
-            await connectAudio();
+            await connectAudio(sessionId);
           }
           return;
         }
@@ -319,8 +319,8 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       // Immediately refresh participants to show user in the list
       await fetchParticipants();
       
-      // Connect to audio - user will hear host immediately
-      await connectAudio();
+      // Connect to audio with explicit sessionId - user will hear host immediately
+      await connectAudio(sessionId);
       
       toast.success('Joined! You can now hear everyone.');
     } finally {
