@@ -67,15 +67,39 @@ const BarioMusic = () => {
   const fetchUploads = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Fetch uploads first
+      const { data: uploadsData, error: uploadsError } = await supabase
         .from('user_uploads')
         .select('*')
         .eq('is_published', true)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setUploads((data || []) as UserUpload[]);
-      setFilteredUploads((data || []) as UserUpload[]);
+      if (uploadsError) throw uploadsError;
+
+      // Fetch profiles for all unique user_ids
+      const userIds = [...new Set((uploadsData || []).map(u => u.user_id))];
+      let profilesMap: Record<string, any> = {};
+      
+      if (userIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, username, avatar_url')
+          .in('user_id', userIds);
+        
+        profilesMap = (profilesData || []).reduce((acc, p) => {
+          acc[p.user_id] = p;
+          return acc;
+        }, {} as Record<string, any>);
+      }
+
+      // Merge profiles into uploads
+      const uploadsWithProfiles = (uploadsData || []).map(upload => ({
+        ...upload,
+        profiles: profilesMap[upload.user_id] || null
+      }));
+
+      setUploads(uploadsWithProfiles as UserUpload[]);
+      setFilteredUploads(uploadsWithProfiles as UserUpload[]);
     } catch (error) {
       console.error('Error fetching uploads:', error);
     } finally {
@@ -114,7 +138,9 @@ const BarioMusic = () => {
     return count.toString();
   };
 
-  const getArtistName = (_upload: UserUpload) => {
+  const getArtistName = (upload: UserUpload) => {
+    if (upload.profiles?.full_name) return upload.profiles.full_name;
+    if (upload.profiles?.username) return upload.profiles.username;
     return 'Bario Artist';
   };
 
