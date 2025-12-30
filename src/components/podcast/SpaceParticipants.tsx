@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Mic, MicOff, Hand, Volume2, Loader2, LogOut, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { useDailyAudio } from '@/hooks/useDailyAudio';
+import { useAgoraAudio } from '@/hooks/useAgoraAudio';
 import AuthPromptModal from './AuthPromptModal';
 import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 
@@ -79,7 +79,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
 
-  // Daily.co Audio Hook - Reliable audio rooms
+  // Agora Audio Hook - Reliable audio rooms
   const {
     isConnected: isAudioConnected,
     isConnecting: isAudioConnecting,
@@ -90,13 +90,13 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     disconnect: disconnectAudio,
     toggleMute,
     enableMicrophone,
-  } = useDailyAudio({
+  } = useAgoraAudio({
     sessionId,
     userId: user?.id || '',
     userName: user?.email?.split('@')[0] || 'Listener',
     isHost,
     onParticipantJoined: (participant) => {
-      console.log('[Daily] Audio participant joined:', participant.name);
+      console.log('[Agora] Audio participant joined:', participant.name);
       fetchParticipants();
     },
     onParticipantLeft: (identity) => {
