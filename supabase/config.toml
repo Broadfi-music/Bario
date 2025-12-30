@@ -33,13 +33,7 @@ verify_jwt = false
 [functions.spotify-search]
 verify_jwt = false
 
-[functions.livekit-token]
-verify_jwt = false
-
 [functions.podcast-recording]
-verify_jwt = false
-
-[functions.join-voice-room]
 verify_jwt = false
 
 [functions.radio-browser]
@@ -48,5 +42,5 @@ verify_jwt = false
 [functions.podcast-episodes]
 verify_jwt = false
 
-[functions.daily-room]
+[functions.agora-token]
 verify_jwt = false
