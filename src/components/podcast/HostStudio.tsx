@@ -116,6 +116,39 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Check for existing live session on mount
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      if (!user) return;
+      
+      const { data: existingSession } = await supabase
+        .from('podcast_sessions')
+        .select('*')
+        .eq('host_id', user.id)
+        .eq('status', 'live')
+        .single();
+      
+      if (existingSession) {
+        console.log('🔄 Found existing live session:', existingSession.id);
+        setSessionId(existingSession.id);
+        setTitle(existingSession.title);
+        setIsLive(true);
+        subscribeToUpdates(existingSession.id);
+        fetchRaisedHands();
+        
+        // Reconnect to Agora audio
+        if (!isAudioConnected && !isAudioConnecting) {
+          console.log('🔌 Reconnecting to audio...');
+          await connectAudio(existingSession.id);
+        }
+      }
+    };
+
+    if (isOpen && user) {
+      checkExistingSession();
+    }
+  }, [isOpen, user]);
+
   useEffect(() => {
     if (session?.id) {
       setSessionId(session.id);
@@ -125,18 +158,12 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       subscribeToUpdates(session.id);
     }
 
-    // Handle browser/tab close - end session immediately
-    const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
-      if (isLive && sessionId) {
-        // Use sendBeacon for reliable cleanup on page unload
-        const data = JSON.stringify({ 
-          sessionId, 
-          action: 'end'
-        });
-        navigator.sendBeacon(
-          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/podcast_sessions?id=eq.${sessionId}`,
-          new Blob([JSON.stringify({ status: 'ended', ended_at: new Date().toISOString() })], { type: 'application/json' })
-        );
+    // Warn user before closing tab if live
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isLive) {
+        e.preventDefault();
+        e.returnValue = 'You have a live session running. Are you sure you want to leave?';
+        return e.returnValue;
       }
     };
 
@@ -144,15 +171,8 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      disconnectAudio();
-      // End session when component unmounts if live
-      if (isLive && sessionId) {
-        supabase
-          .from('podcast_sessions')
-          .update({ status: 'ended', ended_at: new Date().toISOString() })
-          .eq('id', sessionId)
-          .then(() => console.log('Session ended on unmount'));
-      }
+      // Only disconnect audio - don't end session on navigate away
+      // Session will persist until explicitly ended
     };
   }, [session, isLive, sessionId]);
 
@@ -513,21 +533,21 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
           <DialogTitle className="text-white flex items-center gap-2 text-sm">
             <Radio className={`h-4 w-4 ${isLive ? 'text-red-500 animate-pulse' : 'text-white/60'}`} />
             Host Studio
-            {isAudioConnected && (
-              <span className="ml-2 text-[10px] px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                Audio Connected
-              </span>
-            )}
             {isAudioConnecting && (
               <span className="ml-2 text-[10px] px-2 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full flex items-center gap-1">
                 <Loader2 className="w-3 h-3 animate-spin" />
-                Connecting...
+                Connecting audio...
               </span>
             )}
-            {isAudioConnected && (
-              <span className="ml-1 text-[10px] px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">
-                📶 Connected
+            {isAudioConnected && !isAudioConnecting && (
+              <span className="ml-2 text-[10px] px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                Audio Live
+              </span>
+            )}
+            {audioError && (
+              <span className="ml-2 text-[10px] px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full flex items-center gap-1">
+                ⚠️ Audio Error
               </span>
             )}
             {isLive && (
