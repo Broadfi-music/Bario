@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useDailyAudio } from '@/hooks/useDailyAudio';
+import { useAgoraAudio } from '@/hooks/useAgoraAudio';
 import { useHostPlaylists } from '@/hooks/useHostPlaylists';
 
 interface HostStudioProps {
@@ -88,7 +88,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     deletePlaylist
   } = useHostPlaylists();
 
-  // Daily.co Audio Hook - Reliable audio rooms
+  // Agora Audio Hook - Reliable audio rooms
   const {
     isConnected: isAudioConnected,
     isConnecting: isAudioConnecting,
@@ -102,7 +102,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     enableMicrophone,
     startRecording,
     saveEpisode,
-  } = useDailyAudio({
+  } = useAgoraAudio({
     sessionId: sessionId || session?.id || '',
     userId: user?.id || '',
     userName: user?.email?.split('@')[0] || 'Host',
