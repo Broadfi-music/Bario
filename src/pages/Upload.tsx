@@ -100,11 +100,13 @@ const Upload = () => {
     }
 
     setIsUploading(true);
+    toast.info('Starting upload...');
 
     try {
       // Upload cover image if provided
       let coverImageUrl = '';
       if (coverImage) {
+        toast.info('Uploading cover art...');
         const coverPath = `${user.id}/${Date.now()}-cover.${coverImage.name.split('.').pop()}`;
         const { error: coverError } = await supabase.storage
           .from('user-uploads')
@@ -116,6 +118,7 @@ const Upload = () => {
           .from('user-uploads')
           .getPublicUrl(coverPath);
         coverImageUrl = publicUrl;
+        toast.success('Cover art uploaded!');
       }
 
       // Create album if multiple tracks
@@ -136,8 +139,11 @@ const Upload = () => {
       }
 
       // Upload each track
-      for (const track of validTracks) {
+      for (let i = 0; i < validTracks.length; i++) {
+        const track = validTracks[i];
         if (!track.file) continue;
+
+        toast.info(`Uploading track ${i + 1}/${validTracks.length}: ${track.title}...`);
 
         // Upload audio file
         const audioPath = `${user.id}/${Date.now()}-${track.file.name}`;
@@ -178,9 +184,10 @@ const Upload = () => {
         });
 
         if (uploadError) throw uploadError;
+        toast.success(`Track "${track.title}" uploaded!`);
       }
 
-      toast.success(`Successfully uploaded ${validTracks.length} track(s)!`);
+      toast.success(`🎉 Successfully uploaded ${validTracks.length} track(s)! Your music is now live on Bario Music and Heatmap.`);
       navigate('/dashboard/library');
     } catch (error: any) {
       console.error('Upload error:', error);

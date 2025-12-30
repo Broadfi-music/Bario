@@ -88,7 +88,7 @@ serve(async (req) => {
       }
 
       // Also add to heatmap_tracks for visibility
-      await supabase.from('heatmap_tracks').insert({
+      const { error: heatmapError } = await supabase.from('heatmap_tracks').insert({
         title,
         artist_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown Artist',
         cover_image_url: coverImageUrl,
@@ -99,6 +99,13 @@ serve(async (req) => {
         spotify_url: spotifyUrl,
         apple_url: appleUrl,
       });
+
+      if (heatmapError) {
+        console.log('Warning: Failed to add to heatmap_tracks (RLS may block this):', heatmapError.message);
+        // Continue anyway - the main upload succeeded
+      } else {
+        console.log('Successfully added track to heatmap_tracks');
+      }
 
       return new Response(
         JSON.stringify({ success: true, upload }),

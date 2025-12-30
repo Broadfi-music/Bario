@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -211,22 +212,104 @@ async function searchAudius(query: string, limit: number = 20): Promise<any[]> {
   }
 }
 
-// Get Last.fm track info for real listener counts
-async function getLastfmTrackInfo(artist: string, track: string): Promise<{ listeners: number; playcount: number }> {
-  if (!LASTFM_API_KEY) return { listeners: 0, playcount: 0 };
-  
+// Get user uploads from database
+async function getUserUploads(supabase: any, search: string = '', genre: string = '', limit: number = 20): Promise<any[]> {
   try {
-    const response = await fetch(
-      `https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${LASTFM_API_KEY}&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(track)}&format=json`
-    );
-    const data = await response.json();
-    return {
-      listeners: parseInt(data.track?.listeners) || 0,
-      playcount: parseInt(data.track?.playcount) || 0
-    };
+    let query = supabase
+      .from('user_uploads')
+      .select(`
+        id,
+        title,
+        description,
+        audio_url,
+        cover_image_url,
+        genre,
+        duration_ms,
+        play_count,
+        like_count,
+        user_id,
+        created_at,
+        spotify_url,
+        apple_url,
+        soundcloud_url,
+        youtube_url,
+        profiles!user_uploads_user_id_fkey(full_name, username, avatar_url)
+      `)
+      .eq('is_published', true)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (search) {
+      query = query.ilike('title', `%${search}%`);
+    }
+    
+    if (genre && genre !== 'All') {
+      query = query.ilike('genre', `%${genre}%`);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching user uploads:', error);
+      return [];
+    }
+
+    console.log(`Fetched ${data?.length || 0} user uploads from database`);
+    return data || [];
   } catch (e) {
-    return { listeners: 0, playcount: 0 };
+    console.error('User uploads fetch error:', e);
+    return [];
   }
+}
+
+// Format user upload to match heatmap track structure
+function formatUserUpload(upload: any, index: number) {
+  const playCount = upload.play_count || 0;
+  const likeCount = upload.like_count || 0;
+  const change24h = (Math.random() * 20 - 2); // Community tracks tend to grow
+  const attentionScore = Math.round(playCount * 10 + likeCount * 50 + 5000); // Boost user uploads
+  const artistName = upload.profiles?.full_name || upload.profiles?.username || 'Bario Artist';
+
+  return {
+    id: `user_${upload.id}`,
+    rank: index + 1,
+    title: upload.title,
+    artist: artistName,
+    artistId: upload.user_id,
+    album: 'Single',
+    artwork: upload.cover_image_url || '/placeholder.svg',
+    previewUrl: upload.audio_url,
+    genre: upload.genre || 'Other',
+    duration: upload.duration_ms || 200000,
+    country: 'GLOBAL',
+    deezerRank: 0,
+    spotifyUrl: upload.spotify_url,
+    deezerUrl: null,
+    appleUrl: upload.apple_url,
+    audiusUrl: upload.soundcloud_url || upload.youtube_url,
+    deezerId: null,
+    spotifyId: null,
+    audiusId: null,
+    source: 'bario',
+    isCommunity: true,
+    metrics: {
+      attentionScore,
+      spotifyPopularity: 0,
+      deezerPosition: null,
+      deezerRank: 0,
+      lastfmListeners: playCount * 10,
+      lastfmPlaycount: playCount,
+      monthlyListeners: playCount * 10 + likeCount * 5,
+      audiusRank: null,
+      audiusPlays: playCount,
+      mindshare: parseFloat((Math.min(100, playCount / 10 + likeCount / 2) / 3).toFixed(1)),
+      change24h: parseFloat(change24h.toFixed(1)),
+      change7d: parseFloat((change24h * 2 + Math.random() * 10).toFixed(1)),
+      change30d: parseFloat((change24h * 3 + Math.random() * 15).toFixed(1))
+    },
+    trend: change24h > 0 ? 'up' : 'down',
+    momentum: change24h > 10 ? 'surging' : 'stable'
+  };
 }
 
 const countries = [
@@ -401,8 +484,17 @@ serve(async (req) => {
     const country = url.searchParams.get('country') || 'GLOBAL';
     
     console.log(`Fetching tracks: limit=${limit}, search=${search}, genre=${genre}, country=${country}`);
+
+    // Initialize Supabase client to fetch user uploads
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
     
     let tracks: any[] = [];
+    
+    // Always fetch user uploads first
+    const userUploads = await getUserUploads(supabase, search, genre, 20);
+    const formattedUserUploads = userUploads.map((u: any, i: number) => formatUserUpload(u, i));
     
     if (search) {
       // Search all sources in parallel
@@ -416,8 +508,8 @@ serve(async (req) => {
       const deezerTracks = deezerResults.map((t: any, i: number) => formatDeezerTrack(t, i + spotifyTracks.length, country));
       const audiusTracks = audiusResults.map((t: any, i: number) => formatAudiusTrack(t, i + spotifyTracks.length + deezerTracks.length));
       
-      tracks = [...spotifyTracks, ...deezerTracks, ...audiusTracks];
-      console.log(`Search results: Spotify=${spotifyTracks.length}, Deezer=${deezerTracks.length}, Audius=${audiusTracks.length}`);
+      tracks = [...formattedUserUploads, ...spotifyTracks, ...deezerTracks, ...audiusTracks];
+      console.log(`Search results: User=${formattedUserUploads.length}, Spotify=${spotifyTracks.length}, Deezer=${deezerTracks.length}, Audius=${audiusTracks.length}`);
       
     } else if (country && country !== 'GLOBAL') {
       // Get country-specific charts from Spotify and Deezer
@@ -429,8 +521,8 @@ serve(async (req) => {
       const formattedSpotify = spotifyTracks.map((t: any, i: number) => formatSpotifyTrack(t, i, country));
       const formattedDeezer = deezerTracks.map((t: any, i: number) => formatDeezerTrack(t, i + formattedSpotify.length, country));
       
-      tracks = [...formattedSpotify, ...formattedDeezer];
-      console.log(`Country ${country} results: Spotify=${formattedSpotify.length}, Deezer=${formattedDeezer.length}`);
+      tracks = [...formattedUserUploads, ...formattedSpotify, ...formattedDeezer];
+      console.log(`Country ${country} results: User=${formattedUserUploads.length}, Spotify=${formattedSpotify.length}, Deezer=${formattedDeezer.length}`);
       
     } else if (genre && genre !== 'All') {
       // Genre-specific search
@@ -442,7 +534,7 @@ serve(async (req) => {
       const spotifyTracks = spotifyResults.map((t: any, i: number) => ({ ...formatSpotifyTrack(t, i, 'GLOBAL'), genre }));
       const deezerTracks = deezerResults.map((t: any, i: number) => ({ ...formatDeezerTrack(t, i + spotifyTracks.length, 'GLOBAL'), genre }));
       
-      tracks = [...spotifyTracks, ...deezerTracks];
+      tracks = [...formattedUserUploads, ...spotifyTracks, ...deezerTracks];
       
     } else {
       // Global trending - get from all sources
@@ -456,8 +548,8 @@ serve(async (req) => {
       const deezerTracks = deezerGlobal.map((t: any, i: number) => formatDeezerTrack(t, i + spotifyTracks.length, 'GLOBAL'));
       const audiusTracks = audiusTrending.map((t: any, i: number) => formatAudiusTrack(t, i + spotifyTracks.length + deezerTracks.length));
       
-      tracks = [...spotifyTracks, ...deezerTracks, ...audiusTracks];
-      console.log(`Global results: Spotify=${spotifyTracks.length}, Deezer=${deezerTracks.length}, Audius=${audiusTracks.length}`);
+      tracks = [...formattedUserUploads, ...spotifyTracks, ...deezerTracks, ...audiusTracks];
+      console.log(`Global results: User=${formattedUserUploads.length}, Spotify=${spotifyTracks.length}, Deezer=${deezerTracks.length}, Audius=${audiusTracks.length}`);
     }
     
     // Remove duplicates by title+artist
