@@ -29,6 +29,12 @@ interface PodcastSession {
 
 // Only show real signed users - no demo data
 
+interface HostLiveSession {
+  id: string;
+  title: string;
+  listener_count: number;
+}
+
 const Podcasts = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -43,9 +49,54 @@ const Podcasts = () => {
   const [touchStart, setTouchStart] = useState(0);
   const [liveSessions, setLiveSessions] = useState<PodcastSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<PodcastSession | null>(null);
+  const [hostLiveSession, setHostLiveSession] = useState<HostLiveSession | null>(null);
 
   const podcasts = liveSessions;
   const currentPodcast = selectedSession || podcasts[currentIndex];
+
+  // Check if current user has a live session running
+  useEffect(() => {
+    if (!user) {
+      setHostLiveSession(null);
+      return;
+    }
+
+    const checkHostSession = async () => {
+      const { data } = await supabase
+        .from('podcast_sessions')
+        .select('id, title, listener_count')
+        .eq('host_id', user.id)
+        .eq('status', 'live')
+        .single();
+      
+      setHostLiveSession(data ? {
+        id: data.id,
+        title: data.title,
+        listener_count: data.listener_count || 0
+      } : null);
+    };
+
+    checkHostSession();
+
+    // Subscribe to session updates
+    const channel = supabase
+      .channel('host-session-check')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'podcast_sessions',
+          filter: `host_id=eq.${user.id}`
+        },
+        () => checkHostSession()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   // Handle session URL parameter
   useEffect(() => {
@@ -243,8 +294,29 @@ const Podcasts = () => {
 
   return (
     <div className="min-h-screen bg-[#0e0e10] text-white">
+      {/* Live Session Banner - shown when host has an active session */}
+      {hostLiveSession && !showHostStudio && (
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-red-600 to-pink-600 py-2 px-4">
+          <div className="flex items-center justify-center gap-3 max-w-screen-xl mx-auto">
+            <div className="flex items-center gap-2">
+              <span className="animate-pulse w-2 h-2 bg-white rounded-full"></span>
+              <span className="text-xs font-semibold text-white">LIVE</span>
+            </div>
+            <span className="text-xs text-white/90 truncate max-w-[120px] sm:max-w-xs">{hostLiveSession.title}</span>
+            <span className="text-xs text-white/70">{hostLiveSession.listener_count} listeners</span>
+            <Button
+              onClick={() => setShowHostStudio(true)}
+              size="sm"
+              className="bg-white/20 hover:bg-white/30 text-white text-xs h-6 px-2"
+            >
+              Return to Studio
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Kick.com Style Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#18181b] border-b border-white/5">
+      <header className={`fixed left-0 right-0 z-50 bg-[#18181b] border-b border-white/5 ${hostLiveSession && !showHostStudio ? 'top-10' : 'top-0'}`}>
         <div className="flex items-center justify-between h-12 px-2 sm:px-4">
           {/* Left: Logo/Back */}
           <div className="flex items-center gap-2">
@@ -326,7 +398,7 @@ const Podcasts = () => {
         >
           <div className="relative h-full w-full flex flex-col bg-black">
             {/* Full height session with self-contained controls */}
-            <div className="flex-1 min-h-0 pt-12 flex flex-col">
+            <div className={`flex-1 min-h-0 flex flex-col ${hostLiveSession && !showHostStudio ? 'pt-[88px]' : 'pt-12'}`}>
               {/* Participants section */}
               <div className="flex-1 min-h-0 overflow-hidden">
                 <SpaceParticipants 
