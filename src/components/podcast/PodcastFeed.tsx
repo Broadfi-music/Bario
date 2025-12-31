@@ -545,6 +545,21 @@ const PodcastFeed = () => {
           </section>
         )}
 
+        {/* Tabs for Live and Battle */}
+        <div className="px-3 lg:px-6 mb-4">
+          <div className="flex items-center gap-2">
+            <button className="px-4 py-2 bg-[#53fc18] text-black rounded-full text-xs font-semibold">
+              Live
+            </button>
+            <button 
+              onClick={() => navigate('/podcasts?tab=battle')}
+              className="px-4 py-2 bg-white/10 text-white/70 hover:bg-white/20 rounded-full text-xs font-medium transition-colors"
+            >
+              Battle
+            </button>
+          </div>
+        </div>
+
         {/* Live Sessions - Only show when there are live hosts */}
         {liveHosts.length > 0 && (
           <section className="px-3 lg:px-6 mb-6">
