@@ -27,6 +27,8 @@ import Upload from "@/pages/Upload";
 import ArtistProfile from "@/pages/ArtistProfile";
 import RadioStations from "@/pages/RadioStations";
 import RadioDetail from "@/pages/RadioDetail";
+import RadioFeed from "@/pages/RadioFeed";
+import RadioStudio from "@/pages/RadioStudio";
 import Podcasts from "@/pages/Podcasts";
 import PodcastHost from "@/pages/PodcastHost";
 import HostProfile from "@/pages/HostProfile";
@@ -67,6 +69,8 @@ const App = () => {
                 <Route path="/music-result" element={<MusicResultPage />} />
                 <Route path="/radio-stations" element={<RadioStations />} />
                 <Route path="/radio/:stationId" element={<RadioDetail />} />
+                <Route path="/radio-feed" element={<RadioFeed />} />
+                <Route path="/radio-studio" element={<RadioStudio />} />
                 <Route path="/podcasts" element={<Podcasts />} />
                 <Route path="/podcast-host/:hostId" element={<PodcastHost />} />
                 <Route path="/host/:hostId" element={<HostProfile />} />
