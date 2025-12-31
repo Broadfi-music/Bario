@@ -32,7 +32,7 @@ const CURATED_STATIONS: RadioStation[] = [
     name: 'BBC Radio 1',
     url: 'http://stream.live.vc.bbcmedia.co.uk/bbc_radio_one',
     url_resolved: 'http://stream.live.vc.bbcmedia.co.uk/bbc_radio_one',
-    favicon: '',
+    favicon: 'https://cdn-radiotime-logos.tunein.com/s24939q.png',
     tags: 'pop,hits,chart',
     country: 'United Kingdom',
     countrycode: 'UK',
@@ -49,7 +49,7 @@ const CURATED_STATIONS: RadioStation[] = [
     name: 'Hot 97 FM',
     url: 'https://stream.revma.ihrhls.com/zc1465',
     url_resolved: 'https://stream.revma.ihrhls.com/zc1465',
-    favicon: '',
+    favicon: 'https://cdn-radiotime-logos.tunein.com/s34781q.png',
     tags: 'hip-hop,rap,urban',
     country: 'United States',
     countrycode: 'US',
@@ -66,7 +66,7 @@ const CURATED_STATIONS: RadioStation[] = [
     name: 'NRJ France',
     url: 'https://scdn.nrjaudio.fm/fr/30001/mp3_128.mp3',
     url_resolved: 'https://scdn.nrjaudio.fm/fr/30001/mp3_128.mp3',
-    favicon: '',
+    favicon: 'https://cdn-radiotime-logos.tunein.com/s6527q.png',
     tags: 'pop,dance,hits',
     country: 'France',
     countrycode: 'FR',
@@ -83,7 +83,7 @@ const CURATED_STATIONS: RadioStation[] = [
     name: 'Smooth Jazz Florida',
     url: 'https://ice6.securenetsystems.net/SJFL320',
     url_resolved: 'https://ice6.securenetsystems.net/SJFL320',
-    favicon: '',
+    favicon: 'https://cdn-radiotime-logos.tunein.com/s243953q.png',
     tags: 'jazz,smooth jazz,instrumental',
     country: 'United States',
     countrycode: 'US',
@@ -100,7 +100,7 @@ const CURATED_STATIONS: RadioStation[] = [
     name: 'Rock FM',
     url: 'https://rockfm.cope.stream.flumotion.com/cope/rockfm.mp3',
     url_resolved: 'https://rockfm.cope.stream.flumotion.com/cope/rockfm.mp3',
-    favicon: '',
+    favicon: 'https://cdn-radiotime-logos.tunein.com/s24878q.png',
     tags: 'rock,classic rock,metal',
     country: 'Spain',
     countrycode: 'ES',
@@ -117,7 +117,7 @@ const CURATED_STATIONS: RadioStation[] = [
     name: 'Electronica FM',
     url: 'https://strw3.openstream.co/1484',
     url_resolved: 'https://strw3.openstream.co/1484',
-    favicon: '',
+    favicon: 'https://cdn-radiotime-logos.tunein.com/s185589q.png',
     tags: 'electronic,edm,dance',
     country: 'Netherlands',
     countrycode: 'NL',
@@ -134,7 +134,7 @@ const CURATED_STATIONS: RadioStation[] = [
     name: 'Classic FM',
     url: 'https://media-ice.musicradio.com/ClassicFMMP3',
     url_resolved: 'https://media-ice.musicradio.com/ClassicFMMP3',
-    favicon: '',
+    favicon: 'https://cdn-radiotime-logos.tunein.com/s8439q.png',
     tags: 'classical,orchestra,instrumental',
     country: 'United Kingdom',
     countrycode: 'UK',
@@ -151,7 +151,7 @@ const CURATED_STATIONS: RadioStation[] = [
     name: 'Naija FM',
     url: 'https://stream.zeno.fm/8b7t6czn8vruv',
     url_resolved: 'https://stream.zeno.fm/8b7t6czn8vruv',
-    favicon: '',
+    favicon: 'https://cdn-radiotime-logos.tunein.com/s298824q.png',
     tags: 'afrobeats,nigerian,african',
     country: 'Nigeria',
     countrycode: 'NG',
@@ -168,7 +168,7 @@ const CURATED_STATIONS: RadioStation[] = [
     name: 'K-Pop Radio',
     url: 'https://listen.moe/kpop/stream',
     url_resolved: 'https://listen.moe/kpop/stream',
-    favicon: '',
+    favicon: 'https://cdn-radiotime-logos.tunein.com/s297990q.png',
     tags: 'kpop,korean,pop',
     country: 'South Korea',
     countrycode: 'KR',
@@ -185,7 +185,7 @@ const CURATED_STATIONS: RadioStation[] = [
     name: 'Latin Hits FM',
     url: 'https://usa8.fastcast4u.com/proxy/latinosfm?mp=/1',
     url_resolved: 'https://usa8.fastcast4u.com/proxy/latinosfm?mp=/1',
-    favicon: '',
+    favicon: 'https://cdn-radiotime-logos.tunein.com/s256712q.png',
     tags: 'latin,reggaeton,spanish',
     country: 'Mexico',
     countrycode: 'MX',
@@ -375,8 +375,11 @@ const RadioStations = () => {
                 onClick={() => navigate(`/radio/${station.stationuuid}`, { state: { station } })}
               >
                 <div className="relative aspect-video rounded-lg overflow-hidden bg-gradient-to-br from-purple-900/50 to-blue-900/50">
+                  {station.favicon ? (
+                    <img src={station.favicon} alt={station.name} className="absolute inset-0 w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  ) : null}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <Radio className="h-8 w-8 text-white/30" />
+                    {!station.favicon && <Radio className="h-8 w-8 text-white/30" />}
                   </div>
                   
                   <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 px-1 py-0.5 bg-red-600 rounded text-[7px] font-semibold">
