@@ -3,46 +3,25 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import pako from "https://esm.sh/pako@2.1.0";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-// ==================== CRC32 Implementation ====================
-const CRC32_TABLE = (() => {
-  const table = new Uint32Array(256);
-  for (let i = 0; i < 256; i++) {
-    let c = i;
-    for (let j = 0; j < 8; j++) {
-      c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-    }
-    table[i] = c >>> 0;
-  }
-  return table;
-})();
-
-function crc32(data: Uint8Array): number {
-  let crc = 0xFFFFFFFF;
-  for (let i = 0; i < data.length; i++) {
-    crc = CRC32_TABLE[(crc ^ data[i]) & 0xFF] ^ (crc >>> 8);
-  }
-  return (crc ^ 0xFFFFFFFF) >>> 0;
-}
 
 // ==================== ByteBuf Helper ====================
 class ByteBuf {
   private buffer: number[] = [];
 
   putUint16(v: number): this {
-    this.buffer.push(v & 0xFF);
-    this.buffer.push((v >> 8) & 0xFF);
+    this.buffer.push(v & 0xff);
+    this.buffer.push((v >> 8) & 0xff);
     return this;
   }
 
   putUint32(v: number): this {
-    this.buffer.push(v & 0xFF);
-    this.buffer.push((v >> 8) & 0xFF);
-    this.buffer.push((v >> 16) & 0xFF);
-    this.buffer.push((v >> 24) & 0xFF);
+    this.buffer.push(v & 0xff);
+    this.buffer.push((v >> 8) & 0xff);
+    this.buffer.push((v >> 16) & 0xff);
+    this.buffer.push((v >> 24) & 0xff);
     return this;
   }
 
@@ -55,11 +34,10 @@ class ByteBuf {
   }
 
   putString(str: string): this {
-    const bytes = new TextEncoder().encode(str);
-    return this.putBytes(bytes);
+    return this.putBytes(new TextEncoder().encode(str));
   }
 
-  putTreeMap(map: Map<number, number>): this {
+  putTreeMapUInt32(map: Map<number, number>): this {
     this.putUint16(map.size);
     for (const [key, value] of map) {
       this.putUint16(key);
@@ -68,9 +46,18 @@ class ByteBuf {
     return this;
   }
 
-  toUint8Array(): Uint8Array {
+  pack(): Uint8Array {
     return new Uint8Array(this.buffer);
   }
+}
+
+function packUint32(v: number): Uint8Array {
+  return new Uint8Array([
+    v & 0xff,
+    (v >> 8) & 0xff,
+    (v >> 16) & 0xff,
+    (v >> 24) & 0xff,
+  ]);
 }
 
 // ==================== Service Classes ====================
@@ -79,7 +66,6 @@ const ServiceType = {
   RTM: 2,
   FPA: 4,
   CHAT: 5,
-  EDUCATION: 7,
 };
 
 const RtcPrivilege = {
@@ -90,12 +76,8 @@ const RtcPrivilege = {
 };
 
 class Service {
-  type: number;
-  privileges: Map<number, number> = new Map();
-
-  constructor(type: number) {
-    this.type = type;
-  }
+  public privileges: Map<number, number> = new Map();
+  constructor(public type: number) {}
 
   addPrivilege(privilege: number, expire: number): void {
     this.privileges.set(privilege, expire);
@@ -104,32 +86,27 @@ class Service {
   pack(): Uint8Array {
     const buf = new ByteBuf();
     buf.putUint16(this.type);
-    buf.putTreeMap(this.privileges);
-    return buf.toUint8Array();
+    buf.putTreeMapUInt32(this.privileges);
+    return buf.pack();
   }
 }
 
 class ServiceRtc extends Service {
-  channelName: string;
-  uid: string;
-
-  constructor(channelName: string, uid: number) {
+  constructor(public channelName: string, public uid: string) {
     super(ServiceType.RTC);
-    this.channelName = channelName;
-    this.uid = uid === 0 ? '' : String(uid);
   }
 
   override pack(): Uint8Array {
     const buf = new ByteBuf();
     buf.putUint16(this.type);
-    buf.putTreeMap(this.privileges);
+    buf.putTreeMapUInt32(this.privileges);
     buf.putString(this.channelName);
     buf.putString(this.uid);
-    return buf.toUint8Array();
+    return buf.pack();
   }
 }
 
-// ==================== AccessToken2 ====================
+// ==================== AccessToken2 (Official Algorithm) ====================
 class AccessToken2 {
   private appId: string;
   private appCertificate: string;
@@ -138,12 +115,12 @@ class AccessToken2 {
   private salt: number;
   private services: Service[] = [];
 
-  constructor(appId: string, appCertificate: string, expire: number) {
+  constructor(appId: string, appCertificate: string, expire: number = 3600) {
     this.appId = appId;
     this.appCertificate = appCertificate;
     this.issueTs = Math.floor(Date.now() / 1000);
     this.expire = expire;
-    this.salt = Math.floor(Math.random() * 0xFFFFFFFF);
+    this.salt = Math.floor(Math.random() * 0xffffffff);
   }
 
   addService(service: Service): void {
@@ -151,192 +128,119 @@ class AccessToken2 {
   }
 
   async build(): Promise<string> {
-    // Build signing message
-    const signing = this.buildSigning();
-    
-    // Sign with HMAC-SHA256
-    const signature = await this.sign(signing);
-    
-    // Build token content
-    const content = this.buildContent(signature);
-    
-    // Compress content
+    // Step 1: Generate signing key using DOUBLE HMAC-SHA256
+    // First HMAC: sign issueTs with appCertificate
+    // Second HMAC: sign salt with result of first HMAC
+    const signing = await this.generateSigningKey();
+
+    // Step 2: Build signing_info (the data to be signed)
+    const signingInfo = this.buildSigningInfo();
+
+    // Step 3: Generate signature using the signing key
+    const signature = await this.hmacSha256(signing, signingInfo);
+
+    // Step 4: Build content = packString(signature) + signing_info
+    const content = this.buildContent(signature, signingInfo);
+
+    // Step 5: Compress with zlib deflate
     const compressed = pako.deflate(content);
-    
-    // Build final token
-    const version = "007";
-    const base64Content = this.base64Encode(compressed);
-    
-    return version + this.base64Encode(new TextEncoder().encode(this.appId)) + "_" + base64Content;
+
+    // Step 6: Return "007" + base64(compressed) - NO underscore, NO appId!
+    return "007" + this.base64Encode(compressed);
   }
 
-  private buildSigning(): Uint8Array {
-    const buf = new ByteBuf();
-    buf.putString(this.appId);
-    buf.putUint32(this.issueTs);
-    buf.putUint32(this.expire);
-    buf.putUint32(this.salt);
-    buf.putUint16(this.services.length);
-    
-    for (const service of this.services) {
-      const servicePacked = service.pack();
-      for (let i = 0; i < servicePacked.length; i++) {
-        buf.toUint8Array(); // This forces buffer creation
-      }
-    }
-    
-    // Actually pack services into signing
-    const signingBuf = new ByteBuf();
-    signingBuf.putString(this.appId);
-    signingBuf.putUint32(this.issueTs);
-    signingBuf.putUint32(this.expire);
-    signingBuf.putUint32(this.salt);
-    signingBuf.putUint16(this.services.length);
-    
-    for (const service of this.services) {
-      const packed = service.pack();
-      for (let i = 0; i < packed.length; i++) {
-        signingBuf.putUint16(0); // placeholder
-      }
-    }
-    
-    return this.getSigningInput();
-  }
-
-  private getSigningInput(): Uint8Array {
-    const buf = new ByteBuf();
-    buf.putString(this.appId);
-    buf.putUint32(this.issueTs);
-    buf.putUint32(this.expire);
-    buf.putUint32(this.salt);
-    buf.putUint16(this.services.length);
-    
-    for (const service of this.services) {
-      const packed = service.pack();
-      // Add each byte directly
-      for (let i = 0; i < packed.length; i++) {
-        buf.toUint8Array();
-      }
-    }
-    
-    // Rebuild properly
-    const result: number[] = [];
+  private async generateSigningKey(): Promise<Uint8Array> {
     const encoder = new TextEncoder();
-    
-    // appId as string
-    const appIdBytes = encoder.encode(this.appId);
-    result.push(appIdBytes.length & 0xFF);
-    result.push((appIdBytes.length >> 8) & 0xFF);
-    for (let i = 0; i < appIdBytes.length; i++) {
-      result.push(appIdBytes[i]);
-    }
-    
-    // issueTs
-    result.push(this.issueTs & 0xFF);
-    result.push((this.issueTs >> 8) & 0xFF);
-    result.push((this.issueTs >> 16) & 0xFF);
-    result.push((this.issueTs >> 24) & 0xFF);
-    
-    // expire
-    result.push(this.expire & 0xFF);
-    result.push((this.expire >> 8) & 0xFF);
-    result.push((this.expire >> 16) & 0xFF);
-    result.push((this.expire >> 24) & 0xFF);
-    
-    // salt
-    result.push(this.salt & 0xFF);
-    result.push((this.salt >> 8) & 0xFF);
-    result.push((this.salt >> 16) & 0xFF);
-    result.push((this.salt >> 24) & 0xFF);
-    
-    // services count
-    result.push(this.services.length & 0xFF);
-    result.push((this.services.length >> 8) & 0xFF);
-    
-    // Pack each service
-    for (const service of this.services) {
-      const packed = service.pack();
-      for (let i = 0; i < packed.length; i++) {
-        result.push(packed[i]);
-      }
-    }
-    
-    return new Uint8Array(result);
-  }
+    const certBytes = encoder.encode(this.appCertificate);
 
-  private async sign(data: Uint8Array): Promise<Uint8Array> {
-    const keyData = new TextEncoder().encode(this.appCertificate);
-    const key = await crypto.subtle.importKey(
+    // First HMAC: HMAC-SHA256(appCertificate, packUint32(issueTs))
+    const key1 = await crypto.subtle.importKey(
       "raw",
-      keyData.buffer as ArrayBuffer,
+      certBytes.buffer as ArrayBuffer,
       { name: "HMAC", hash: "SHA-256" },
       false,
       ["sign"]
     );
-    const signature = await crypto.subtle.sign("HMAC", key, data.buffer as ArrayBuffer);
+    const issueData = packUint32(this.issueTs);
+    const hmac1Result = await crypto.subtle.sign("HMAC", key1, issueData.buffer as ArrayBuffer);
+
+    // Second HMAC: HMAC-SHA256(hmac1Result, packUint32(salt))
+    const key2 = await crypto.subtle.importKey(
+      "raw",
+      hmac1Result,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const saltData = packUint32(this.salt);
+    const hmac2Result = await crypto.subtle.sign("HMAC", key2, saltData.buffer as ArrayBuffer);
+
+    return new Uint8Array(hmac2Result);
+  }
+
+  private buildSigningInfo(): Uint8Array {
+    const encoder = new TextEncoder();
+    const appIdBytes = encoder.encode(this.appId);
+
+    // Build the signing info buffer
+    const buf = new ByteBuf();
+    buf.putBytes(appIdBytes);     // appId with length prefix
+    buf.putUint32(this.issueTs);  // issue timestamp
+    buf.putUint32(this.expire);   // expire duration
+    buf.putUint32(this.salt);     // random salt
+    buf.putUint16(this.services.length); // service count
+
+    const baseBuffer = buf.pack();
+
+    // Pack all services
+    const servicePacks = this.services.map(s => s.pack());
+    const totalServiceLength = servicePacks.reduce((sum, s) => sum + s.length, 0);
+
+    // Combine base buffer with service packs
+    const result = new Uint8Array(baseBuffer.length + totalServiceLength);
+    result.set(baseBuffer, 0);
+
+    let offset = baseBuffer.length;
+    for (const sp of servicePacks) {
+      result.set(sp, offset);
+      offset += sp.length;
+    }
+
+    return result;
+  }
+
+  private async hmacSha256(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> {
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      key.buffer as ArrayBuffer,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    const signature = await crypto.subtle.sign("HMAC", cryptoKey, data.buffer as ArrayBuffer);
     return new Uint8Array(signature);
   }
 
-  private buildContent(signature: Uint8Array): Uint8Array {
-    const result: number[] = [];
-    
-    // signature (with length prefix)
-    result.push(signature.length & 0xFF);
-    result.push((signature.length >> 8) & 0xFF);
-    for (let i = 0; i < signature.length; i++) {
-      result.push(signature[i]);
-    }
-    
-    // crc32 of appId
-    const appIdBytes = new TextEncoder().encode(this.appId);
-    const appIdCrc = crc32(appIdBytes);
-    result.push(appIdCrc & 0xFF);
-    result.push((appIdCrc >> 8) & 0xFF);
-    result.push((appIdCrc >> 16) & 0xFF);
-    result.push((appIdCrc >> 24) & 0xFF);
-    
-    // issueTs
-    result.push(this.issueTs & 0xFF);
-    result.push((this.issueTs >> 8) & 0xFF);
-    result.push((this.issueTs >> 16) & 0xFF);
-    result.push((this.issueTs >> 24) & 0xFF);
-    
-    // expire
-    result.push(this.expire & 0xFF);
-    result.push((this.expire >> 8) & 0xFF);
-    result.push((this.expire >> 16) & 0xFF);
-    result.push((this.expire >> 24) & 0xFF);
-    
-    // salt
-    result.push(this.salt & 0xFF);
-    result.push((this.salt >> 8) & 0xFF);
-    result.push((this.salt >> 16) & 0xFF);
-    result.push((this.salt >> 24) & 0xFF);
-    
-    // services count
-    result.push(this.services.length & 0xFF);
-    result.push((this.services.length >> 8) & 0xFF);
-    
-    // Pack each service
-    for (const service of this.services) {
-      const packed = service.pack();
-      for (let i = 0; i < packed.length; i++) {
-        result.push(packed[i]);
-      }
-    }
-    
-    return new Uint8Array(result);
+  private buildContent(signature: Uint8Array, signingInfo: Uint8Array): Uint8Array {
+    // Content = packBytes(signature) + signingInfo
+    // packBytes adds a 2-byte length prefix
+    const sigBuf = new ByteBuf();
+    sigBuf.putBytes(signature);
+    const packedSig = sigBuf.pack();
+
+    const content = new Uint8Array(packedSig.length + signingInfo.length);
+    content.set(packedSig, 0);
+    content.set(signingInfo, packedSig.length);
+
+    return content;
   }
 
   private base64Encode(data: Uint8Array): string {
-    let binary = '';
+    let binary = "";
     for (let i = 0; i < data.length; i++) {
       binary += String.fromCharCode(data[i]);
     }
-    return btoa(binary)
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
+    return btoa(binary);
   }
 }
 
@@ -357,18 +261,22 @@ class RtcTokenBuilder {
     privilegeExpire: number
   ): Promise<string> {
     const token = new AccessToken2(appId, appCertificate, tokenExpire);
-    
-    const service = new ServiceRtc(channelName, uid);
-    service.addPrivilege(RtcPrivilege.JOIN_CHANNEL, privilegeExpire);
-    
+
+    const uidStr = uid === 0 ? "" : uid.toString();
+    const serviceRtc = new ServiceRtc(channelName, uidStr);
+
+    // Always grant JOIN_CHANNEL
+    serviceRtc.addPrivilege(RtcPrivilege.JOIN_CHANNEL, privilegeExpire);
+
+    // Publishers can also publish streams
     if (role === Role.PUBLISHER) {
-      service.addPrivilege(RtcPrivilege.PUBLISH_AUDIO_STREAM, privilegeExpire);
-      service.addPrivilege(RtcPrivilege.PUBLISH_VIDEO_STREAM, privilegeExpire);
-      service.addPrivilege(RtcPrivilege.PUBLISH_DATA_STREAM, privilegeExpire);
+      serviceRtc.addPrivilege(RtcPrivilege.PUBLISH_AUDIO_STREAM, privilegeExpire);
+      serviceRtc.addPrivilege(RtcPrivilege.PUBLISH_VIDEO_STREAM, privilegeExpire);
+      serviceRtc.addPrivilege(RtcPrivilege.PUBLISH_DATA_STREAM, privilegeExpire);
     }
-    
-    token.addService(service);
-    
+
+    token.addService(serviceRtc);
+
     return await token.build();
   }
 }
@@ -381,68 +289,67 @@ function generateUid(userId: string): number {
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash;
   }
-  return Math.abs(hash) % 2147483647 || 1;
+  // Ensure positive non-zero UID
+  return (Math.abs(hash) % 100000000) || 1;
 }
 
 // ==================== Main Handler ====================
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { sessionId, userId, userName, isHost } = await req.json();
 
-    console.log('Agora token request:', { sessionId, userId, userName, isHost });
+    console.log("Agora token request:", { sessionId, userId, userName, isHost });
 
     if (!sessionId || !userId) {
-      throw new Error('Missing sessionId or userId');
+      throw new Error("Missing sessionId or userId");
     }
 
-    const AGORA_APP_ID = Deno.env.get('AGORA_APP_ID');
-    const AGORA_APP_CERTIFICATE = Deno.env.get('AGORA_APP_CERTIFICATE');
+    const AGORA_APP_ID = Deno.env.get("AGORA_APP_ID");
+    const AGORA_APP_CERTIFICATE = Deno.env.get("AGORA_APP_CERTIFICATE");
 
     if (!AGORA_APP_ID || !AGORA_APP_CERTIFICATE) {
-      console.error('Agora credentials not configured');
-      throw new Error('Agora not configured');
+      console.error("Agora credentials not configured");
+      throw new Error("Agora credentials not configured");
     }
 
-    console.log('Agora credentials found, generating token...');
+    console.log("Agora App ID:", AGORA_APP_ID.substring(0, 8) + "...");
 
     // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Determine role based on participant data
+    // Determine if user can publish
     let canPublish = isHost;
 
-    if (!sessionId.startsWith('demo-')) {
+    if (!isHost && !sessionId.startsWith("demo-")) {
       const { data: participant } = await supabase
-        .from('podcast_participants')
-        .select('role')
-        .eq('session_id', sessionId)
-        .eq('user_id', userId)
+        .from("podcast_participants")
+        .select("role")
+        .eq("session_id", sessionId)
+        .eq("user_id", userId)
         .single();
 
       if (participant) {
-        canPublish = ['host', 'co_host', 'speaker'].includes(participant.role);
+        canPublish = ["host", "co_host", "speaker"].includes(participant.role);
       }
     }
 
-    console.log('Agora permissions:', { userId, isHost, canPublish });
-
     // Generate channel name and UID
-    const channelName = `bario-${sessionId.replace(/-/g, '').substring(0, 30)}`;
+    const channelName = `podcast-${sessionId}`;
     const uid = generateUid(userId);
     const role = canPublish ? Role.PUBLISHER : Role.SUBSCRIBER;
-    
-    // Token expires in 2 hours
-    const currentTs = Math.floor(Date.now() / 1000);
-    const tokenExpire = 7200; // 2 hours
-    const privilegeExpire = currentTs + 7200;
 
-    // Generate token using proper AccessToken2 format
+    // Token expires in 2 hours
+    const tokenExpire = 7200;
+    const privilegeExpire = Math.floor(Date.now() / 1000) + 7200;
+
+    console.log("Generating token:", { channelName, uid, role: canPublish ? "publisher" : "subscriber" });
+
     const token = await RtcTokenBuilder.buildTokenWithUid(
       AGORA_APP_ID,
       AGORA_APP_CERTIFICATE,
@@ -453,12 +360,7 @@ serve(async (req) => {
       privilegeExpire
     );
 
-    console.log('Agora token generated successfully:', { 
-      channelName, 
-      uid, 
-      role: canPublish ? 'publisher' : 'subscriber',
-      tokenLength: token.length 
-    });
+    console.log("Token generated, length:", token.length);
 
     return new Response(
       JSON.stringify({
@@ -468,14 +370,13 @@ serve(async (req) => {
         uid,
         canPublish,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error: unknown) {
-    console.error('Agora token error:', error);
-    const message = error instanceof Error ? error.message : 'Unknown error';
+  } catch (error) {
+    console.error("Agora token error:", error);
     return new Response(
-      JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
