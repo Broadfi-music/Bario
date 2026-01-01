@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -78,16 +78,19 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
   const [previousSessionId, setPreviousSessionId] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const previousRoleRef = useRef<string | null>(null);
 
   // Agora Audio Hook - Reliable audio rooms
   const {
     isConnected: isAudioConnected,
     isConnecting: isAudioConnecting,
     isMuted,
+    canPublish,
     participants: audioParticipants,
     error: audioError,
     connect: connectAudio,
     disconnect: disconnectAudio,
+    reconnect: reconnectAudio,
     toggleMute,
     enableMicrophone,
   } = useAgoraAudio({
@@ -100,7 +103,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       fetchParticipants();
     },
     onParticipantLeft: (identity) => {
-      console.log('[Daily] Audio participant left:', identity);
+      console.log('[Agora] Audio participant left:', identity);
       fetchParticipants();
     },
   });
@@ -111,6 +114,26 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       toast.error(audioError, { duration: 5000 });
     }
   }, [audioError]);
+
+  // CRITICAL: When user is promoted to speaker, reconnect to get fresh token with PUBLISHER role
+  useEffect(() => {
+    if (!myParticipation || !isAudioConnected) return;
+    
+    const currentRole = myParticipation.role;
+    const prevRole = previousRoleRef.current;
+    
+    // Check if user was just promoted from listener to speaker/co_host
+    if (prevRole === 'listener' && (currentRole === 'speaker' || currentRole === 'co_host')) {
+      console.log('🎤 User promoted from listener to', currentRole, '- reconnecting for publisher token...');
+      toast.info('You were promoted! Reconnecting with speaker permissions...');
+      
+      // Need to reconnect to get a fresh token with PUBLISHER role
+      reconnectAudio();
+    }
+    
+    // Update previous role ref
+    previousRoleRef.current = currentRole;
+  }, [myParticipation?.role, isAudioConnected, reconnectAudio]);
 
   // Check if user is banned from this session
   const checkBanStatus = useCallback(async () => {
@@ -171,13 +194,6 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
   }, [sessionId, user]);
 
   // Check if user was promoted to speaker and enable mic
-  useEffect(() => {
-    if (myParticipation && (myParticipation.role === 'speaker' || myParticipation.role === 'co_host')) {
-      if (isAudioConnected) {
-        enableMicrophone();
-      }
-    }
-  }, [myParticipation?.role, isAudioConnected]);
 
   const fetchParticipants = async () => {
     if (isDemoSession(sessionId)) return;

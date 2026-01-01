@@ -56,6 +56,8 @@ interface ParticipantInfo {
   hand_raised: boolean;
 }
 
+const MAX_SESSION_DURATION_SECONDS = 60 * 60; // 1 hour max for Agora free plan
+
 const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
   const { user } = useAuth();
   const [isLive, setIsLive] = useState(false);
@@ -75,8 +77,11 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   const [isMicTesting, setIsMicTesting] = useState(false);
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
+  const [remainingTime, setRemainingTime] = useState(MAX_SESSION_DURATION_SECONDS);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Persistent Playlists
   const {
@@ -116,6 +121,48 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Format remaining time for display (mm:ss)
+  const formatRemainingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // 1-hour session timer - auto-end when time runs out
+  useEffect(() => {
+    if (isLive && sessionStartTime) {
+      timerIntervalRef.current = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+        const remaining = MAX_SESSION_DURATION_SECONDS - elapsed;
+        
+        setRemainingTime(remaining);
+        
+        // Warning at 5 minutes remaining
+        if (remaining === 300) {
+          toast.warning('5 minutes remaining in your session!');
+        }
+        
+        // Warning at 1 minute remaining
+        if (remaining === 60) {
+          toast.warning('1 minute remaining! Session will end soon.');
+        }
+        
+        // Auto-end session when time is up
+        if (remaining <= 0) {
+          toast.error('Session time limit reached (1 hour). Ending session...');
+          endSession();
+        }
+      }, 1000);
+    }
+    
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+    };
+  }, [isLive, sessionStartTime]);
+
   // Check for existing live session on mount
   useEffect(() => {
     const checkExistingSession = async () => {
@@ -133,6 +180,15 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
         setSessionId(existingSession.id);
         setTitle(existingSession.title);
         setIsLive(true);
+        
+        // Calculate remaining time based on when session started
+        if (existingSession.started_at) {
+          const startTime = new Date(existingSession.started_at).getTime();
+          setSessionStartTime(startTime);
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
+          setRemainingTime(Math.max(0, MAX_SESSION_DURATION_SECONDS - elapsed));
+        }
+        
         subscribeToUpdates(existingSession.id);
         fetchRaisedHands();
         
@@ -279,6 +335,10 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
 
       const newSessionId = data.id;
       console.log('🎙️ Session created:', newSessionId);
+      
+      // Set session start time for 1-hour timer
+      setSessionStartTime(Date.now());
+      setRemainingTime(MAX_SESSION_DURATION_SECONDS);
 
       await supabase.from('podcast_participants').insert({
         session_id: newSessionId,
@@ -543,6 +603,13 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
               <span className="ml-2 text-[10px] px-2 py-0.5 bg-green-500/20 text-green-400 rounded-full flex items-center gap-1">
                 <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
                 Audio Live
+              </span>
+            )}
+            {isLive && remainingTime > 0 && (
+              <span className={`ml-2 text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                remainingTime <= 300 ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-white/60'
+              }`}>
+                ⏱️ {formatRemainingTime(remainingTime)}
               </span>
             )}
             {audioError && (

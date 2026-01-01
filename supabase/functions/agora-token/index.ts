@@ -317,19 +317,53 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Max 4 speakers allowed (host + 3 others) for Agora free plan
+    const MAX_SPEAKERS = 4;
+
     // Determine if user can publish
     let canPublish = isHost === true;
+    let speakerSlotsFull = false;
 
-    if (!isHost && !sessionId.startsWith("demo-")) {
-      const { data: participant } = await supabase
+    if (!sessionId.startsWith("demo-")) {
+      // Count current speakers in the session
+      const { data: currentSpeakers } = await supabase
         .from("podcast_participants")
-        .select("role")
+        .select("id, role")
         .eq("session_id", sessionId)
-        .eq("user_id", userId)
-        .single();
+        .in("role", ["host", "co_host", "speaker"]);
 
-      if (participant) {
-        canPublish = ["host", "co_host", "speaker"].includes(participant.role);
+      const currentSpeakerCount = currentSpeakers?.length || 0;
+      console.log("Current speaker count:", currentSpeakerCount, "/ Max:", MAX_SPEAKERS);
+
+      if (!isHost) {
+        const { data: participant } = await supabase
+          .from("podcast_participants")
+          .select("role")
+          .eq("session_id", sessionId)
+          .eq("user_id", userId)
+          .single();
+
+        if (participant) {
+          const isSpeakerRole = ["host", "co_host", "speaker"].includes(participant.role);
+          
+          // Check if speaker slots are full
+          if (isSpeakerRole && currentSpeakerCount > MAX_SPEAKERS) {
+            console.log("Speaker slots full, demoting to listener");
+            speakerSlotsFull = true;
+            canPublish = false;
+          } else {
+            canPublish = isSpeakerRole;
+          }
+        }
+      } else {
+        // Host always gets a slot if not already full
+        if (currentSpeakerCount >= MAX_SPEAKERS) {
+          // Check if host is already in the count
+          const hostInList = currentSpeakers?.some(s => s.role === 'host');
+          if (!hostInList && currentSpeakerCount >= MAX_SPEAKERS) {
+            console.log("Warning: Max speakers reached, but host always gets access");
+          }
+        }
       }
     }
 
@@ -341,6 +375,7 @@ serve(async (req) => {
     console.log("Channel:", channelName);
     console.log("UID:", uid);
     console.log("Role:", canPublish ? "PUBLISHER" : "SUBSCRIBER");
+    console.log("Speaker slots full:", speakerSlotsFull);
 
     // Token expires in 24 hours (in seconds from now)
     const tokenExpire = 86400;
@@ -370,6 +405,8 @@ serve(async (req) => {
         token,
         uid,
         canPublish,
+        speakerSlotsFull,
+        maxSpeakers: MAX_SPEAKERS,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
