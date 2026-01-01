@@ -41,14 +41,16 @@ export const useAgoraAudio = ({
 }: UseAgoraAudioProps) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isMuted, setIsMuted] = useState(!isHost);
+  const [isMuted, setIsMuted] = useState(false); // Start unmuted for speakers
   const [isRecording, setIsRecording] = useState(false);
   const [participants, setParticipants] = useState<AudioParticipant[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [canPublish, setCanPublish] = useState(false);
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
   const volumeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const currentSessionRef = useRef<string | null>(null);
 
   // Cleanup function
   const cleanup = useCallback(async () => {
@@ -78,9 +80,11 @@ export const useAgoraAudio = ({
     }
 
     uidToUserMap.clear();
+    currentSessionRef.current = null;
     setIsConnected(false);
     setIsConnecting(false);
     setParticipants([]);
+    setCanPublish(false);
   }, []);
 
   // Update participants from remote users
@@ -94,7 +98,6 @@ export const useAgoraAudio = ({
 
     // Add local user if we have a local track
     if (localAudioTrackRef.current) {
-      const localUserInfo = uidToUserMap.get(client.uid as number);
       mapped.push({
         id: String(client.uid),
         identity: userId,
@@ -211,6 +214,8 @@ export const useAgoraAudio = ({
 
       // Store user mapping
       uidToUserMap.set(credentials.uid, { identity: userId, name: userName });
+      currentSessionRef.current = targetSessionId;
+      setCanPublish(credentials.canPublish);
 
       // Create Agora client
       const client = AgoraRTC.createClient({ 
@@ -279,20 +284,24 @@ export const useAgoraAudio = ({
       // Create and publish audio track if user can publish
       if (credentials.canPublish) {
         try {
+          console.log('🎤 Creating microphone track...');
           const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
             encoderConfig: 'speech_standard',
           });
           localAudioTrackRef.current = audioTrack;
 
           await client.publish(audioTrack);
-          console.log('🎤 Audio track published');
+          console.log('🎤 Audio track published successfully!');
           
+          // Start unmuted for speakers
           setIsMuted(false);
+          toast.success('Microphone is live!');
         } catch (audioErr) {
           console.error('Error creating audio track:', audioErr);
-          toast.error('Could not access microphone');
+          toast.error('Could not access microphone. Please check permissions.');
         }
       } else {
+        console.log('📻 Joining as listener (no publish rights)');
         setIsMuted(true);
       }
 
@@ -313,16 +322,61 @@ export const useAgoraAudio = ({
     }
   }, [sessionId, userId, userName, isHost, isConnected, isConnecting, updateParticipants, startVolumeMonitoring, onParticipantJoined, onParticipantLeft]);
 
+  // Reconnect with fresh token - CRITICAL for when user is promoted to speaker
+  const reconnect = useCallback(async () => {
+    const targetSessionId = currentSessionRef.current || sessionId;
+    
+    if (!targetSessionId) {
+      console.error('No session to reconnect to');
+      return;
+    }
+
+    console.log('🔄 Reconnecting to get fresh token with new role...');
+    toast.info('Reconnecting with speaker permissions...');
+    
+    // Cleanup existing connection
+    await cleanup();
+    
+    // Small delay to ensure cleanup is complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Reconnect - this will fetch a fresh token with updated role
+    await connect(targetSessionId);
+  }, [sessionId, cleanup, connect]);
+
   // Disconnect from Agora
   const disconnect = useCallback(async () => {
     console.log('Disconnecting from Agora...');
     await cleanup();
   }, [cleanup]);
 
-  // Toggle mute
+  // Toggle mute - create audio track if needed
   const toggleMute = useCallback(async () => {
+    // If no audio track exists but we have publish rights, create one
+    if (!localAudioTrackRef.current && canPublish && clientRef.current) {
+      try {
+        console.log('🎤 Creating microphone track on unmute...');
+        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
+          encoderConfig: 'speech_standard',
+        });
+        localAudioTrackRef.current = audioTrack;
+        
+        await clientRef.current.publish(audioTrack);
+        console.log('🎤 Audio track published!');
+        setIsMuted(false);
+        toast.success('Microphone enabled!');
+        updateParticipants();
+        return;
+      } catch (err) {
+        console.error('Error creating audio track:', err);
+        toast.error('Could not access microphone. Please check permissions.');
+        return;
+      }
+    }
+
     if (!localAudioTrackRef.current) {
       console.warn('No local audio track for toggle mute');
+      toast.error('You need speaker permissions to unmute');
       return;
     }
 
@@ -332,24 +386,51 @@ export const useAgoraAudio = ({
       setIsMuted(newMuteState);
       console.log('Mute toggled to:', newMuteState);
       toast(newMuteState ? 'Microphone muted' : 'Microphone unmuted');
+      updateParticipants();
     } catch (err) {
       console.error('Error toggling mute:', err);
       toast.error('Failed to toggle microphone');
     }
-  }, [isMuted]);
+  }, [isMuted, canPublish, updateParticipants]);
 
-  // Enable microphone
+  // Enable microphone - create track if needed
   const enableMicrophone = useCallback(async () => {
-    if (!localAudioTrackRef.current) return;
+    if (!clientRef.current || !canPublish) {
+      console.log('Cannot enable mic - not connected or no publish rights');
+      return;
+    }
+
+    // If no track exists, create one
+    if (!localAudioTrackRef.current) {
+      try {
+        console.log('🎤 Creating microphone track...');
+        const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
+          encoderConfig: 'speech_standard',
+        });
+        localAudioTrackRef.current = audioTrack;
+        
+        await clientRef.current.publish(audioTrack);
+        console.log('🎤 Audio track published!');
+        setIsMuted(false);
+        toast.success('Microphone enabled!');
+        updateParticipants();
+        return;
+      } catch (err) {
+        console.error('Error creating audio track:', err);
+        toast.error('Could not access microphone');
+        return;
+      }
+    }
 
     try {
       await localAudioTrackRef.current.setEnabled(true);
       setIsMuted(false);
       console.log('Microphone enabled');
+      updateParticipants();
     } catch (err) {
       console.error('Error enabling microphone:', err);
     }
-  }, []);
+  }, [canPublish, updateParticipants]);
 
   // Start recording (placeholder)
   const startRecording = useCallback(async () => {
@@ -377,9 +458,11 @@ export const useAgoraAudio = ({
     isRecording,
     participants,
     error,
+    canPublish,
     provider: 'agora' as const,
     connect,
     disconnect,
+    reconnect,
     toggleMute,
     enableMicrophone,
     startRecording,
