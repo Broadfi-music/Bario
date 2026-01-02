@@ -160,7 +160,7 @@ export const useAgoraAudio = ({
   }, []);
 
   // Connect to Agora channel
-  const connect = useCallback(async (overrideSessionId?: string) => {
+  const connect = useCallback(async (overrideSessionId?: string, force: boolean = false) => {
     const targetSessionId = overrideSessionId || sessionId;
 
     if (!targetSessionId) {
@@ -169,10 +169,13 @@ export const useAgoraAudio = ({
       return;
     }
 
-    if (isConnected || isConnecting) {
-      console.log('Already connected or connecting');
+    // Skip this check when force=true (used by reconnect after cleanup)
+    if (!force && (isConnected || isConnecting)) {
+      console.log('Already connected or connecting (use force=true to override)');
       return;
     }
+    
+    console.log(`🔌 Connect called: force=${force}, isConnected=${isConnected}, isConnecting=${isConnecting}`);
 
     setIsConnecting(true);
     setError(null);
@@ -369,10 +372,10 @@ export const useAgoraAudio = ({
     console.log('🔄 RECONNECT: Waiting for cleanup...');
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Step 5: Reconnect with fresh token
-    console.log('🔄 RECONNECT: Connecting with fresh token...');
+    // Step 5: Reconnect with fresh token (force=true to bypass stale state check)
+    console.log('🔄 RECONNECT: Connecting with fresh token (force=true)...');
     currentSessionRef.current = null; // Clear so connect uses the parameter
-    await connect(targetSessionId);
+    await connect(targetSessionId, true);
     
     console.log('🔄 RECONNECT: Complete!');
   }, [sessionId, connect]);
