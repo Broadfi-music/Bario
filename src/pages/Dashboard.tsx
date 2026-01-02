@@ -233,7 +233,6 @@ const Dashboard = () => {
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Library, label: 'Library', path: '/dashboard/library' },
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
-    { icon: Sparkles, label: 'Megashuffle', path: '/dashboard/megashuffle' },
     { icon: Gift, label: 'Reward & Earn', path: '/dashboard/rewards' },
     { icon: Upload, label: 'Upload', path: '/dashboard/upload' },
   ];
@@ -241,7 +240,6 @@ const Dashboard = () => {
   const topNavItems = [
     { label: 'Heatmap', path: '/global-heatmap' },
     { label: 'Podcast', path: '/podcasts' },
-    { label: 'Radio', path: '/radio-stations' },
   ];
 
   const sections = [
