@@ -25,9 +25,10 @@ import Analytics from "@/pages/Analytics";
 import Megashuffle from "@/pages/Megashuffle";
 import Upload from "@/pages/Upload";
 import ArtistProfile from "@/pages/ArtistProfile";
-import RadioStations from "@/pages/RadioStations";
+import RadioStations from "@/pages/RadioStationsNew";
 import RadioDetail from "@/pages/RadioDetail";
 import RadioFeed from "@/pages/RadioFeed";
+import RadioFeedProfile from "@/pages/RadioFeedProfile";
 import RadioStudio from "@/pages/RadioStudio";
 import Podcasts from "@/pages/Podcasts";
 import PodcastHost from "@/pages/PodcastHost";
@@ -70,6 +71,7 @@ const App = () => {
                 <Route path="/radio-stations" element={<RadioStations />} />
                 <Route path="/radio/:stationId" element={<RadioDetail />} />
                 <Route path="/radio-feed" element={<RadioFeed />} />
+                <Route path="/radio-feed/:hostId" element={<RadioFeedProfile />} />
                 <Route path="/radio-studio" element={<RadioStudio />} />
                 <Route path="/podcasts" element={<Podcasts />} />
                 <Route path="/podcast-host/:hostId" element={<PodcastHost />} />
