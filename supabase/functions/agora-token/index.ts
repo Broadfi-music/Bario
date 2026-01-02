@@ -325,45 +325,53 @@ serve(async (req) => {
     let speakerSlotsFull = false;
 
     if (!sessionId.startsWith("demo-")) {
+      // CRITICAL: Always fetch the LATEST role from database
+      // This ensures promoted speakers get PUBLISHER token
+      console.log("Fetching FRESH role from database for user:", userId);
+      
+      const { data: participant, error: participantError } = await supabase
+        .from("podcast_participants")
+        .select("role")
+        .eq("session_id", sessionId)
+        .eq("user_id", userId)
+        .single();
+
+      if (participantError) {
+        console.log("No participant record found:", participantError.message);
+      } else {
+        console.log("FRESH participant role from DB:", participant?.role);
+      }
+
       // Count current speakers in the session
       const { data: currentSpeakers } = await supabase
         .from("podcast_participants")
-        .select("id, role")
+        .select("id, role, user_id")
         .eq("session_id", sessionId)
         .in("role", ["host", "co_host", "speaker"]);
 
       const currentSpeakerCount = currentSpeakers?.length || 0;
       console.log("Current speaker count:", currentSpeakerCount, "/ Max:", MAX_SPEAKERS);
 
-      if (!isHost) {
-        const { data: participant } = await supabase
-          .from("podcast_participants")
-          .select("role")
-          .eq("session_id", sessionId)
-          .eq("user_id", userId)
-          .single();
-
-        if (participant) {
-          const isSpeakerRole = ["host", "co_host", "speaker"].includes(participant.role);
-          
-          // Check if speaker slots are full
-          if (isSpeakerRole && currentSpeakerCount > MAX_SPEAKERS) {
-            console.log("Speaker slots full, demoting to listener");
-            speakerSlotsFull = true;
-            canPublish = false;
-          } else {
-            canPublish = isSpeakerRole;
-          }
+      if (!isHost && participant) {
+        const isSpeakerRole = ["host", "co_host", "speaker"].includes(participant.role);
+        console.log("User role check - isSpeakerRole:", isSpeakerRole, "role:", participant.role);
+        
+        // Check if speaker slots are full (exclude the user themselves if already counted)
+        const userAlreadyCounted = currentSpeakers?.some(s => s.user_id === userId);
+        const effectiveSpeakerCount = userAlreadyCounted ? currentSpeakerCount : currentSpeakerCount + (isSpeakerRole ? 1 : 0);
+        
+        if (isSpeakerRole && effectiveSpeakerCount > MAX_SPEAKERS) {
+          console.log("Speaker slots full, demoting to listener");
+          speakerSlotsFull = true;
+          canPublish = false;
+        } else {
+          canPublish = isSpeakerRole;
+          console.log("Setting canPublish to:", canPublish);
         }
-      } else {
-        // Host always gets a slot if not already full
-        if (currentSpeakerCount >= MAX_SPEAKERS) {
-          // Check if host is already in the count
-          const hostInList = currentSpeakers?.some(s => s.role === 'host');
-          if (!hostInList && currentSpeakerCount >= MAX_SPEAKERS) {
-            console.log("Warning: Max speakers reached, but host always gets access");
-          }
-        }
+      } else if (isHost) {
+        // Host always gets a slot
+        console.log("Host always gets publisher access");
+        canPublish = true;
       }
     }
 

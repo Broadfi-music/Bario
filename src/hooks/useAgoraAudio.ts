@@ -331,18 +331,51 @@ export const useAgoraAudio = ({
       return;
     }
 
-    console.log('🔄 Reconnecting to get fresh token with new role...');
-    toast.info('Reconnecting with speaker permissions...');
+    console.log('🔄 RECONNECT: Starting fresh connection for speaker permissions...');
     
-    // Cleanup existing connection
-    await cleanup();
+    // Step 1: Stop volume monitoring
+    if (volumeIntervalRef.current) {
+      clearInterval(volumeIntervalRef.current);
+      volumeIntervalRef.current = null;
+    }
+
+    // Step 2: Stop and close local track
+    if (localAudioTrackRef.current) {
+      console.log('🔄 RECONNECT: Stopping local audio track');
+      localAudioTrackRef.current.stop();
+      localAudioTrackRef.current.close();
+      localAudioTrackRef.current = null;
+    }
+
+    // Step 3: Leave channel
+    if (clientRef.current) {
+      try {
+        console.log('🔄 RECONNECT: Leaving Agora channel');
+        await clientRef.current.leave();
+      } catch (e) {
+        console.warn('Reconnect cleanup error:', e);
+      }
+      clientRef.current = null;
+    }
+
+    // Clear state
+    uidToUserMap.clear();
+    setIsConnected(false);
+    setIsConnecting(false);
+    setParticipants([]);
+    setCanPublish(false);
     
-    // Small delay to ensure cleanup is complete
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Step 4: Wait for cleanup to complete
+    console.log('🔄 RECONNECT: Waiting for cleanup...');
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Reconnect - this will fetch a fresh token with updated role
+    // Step 5: Reconnect with fresh token
+    console.log('🔄 RECONNECT: Connecting with fresh token...');
+    currentSessionRef.current = null; // Clear so connect uses the parameter
     await connect(targetSessionId);
-  }, [sessionId, cleanup, connect]);
+    
+    console.log('🔄 RECONNECT: Complete!');
+  }, [sessionId, connect]);
 
   // Disconnect from Agora
   const disconnect = useCallback(async () => {
