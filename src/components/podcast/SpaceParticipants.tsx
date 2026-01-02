@@ -115,23 +115,43 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     }
   }, [audioError]);
 
-  // CRITICAL: When user is promoted to speaker, reconnect to get fresh token with PUBLISHER role
+  // Initialize previousRoleRef when we first get participant data
+  useEffect(() => {
+    if (myParticipation && previousRoleRef.current === null) {
+      previousRoleRef.current = myParticipation.role;
+      console.log('📌 Initialized previousRoleRef to:', myParticipation.role);
+    }
+  }, [myParticipation]);
+
+  // CRITICAL: When user is promoted to speaker, WAIT for DB sync then reconnect to get fresh token
   useEffect(() => {
     if (!myParticipation || !isAudioConnected) return;
     
     const currentRole = myParticipation.role;
     const prevRole = previousRoleRef.current;
     
+    // Skip if we haven't initialized the previous role yet
+    if (prevRole === null) return;
+    
     // Check if user was just promoted from listener to speaker/co_host
     if (prevRole === 'listener' && (currentRole === 'speaker' || currentRole === 'co_host')) {
-      console.log('🎤 User promoted from listener to', currentRole, '- reconnecting for publisher token...');
-      toast.info('You were promoted! Reconnecting with speaker permissions...');
+      console.log('🎤 User promoted from listener to', currentRole, '- waiting for DB sync...');
+      toast.info('You were promoted! Connecting your microphone...');
       
-      // Need to reconnect to get a fresh token with PUBLISHER role
-      reconnectAudio();
+      // CRITICAL: Wait 1.5s for database to fully sync before reconnecting
+      // This ensures the agora-token function gets the updated role
+      const timer = setTimeout(async () => {
+        console.log('🔄 DB sync complete, reconnecting for publisher token...');
+        await reconnectAudio();
+      }, 1500);
+      
+      // Update previous role ref immediately to prevent multiple triggers
+      previousRoleRef.current = currentRole;
+      
+      return () => clearTimeout(timer);
     }
     
-    // Update previous role ref
+    // Update previous role ref for non-promotion changes
     previousRoleRef.current = currentRole;
   }, [myParticipation?.role, isAudioConnected, reconnectAudio]);
 
