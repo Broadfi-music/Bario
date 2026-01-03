@@ -157,51 +157,66 @@ const Podcasts = () => {
     };
   }, []);
 
-  const fetchLiveSessions = async () => {
-    const { data: sessions } = await supabase
-      .from('podcast_sessions')
-      .select('*')
-      .eq('status', 'live')
-      .order('listener_count', { ascending: false });
-    
-    if (!sessions) return;
+  const fetchLiveSessions = async (retryCount = 0) => {
+    try {
+      const { data: sessions, error } = await supabase
+        .from('podcast_sessions')
+        .select('*')
+        .eq('status', 'live')
+        .order('listener_count', { ascending: false });
+      
+      // Handle JWT errors with retry
+      if (error) {
+        console.error('Error fetching live sessions:', error);
+        if ((error.message?.includes('JWT') || error.code === 'PGRST303') && retryCount < 1) {
+          console.log('JWT error, refreshing token and retrying...');
+          await supabase.auth.refreshSession();
+          return fetchLiveSessions(retryCount + 1);
+        }
+        return;
+      }
+      
+      if (!sessions) return;
 
-    const validHostIds = sessions.filter(s => isValidUUID(s.host_id)).map(s => s.host_id);
-    
-    interface ProfileInfo {
-      user_id: string;
-      full_name: string | null;
-      avatar_url: string | null;
-      username: string | null;
-    }
-    
-    let profiles: ProfileInfo[] = [];
-    if (validHostIds.length > 0) {
-      const { data } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, avatar_url, username')
-        .in('user_id', validHostIds);
-      profiles = data || [];
-    }
+      const validHostIds = sessions.filter(s => isValidUUID(s.host_id)).map(s => s.host_id);
+      
+      interface ProfileInfo {
+        user_id: string;
+        full_name: string | null;
+        avatar_url: string | null;
+        username: string | null;
+      }
+      
+      let profiles: ProfileInfo[] = [];
+      if (validHostIds.length > 0) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, avatar_url, username')
+          .in('user_id', validHostIds);
+        profiles = data || [];
+      }
 
-    const profileMap = new Map<string, ProfileInfo>(profiles.map(p => [p.user_id, p]));
-    
-    setLiveSessions(sessions.map(s => {
-      const profile = profileMap.get(s.host_id);
-      return {
-        id: s.id,
-        host_id: s.host_id,
-        title: s.title,
-        description: s.description,
-        cover_image_url: s.cover_image_url,
-        status: s.status as 'scheduled' | 'live' | 'ended',
-        listener_count: s.listener_count || 0,
-        started_at: s.started_at,
-        host_name: profile?.full_name || profile?.username || 'Host',
-        host_avatar: profile?.avatar_url || null,
-        category: 'Music'
-      };
-    }));
+      const profileMap = new Map<string, ProfileInfo>(profiles.map(p => [p.user_id, p]));
+      
+      setLiveSessions(sessions.map(s => {
+        const profile = profileMap.get(s.host_id);
+        return {
+          id: s.id,
+          host_id: s.host_id,
+          title: s.title,
+          description: s.description,
+          cover_image_url: s.cover_image_url,
+          status: s.status as 'scheduled' | 'live' | 'ended',
+          listener_count: s.listener_count || 0,
+          started_at: s.started_at,
+          host_name: profile?.full_name || profile?.username || 'Host',
+          host_avatar: profile?.avatar_url || null,
+          category: 'Music'
+        };
+      }));
+    } catch (err) {
+      console.error('Unexpected error fetching live sessions:', err);
+    }
   };
 
   const handleBackToFeed = () => {
