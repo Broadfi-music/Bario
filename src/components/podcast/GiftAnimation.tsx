@@ -244,13 +244,13 @@ const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
                   <span className="text-white/70 text-xs flex items-center gap-1">
                     sent {config.label} 
                     <span className="flex items-center text-yellow-400">
-                      <Coins className="h-3 w-3" />
+                      <Coins className="h-3 w-3 mr-0.5" />
                       {config.coins}
                     </span>
                   </span>
                 </div>
 
-                {/* Gift Icon */}
+                {/* Gift Icon with points display */}
                 <div className="relative">
                   <Icon className={`${config.size} ${config.color} drop-shadow-lg animate-bounce`} />
                   
@@ -262,10 +262,13 @@ const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
                   )}
                 </div>
 
-                {/* Points */}
-                <span className={`text-lg font-bold ${config.color}`}>
-                  +{gift.points_value}
-                </span>
+                {/* Coins amount */}
+                <div className="flex items-center gap-1 bg-yellow-500/20 px-2 py-1 rounded-full">
+                  <Coins className="h-4 w-4 text-yellow-400" />
+                  <span className="text-yellow-400 font-bold text-sm">
+                    {config.coins}
+                  </span>
+                </div>
               </div>
             </div>
           );
