@@ -838,7 +838,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-foreground/5 py-8 lg:py-16 px-4 sm:px-6">
         <div className="container mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 lg:gap-12 mb-8 lg:mb-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-12 mb-8 lg:mb-12">
             {/* Brand Section */}
             <div>
               <h3 className="text-foreground font-semibold text-base lg:text-lg mb-3 lg:mb-4">Brand</h3>
@@ -850,10 +850,19 @@ const Index = () => {
               </ul>
             </div>
 
+            {/* Program Section */}
+            <div>
+              <h3 className="text-foreground font-semibold text-base lg:text-lg mb-3 lg:mb-4">Program</h3>
+              <ul className="space-y-2 lg:space-y-3">
+                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-xs sm:text-sm">Creator Program</a></li>
+                <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-xs sm:text-sm">Bario Labs</a></li>
+              </ul>
+            </div>
+
             {/* Support Section */}
-            <div className="col-span-1 md:col-span-2 lg:col-span-1">
+            <div className="col-span-2 md:col-span-2 lg:col-span-2">
               <h3 className="text-foreground font-semibold text-base lg:text-lg mb-3 lg:mb-4">Support</h3>
-              <ul className="space-y-2 lg:space-y-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-x-4">
+              <ul className="space-y-2 lg:space-y-3 grid grid-cols-2 gap-x-4">
                 <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-xs sm:text-sm">Help</a></li>
                 <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-xs sm:text-sm">Contact us</a></li>
                 <li><a href="#" className="text-foreground/60 hover:text-foreground transition-colors text-xs sm:text-sm">Community guidelines</a></li>

@@ -350,19 +350,22 @@ const HostProfile = () => {
     const confirmed = window.confirm('Are you sure you want to delete this episode?');
     if (!confirmed) return;
 
+    // First update local state for immediate feedback
+    setEpisodes(prev => prev.filter(e => e.id !== episodeId));
+
     const { error } = await supabase
       .from('podcast_episodes')
       .delete()
-      .eq('id', episodeId)
-      .eq('host_id', user.id);
+      .eq('id', episodeId);
 
     if (error) {
       toast.error('Failed to delete episode');
+      // Refetch to restore state on error
+      fetchHostData();
       return;
     }
 
     toast.success('Episode deleted');
-    setEpisodes(prev => prev.filter(e => e.id !== episodeId));
   };
 
   const handleDeleteSchedule = async (scheduleId: string) => {
@@ -482,7 +485,7 @@ const HostProfile = () => {
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 <Radio className="h-4 w-4 mr-2" />
-                Watch Live
+                Live
               </Button>
             )}
             <Button
