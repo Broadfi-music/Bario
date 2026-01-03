@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      battle_invites: {
+        Row: {
+          battle_id: string | null
+          created_at: string
+          from_user_id: string
+          id: string
+          status: string
+          to_user_id: string
+        }
+        Insert: {
+          battle_id?: string | null
+          created_at?: string
+          from_user_id: string
+          id?: string
+          status?: string
+          to_user_id: string
+        }
+        Update: {
+          battle_id?: string | null
+          created_at?: string
+          from_user_id?: string
+          id?: string
+          status?: string
+          to_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_invites_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "podcast_battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       follows: {
         Row: {
           created_at: string
@@ -450,6 +485,65 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "podcast_banned_users_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "podcast_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      podcast_battles: {
+        Row: {
+          created_at: string
+          duration_seconds: number
+          ended_at: string | null
+          host_id: string
+          host_score: number
+          id: string
+          opponent_id: string
+          opponent_score: number
+          rules: Json | null
+          session_id: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+          winner_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number
+          ended_at?: string | null
+          host_id: string
+          host_score?: number
+          id?: string
+          opponent_id: string
+          opponent_score?: number
+          rules?: Json | null
+          session_id?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          winner_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number
+          ended_at?: string | null
+          host_id?: string
+          host_score?: number
+          id?: string
+          opponent_id?: string
+          opponent_score?: number
+          rules?: Json | null
+          session_id?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          winner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "podcast_battles_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "podcast_sessions"
