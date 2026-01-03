@@ -330,9 +330,14 @@ const HostProfile = () => {
   };
 
   const handlePlayEpisode = (episode: Episode) => {
+    if (!episode.audio_url) {
+      toast.error('No audio available for this episode');
+      return;
+    }
+    
     if (currentTrack?.id === episode.id) {
       isPlaying ? pauseTrack() : resumeTrack();
-    } else if (episode.audio_url) {
+    } else {
       playTrack({
         id: episode.id,
         title: episode.title,
