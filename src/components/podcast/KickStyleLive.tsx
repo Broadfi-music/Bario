@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import SpaceParticipants from './SpaceParticipants';
 import TwitchComments from './TwitchComments';
 import GiftModal from './GiftModal';
+import GiftAnimation from './GiftAnimation';
 import ShareModal from './ShareModal';
 import { toast } from 'sonner';
 import { isValidUUID } from '@/lib/authUtils';
@@ -616,6 +617,9 @@ const KickStyleLive = ({
           </aside>
         </div>
       </div>
+
+      {/* Gift Animation Overlay - TikTok style */}
+      <GiftAnimation sessionId={currentSession.id} />
 
       {/* Modals */}
       <GiftModal
