@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Flame, Heart, Star, Diamond, Crown } from 'lucide-react';
+import { Flame, Heart, Star, Diamond, Crown, Coins } from 'lucide-react';
 import { isValidUUID, isDemoSession } from '@/lib/authUtils';
 
 interface GiftAnimationProps {
@@ -23,7 +23,8 @@ const GIFT_CONFIG: Record<string, {
   bgColor: string;
   label: string;
   size: string;
-  videoUrl?: string;
+  videoUrl: string;
+  coins: number;
 }> = {
   fire: { 
     icon: Flame, 
@@ -31,7 +32,8 @@ const GIFT_CONFIG: Record<string, {
     bgColor: 'from-orange-500/30 to-red-500/30',
     label: 'Fire',
     size: 'h-10 w-10',
-    videoUrl: '/gifts/gift-animation-1.mp4'
+    videoUrl: '/gifts/gift-fire.mp4',
+    coins: 50
   },
   heart: { 
     icon: Heart, 
@@ -39,7 +41,8 @@ const GIFT_CONFIG: Record<string, {
     bgColor: 'from-pink-500/30 to-rose-500/30',
     label: 'Heart',
     size: 'h-12 w-12',
-    videoUrl: '/gifts/gift-animation-1.mp4'
+    videoUrl: '/gifts/gift-heart.mp4',
+    coins: 100
   },
   star: { 
     icon: Star, 
@@ -47,7 +50,8 @@ const GIFT_CONFIG: Record<string, {
     bgColor: 'from-yellow-400/30 to-amber-500/30',
     label: 'Star',
     size: 'h-14 w-14',
-    videoUrl: '/gifts/gift-animation-2.mp4'
+    videoUrl: '/gifts/gift-star.mp4',
+    coins: 299
   },
   diamond: { 
     icon: Diamond, 
@@ -55,7 +59,8 @@ const GIFT_CONFIG: Record<string, {
     bgColor: 'from-cyan-400/30 to-blue-500/30',
     label: 'Diamond',
     size: 'h-16 w-16',
-    videoUrl: '/gifts/gift-animation-2.mp4'
+    videoUrl: '/gifts/gift-diamond.mp4',
+    coins: 999
   },
   crown: { 
     icon: Crown, 
@@ -63,7 +68,8 @@ const GIFT_CONFIG: Record<string, {
     bgColor: 'from-purple-500/30 to-pink-500/30',
     label: 'Crown',
     size: 'h-20 w-20',
-    videoUrl: '/gifts/gift-animation-2.mp4'
+    videoUrl: '/gifts/gift-crown.mp4',
+    coins: 2999
   },
 };
 
@@ -73,11 +79,12 @@ const generateDemoGift = (): GiftEvent => {
   const names = ['MusicFan123', 'BeatMaster', 'VibeLord', 'SoundWave', 'GrooveKing'];
   const type = types[Math.floor(Math.random() * types.length)];
   const name = names[Math.floor(Math.random() * names.length)];
+  const config = GIFT_CONFIG[type];
   
   return {
     id: `demo-${Date.now()}`,
     gift_type: type,
-    points_value: type === 'fire' ? 10 : type === 'heart' ? 25 : type === 'star' ? 50 : type === 'diamond' ? 100 : 500,
+    points_value: config.coins,
     sender_id: `demo-user-${Math.random()}`,
     sender_name: name,
     created_at: new Date().toISOString(),
@@ -88,6 +95,7 @@ const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
   const [giftEvents, setGiftEvents] = useState<GiftEvent[]>([]);
   const [comboCount, setComboCount] = useState<Record<string, number>>({});
   const [bigGift, setBigGift] = useState<GiftEvent | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleNewGift = (gift: GiftEvent) => {
     // Add gift to display queue
@@ -100,11 +108,8 @@ const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
       [comboKey]: (prev[comboKey] || 0) + 1,
     }));
 
-    // Show big celebration for high-value gifts
-    if (['diamond', 'crown'].includes(gift.gift_type)) {
-      setBigGift(gift);
-      setTimeout(() => setBigGift(null), 3000);
-    }
+    // Show big video celebration for ALL gifts (TikTok style)
+    setBigGift(gift);
 
     // Remove gift after animation completes (4 seconds)
     setTimeout(() => {
@@ -123,6 +128,11 @@ const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
         return newCount;
       });
     }, 5000);
+  };
+
+  // Clear big gift when video ends
+  const handleVideoEnded = () => {
+    setBigGift(null);
   };
 
   // Subscribe to real-time gift events
@@ -231,8 +241,12 @@ const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
                   <span className="text-white font-semibold text-sm truncate max-w-32">
                     {gift.sender_name}
                   </span>
-                  <span className="text-white/70 text-xs">
-                    sent {config.label}
+                  <span className="text-white/70 text-xs flex items-center gap-1">
+                    sent {config.label} 
+                    <span className="flex items-center text-yellow-400">
+                      <Coins className="h-3 w-3" />
+                      {config.coins}
+                    </span>
                   </span>
                 </div>
 
@@ -258,44 +272,53 @@ const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
         })}
       </div>
 
-      {/* Big gift celebration with VIDEO for immersive experience */}
+      {/* BIG TikTok-style full-screen gift video celebration */}
       {bigGift && (() => {
         const config = GIFT_CONFIG[bigGift.gift_type];
         return (
-          <div className="absolute inset-0 flex items-center justify-center big-gift-container">
-            {/* Video Animation - Full immersive experience */}
-            <div className="relative flex flex-col items-center">
+          <div className="absolute inset-0 flex items-center justify-center big-gift-container bg-black/60">
+            {/* Full-screen Video Animation with SOUND */}
+            <div className="relative flex flex-col items-center justify-center w-full h-full">
               <video
+                ref={videoRef}
                 src={config.videoUrl}
                 autoPlay
-                muted
                 playsInline
-                className="h-64 w-64 md:h-80 md:w-80 object-contain drop-shadow-2xl"
-                style={{ filter: 'drop-shadow(0 0 40px rgba(255,255,255,0.5))' }}
+                onEnded={handleVideoEnded}
+                className="w-[80vw] h-[80vh] max-w-[600px] max-h-[600px] object-contain"
+                style={{ 
+                  filter: 'drop-shadow(0 0 60px rgba(255,255,255,0.4))',
+                }}
               />
               
-              {/* Sender name shoutout overlay */}
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 whitespace-nowrap shoutout-text">
-                <div className="bg-black/80 backdrop-blur-md rounded-lg px-6 py-3 border border-white/20 shadow-2xl">
-                  <p className="text-white font-bold text-2xl text-center">
+              {/* Sender name + coin amount overlay - TikTok style */}
+              <div className="absolute bottom-[15%] left-1/2 -translate-x-1/2 whitespace-nowrap shoutout-text">
+                <div className="bg-black/90 backdrop-blur-xl rounded-2xl px-8 py-5 border border-white/30 shadow-2xl">
+                  <p className="text-white font-bold text-3xl md:text-4xl text-center mb-2">
                     🎉 {bigGift.sender_name}
                   </p>
-                  <p className={`${config.color} font-semibold text-center text-lg`}>
+                  <p className={`${config.color} font-bold text-center text-xl md:text-2xl mb-3`}>
                     sent a {config.label}!
                   </p>
+                  {/* Coin amount display */}
+                  <div className="flex items-center justify-center gap-2 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-full px-6 py-2 border border-yellow-400/30">
+                    <Coins className="h-6 w-6 text-yellow-400" />
+                    <span className="text-yellow-400 font-bold text-2xl">{config.coins}</span>
+                    <span className="text-yellow-300/80 text-lg">coins</span>
+                  </div>
                 </div>
               </div>
             </div>
             
             {/* Particle effects around video */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              {[...Array(12)].map((_, i) => (
+              {[...Array(16)].map((_, i) => (
                 <div
                   key={i}
-                  className={`absolute w-3 h-3 rounded-full ${config.color.replace('text-', 'bg-')} particle`}
+                  className={`absolute w-4 h-4 rounded-full ${config.color.replace('text-', 'bg-')} particle`}
                   style={{
-                    animationDelay: `${i * 0.1}s`,
-                    '--rotation': `${i * 30}deg`,
+                    animationDelay: `${i * 0.08}s`,
+                    '--rotation': `${i * 22.5}deg`,
                   } as React.CSSProperties}
                 />
               ))}
@@ -333,63 +356,31 @@ const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
         }
 
         .big-gift-container {
-          animation: bigGiftPulse 3s ease-out forwards;
+          animation: bigGiftAppear 0.3s ease-out forwards;
         }
 
-        @keyframes bigGiftPulse {
+        @keyframes bigGiftAppear {
           0% { opacity: 0; }
-          10% { opacity: 1; }
-          80% { opacity: 1; }
-          100% { opacity: 0; }
-        }
-
-        .big-gift-icon {
-          animation: bigGiftIcon 1s ease-out forwards;
-          filter: drop-shadow(0 0 30px currentColor);
-        }
-
-        @keyframes bigGiftIcon {
-          0% {
-            transform: scale(0) rotate(-180deg);
-            opacity: 0;
-          }
-          50% {
-            transform: scale(1.2) rotate(10deg);
-            opacity: 1;
-          }
-          70% {
-            transform: scale(1) rotate(-5deg);
-          }
-          100% {
-            transform: scale(1) rotate(0deg);
-          }
+          100% { opacity: 1; }
         }
 
         .shoutout-text {
-          animation: shoutout 2.5s ease-out forwards;
+          animation: shoutout 0.5s ease-out forwards;
         }
 
         @keyframes shoutout {
           0% {
             opacity: 0;
-            transform: translateX(-50%) translateY(20px);
-          }
-          20% {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-          }
-          80% {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
+            transform: translateX(-50%) translateY(30px) scale(0.8);
           }
           100% {
-            opacity: 0;
-            transform: translateX(-50%) translateY(-10px);
+            opacity: 1;
+            transform: translateX(-50%) translateY(0) scale(1);
           }
         }
 
         .particle {
-          animation: particle 1.5s ease-out forwards;
+          animation: particle 2s ease-out forwards;
         }
 
         @keyframes particle {
@@ -399,7 +390,7 @@ const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
           }
           100% {
             opacity: 0;
-            transform: rotate(var(--rotation, 0deg)) translateY(-150px) scale(0);
+            transform: rotate(var(--rotation, 0deg)) translateY(-200px) scale(0);
           }
         }
       `}</style>
