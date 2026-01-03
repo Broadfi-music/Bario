@@ -1,17 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, Mic, Radio, Home, Flame, Music } from 'lucide-react';
+import { ChevronLeft, Mic, Radio, Home, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import TwitchComments from '@/components/podcast/TwitchComments';
-import SpaceParticipants from '@/components/podcast/SpaceParticipants';
-import GiftModal from '@/components/podcast/GiftModal';
 import HostStudio from '@/components/podcast/HostStudio';
 import PodcastFeed from '@/components/podcast/PodcastFeed';
-import { toast } from 'sonner';
-import { getFreshSession, isDemoSession, isValidUUID } from '@/lib/authUtils';
+import KickStyleLive from '@/components/podcast/KickStyleLive';
+import { isValidUUID } from '@/lib/authUtils';
 
 interface PodcastSession {
   id: string;
@@ -27,8 +24,6 @@ interface PodcastSession {
   category?: string;
 }
 
-// Only show real signed users - no demo data
-
 interface HostLiveSession {
   id: string;
   title: string;
@@ -40,19 +35,11 @@ const Podcasts = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showGiftModal, setShowGiftModal] = useState(false);
-  const [giftSessionId, setGiftSessionId] = useState('');
-  const [giftHostId, setGiftHostId] = useState('');
   const [showHostStudio, setShowHostStudio] = useState(false);
   const [activeTab, setActiveTab] = useState('feed');
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [touchStart, setTouchStart] = useState(0);
   const [liveSessions, setLiveSessions] = useState<PodcastSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<PodcastSession | null>(null);
   const [hostLiveSession, setHostLiveSession] = useState<HostLiveSession | null>(null);
-
-  const podcasts = liveSessions;
-  const currentPodcast = selectedSession || podcasts[currentIndex];
 
   // Check if current user has a live session running
   useEffect(() => {
@@ -78,7 +65,6 @@ const Podcasts = () => {
 
     checkHostSession();
 
-    // Subscribe to session updates
     const channel = supabase
       .channel('host-session-check')
       .on(
@@ -102,25 +88,19 @@ const Podcasts = () => {
   useEffect(() => {
     const sessionId = searchParams.get('session');
     if (sessionId) {
-      // Find session by ID
-      const foundSession = podcasts.find(p => p.id === sessionId);
+      const foundSession = liveSessions.find(p => p.id === sessionId);
       if (foundSession) {
         setSelectedSession(foundSession);
         setActiveTab('live');
       } else {
-        // Fetch from database
         fetchSessionById(sessionId);
       }
     }
   }, [searchParams, liveSessions]);
 
   const fetchSessionById = async (sessionId: string) => {
-    // Only query DB for valid UUIDs
-    if (!isValidUUID(sessionId)) {
-      return;
-    }
+    if (!isValidUUID(sessionId)) return;
 
-    // Query session and profile separately to avoid foreign key issues
     const { data } = await supabase
       .from('podcast_sessions')
       .select('*')
@@ -128,7 +108,6 @@ const Podcasts = () => {
       .single();
 
     if (data) {
-      // Fetch profile separately only if host_id is a valid UUID
       let hostProfile = null;
       if (isValidUUID(data.host_id)) {
         const { data: profile } = await supabase
@@ -179,7 +158,6 @@ const Podcasts = () => {
   }, []);
 
   const fetchLiveSessions = async () => {
-    // Fetch sessions first
     const { data: sessions } = await supabase
       .from('podcast_sessions')
       .select('*')
@@ -188,7 +166,6 @@ const Podcasts = () => {
     
     if (!sessions) return;
 
-    // Fetch profiles separately for valid host IDs
     const validHostIds = sessions.filter(s => isValidUUID(s.host_id)).map(s => s.host_id);
     
     interface ProfileInfo {
@@ -225,65 +202,6 @@ const Podcasts = () => {
         category: 'Music'
       };
     }));
-  };
-
-  const goToNext = useCallback(() => {
-    const maxIndex = podcasts.length - 1;
-    setCurrentIndex(prev => Math.min(prev + 1, maxIndex));
-    if (currentIndex < podcasts.length - 1) {
-      setSelectedSession(podcasts[currentIndex + 1]);
-    }
-  }, [podcasts.length, currentIndex, podcasts]);
-
-  const goToPrev = useCallback(() => {
-    setCurrentIndex(prev => Math.max(prev - 1, 0));
-    if (currentIndex > 0) {
-      setSelectedSession(podcasts[currentIndex - 1]);
-    }
-  }, [currentIndex, podcasts]);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart(e.touches[0].clientY);
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const touchEnd = e.changedTouches[0].clientY;
-    const diff = touchStart - touchEnd;
-
-    if (Math.abs(diff) > 50) {
-      if (diff > 0) goToNext();
-      else goToPrev();
-    }
-  };
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp') goToPrev();
-      if (e.key === 'ArrowDown') goToNext();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToNext, goToPrev]);
-
-  const handleWheel = useCallback((e: WheelEvent) => {
-    e.preventDefault();
-    if (e.deltaY > 30) goToNext();
-    else if (e.deltaY < -30) goToPrev();
-  }, [goToNext, goToPrev]);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (container && activeTab === 'live') {
-      container.addEventListener('wheel', handleWheel, { passive: false });
-      return () => container.removeEventListener('wheel', handleWheel);
-    }
-  }, [handleWheel, activeTab]);
-
-  const handleOpenGift = (sessionId: string, hostId: string) => {
-    setGiftSessionId(sessionId);
-    setGiftHostId(hostId);
-    setShowGiftModal(true);
   };
 
   const handleBackToFeed = () => {
@@ -353,12 +271,6 @@ const Podcasts = () => {
                 Heatmap
               </Button>
             </Link>
-            <Link to="/radio-stations">
-              <Button variant="ghost" size="sm" className="text-white/60 hover:text-white h-8 px-2 text-xs">
-                <Music className="h-3 w-3 mr-1" />
-                Radio
-              </Button>
-            </Link>
           </div>
 
           {/* Right: Actions */}
@@ -388,58 +300,18 @@ const Podcasts = () => {
         </div>
       </header>
 
-      {activeTab === 'live' && currentPodcast ? (
-        /* Live Session View */
-        <div 
-          ref={containerRef}
-          className="h-[100dvh] overflow-hidden"
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-        >
-          <div className="relative h-full w-full flex flex-col bg-black">
-            {/* Full height session with self-contained controls */}
-            <div className={`flex-1 min-h-0 flex flex-col ${hostLiveSession && !showHostStudio ? 'pt-[88px]' : 'pt-12'}`}>
-              {/* Participants section */}
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <SpaceParticipants 
-                  sessionId={currentPodcast.id}
-                  hostId={currentPodcast.host_id}
-                  isHost={user?.id === currentPodcast.host_id}
-                  title={currentPodcast.title}
-                  hostName={currentPodcast.host_name}
-                  hostAvatar={currentPodcast.host_avatar}
-                />
-              </div>
-
-              {/* Comments section with controls */}
-              <div className="shrink-0">
-                <TwitchComments 
-                  sessionId={currentPodcast.id}
-                  hostId={currentPodcast.host_id}
-                  onSendGift={() => handleOpenGift(currentPodcast.id, currentPodcast.host_id)}
-                  sessionTitle={currentPodcast.title}
-                  isHost={user?.id === currentPodcast.host_id}
-                />
-              </div>
-            </div>
-
-            {/* Swipe hint */}
-            <div className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[8px] text-white/40 z-10">
-              Swipe for more sessions
-            </div>
-          </div>
-        </div>
+      {activeTab === 'live' ? (
+        <KickStyleLive
+          sessions={liveSessions}
+          currentIndex={currentIndex}
+          onIndexChange={setCurrentIndex}
+          selectedSession={selectedSession}
+          onSessionSelect={setSelectedSession}
+          hostLiveSession={hostLiveSession}
+        />
       ) : (
         <PodcastFeed />
       )}
-
-      {/* Gift Modal */}
-      <GiftModal
-        isOpen={showGiftModal}
-        onClose={() => setShowGiftModal(false)}
-        sessionId={giftSessionId}
-        hostId={giftHostId}
-      />
 
       {/* Host Studio */}
       <HostStudio
@@ -447,8 +319,6 @@ const Podcasts = () => {
         onClose={() => setShowHostStudio(false)}
         session={null}
       />
-
-      {/* Mobile Bottom Navigation removed as requested */}
     </div>
   );
 };

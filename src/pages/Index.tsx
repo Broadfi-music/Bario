@@ -787,56 +787,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Radio Station Section */}
-      <section className="py-12 lg:py-20 px-4 sm:px-6 border-t border-foreground/5">
-        <div className="container mx-auto max-w-7xl">
-          <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-12">
-            <div className="flex-1 space-y-4 lg:space-y-6 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-500/10 rounded-full">
-                <span className="text-red-500 text-sm animate-pulse">●</span>
-                <span className="text-red-400 text-xs font-medium">LIVE NOW</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground">
-                🎙️ Bario Radio
-              </h2>
-              <p className="text-sm sm:text-base lg:text-lg text-foreground/70 leading-relaxed">
-                24/7 live radio streaming the hottest tracks from around the world. AI-curated playlists, artist takeovers, and exclusive premieres. Tune in and discover your next favorite song.
-              </p>
-              <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
-                <button className="px-6 py-3 bg-red-500 text-white rounded-full font-semibold hover:bg-red-600 transition-colors text-sm flex items-center gap-2">
-                  <Play className="h-4 w-4 fill-white" />
-                  Listen Live
-                </button>
-                <button className="px-6 py-3 bg-foreground/10 text-foreground rounded-full font-semibold hover:bg-foreground/20 transition-colors text-sm">
-                  View Schedule
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 w-full max-w-md">
-              <div className="bg-gradient-to-br from-red-500/20 via-orange-500/10 to-yellow-500/20 rounded-2xl p-6 border border-foreground/10">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center animate-pulse">
-                    <span className="text-2xl">🎵</span>
-                  </div>
-                  <div>
-                    <p className="text-foreground font-semibold">Now Playing</p>
-                    <p className="text-foreground/60 text-sm">Afrobeats Takeover • DJ Spinall</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-foreground/50">
-                    <span>Live listeners</span>
-                    <span className="text-red-400">2.4K listening</span>
-                  </div>
-                  <div className="h-1 bg-foreground/10 rounded-full overflow-hidden">
-                    <div className="h-full w-3/4 bg-gradient-to-r from-red-500 to-orange-500 animate-pulse" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Podcast Section */}
       <section className="py-12 lg:py-20 px-4 sm:px-6 border-t border-foreground/5">
