@@ -23,41 +23,47 @@ const GIFT_CONFIG: Record<string, {
   bgColor: string;
   label: string;
   size: string;
+  videoUrl?: string;
 }> = {
   fire: { 
     icon: Flame, 
     color: 'text-orange-500', 
     bgColor: 'from-orange-500/30 to-red-500/30',
     label: 'Fire',
-    size: 'h-10 w-10'
+    size: 'h-10 w-10',
+    videoUrl: '/gifts/gift-animation-1.mp4'
   },
   heart: { 
     icon: Heart, 
     color: 'text-pink-500', 
     bgColor: 'from-pink-500/30 to-rose-500/30',
     label: 'Heart',
-    size: 'h-12 w-12'
+    size: 'h-12 w-12',
+    videoUrl: '/gifts/gift-animation-1.mp4'
   },
   star: { 
     icon: Star, 
     color: 'text-yellow-400', 
     bgColor: 'from-yellow-400/30 to-amber-500/30',
     label: 'Star',
-    size: 'h-14 w-14'
+    size: 'h-14 w-14',
+    videoUrl: '/gifts/gift-animation-2.mp4'
   },
   diamond: { 
     icon: Diamond, 
     color: 'text-cyan-400', 
     bgColor: 'from-cyan-400/30 to-blue-500/30',
     label: 'Diamond',
-    size: 'h-16 w-16'
+    size: 'h-16 w-16',
+    videoUrl: '/gifts/gift-animation-2.mp4'
   },
   crown: { 
     icon: Crown, 
     color: 'text-purple-500', 
     bgColor: 'from-purple-500/30 to-pink-500/30',
     label: 'Crown',
-    size: 'h-20 w-20'
+    size: 'h-20 w-20',
+    videoUrl: '/gifts/gift-animation-2.mp4'
   },
 };
 
@@ -252,14 +258,38 @@ const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
         })}
       </div>
 
-      {/* Big gift celebration for high-value gifts (Diamond, Crown) */}
-      {bigGift && (
-        <div className="absolute inset-0 flex items-center justify-center big-gift-container">
-          {/* Particle effects */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            {[...Array(12)].map((_, i) => {
-              const config = GIFT_CONFIG[bigGift.gift_type];
-              return (
+      {/* Big gift celebration with VIDEO for immersive experience */}
+      {bigGift && (() => {
+        const config = GIFT_CONFIG[bigGift.gift_type];
+        return (
+          <div className="absolute inset-0 flex items-center justify-center big-gift-container">
+            {/* Video Animation - Full immersive experience */}
+            <div className="relative flex flex-col items-center">
+              <video
+                src={config.videoUrl}
+                autoPlay
+                muted
+                playsInline
+                className="h-64 w-64 md:h-80 md:w-80 object-contain drop-shadow-2xl"
+                style={{ filter: 'drop-shadow(0 0 40px rgba(255,255,255,0.5))' }}
+              />
+              
+              {/* Sender name shoutout overlay */}
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 whitespace-nowrap shoutout-text">
+                <div className="bg-black/80 backdrop-blur-md rounded-lg px-6 py-3 border border-white/20 shadow-2xl">
+                  <p className="text-white font-bold text-2xl text-center">
+                    🎉 {bigGift.sender_name}
+                  </p>
+                  <p className={`${config.color} font-semibold text-center text-lg`}>
+                    sent a {config.label}!
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Particle effects around video */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              {[...Array(12)].map((_, i) => (
                 <div
                   key={i}
                   className={`absolute w-3 h-3 rounded-full ${config.color.replace('text-', 'bg-')} particle`}
@@ -268,36 +298,11 @@ const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
                     '--rotation': `${i * 30}deg`,
                   } as React.CSSProperties}
                 />
-              );
-            })}
+              ))}
+            </div>
           </div>
-
-          {/* Big icon */}
-          <div className="relative big-icon-wrapper">
-            {(() => {
-              const config = GIFT_CONFIG[bigGift.gift_type];
-              const Icon = config.icon;
-              return (
-                <>
-                  <Icon className={`h-32 w-32 ${config.color} drop-shadow-2xl big-gift-icon`} />
-                  
-                  {/* Sender name shoutout */}
-                  <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 whitespace-nowrap shoutout-text">
-                    <div className="bg-black/80 backdrop-blur-md rounded-lg px-6 py-3 border border-white/20">
-                      <p className="text-white font-bold text-xl text-center">
-                        🎉 {bigGift.sender_name}
-                      </p>
-                      <p className={`${config.color} font-semibold text-center text-sm`}>
-                        sent a {config.label}!
-                      </p>
-                    </div>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* CSS Keyframes */}
       <style>{`
