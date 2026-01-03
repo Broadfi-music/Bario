@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Send, Gift, Smile, Share2, UserPlus, Reply } from 'lucide-react';
+import { Send, Gift, Smile, Share2, UserPlus, Reply, Sticker, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -18,6 +18,7 @@ interface Comment {
   is_emoji: boolean;
   created_at: string;
   user_name?: string;
+  fadeOut?: boolean;
 }
 
 interface TwitchCommentsProps {
@@ -28,7 +29,29 @@ interface TwitchCommentsProps {
   isHost?: boolean;
 }
 
-const EMOJIS = ['🔥', '❤️', '👏', '😂', '🎵', '💯', '🙌', '✨'];
+// Message display duration in ms (0.9 seconds)
+const MESSAGE_DISPLAY_DURATION = 900;
+
+// Emotes like Kick.com
+const EMOTES = [
+  '🔥', '❤️', '👏', '😂', '🎵', '💯', '🙌', '✨',
+  '💀', '😍', '🤣', '😭', '🥺', '😎', '🤯', '💪',
+  '👀', '🎉', '💔', '😈', '🥵', '🤑', '😴', '🤮',
+  '👑', '💎', '🌟', '⚡', '🔊', '🎧', '🎤', '🎸',
+];
+
+// Stickers
+const STICKERS = [
+  '🦄', '🐱', '🐶', '🦊', '🐻', '🐼', '🦁', '🐯',
+  '🦋', '🌈', '🌸', '🍕', '🍔', '🎂', '🍿', '🎮',
+  '🚀', '💫', '🌙', '☀️', '🎪', '🎭', '🎨', '🎯',
+];
+
+// GIF keywords for demo
+const GIFS = [
+  '👍', '😢', '🤝', '💃', '🕺', '🙈', '🙉', '🙊',
+  '🤖', '👻', '💅', '🦾', '🧠', '👁️', '🫀', '🫁',
+];
 
 const getRandomUsername = (userId: string) => {
   const names = ['CryptoKing', 'MusicLover', 'BeatDrop', 'VibeCheck', 'NightOwl', 'StarGazer', 'WaveRider', 'SoundWave'];
@@ -42,6 +65,16 @@ const getUserColor = (userId: string) => {
   return colors[index];
 };
 
+type PickerTab = 'emotes' | 'stickers' | 'gifs';
+
+const demoComments: Comment[] = [
+  { id: 'demo-1', user_id: 'user1', content: 'This is fire! 🔥', is_emoji: false, created_at: '' },
+  { id: 'demo-2', user_id: 'user2', content: 'Amazing show!', is_emoji: false, created_at: '' },
+  { id: 'demo-3', user_id: 'user3', content: '❤️', is_emoji: true, created_at: '' },
+  { id: 'demo-4', user_id: 'user4', content: 'Love the vibes!', is_emoji: false, created_at: '' },
+  { id: 'demo-5', user_id: 'user5', content: 'Keep it going!', is_emoji: false, created_at: '' },
+];
+
 const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHost = false }: TwitchCommentsProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -52,15 +85,7 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
   const [showParticipantModal, setShowParticipantModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
-
-  // Demo comments for demo sessions
-  const demoComments: Comment[] = [
-    { id: 'demo-1', user_id: 'user1', content: 'This is fire! 🔥', is_emoji: false, created_at: '' },
-    { id: 'demo-2', user_id: 'user2', content: 'Amazing show!', is_emoji: false, created_at: '' },
-    { id: 'demo-3', user_id: 'user3', content: '❤️', is_emoji: true, created_at: '' },
-    { id: 'demo-4', user_id: 'user4', content: 'Love the vibes!', is_emoji: false, created_at: '' },
-    { id: 'demo-5', user_id: 'user5', content: 'Keep it going!', is_emoji: false, created_at: '' },
-  ];
+  const [pickerTab, setPickerTab] = useState<PickerTab>('emotes');
 
   useEffect(() => {
     // Skip database calls for demo sessions
@@ -96,7 +121,19 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
         },
         (payload) => {
           const newComment = payload.new as Comment;
+          // Add comment with fadeOut animation scheduled
           setComments(prev => [...prev.slice(-49), newComment]);
+          
+          // Schedule fadeout and removal after 0.9 seconds
+          setTimeout(() => {
+            setComments(prev => prev.map(c => 
+              c.id === newComment.id ? { ...c, fadeOut: true } : c
+            ));
+          }, MESSAGE_DISPLAY_DURATION - 200);
+          
+          setTimeout(() => {
+            setComments(prev => prev.filter(c => c.id !== newComment.id));
+          }, MESSAGE_DISPLAY_DURATION);
         }
       )
       .subscribe();
@@ -110,7 +147,7 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
     commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [comments]);
 
-  const sendComment = async (content: string, isEmoji = false) => {
+const sendComment = async (content: string, isEmoji = false) => {
     if (!user || !content.trim()) {
       if (!user) {
         setShowAuthModal(true);
@@ -119,18 +156,33 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
       return;
     }
 
-    // For demo sessions, add comment locally
+    const commentId = `local-${Date.now()}`;
+    const newLocalComment: Comment = {
+      id: commentId,
+      user_id: user.id,
+      content: content.trim(),
+      is_emoji: isEmoji,
+      created_at: new Date().toISOString(),
+    };
+
+    // Add comment immediately and show it
+    setComments(prev => [...prev, newLocalComment]);
+    setNewComment('');
+    setShowEmojis(false);
+
+    // Schedule fadeout and removal after 0.9 seconds
+    setTimeout(() => {
+      setComments(prev => prev.map(c => 
+        c.id === commentId ? { ...c, fadeOut: true } : c
+      ));
+    }, MESSAGE_DISPLAY_DURATION - 200);
+    
+    setTimeout(() => {
+      setComments(prev => prev.filter(c => c.id !== commentId));
+    }, MESSAGE_DISPLAY_DURATION);
+
+    // For demo sessions, don't save to database
     if (isDemoSession(sessionId)) {
-      const newLocalComment = {
-        id: `local-${Date.now()}`,
-        user_id: user.id,
-        content: content.trim(),
-        is_emoji: isEmoji,
-        created_at: new Date().toISOString(),
-      };
-      setComments(prev => [...prev, newLocalComment]);
-      setNewComment('');
-      setShowEmojis(false);
       return;
     }
 
@@ -151,9 +203,6 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
     if (error) {
       console.error('Send comment error:', error);
       toast.error('Failed to send message');
-    } else {
-      setNewComment('');
-      setShowEmojis(false);
     }
   };
 
@@ -171,19 +220,19 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
     navigate(`/host/${userId}`);
   };
 
-  return (
+return (
     <div className="flex flex-col h-full bg-gradient-to-t from-black via-black/95 to-transparent">
-      {/* Comments List - Kick.com style persistent chat */}
+      {/* Comments List - Kick.com style with 0.9s display */}
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 scrollbar-hide">
         {comments.map((comment) => (
           <div 
             key={comment.id} 
-            className="py-1 group"
+            className={`py-1 group transition-all duration-200 ${comment.fadeOut ? 'opacity-0 translate-x-4' : 'opacity-100'}`}
           >
             {comment.is_emoji ? (
-              <span className="text-2xl inline-block">{comment.content}</span>
+              <span className="text-2xl inline-block animate-bounce">{comment.content}</span>
             ) : (
-              <div className="flex items-start gap-2 bg-black/40 rounded px-2 py-1.5 backdrop-blur-sm hover:bg-black/60 transition-colors">
+              <div className="flex items-start gap-2 bg-black/40 rounded px-2 py-1.5 backdrop-blur-sm hover:bg-black/60 transition-colors animate-in slide-in-from-right-4 duration-150">
                 <div className="flex-1 min-w-0">
                   <span 
                     className={`text-xs font-bold ${getUserColor(comment.user_id)} cursor-pointer hover:underline`}
@@ -209,18 +258,64 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
         <div ref={commentsEndRef} />
       </div>
 
-      {/* Emoji Picker */}
+      {/* Emotes/Stickers/GIF Picker - Kick.com style */}
       {showEmojis && (
-        <div className="flex gap-2 px-3 py-1.5 bg-black/90">
-          {EMOJIS.map((emoji) => (
+        <div className="bg-black/95 border-t border-white/10">
+          {/* Tabs */}
+          <div className="flex border-b border-white/10">
             <button
-              key={emoji}
-              onClick={() => sendComment(emoji, true)}
-              className="text-lg hover:scale-125 transition-transform"
+              onClick={() => setPickerTab('emotes')}
+              className={`flex-1 py-2 text-xs font-medium flex items-center justify-center gap-1.5 ${pickerTab === 'emotes' ? 'text-white border-b-2 border-white' : 'text-white/50'}`}
             >
-              {emoji}
+              <Smile className="h-3.5 w-3.5" />
+              Emotes
             </button>
-          ))}
+            <button
+              onClick={() => setPickerTab('stickers')}
+              className={`flex-1 py-2 text-xs font-medium flex items-center justify-center gap-1.5 ${pickerTab === 'stickers' ? 'text-white border-b-2 border-white' : 'text-white/50'}`}
+            >
+              <Sticker className="h-3.5 w-3.5" />
+              Stickers
+            </button>
+            <button
+              onClick={() => setPickerTab('gifs')}
+              className={`flex-1 py-2 text-xs font-medium flex items-center justify-center gap-1.5 ${pickerTab === 'gifs' ? 'text-white border-b-2 border-white' : 'text-white/50'}`}
+            >
+              <Image className="h-3.5 w-3.5" />
+              GIFs
+            </button>
+          </div>
+          
+          {/* Content Grid */}
+          <div className="grid grid-cols-8 gap-1 p-2 max-h-32 overflow-y-auto scrollbar-hide">
+            {pickerTab === 'emotes' && EMOTES.map((emote, i) => (
+              <button
+                key={`emote-${i}`}
+                onClick={() => sendComment(emote, true)}
+                className="text-xl hover:scale-125 transition-transform p-1.5 rounded hover:bg-white/10"
+              >
+                {emote}
+              </button>
+            ))}
+            {pickerTab === 'stickers' && STICKERS.map((sticker, i) => (
+              <button
+                key={`sticker-${i}`}
+                onClick={() => sendComment(sticker, true)}
+                className="text-2xl hover:scale-125 transition-transform p-1.5 rounded hover:bg-white/10"
+              >
+                {sticker}
+              </button>
+            ))}
+            {pickerTab === 'gifs' && GIFS.map((gif, i) => (
+              <button
+                key={`gif-${i}`}
+                onClick={() => sendComment(gif, true)}
+                className="text-2xl hover:scale-125 transition-transform p-1.5 rounded hover:bg-white/10 animate-pulse"
+              >
+                {gif}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 

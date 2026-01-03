@@ -141,7 +141,7 @@ const KickStyleLive = ({
     };
   }, [currentSession]);
 
-  // Fetch top gifters for current session
+// Fetch top gifters for current session with real-time updates
   useEffect(() => {
     if (!currentSession) return;
 
@@ -186,11 +186,75 @@ const KickStyleLive = ({
     };
 
     fetchTopGifters();
+
+    // Subscribe to real-time gift updates
+    const channel = supabase
+      .channel(`gifts-${currentSession.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'podcast_gifts',
+          filter: `session_id=eq.${currentSession.id}`
+        },
+        () => {
+          // Refetch top gifters when a new gift is sent
+          fetchTopGifters();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [currentSession]);
 
-  // Fetch recommended sessions (other live sessions)
+  // Fetch recommended sessions (other live audio rooms)
   useEffect(() => {
-    setRecommendedSessions(sessions.filter(s => s.id !== currentSession?.id).slice(0, 8));
+    const fetchRecommended = async () => {
+      // Fetch all live sessions from database
+      const { data: liveSessions } = await supabase
+        .from('podcast_sessions')
+        .select(`
+          id,
+          host_id,
+          title,
+          description,
+          cover_image_url,
+          status,
+          listener_count,
+          started_at
+        `)
+        .eq('status', 'live')
+        .neq('id', currentSession?.id || '')
+        .limit(8);
+
+      if (liveSessions && liveSessions.length > 0) {
+        // Fetch host profiles
+        const hostIds = liveSessions.map(s => s.host_id).filter(isValidUUID);
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, avatar_url, username')
+          .in('user_id', hostIds);
+
+        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+        const enrichedSessions: PodcastSession[] = liveSessions.map(s => ({
+          ...s,
+          status: s.status as 'scheduled' | 'live' | 'ended',
+          host_name: profileMap.get(s.host_id)?.full_name || profileMap.get(s.host_id)?.username || 'Host',
+          host_avatar: profileMap.get(s.host_id)?.avatar_url || null,
+        }));
+
+        setRecommendedSessions(enrichedSessions);
+      } else {
+        // Fallback to passed sessions prop
+        setRecommendedSessions(sessions.filter(s => s.id !== currentSession?.id).slice(0, 8));
+      }
+    };
+
+    fetchRecommended();
   }, [sessions, currentSession]);
 
   // Handle follow/unfollow
