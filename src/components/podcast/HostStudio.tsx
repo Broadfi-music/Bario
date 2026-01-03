@@ -70,7 +70,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
   const [sessionId, setSessionId] = useState(session?.id || '');
   const [raisedHands, setRaisedHands] = useState<ParticipantInfo[]>([]);
   const [allParticipants, setAllParticipants] = useState<ParticipantInfo[]>([]);
-  const [comments, setComments] = useState<any[]>([]);
   const [uploadedMusic, setUploadedMusic] = useState<UploadedMusic[]>([]);
   const [isUploadingMusic, setIsUploadingMusic] = useState(false);
   const [showPlaylistManager, setShowPlaylistManager] = useState(false);
@@ -244,18 +243,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
           filter: `session_id=eq.${sid}`
         },
         () => fetchRaisedHands()
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'podcast_comments',
-          filter: `session_id=eq.${sid}`
-        },
-        (payload) => {
-          setComments(prev => [...prev.slice(-9), payload.new]);
-        }
       )
       .subscribe();
 
@@ -919,25 +906,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
                 </div>
               )}
 
-              {/* Live Comments */}
-              <div className="space-y-1.5">
-                <h4 className="text-[10px] text-white/60 uppercase tracking-wider flex items-center gap-1">
-                  <MessageSquare className="h-3 w-3" /> Live Comments
-                </h4>
-                <div className="h-24 overflow-y-auto bg-white/5 rounded-lg p-2 space-y-0.5">
-                  {comments.map((c, i) => (
-                    <div key={i} className="text-[10px]">
-                      <span className="text-purple-400">User: </span>
-                      <span className="text-white/80">{c.content}</span>
-                    </div>
-                  ))}
-                  {comments.length === 0 && (
-                    <p className="text-[10px] text-white/40 text-center py-4">
-                      Comments will appear here...
-                    </p>
-                  )}
-                </div>
-              </div>
             </>
           )}
         </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
-  Users, Heart, Gift, Share2, UserPlus, Eye,
+  Users, Heart, Gift, Share2, UserPlus, Headphones,
   ChevronUp, ChevronDown, Crown, MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -73,6 +73,8 @@ const KickStyleLive = ({
 
   const currentSession = selectedSession || sessions[currentIndex];
 
+  const [listenerCount, setListenerCount] = useState(0);
+
   // Fetch follow status
   useEffect(() => {
     if (!user || !currentSession) return;
@@ -100,6 +102,44 @@ const KickStyleLive = ({
     checkFollowStatus();
     fetchFollowerCount();
   }, [user, currentSession]);
+
+  // Real-time listener count
+  useEffect(() => {
+    if (!currentSession) return;
+
+    // Initial fetch
+    const fetchListenerCount = async () => {
+      const { count } = await supabase
+        .from('podcast_participants')
+        .select('id', { count: 'exact', head: true })
+        .eq('session_id', currentSession.id);
+      
+      setListenerCount(count || currentSession.listener_count || 0);
+    };
+
+    fetchListenerCount();
+
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel(`listeners-${currentSession.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'podcast_participants',
+          filter: `session_id=eq.${currentSession.id}`
+        },
+        () => {
+          fetchListenerCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentSession]);
 
   // Fetch top gifters for current session
   useEffect(() => {
@@ -271,7 +311,7 @@ const KickStyleLive = ({
                     <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#18181b]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-white truncate group-hover:text-[#53fc18]">
+                  <p className="text-xs font-medium text-white truncate group-hover:text-white/80">
                       {session.host_name}
                     </p>
                     <p className="text-[10px] text-white/40 truncate">{session.title}</p>
@@ -343,7 +383,7 @@ const KickStyleLive = ({
               <div className="flex items-center justify-between mb-2 lg:mb-3">
                 <div className="flex items-center gap-3">
                   <div 
-                    className="w-10 h-10 lg:w-12 lg:h-12 rounded-full overflow-hidden ring-2 ring-[#53fc18] cursor-pointer"
+                    className="w-10 h-10 lg:w-12 lg:h-12 rounded-full overflow-hidden ring-2 ring-white/30 cursor-pointer"
                     onClick={() => navigate(`/host/${currentSession.host_id}`)}
                   >
                     {currentSession.host_avatar ? (
@@ -355,7 +395,7 @@ const KickStyleLive = ({
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span 
-                        className="font-bold text-white text-sm lg:text-base cursor-pointer hover:text-[#53fc18]"
+                        className="font-bold text-white text-sm lg:text-base cursor-pointer hover:text-white/80"
                         onClick={() => navigate(`/host/${currentSession.host_id}`)}
                       >
                         {currentSession.host_name}
@@ -368,10 +408,10 @@ const KickStyleLive = ({
                   </div>
                 </div>
 
-                {/* Viewer Count */}
+                {/* Listener Count - Real-time */}
                 <div className="flex items-center gap-1.5 text-white/60">
-                  <Eye className="h-4 w-4" />
-                  <span className="text-sm font-medium">{formatViewers(currentSession.listener_count)} Viewers</span>
+                  <Headphones className="h-4 w-4" />
+                  <span className="text-sm font-medium">{formatViewers(listenerCount)} Listeners</span>
                 </div>
               </div>
 
@@ -383,7 +423,7 @@ const KickStyleLive = ({
                   className={`h-8 px-3 text-xs font-semibold ${
                     isFollowing 
                       ? 'bg-white/10 text-white hover:bg-white/20' 
-                      : 'bg-[#53fc18] text-black hover:bg-[#53fc18]/90'
+                      : 'bg-black text-white hover:bg-neutral-800 border border-white/20'
                   }`}
                 >
                   <Heart className={`h-3.5 w-3.5 mr-1.5 ${isFollowing ? 'fill-red-500 text-red-500' : ''}`} />
@@ -395,8 +435,8 @@ const KickStyleLive = ({
                   size="sm"
                   className={`h-8 px-3 text-xs font-semibold ${
                     isSubscribed 
-                      ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30' 
-                      : 'bg-purple-600 text-white hover:bg-purple-700'
+                      ? 'bg-white/10 text-white hover:bg-white/20' 
+                      : 'bg-neutral-800 text-white hover:bg-neutral-700 border border-white/20'
                   }`}
                 >
                   <UserPlus className="h-3.5 w-3.5 mr-1.5" />
