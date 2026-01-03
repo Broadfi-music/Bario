@@ -236,54 +236,64 @@ const PodcastFeed = () => {
     }
   };
 
-  const fetchLiveSessions = async () => {
+  const fetchLiveSessions = async (retryCount = 0) => {
     console.log('Fetching live sessions...');
     
-    // Step 1: Fetch live sessions
-    const { data: sessions, error: sessionsError } = await supabase
-      .from('podcast_sessions')
-      .select('*')
-      .eq('status', 'live')
-      .order('listener_count', { ascending: false });
+    try {
+      // Step 1: Fetch live sessions
+      const { data: sessions, error: sessionsError } = await supabase
+        .from('podcast_sessions')
+        .select('*')
+        .eq('status', 'live')
+        .order('listener_count', { ascending: false });
 
-    if (sessionsError) {
-      console.error('Error fetching live sessions:', sessionsError);
-      return;
+      // Handle JWT errors with retry
+      if (sessionsError) {
+        console.error('Error fetching live sessions:', sessionsError);
+        if ((sessionsError.message?.includes('JWT') || sessionsError.code === 'PGRST303') && retryCount < 1) {
+          console.log('JWT error, refreshing token and retrying...');
+          await supabase.auth.refreshSession();
+          return fetchLiveSessions(retryCount + 1);
+        }
+        return;
+      }
+
+      console.log('Live sessions fetched:', sessions?.length || 0);
+      
+      if (!sessions || sessions.length === 0) {
+        setLiveHosts([]);
+        return;
+      }
+
+      // Step 2: Fetch host profiles separately
+      const hostIds = [...new Set(sessions.map(s => s.host_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, avatar_url, username')
+        .in('user_id', hostIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      // Step 3: Combine data
+      const realSessions = sessions.map(s => {
+        const profile = profileMap.get(s.host_id);
+        return {
+          id: s.id,
+          host_id: s.host_id,
+          title: s.title,
+          description: s.description || '',
+          listener_count: s.listener_count || 0,
+          host_name: profile?.full_name || profile?.username || 'Host',
+          host_avatar: profile?.avatar_url || null,
+          category: 'Music',
+          cover_image_url: s.cover_image_url
+        };
+      });
+      
+      setLiveHosts(realSessions);
+    } catch (err) {
+      console.error('Unexpected error fetching live sessions:', err);
     }
-
-    console.log('Live sessions fetched:', sessions?.length || 0);
-    
-    if (!sessions || sessions.length === 0) {
-      setLiveHosts([]);
-      return;
-    }
-
-    // Step 2: Fetch host profiles separately
-    const hostIds = [...new Set(sessions.map(s => s.host_id))];
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('user_id, full_name, avatar_url, username')
-      .in('user_id', hostIds);
-
-    const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-
-    // Step 3: Combine data
-    const realSessions = sessions.map(s => {
-      const profile = profileMap.get(s.host_id);
-      return {
-        id: s.id,
-        host_id: s.host_id,
-        title: s.title,
-        description: s.description || '',
-        listener_count: s.listener_count || 0,
-        host_name: profile?.full_name || profile?.username || 'Host',
-        host_avatar: profile?.avatar_url || null,
-        category: 'Music',
-        cover_image_url: s.cover_image_url
-      };
-    });
-    
-    setLiveHosts(realSessions);
   };
 
   const heroHosts = liveHosts.slice(0, 5);

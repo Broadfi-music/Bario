@@ -22,50 +22,67 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
         
-        // Auto refresh token if expired
+        // Handle token refresh events
         if (event === 'TOKEN_REFRESHED') {
-          console.log('Token refreshed');
+          console.log('Token refreshed successfully');
+        }
+        
+        // Handle refresh failure - sign out user
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
         }
       }
     );
 
     // THEN check for existing session
     const initSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        // Try to refresh the session
-        const { data: refreshData } = await supabase.auth.refreshSession();
-        setSession(refreshData.session);
-        setUser(refreshData.session?.user ?? null);
-      } else {
-        setSession(session);
-        setUser(session?.user ?? null);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.log('Session error, attempting refresh...');
+          const { data: refreshData } = await supabase.auth.refreshSession();
+          setSession(refreshData.session);
+          setUser(refreshData.session?.user ?? null);
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
+      } catch (err) {
+        console.error('Failed to initialize session:', err);
+        setSession(null);
+        setUser(null);
       }
       setLoading(false);
     };
     
     initSession();
 
-    // Set up automatic token refresh interval
+    // Set up automatic token refresh interval - check every 30 seconds
     const refreshInterval = setInterval(async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // Check if token expires soon (within 5 minutes)
-        const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
-        const now = Date.now();
-        const fiveMinutes = 5 * 60 * 1000;
-        
-        if (expiresAt - now < fiveMinutes) {
-          await supabase.auth.refreshSession();
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          // Check if token expires soon (within 2 minutes)
+          const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+          const now = Date.now();
+          const twoMinutes = 2 * 60 * 1000;
+          
+          if (expiresAt - now < twoMinutes) {
+            console.log('Token expiring soon, refreshing...');
+            await supabase.auth.refreshSession();
+          }
         }
+      } catch (err) {
+        console.error('Token refresh interval error:', err);
       }
-    }, 60000); // Check every minute
+    }, 30000); // Check every 30 seconds
 
     return () => {
       subscription.unsubscribe();

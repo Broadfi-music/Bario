@@ -334,10 +334,61 @@ const KickStyleLive = ({
     }
   }, [handleWheel]);
 
+  // Fallback fetch if sessions prop is empty
+  useEffect(() => {
+    if (sessions.length === 0 && !selectedSession) {
+      const fetchFallbackSessions = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('podcast_sessions')
+            .select('*')
+            .eq('status', 'live')
+            .order('listener_count', { ascending: false })
+            .limit(10);
+          
+          if (error) {
+            if (error.message?.includes('JWT') || error.code === 'PGRST303') {
+              await supabase.auth.refreshSession();
+            }
+            return;
+          }
+          
+          if (data && data.length > 0) {
+            // Fetch profiles
+            const hostIds = data.map(s => s.host_id).filter(isValidUUID);
+            const { data: profiles } = await supabase
+              .from('profiles')
+              .select('user_id, full_name, avatar_url, username')
+              .in('user_id', hostIds);
+            
+            const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+            
+            const enriched = data.map(s => ({
+              ...s,
+              status: s.status as 'scheduled' | 'live' | 'ended',
+              host_name: profileMap.get(s.host_id)?.full_name || profileMap.get(s.host_id)?.username || 'Host',
+              host_avatar: profileMap.get(s.host_id)?.avatar_url || null,
+            }));
+            
+            if (enriched.length > 0) {
+              onSessionSelect(enriched[0]);
+            }
+          }
+        } catch (err) {
+          console.error('Fallback fetch error:', err);
+        }
+      };
+      
+      fetchFallbackSessions();
+    }
+  }, [sessions.length, selectedSession, onSessionSelect]);
+
   if (!currentSession) {
     return (
-      <div className="h-full flex items-center justify-center text-white/60">
-        <p>No live sessions available</p>
+      <div className="h-full flex flex-col items-center justify-center text-white/60 gap-4 pt-20">
+        <div className="animate-pulse w-16 h-16 rounded-full bg-white/10" />
+        <p className="text-sm">Looking for live sessions...</p>
+        <p className="text-xs text-white/40">Check back later or start your own stream!</p>
       </div>
     );
   }
