@@ -94,20 +94,9 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
       return;
     }
 
-    const fetchComments = async () => {
-      const { data, error } = await supabase
-        .from('podcast_comments')
-        .select('*')
-        .eq('session_id', sessionId)
-        .order('created_at', { ascending: true })
-        .limit(50);
-      
-      if (!error && data) {
-        setComments(data as Comment[]);
-      }
-    };
-
-    fetchComments();
+    // Don't fetch old comments - only show NEW messages that arrive after joining
+    // This makes it behave like Kick.com where chat is ephemeral
+    setComments([]);
 
     const channel = supabase
       .channel(`comments-${sessionId}`)
@@ -121,8 +110,17 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
         },
         (payload) => {
           const newComment = payload.new as Comment;
-          // Add comment with fadeOut animation scheduled
-          setComments(prev => [...prev.slice(-49), newComment]);
+          
+          // Skip if we already have a local version of this comment (prevents duplicates)
+          setComments(prev => {
+            const isDuplicate = prev.some(c => 
+              c.id.startsWith('local-') && 
+              c.user_id === newComment.user_id && 
+              c.content === newComment.content
+            );
+            if (isDuplicate) return prev;
+            return [...prev.slice(-49), newComment];
+          });
           
           // Schedule fadeout and removal after 0.9 seconds
           setTimeout(() => {
@@ -142,6 +140,19 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
       supabase.removeChannel(channel);
     };
   }, [sessionId]);
+
+  // Cleanup interval to remove any stale comments
+  useEffect(() => {
+    const cleanup = setInterval(() => {
+      setComments(prev => prev.filter(c => {
+        if (!c.created_at || c.id.startsWith('demo-')) return true;
+        const age = Date.now() - new Date(c.created_at).getTime();
+        return age < MESSAGE_DISPLAY_DURATION + 500;
+      }));
+    }, 500);
+    
+    return () => clearInterval(cleanup);
+  }, []);
 
   useEffect(() => {
     commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
