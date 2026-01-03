@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronLeft, ChevronRight, Users, Play, Pause, Calendar, Headphones, Search, User, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, Play, Pause, Calendar, Headphones, Search, User, X, Swords } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import BattleInviteModal from './BattleInviteModal';
+import BattleNotification from './BattleNotification';
+import BattleLive from './BattleLive';
 
 interface LiveHost {
   id: string;
@@ -85,6 +88,10 @@ const PodcastFeed = () => {
   const [currentEpisode, setCurrentEpisode] = useState<EpisodeItem | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Battle state
+  const [showBattleInviteModal, setShowBattleInviteModal] = useState(false);
+  const [activeBattle, setActiveBattle] = useState<any>(null);
 
   // Filter hosts based on search
   const filteredHosts = searchQuery.trim() 
@@ -567,6 +574,14 @@ const PodcastFeed = () => {
             >
               Battle
             </button>
+            <Button
+              onClick={() => setShowBattleInviteModal(true)}
+              size="sm"
+              className="ml-2 bg-black hover:bg-black/80 text-white font-semibold px-4 py-2 h-auto rounded-full text-xs"
+            >
+              <Swords className="h-3.5 w-3.5 mr-1.5" />
+              Join Battle
+            </Button>
           </div>
         </div>
 
@@ -761,9 +776,62 @@ const PodcastFeed = () => {
             </div>
           </div>
         )}
+
+        {/* Battle Invite Modal */}
+        <BattleInviteModal
+          isOpen={showBattleInviteModal}
+          onClose={() => setShowBattleInviteModal(false)}
+          onBattleStart={(battleId) => {
+            // Fetch the battle and show it
+            fetchBattle(battleId);
+          }}
+        />
+
+        {/* Battle Notification for incoming invites */}
+        <BattleNotification
+          onAccept={async (battleId) => {
+            await fetchBattle(battleId);
+          }}
+        />
+
+        {/* Active Battle View */}
+        {activeBattle && (
+          <div className="fixed inset-0 z-50">
+            <BattleLive
+              battle={activeBattle}
+              onClose={() => setActiveBattle(null)}
+            />
+          </div>
+        )}
       </main>
     </div>
   );
+
+  async function fetchBattle(battleId: string) {
+    const { data: battle } = await supabase
+      .from('podcast_battles')
+      .select('*')
+      .eq('id', battleId)
+      .single();
+
+    if (battle) {
+      // Fetch profiles for host and opponent
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, username, avatar_url')
+        .in('user_id', [battle.host_id, battle.opponent_id]);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      
+      setActiveBattle({
+        ...battle,
+        host_name: profileMap.get(battle.host_id)?.full_name || profileMap.get(battle.host_id)?.username || 'Host',
+        host_avatar: profileMap.get(battle.host_id)?.avatar_url,
+        opponent_name: profileMap.get(battle.opponent_id)?.full_name || profileMap.get(battle.opponent_id)?.username || 'Opponent',
+        opponent_avatar: profileMap.get(battle.opponent_id)?.avatar_url,
+      });
+    }
+  }
 };
 
 export default PodcastFeed;
