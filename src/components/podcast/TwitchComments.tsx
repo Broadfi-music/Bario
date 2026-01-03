@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Send, Gift, Smile, Share2, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Send, Gift, Smile, Share2, UserPlus, Reply } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -17,8 +18,6 @@ interface Comment {
   is_emoji: boolean;
   created_at: string;
   user_name?: string;
-  isVisible?: boolean;
-  fadeTimeout?: NodeJS.Timeout;
 }
 
 interface TwitchCommentsProps {
@@ -31,9 +30,6 @@ interface TwitchCommentsProps {
 
 const EMOJIS = ['🔥', '❤️', '👏', '😂', '🎵', '💯', '🙌', '✨'];
 
-// Comment display duration in milliseconds (0.7 seconds = 700ms as requested)
-const COMMENT_DISPLAY_DURATION = 700;
-
 const getRandomUsername = (userId: string) => {
   const names = ['CryptoKing', 'MusicLover', 'BeatDrop', 'VibeCheck', 'NightOwl', 'StarGazer', 'WaveRider', 'SoundWave'];
   const index = userId.charCodeAt(0) % names.length;
@@ -41,13 +37,14 @@ const getRandomUsername = (userId: string) => {
 };
 
 const getUserColor = (userId: string) => {
-  const colors = ['text-green-400', 'text-pink-400', 'text-blue-400', 'text-yellow-400', 'text-purple-400', 'text-orange-400'];
+  const colors = ['text-emerald-400', 'text-pink-400', 'text-blue-400', 'text-yellow-400', 'text-cyan-400', 'text-orange-400'];
   const index = userId.charCodeAt(0) % colors.length;
   return colors[index];
 };
 
 const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHost = false }: TwitchCommentsProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [showEmojis, setShowEmojis] = useState(false);
@@ -56,24 +53,13 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
   const [showAuthModal, setShowAuthModal] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
-  // Fade out comment after COMMENT_DISPLAY_DURATION (Twitch style - fast fade)
-  const scheduleCommentFade = (commentId: string) => {
-    setTimeout(() => {
-      setComments(prev => prev.map(c => 
-        c.id === commentId ? { ...c, isVisible: false } : c
-      ));
-      // Remove after fade animation completes (300ms for smooth animation)
-      setTimeout(() => {
-        setComments(prev => prev.filter(c => c.id !== commentId));
-      }, 300);
-    }, COMMENT_DISPLAY_DURATION);
-  };
-
   // Demo comments for demo sessions
   const demoComments: Comment[] = [
-    { id: 'demo-1', user_id: 'user1', content: 'This is fire! 🔥', is_emoji: false, created_at: '', isVisible: true },
-    { id: 'demo-2', user_id: 'user2', content: 'Amazing show!', is_emoji: false, created_at: '', isVisible: true },
-    { id: 'demo-3', user_id: 'user3', content: '❤️', is_emoji: true, created_at: '', isVisible: true },
+    { id: 'demo-1', user_id: 'user1', content: 'This is fire! 🔥', is_emoji: false, created_at: '' },
+    { id: 'demo-2', user_id: 'user2', content: 'Amazing show!', is_emoji: false, created_at: '' },
+    { id: 'demo-3', user_id: 'user3', content: '❤️', is_emoji: true, created_at: '' },
+    { id: 'demo-4', user_id: 'user4', content: 'Love the vibes!', is_emoji: false, created_at: '' },
+    { id: 'demo-5', user_id: 'user5', content: 'Keep it going!', is_emoji: false, created_at: '' },
   ];
 
   useEffect(() => {
@@ -89,14 +75,10 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
         .select('*')
         .eq('session_id', sessionId)
         .order('created_at', { ascending: true })
-        .limit(20);
+        .limit(50);
       
       if (!error && data) {
-        // Mark all as visible initially
-        const visibleComments = (data as Comment[]).map(c => ({ ...c, isVisible: true }));
-        setComments(visibleComments);
-        // Schedule fade for existing comments
-        visibleComments.forEach(c => scheduleCommentFade(c.id));
+        setComments(data as Comment[]);
       }
     };
 
@@ -113,9 +95,8 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
           filter: `session_id=eq.${sessionId}`
         },
         (payload) => {
-          const newComment = { ...payload.new as Comment, isVisible: true };
-          setComments(prev => [...prev.slice(-19), newComment]);
-          scheduleCommentFade(newComment.id);
+          const newComment = payload.new as Comment;
+          setComments(prev => [...prev.slice(-49), newComment]);
         }
       )
       .subscribe();
@@ -146,10 +127,8 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
         content: content.trim(),
         is_emoji: isEmoji,
         created_at: new Date().toISOString(),
-        isVisible: true
       };
       setComments(prev => [...prev, newLocalComment]);
-      scheduleCommentFade(newLocalComment.id);
       setNewComment('');
       setShowEmojis(false);
       return;
@@ -183,27 +162,46 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
     sendComment(newComment);
   };
 
+  const handleReply = (userId: string) => {
+    const username = getRandomUsername(userId);
+    setNewComment(`@${username} `);
+  };
+
+  const handleUserClick = (userId: string) => {
+    navigate(`/host/${userId}`);
+  };
+
   return (
-    <div className="flex flex-col bg-gradient-to-t from-black via-black/95 to-transparent">
-      {/* Comments List - Twitch style with fast fade */}
-      <div className="h-32 overflow-y-auto px-3 py-1 scrollbar-hide relative">
+    <div className="flex flex-col h-full bg-gradient-to-t from-black via-black/95 to-transparent">
+      {/* Comments List - Kick.com style persistent chat */}
+      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 scrollbar-hide">
         {comments.map((comment) => (
           <div 
             key={comment.id} 
-            className={`py-0.5 transition-all duration-300 ${
-              comment.isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2'
-            }`}
+            className="py-1 group"
           >
             {comment.is_emoji ? (
-              <span className="text-2xl inline-block animate-bounce">{comment.content}</span>
+              <span className="text-2xl inline-block">{comment.content}</span>
             ) : (
-              <div className="flex items-start gap-1 bg-black/40 rounded px-2 py-1 backdrop-blur-sm">
-                <span className={`text-xs font-bold ${getUserColor(comment.user_id)} shrink-0`}>
-                  {getRandomUsername(comment.user_id)}:
-                </span>
-                <span className="text-xs text-white break-words">
-                  {comment.content}
-                </span>
+              <div className="flex items-start gap-2 bg-black/40 rounded px-2 py-1.5 backdrop-blur-sm hover:bg-black/60 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <span 
+                    className={`text-xs font-bold ${getUserColor(comment.user_id)} cursor-pointer hover:underline`}
+                    onClick={() => handleUserClick(comment.user_id)}
+                  >
+                    {getRandomUsername(comment.user_id)}:
+                  </span>
+                  <span className="text-xs text-white ml-1.5 break-words">
+                    {comment.content}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleReply(comment.user_id)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
+                  title="Reply"
+                >
+                  <Reply className="h-3 w-3 text-white/60" />
+                </button>
               </div>
             )}
           </div>
@@ -227,7 +225,7 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
       )}
 
       {/* Input Area with Request/Join buttons */}
-      <form onSubmit={handleSubmit} className="flex items-center gap-1.5 px-2 py-2 bg-black">
+      <form onSubmit={handleSubmit} className="flex items-center gap-1.5 px-2 py-2 bg-black shrink-0">
         {/* Message Input with Emoji Icon inside */}
         <div className="flex-1 min-w-0 relative">
           <Input
@@ -276,7 +274,7 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
               size="icon"
               variant="ghost"
               onClick={() => setShowParticipantModal(true)}
-              className="text-purple-400 hover:text-purple-300 h-8 w-8"
+              className="text-white/60 hover:text-white h-8 w-8"
             >
               <UserPlus className="h-4 w-4" />
             </Button>
@@ -286,7 +284,7 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
             type="submit"
             size="sm"
             disabled={!user || !newComment.trim()}
-            className="bg-[#53fc18] hover:bg-[#53fc18]/90 text-black font-semibold h-8 px-3 text-xs"
+            className="bg-black hover:bg-neutral-800 text-white font-semibold h-8 px-3 text-xs border border-white/20"
           >
             <Send className="h-3.5 w-3.5" />
           </Button>
