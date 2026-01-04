@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import BattleInviteModal from './BattleInviteModal';
 import BattleNotification from './BattleNotification';
-import BattleLive from './BattleLive';
+import BattleReelScroller from './BattleReelScroller';
 
 interface LiveHost {
   id: string;
@@ -794,11 +794,11 @@ const PodcastFeed = () => {
           }}
         />
 
-        {/* Active Battle View */}
+        {/* Active Battle View - Using Reel Scroller */}
         {activeBattle && (
           <div className="fixed inset-0 z-50">
-            <BattleLive
-              battle={activeBattle}
+            <BattleReelScroller
+              initialBattle={activeBattle}
               onClose={() => setActiveBattle(null)}
             />
           </div>

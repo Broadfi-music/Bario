@@ -19,6 +19,7 @@ interface BattleInvite {
   };
   battle?: {
     duration_seconds: number;
+    session_id: string | null;
   };
 }
 
@@ -61,7 +62,7 @@ const BattleNotification = ({ onAccept }: BattleNotificationProps) => {
       // Get battle details
       const { data: battle } = await supabase
         .from('podcast_battles')
-        .select('duration_seconds')
+        .select('duration_seconds, session_id')
         .eq('id', rawInvite.battle_id)
         .single();
 
@@ -97,7 +98,7 @@ const BattleNotification = ({ onAccept }: BattleNotificationProps) => {
   }, [user]);
 
   const handleAccept = async () => {
-    if (!invite) return;
+    if (!invite || !user) return;
     setIsLoading(true);
 
     try {
@@ -115,6 +116,20 @@ const BattleNotification = ({ onAccept }: BattleNotificationProps) => {
           started_at: new Date().toISOString()
         })
         .eq('id', invite.battle_id);
+
+      // CRITICAL: Add opponent (accepting user) as speaker in podcast_participants
+      // This ensures they get PUBLISHER token for audio
+      if (invite.battle?.session_id) {
+        console.log('Adding opponent as speaker to session:', invite.battle.session_id);
+        
+        await supabase
+          .from('podcast_participants')
+          .insert({
+            session_id: invite.battle.session_id,
+            user_id: user.id,
+            role: 'speaker'
+          });
+      }
 
       toast.success('Battle accepted! Get ready!');
       onAccept(invite.battle_id);
@@ -191,6 +206,11 @@ const BattleNotification = ({ onAccept }: BattleNotificationProps) => {
             <Clock className="h-4 w-4" />
             <span className="text-sm">{durationMinutes} minute battle</span>
           </div>
+
+          {/* Info about audio */}
+          <p className="text-xs text-center text-white/40">
+            Audio will start immediately when you accept
+          </p>
 
           {/* Action Buttons */}
           <div className="flex gap-2">
