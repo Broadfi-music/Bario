@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, Mic, Radio, Home, Flame } from 'lucide-react';
+import { ChevronLeft, Mic, Radio, Home, Flame, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import HostStudio from '@/components/podcast/HostStudio';
 import PodcastFeed from '@/components/podcast/PodcastFeed';
 import KickStyleLive from '@/components/podcast/KickStyleLive';
+import BattleReelScroller from '@/components/podcast/BattleReelScroller';
 import { isValidUUID } from '@/lib/authUtils';
 
 interface PodcastSession {
@@ -30,6 +31,12 @@ interface HostLiveSession {
   listener_count: number;
 }
 
+interface HostBattle {
+  id: string;
+  host_name: string;
+  opponent_name: string;
+}
+
 const Podcasts = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -40,11 +47,14 @@ const Podcasts = () => {
   const [liveSessions, setLiveSessions] = useState<PodcastSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<PodcastSession | null>(null);
   const [hostLiveSession, setHostLiveSession] = useState<HostLiveSession | null>(null);
+  const [hostBattle, setHostBattle] = useState<HostBattle | null>(null);
+  const [showBattleSession, setShowBattleSession] = useState(false);
 
-  // Check if current user has a live session running
+  // Check if current user has a live session or active battle running
   useEffect(() => {
     if (!user) {
       setHostLiveSession(null);
+      setHostBattle(null);
       return;
     }
 
@@ -63,7 +73,35 @@ const Podcasts = () => {
       } : null);
     };
 
+    const checkHostBattle = async () => {
+      const { data: battle } = await supabase
+        .from('podcast_battles')
+        .select('id, host_id, opponent_id')
+        .or(`host_id.eq.${user.id},opponent_id.eq.${user.id}`)
+        .eq('status', 'active')
+        .single();
+      
+      if (battle) {
+        // Fetch profiles
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, username')
+          .in('user_id', [battle.host_id, battle.opponent_id]);
+        
+        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+        
+        setHostBattle({
+          id: battle.id,
+          host_name: profileMap.get(battle.host_id)?.full_name || profileMap.get(battle.host_id)?.username || 'Host',
+          opponent_name: profileMap.get(battle.opponent_id)?.full_name || profileMap.get(battle.opponent_id)?.username || 'Opponent',
+        });
+      } else {
+        setHostBattle(null);
+      }
+    };
+
     checkHostSession();
+    checkHostBattle();
 
     const channel = supabase
       .channel('host-session-check')
@@ -76,6 +114,15 @@ const Podcasts = () => {
           filter: `host_id=eq.${user.id}`
         },
         () => checkHostSession()
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'podcast_battles'
+        },
+        () => checkHostBattle()
       )
       .subscribe();
 
@@ -227,8 +274,30 @@ const Podcasts = () => {
 
   return (
     <div className="min-h-screen bg-[#0e0e10] text-white">
+      {/* Battle Session Banner - shown when user is in an active battle */}
+      {hostBattle && !showBattleSession && (
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-pink-600 via-purple-600 to-cyan-600 py-2 px-4">
+          <div className="flex items-center justify-center gap-3 max-w-screen-xl mx-auto">
+            <div className="flex items-center gap-2">
+              <span className="animate-pulse w-2 h-2 bg-yellow-400 rounded-full"></span>
+              <span className="text-xs font-semibold text-white">BATTLE</span>
+            </div>
+            <span className="text-xs text-white/90 truncate max-w-[120px] sm:max-w-xs">
+              {hostBattle.host_name} vs {hostBattle.opponent_name}
+            </span>
+            <Button
+              onClick={() => setShowBattleSession(true)}
+              size="sm"
+              className="bg-white/20 hover:bg-white/30 text-white text-xs h-6 px-2"
+            >
+              Return to Session
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Live Session Banner - shown when host has an active session */}
-      {hostLiveSession && !showHostStudio && (
+      {hostLiveSession && !showHostStudio && !hostBattle && (
         <div className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-red-600 to-pink-600 py-2 px-4">
           <div className="flex items-center justify-center gap-3 max-w-screen-xl mx-auto">
             <div className="flex items-center gap-2">
@@ -249,7 +318,7 @@ const Podcasts = () => {
       )}
 
       {/* Kick.com Style Header */}
-      <header className={`fixed left-0 right-0 z-50 bg-[#18181b] border-b border-white/5 ${hostLiveSession && !showHostStudio ? 'top-10' : 'top-0'}`}>
+      <header className={`fixed left-0 right-0 z-50 bg-[#18181b] border-b border-white/5 ${(hostLiveSession && !showHostStudio) || (hostBattle && !showBattleSession) ? 'top-10' : 'top-0'}`}>
         <div className="flex items-center justify-between h-12 px-2 sm:px-4">
           {/* Left: Logo/Back */}
           <div className="flex items-center gap-2">
@@ -334,6 +403,15 @@ const Podcasts = () => {
         onClose={() => setShowHostStudio(false)}
         session={null}
       />
+
+      {/* Battle Session View */}
+      {showBattleSession && hostBattle && (
+        <div className="fixed inset-0 z-[70]">
+          <BattleReelScroller
+            onClose={() => setShowBattleSession(false)}
+          />
+        </div>
+      )}
     </div>
   );
 };
