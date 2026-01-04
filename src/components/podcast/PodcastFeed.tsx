@@ -118,13 +118,26 @@ const PodcastFeed = () => {
 
   // Fetch active battles
   const fetchActiveBattles = async () => {
-    const { data: battles } = await supabase
-      .from('podcast_battles')
-      .select('*')
-      .eq('status', 'active')
-      .order('created_at', { ascending: false });
+    try {
+      const { data: battles, error } = await supabase
+        .from('podcast_battles')
+        .select('*')
+        .eq('status', 'active')
+        .is('ended_at', null) // Extra safety: only battles that haven't ended
+        .order('created_at', { ascending: false });
 
-    if (battles && battles.length > 0) {
+      if (error) {
+        console.error('Error fetching battles:', error);
+        setActiveBattles([]); // Clear state on error
+        return;
+      }
+
+      if (!battles || battles.length === 0) {
+        console.log('No active battles found, clearing state');
+        setActiveBattles([]); // Explicitly clear state
+        return;
+      }
+
       const userIds = [...new Set(battles.flatMap(b => [b.host_id, b.opponent_id]))];
       const { data: profiles } = await supabase
         .from('profiles')
@@ -140,7 +153,8 @@ const PodcastFeed = () => {
         opponent_name: profileMap.get(b.opponent_id)?.full_name || profileMap.get(b.opponent_id)?.username || 'Opponent',
         opponent_avatar: profileMap.get(b.opponent_id)?.avatar_url,
       })));
-    } else {
+    } catch (err) {
+      console.error('Battle fetch error:', err);
       setActiveBattles([]);
     }
   };
@@ -179,11 +193,32 @@ const PodcastFeed = () => {
         fetchLiveSessions();
       })
       .on('postgres_changes', { 
-        event: '*', 
+        event: 'INSERT', 
         schema: 'public', 
         table: 'podcast_battles' 
-      }, () => {
-        console.log('Battle updated');
+      }, (payload) => {
+        console.log('Battle inserted:', payload);
+        fetchActiveBattles();
+      })
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'podcast_battles' 
+      }, (payload: any) => {
+        console.log('Battle updated:', payload);
+        // If battle is ended, immediately remove from local state
+        if (payload.new.status === 'ended' || payload.new.ended_at) {
+          console.log('Battle ended, removing from state:', payload.new.id);
+          setActiveBattles(prev => prev.filter(b => b.id !== payload.new.id));
+        }
+        fetchActiveBattles(); // Also re-fetch for safety
+      })
+      .on('postgres_changes', { 
+        event: 'DELETE', 
+        schema: 'public', 
+        table: 'podcast_battles' 
+      }, (payload) => {
+        console.log('Battle deleted:', payload);
         fetchActiveBattles();
       })
       .subscribe((status) => {

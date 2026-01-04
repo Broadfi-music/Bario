@@ -180,14 +180,38 @@ export const useAgoraAudio = ({
       return;
     }
 
+    // CRITICAL: Always cleanup existing connection first to prevent UID_CONFLICT
+    if (clientRef.current) {
+      console.log('🧹 Pre-connect cleanup: existing client found');
+      try {
+        if (clientRef.current.connectionState === 'CONNECTED' || 
+            clientRef.current.connectionState === 'CONNECTING') {
+          console.log('🧹 Leaving existing channel before reconnecting');
+          await clientRef.current.leave();
+        }
+      } catch (e: any) {
+        // Ignore cleanup errors (WS_ABORT, etc.)
+        if (e?.code !== 'WS_ABORT' && !e?.message?.includes('WS_ABORT')) {
+          console.warn('Pre-connect cleanup error (ignored):', e);
+        }
+      }
+      clientRef.current = null;
+      if (localAudioTrackRef.current) {
+        localAudioTrackRef.current.stop();
+        localAudioTrackRef.current.close();
+        localAudioTrackRef.current = null;
+      }
+    }
+
     // Skip this check when force=true (used by reconnect after cleanup)
-    if (!force && (isConnected || isConnecting)) {
-      console.log('Already connected or connecting (use force=true to override)');
+    if (!force && isConnecting) {
+      console.log('Already connecting, please wait');
       return;
     }
     
-    console.log(`🔌 Connect called: force=${force}, isConnected=${isConnected}, isConnecting=${isConnecting}`);
+    console.log(`🔌 Connect called: force=${force}, isConnecting=${isConnecting}`);
 
+    setIsConnected(false);
     setIsConnecting(true);
     setError(null);
 
