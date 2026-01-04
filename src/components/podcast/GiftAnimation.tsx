@@ -96,6 +96,19 @@ const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
   const [comboCount, setComboCount] = useState<Record<string, number>>({});
   const [bigGift, setBigGift] = useState<GiftEvent | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const preloadedVideos = useRef<Map<string, HTMLVideoElement>>(new Map());
+
+  // Preload all gift videos on mount for instant playback
+  useEffect(() => {
+    Object.entries(GIFT_CONFIG).forEach(([type, config]) => {
+      const video = document.createElement('video');
+      video.preload = 'auto';
+      video.src = config.videoUrl;
+      video.muted = false;
+      video.load();
+      preloadedVideos.current.set(type, video);
+    });
+  }, []);
 
   const handleNewGift = (gift: GiftEvent) => {
     // Add gift to display queue
@@ -287,7 +300,12 @@ const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
                 src={config.videoUrl}
                 autoPlay
                 playsInline
+                preload="auto"
                 onEnded={handleVideoEnded}
+                onCanPlay={(e) => {
+                  // Ensure video plays immediately when ready
+                  (e.target as HTMLVideoElement).play().catch(() => {});
+                }}
                 className="w-[80vw] h-[80vh] max-w-[600px] max-h-[600px] object-contain"
                 style={{ 
                   filter: 'drop-shadow(0 0 60px rgba(255,255,255,0.4))',

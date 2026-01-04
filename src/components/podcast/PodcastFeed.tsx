@@ -74,6 +74,19 @@ interface EpisodeItem {
   isRealUser?: boolean;
 }
 
+interface BattleSession {
+  id: string;
+  host_id: string;
+  opponent_id: string;
+  status: string;
+  host_name?: string;
+  host_avatar?: string;
+  opponent_name?: string;
+  opponent_avatar?: string;
+  duration_seconds: number;
+  started_at?: string;
+}
+
 const PodcastFeed = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -92,6 +105,7 @@ const PodcastFeed = () => {
   // Battle state
   const [showBattleInviteModal, setShowBattleInviteModal] = useState(false);
   const [activeBattle, setActiveBattle] = useState<any>(null);
+  const [activeBattles, setActiveBattles] = useState<BattleSession[]>([]);
 
   // Filter hosts based on search
   const filteredHosts = searchQuery.trim() 
@@ -102,10 +116,40 @@ const PodcastFeed = () => {
       )
     : liveHosts;
 
+  // Fetch active battles
+  const fetchActiveBattles = async () => {
+    const { data: battles } = await supabase
+      .from('podcast_battles')
+      .select('*')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+
+    if (battles && battles.length > 0) {
+      const userIds = [...new Set(battles.flatMap(b => [b.host_id, b.opponent_id]))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, username, avatar_url')
+        .in('user_id', userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      setActiveBattles(battles.map(b => ({
+        ...b,
+        host_name: profileMap.get(b.host_id)?.full_name || profileMap.get(b.host_id)?.username || 'Host',
+        host_avatar: profileMap.get(b.host_id)?.avatar_url,
+        opponent_name: profileMap.get(b.opponent_id)?.full_name || profileMap.get(b.opponent_id)?.username || 'Opponent',
+        opponent_avatar: profileMap.get(b.opponent_id)?.avatar_url,
+      })));
+    } else {
+      setActiveBattles([]);
+    }
+  };
+
   useEffect(() => {
     fetchLiveSessions();
     fetchSchedules();
     fetchEpisodes();
+    fetchActiveBattles();
     
     // Subscribe to real-time updates for immediate live session visibility
     const channel = supabase
@@ -133,6 +177,14 @@ const PodcastFeed = () => {
       }, () => {
         console.log('Session deleted');
         fetchLiveSessions();
+      })
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'podcast_battles' 
+      }, () => {
+        console.log('Battle updated');
+        fetchActiveBattles();
       })
       .subscribe((status) => {
         console.log('Podcast feed realtime subscription status:', status);
@@ -562,6 +614,79 @@ const PodcastFeed = () => {
           </section>
         )}
 
+        {/* Live Battles Section */}
+        {activeBattles.length > 0 && (
+          <section className="px-3 lg:px-6 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold flex items-center gap-2">
+                <Swords className="h-4 w-4 text-yellow-400" />
+                <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                Live Battles
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 lg:gap-4">
+              {activeBattles.map((battle) => (
+                <div 
+                  key={battle.id}
+                  onClick={() => {
+                    setActiveBattle({
+                      ...battle,
+                      host_score: 0,
+                      opponent_score: 0,
+                    });
+                  }}
+                  className="group block cursor-pointer"
+                >
+                  <div className="relative aspect-video rounded-lg overflow-hidden bg-gradient-to-br from-pink-600/50 via-purple-500/50 to-orange-500/50 mb-1.5">
+                    {/* VS Split View */}
+                    <div className="absolute inset-0 flex">
+                      <div className="flex-1 flex items-center justify-center border-r border-white/20">
+                        <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-pink-500">
+                          {battle.host_avatar ? (
+                            <img src={battle.host_avatar} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-pink-500 to-purple-600" />
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-1 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-cyan-500">
+                          {battle.opponent_avatar ? (
+                            <img src={battle.opponent_avatar} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-cyan-500 to-blue-600" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* VS Badge */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-yellow-500 text-black text-[10px] font-bold px-2 py-1 rounded-full">
+                      VS
+                    </div>
+                    
+                    {/* Battle badge */}
+                    <div className="absolute top-1 left-1 lg:top-2 lg:left-2 bg-gradient-to-r from-pink-600 to-purple-600 text-white text-[8px] lg:text-[10px] font-bold px-1.5 lg:px-2 py-0.5 rounded flex items-center gap-0.5 lg:gap-1">
+                      <Swords className="w-2.5 h-2.5" />
+                      BATTLE
+                    </div>
+                  </div>
+
+                  {/* Info */}
+                  <div className="min-w-0">
+                    <h3 className="text-[11px] lg:text-sm font-medium text-white truncate group-hover:text-[#53fc18] transition-colors">
+                      {battle.host_name} vs {battle.opponent_name}
+                    </h3>
+                    <p className="text-[10px] lg:text-xs text-white/50">
+                      {Math.floor(battle.duration_seconds / 60)} min battle
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Tabs for Live and Battle */}
         <div className="px-3 lg:px-6 mb-4">
           <div className="flex items-center gap-2">
@@ -580,7 +705,7 @@ const PodcastFeed = () => {
               className="ml-2 bg-black hover:bg-black/80 text-white font-semibold px-4 py-2 h-auto rounded-full text-xs"
             >
               <Swords className="h-3.5 w-3.5 mr-1.5" />
-              Join Battle
+              Start Battle
             </Button>
           </div>
         </div>
