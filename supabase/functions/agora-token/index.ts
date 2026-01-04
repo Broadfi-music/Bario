@@ -271,10 +271,12 @@ async function buildTokenWithUid(
 }
 
 // ==================== UID Generation ====================
-function generateUid(userId: string): number {
+// Include sessionId to prevent UID conflicts when same user joins different sessions
+function generateUid(userId: string, sessionId: string): number {
+  const combined = `${userId}-${sessionId}`;
   let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    const char = userId.charCodeAt(i);
+  for (let i = 0; i < combined.length; i++) {
+    const char = combined.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash;
   }
@@ -319,9 +321,9 @@ serve(async (req) => {
     const speakerSlotsFull = false;
     const MAX_SPEAKERS = 100; // No practical limit now
 
-    // Generate channel name and UID
+    // Generate channel name and UID (include sessionId for uniqueness)
     const channelName = `podcast-${sessionId}`;
-    const uid = generateUid(userId);
+    const uid = generateUid(userId, sessionId);
     const role = canPublish ? Role.PUBLISHER : Role.SUBSCRIBER;
 
     console.log("Channel:", channelName);

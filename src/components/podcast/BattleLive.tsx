@@ -88,19 +88,28 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     isHost: isParticipant, // Both host and opponent are publishers
   });
 
+  // Track if we've initiated audio connection
+  const audioConnectionRef = useRef(false);
+
   // Connect audio when battle is active
   useEffect(() => {
-    if (battle.session_id && user && isParticipant && battleStatus === 'active') {
-      console.log('Connecting audio for battle participant');
+    const shouldConnect = battle.session_id && user && isParticipant && battleStatus === 'active';
+    
+    if (shouldConnect && !audioConnectionRef.current) {
+      console.log('🎙️ Connecting audio for battle participant');
+      audioConnectionRef.current = true;
       connectAudio();
     }
     
     return () => {
-      if (audioConnected) {
+      // Always cleanup on unmount
+      if (audioConnectionRef.current) {
+        console.log('🧹 Disconnecting audio on cleanup');
+        audioConnectionRef.current = false;
         disconnectAudio();
       }
     };
-  }, [battle.session_id, user, isParticipant, battleStatus]);
+  }, [battle.session_id, user?.id, isParticipant, battleStatus]);
 
   // Calculate progress bar percentages
   const totalScore = hostScore + opponentScore || 1;
