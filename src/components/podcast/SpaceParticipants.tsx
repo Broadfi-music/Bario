@@ -330,12 +330,12 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
         await disconnectAudio();
       }
 
-      // Insert as listener - automatic join, no approval needed
+      // Insert as listener with mic ON by default - user controls their own mic
       const { error } = await supabase.from('podcast_participants').insert({
         session_id: sessionId,
         user_id: user.id,
         role: 'listener',
-        is_muted: true
+        is_muted: false // MIC ON by default - everyone can speak
       });
 
       if (error) {

@@ -94,12 +94,26 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
       return;
     }
 
-    // Don't fetch old comments - only show NEW messages that arrive after joining
-    // This makes it behave like Kick.com where chat is ephemeral
-    setComments([]);
+    // Fetch recent comments on mount so everyone sees existing messages
+    const fetchRecentComments = async () => {
+      const { data } = await supabase
+        .from('podcast_comments')
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      
+      if (data) {
+        // Reverse to show oldest first
+        setComments(data.reverse() as Comment[]);
+      }
+    };
+    
+    fetchRecentComments();
 
+    // Subscribe to ALL new comments - everyone should see everyone's messages
     const channel = supabase
-      .channel(`comments-${sessionId}`)
+      .channel(`comments-realtime-${sessionId}`)
       .on(
         'postgres_changes',
         {
@@ -110,19 +124,20 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
         },
         (payload) => {
           const newComment = payload.new as Comment;
+          console.log('💬 New comment received:', newComment.content);
           
-          // Skip if we already have a local version of this comment (prevents duplicates)
+          // Add to comments - remove local duplicate if exists
           setComments(prev => {
-            const isDuplicate = prev.some(c => 
-              c.id.startsWith('local-') && 
-              c.user_id === newComment.user_id && 
-              c.content === newComment.content
+            // Remove any local version of this comment
+            const filtered = prev.filter(c => 
+              !(c.id.startsWith('local-') && 
+                c.user_id === newComment.user_id && 
+                c.content === newComment.content)
             );
-            if (isDuplicate) return prev;
-            return [...prev.slice(-49), newComment];
+            return [...filtered.slice(-49), newComment];
           });
           
-          // Schedule fadeout and removal after 0.9 seconds
+          // Schedule fadeout and removal after display duration
           setTimeout(() => {
             setComments(prev => prev.map(c => 
               c.id === newComment.id ? { ...c, fadeOut: true } : c
@@ -134,7 +149,9 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
           }, MESSAGE_DISPLAY_DURATION);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('💬 Chat subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
