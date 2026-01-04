@@ -7,7 +7,7 @@ import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Swords, Users, Clock, Search, UserPlus, Radio } from 'lucide-react';
+import { Swords, Users, Clock, Search, UserPlus, Radio, Shuffle } from 'lucide-react';
 
 interface OnlineCreator {
   user_id: string;
@@ -57,11 +57,37 @@ const BattleInviteModal = ({ isOpen, onClose, sessionId, onBattleStart }: Battle
 
       const followingIds = follows?.map(f => f.following_id) || [];
 
+      // Also get recently active users (profiles updated in last hour)
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { data: recentProfiles } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .gte('updated_at', oneHourAgo)
+        .neq('user_id', user.id)
+        .limit(20);
+      
+      const recentUserIds = recentProfiles?.map(p => p.user_id) || [];
+
       // Combine and get profiles
-      const allUserIds = [...new Set([...liveHostIds, ...followingIds])];
+      const allUserIds = [...new Set([...liveHostIds, ...followingIds, ...recentUserIds])];
       
       if (allUserIds.length === 0) {
-        setCreators([]);
+        // Fallback: get any profiles
+        const { data: anyProfiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, username, avatar_url')
+          .neq('user_id', user.id)
+          .limit(20);
+        
+        if (anyProfiles) {
+          setCreators(anyProfiles.map(p => ({
+            user_id: p.user_id,
+            full_name: p.full_name,
+            username: p.username,
+            avatar_url: p.avatar_url,
+            is_live: false
+          })));
+        }
         return;
       }
 
@@ -101,16 +127,42 @@ const BattleInviteModal = ({ isOpen, onClose, sessionId, onBattleStart }: Battle
     setStep('configure');
   };
 
+  // Auto-suggest random opponent
+  const handleSuggestRandom = () => {
+    if (creators.length === 0) return;
+    const randomIndex = Math.floor(Math.random() * creators.length);
+    handleSelectCreator(creators[randomIndex]);
+  };
+
   const handleSendInvite = async () => {
     if (!user || !selectedCreator) return;
 
     setIsLoading(true);
     try {
-      // Create the battle record
+      // IMPORTANT: Create a podcast_session for the battle audio channel
+      const { data: session, error: sessionError } = await supabase
+        .from('podcast_sessions')
+        .insert({
+          host_id: user.id,
+          title: `Battle: ${user.email?.split('@')[0]} vs ${selectedCreator.full_name || selectedCreator.username}`,
+          status: 'live',
+          description: 'Live battle session'
+        })
+        .select()
+        .single();
+
+      if (sessionError) {
+        console.error('Session creation error:', sessionError);
+        throw sessionError;
+      }
+
+      console.log('Created battle session:', session.id);
+
+      // Create the battle record WITH session_id
       const { data: battle, error: battleError } = await supabase
         .from('podcast_battles')
         .insert({
-          session_id: sessionId || null,
+          session_id: session.id, // Link to audio session
           host_id: user.id,
           opponent_id: selectedCreator.user_id,
           status: 'pending',
@@ -121,6 +173,15 @@ const BattleInviteModal = ({ isOpen, onClose, sessionId, onBattleStart }: Battle
         .single();
 
       if (battleError) throw battleError;
+
+      // Add host as speaker in participants
+      await supabase
+        .from('podcast_participants')
+        .insert({
+          session_id: session.id,
+          user_id: user.id,
+          role: 'speaker'
+        });
 
       // Create the invite
       const { error: inviteError } = await supabase
@@ -155,7 +216,7 @@ const BattleInviteModal = ({ isOpen, onClose, sessionId, onBattleStart }: Battle
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#18181b] border-white/10 text-white max-w-md">
+      <DialogContent className="bg-[#18181b] border-white/10 text-white max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             <Swords className="h-5 w-5 text-yellow-400" />
@@ -165,19 +226,28 @@ const BattleInviteModal = ({ isOpen, onClose, sessionId, onBattleStart }: Battle
 
         {step === 'select' ? (
           <div className="space-y-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-              <Input
-                placeholder="Search creators..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40"
-              />
+            {/* Search and Suggest */}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                <Input
+                  placeholder="Search creators..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40"
+                />
+              </div>
+              <Button
+                onClick={handleSuggestRandom}
+                disabled={creators.length === 0}
+                className="bg-[#53fc18] hover:bg-[#45d914] text-black"
+              >
+                <Shuffle className="h-4 w-4" />
+              </Button>
             </div>
 
             {/* Creator List */}
-            <div className="space-y-1 max-h-[300px] overflow-y-auto">
+            <div className="space-y-1 max-h-[250px] overflow-y-auto">
               {filteredCreators.length === 0 ? (
                 <div className="text-center py-8 text-white/40">
                   <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -271,11 +341,15 @@ const BattleInviteModal = ({ isOpen, onClose, sessionId, onBattleStart }: Battle
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" />
+                  Double-tap to boost (+5 points)
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" />
                   Highest score wins when timer ends
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#53fc18]" />
-                  Both creators share the stream
+                  Audio starts immediately on accept
                 </li>
               </ul>
             </div>
