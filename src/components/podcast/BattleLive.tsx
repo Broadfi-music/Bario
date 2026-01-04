@@ -430,8 +430,8 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
 
       {/* Battle Content Area */}
       <div className="flex-1 flex flex-col min-h-0">
-        {/* Host vs Opponent Split - Compact */}
-        <div className="shrink-0 flex flex-row h-32 lg:h-40 border-b border-white/10">
+        {/* Host vs Opponent Split - Enlarged */}
+        <div className="shrink-0 flex flex-row h-48 lg:h-56 border-b border-white/10">
           {/* Host Side */}
           <div 
             className="flex-1 relative border-r border-white/10 flex items-center justify-center"
@@ -451,11 +451,11 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
                   <img 
                     src={battle.host_avatar} 
                     alt="" 
-                    className={`w-14 h-14 lg:w-16 lg:h-16 rounded-full object-cover ring-2 ${isHostSpeaking ? 'ring-[#53fc18] animate-pulse' : 'ring-[#53fc18]/50'}`}
+                    className={`w-20 h-20 lg:w-28 lg:h-28 rounded-full object-cover ring-4 ${isHostSpeaking ? 'ring-[#53fc18] animate-pulse' : 'ring-[#53fc18]/50'}`}
                   />
                 ) : (
-                  <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-full bg-gradient-to-br from-[#53fc18] to-green-600 flex items-center justify-center">
-                    <Users className="w-7 h-7 text-black" />
+                  <div className="w-20 h-20 lg:w-28 lg:h-28 rounded-full bg-gradient-to-br from-[#53fc18] to-green-600 flex items-center justify-center">
+                    <Users className="w-10 h-10 text-black" />
                   </div>
                 )}
                 {isHostSpeaking && (
@@ -466,7 +466,7 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
                   </div>
                 )}
               </div>
-              <p className="text-[10px] font-medium text-white truncate max-w-[70px]">{battle.host_name}</p>
+              <p className="text-xs lg:text-sm font-bold text-white truncate max-w-[100px]">{battle.host_name}</p>
               <div className="flex items-center gap-1">
                 <Crown className="h-2.5 w-2.5 text-yellow-400" />
                 <div className="flex -space-x-1">
@@ -509,11 +509,11 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
                   <img 
                     src={battle.opponent_avatar} 
                     alt="" 
-                    className={`w-14 h-14 lg:w-16 lg:h-16 rounded-full object-cover ring-2 ${isOpponentSpeaking ? 'ring-pink-500 animate-pulse' : 'ring-pink-500/50'}`}
+                    className={`w-20 h-20 lg:w-28 lg:h-28 rounded-full object-cover ring-4 ${isOpponentSpeaking ? 'ring-pink-500 animate-pulse' : 'ring-pink-500/50'}`}
                   />
                 ) : (
-                  <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
-                    <Users className="w-7 h-7 text-white" />
+                  <div className="w-20 h-20 lg:w-28 lg:h-28 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+                    <Users className="w-10 h-10 text-white" />
                   </div>
                 )}
                 {isOpponentSpeaking && (
@@ -524,7 +524,7 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
                   </div>
                 )}
               </div>
-              <p className="text-[10px] font-medium text-white truncate max-w-[70px]">{battle.opponent_name}</p>
+              <p className="text-xs lg:text-sm font-bold text-white truncate max-w-[100px]">{battle.opponent_name}</p>
               <div className="flex items-center gap-1">
                 <div className="flex -space-x-1">
                   {opponentTopGifters.length > 0 ? opponentTopGifters.slice(0, 3).map((g) => (
