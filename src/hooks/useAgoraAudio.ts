@@ -52,7 +52,7 @@ export const useAgoraAudio = ({
   const volumeIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentSessionRef = useRef<string | null>(null);
 
-  // Cleanup function
+  // Cleanup function with proper error handling
   const cleanup = useCallback(async () => {
     console.log('🧹 Agora audio cleanup');
     
@@ -64,17 +64,28 @@ export const useAgoraAudio = ({
 
     // Stop and close local track
     if (localAudioTrackRef.current) {
-      localAudioTrackRef.current.stop();
-      localAudioTrackRef.current.close();
+      try {
+        localAudioTrackRef.current.stop();
+        localAudioTrackRef.current.close();
+      } catch (e) {
+        console.warn('Error stopping local track:', e);
+      }
       localAudioTrackRef.current = null;
     }
 
-    // Leave channel and cleanup client
+    // Leave channel and cleanup client - handle WS_ABORT errors gracefully
     if (clientRef.current) {
       try {
-        await clientRef.current.leave();
-      } catch (e) {
-        console.warn('Cleanup error:', e);
+        // Only leave if connected
+        if (clientRef.current.connectionState === 'CONNECTED' || 
+            clientRef.current.connectionState === 'CONNECTING') {
+          await clientRef.current.leave();
+        }
+      } catch (e: any) {
+        // Ignore WS_ABORT errors - they happen during cleanup and are harmless
+        if (e?.code !== 'WS_ABORT' && !e?.message?.includes('WS_ABORT')) {
+          console.warn('Cleanup leave error:', e);
+        }
       }
       clientRef.current = null;
     }

@@ -312,84 +312,12 @@ serve(async (req) => {
     console.log("App ID:", AGORA_APP_ID.substring(0, 8) + "...");
     console.log("Certificate length:", AGORA_APP_CERTIFICATE.length);
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Max 4 speakers allowed (host + 3 others) for Agora free plan
-    const MAX_SPEAKERS = 4;
-
-    // Determine if user can publish
-    let canPublish = isHost === true;
-    let speakerSlotsFull = false;
-
-    if (!sessionId.startsWith("demo-")) {
-      // CRITICAL: Check if user is in an active battle - both host and opponent get publisher rights
-      console.log("Checking if user is in a battle for session:", sessionId);
-      
-      const { data: battleParticipant } = await supabase
-        .from("podcast_battles")
-        .select("*")
-        .or(`host_id.eq.${userId},opponent_id.eq.${userId}`)
-        .eq("status", "active")
-        .eq("session_id", sessionId)
-        .maybeSingle();
-
-      if (battleParticipant) {
-        console.log("User is in active battle - granting PUBLISHER rights");
-        canPublish = true;
-      } else {
-        // CRITICAL: Always fetch the LATEST role from database
-        // This ensures promoted speakers get PUBLISHER token
-        console.log("Fetching FRESH role from database for user:", userId);
-        
-        const { data: participant, error: participantError } = await supabase
-          .from("podcast_participants")
-          .select("role")
-          .eq("session_id", sessionId)
-          .eq("user_id", userId)
-          .single();
-
-        if (participantError) {
-          console.log("No participant record found:", participantError.message);
-        } else {
-          console.log("FRESH participant role from DB:", participant?.role);
-        }
-
-        // Count current speakers in the session
-        const { data: currentSpeakers } = await supabase
-          .from("podcast_participants")
-          .select("id, role, user_id")
-          .eq("session_id", sessionId)
-          .in("role", ["host", "co_host", "speaker"]);
-
-        const currentSpeakerCount = currentSpeakers?.length || 0;
-        console.log("Current speaker count:", currentSpeakerCount, "/ Max:", MAX_SPEAKERS);
-
-        if (!isHost && participant) {
-          const isSpeakerRole = ["host", "co_host", "speaker"].includes(participant.role);
-          console.log("User role check - isSpeakerRole:", isSpeakerRole, "role:", participant.role);
-          
-          // Check if speaker slots are full (exclude the user themselves if already counted)
-          const userAlreadyCounted = currentSpeakers?.some(s => s.user_id === userId);
-          const effectiveSpeakerCount = userAlreadyCounted ? currentSpeakerCount : currentSpeakerCount + (isSpeakerRole ? 1 : 0);
-          
-          if (isSpeakerRole && effectiveSpeakerCount > MAX_SPEAKERS) {
-            console.log("Speaker slots full, demoting to listener");
-            speakerSlotsFull = true;
-            canPublish = false;
-          } else {
-            canPublish = isSpeakerRole;
-            console.log("Setting canPublish to:", canPublish);
-          }
-        } else if (isHost) {
-          // Host always gets a slot
-          console.log("Host always gets publisher access");
-          canPublish = true;
-        }
-      }
-    }
+    // CRITICAL FIX: Give ALL authenticated users PUBLISHER rights
+    // Everyone can speak - they control their own mic (mute/unmute)
+    // No promotion needed - everyone joins with mic capability
+    const canPublish = true; // ALL users get publisher rights
+    const speakerSlotsFull = false;
+    const MAX_SPEAKERS = 100; // No practical limit now
 
     // Generate channel name and UID
     const channelName = `podcast-${sessionId}`;

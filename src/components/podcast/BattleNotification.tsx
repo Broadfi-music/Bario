@@ -108,6 +108,38 @@ const BattleNotification = ({ onAccept }: BattleNotificationProps) => {
         .update({ status: 'accepted' })
         .eq('id', invite.id);
 
+      let sessionId = invite.battle?.session_id;
+
+      // CRITICAL: Create session if it doesn't exist
+      if (!sessionId) {
+        console.log('No session_id found, creating one for battle...');
+        const { data: newSession, error: sessionError } = await supabase
+          .from('podcast_sessions')
+          .insert({
+            host_id: invite.from_user_id,
+            title: `Battle Session`,
+            status: 'live',
+            started_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (sessionError || !newSession) {
+          console.error('Failed to create session:', sessionError);
+          toast.error('Failed to create battle session');
+          return;
+        }
+
+        sessionId = newSession.id;
+        console.log('Created new session:', sessionId);
+
+        // Update battle with the new session_id
+        await supabase
+          .from('podcast_battles')
+          .update({ session_id: sessionId })
+          .eq('id', invite.battle_id);
+      }
+
       // Update battle status to active and set start time
       await supabase
         .from('podcast_battles')
@@ -119,17 +151,16 @@ const BattleNotification = ({ onAccept }: BattleNotificationProps) => {
 
       // CRITICAL: Add opponent (accepting user) as speaker in podcast_participants
       // This ensures they get PUBLISHER token for audio
-      if (invite.battle?.session_id) {
-        console.log('Adding opponent as speaker to session:', invite.battle.session_id);
-        
-        await supabase
-          .from('podcast_participants')
-          .insert({
-            session_id: invite.battle.session_id,
-            user_id: user.id,
-            role: 'speaker'
-          });
-      }
+      console.log('Adding opponent as speaker to session:', sessionId);
+      
+      await supabase
+        .from('podcast_participants')
+        .insert({
+          session_id: sessionId,
+          user_id: user.id,
+          role: 'speaker',
+          is_muted: false // MIC ON by default
+        });
 
       toast.success('Battle accepted! Get ready!');
       onAccept(invite.battle_id);
