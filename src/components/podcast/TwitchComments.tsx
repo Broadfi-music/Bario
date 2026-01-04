@@ -29,8 +29,8 @@ interface TwitchCommentsProps {
   isHost?: boolean;
 }
 
-// Message display duration in ms (0.9 seconds)
-const MESSAGE_DISPLAY_DURATION = 900;
+// Message display duration in ms (10 seconds - visible to all)
+const MESSAGE_DISPLAY_DURATION = 10000;
 
 // Emotes like Kick.com
 const EMOTES = [
