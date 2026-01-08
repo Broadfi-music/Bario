@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
 import { toast } from 'sonner';
 import { useHeatmapTracks, useSyncHeatmap, HeatmapTrack } from '@/hooks/useHeatmapData';
 
@@ -49,7 +50,7 @@ const timeFilters = ['Now', '24H', '7D', '30D'];
 const GlobalHeatmap = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { playTrack: globalPlayTrack, pauseTrack: globalPauseTrack, currentTrack: globalCurrentTrack, isPlaying: globalIsPlaying } = useAudioPlayer();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [timeWindow, setTimeWindow] = useState('24H');
   const [watchlist, setWatchlist] = useState<string[]>([]);
@@ -58,8 +59,6 @@ const GlobalHeatmap = () => {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showAllLeaderboard, setShowAllLeaderboard] = useState(false);
   const [marketEvents, setMarketEvents] = useState<MarketEvent[]>([]);
-  const [currentTrack, setCurrentTrack] = useState<HeatmapTrack | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const [selectedGenre, setSelectedGenre] = useState<string>('');
   const [selectedCountry, setSelectedCountry] = useState<string>('GLOBAL');
   
@@ -138,12 +137,12 @@ const GlobalHeatmap = () => {
     });
   };
 
+  // Use global audio player for consistent playback across pages
   const playTrack = (track: HeatmapTrack, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    if (currentTrack?.id === track.id && isPlaying) {
-      audioRef.current?.pause();
-      setIsPlaying(false);
+    if (globalCurrentTrack?.id === track.id && globalIsPlaying) {
+      globalPauseTrack();
       return;
     }
     
@@ -152,12 +151,14 @@ const GlobalHeatmap = () => {
       return;
     }
     
-    if (audioRef.current) {
-      audioRef.current.src = track.previewUrl;
-      audioRef.current.play();
-      setCurrentTrack(track);
-      setIsPlaying(true);
-    }
+    globalPlayTrack({
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      audioUrl: track.previewUrl,
+      coverUrl: track.artwork,
+      type: 'music'
+    });
   };
 
   const handleCountryChange = (country: string) => {
@@ -195,15 +196,6 @@ const GlobalHeatmap = () => {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Hidden Audio Element */}
-      <audio 
-        ref={audioRef} 
-        onEnded={() => setIsPlaying(false)}
-        onError={() => {
-          setIsPlaying(false);
-          toast.error('Failed to play preview');
-        }}
-      />
       
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-sm border-b border-white/5">
@@ -420,7 +412,7 @@ const GlobalHeatmap = () => {
                     onClick={(e) => playTrack(track, e)}
                     className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
                   >
-                    {currentTrack?.id === track.id && isPlaying ? (
+                    {globalCurrentTrack?.id === track.id && globalIsPlaying ? (
                       <Pause className="h-4 w-4 text-white" />
                     ) : (
                       <Play className="h-4 w-4 text-white" />
@@ -478,7 +470,7 @@ const GlobalHeatmap = () => {
                       onClick={(e) => playTrack(event.song, e)}
                       className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
                     >
-                      {currentTrack?.id === event.song.id && isPlaying ? (
+                      {globalCurrentTrack?.id === event.song.id && globalIsPlaying ? (
                         <Pause className="h-3 w-3 text-white" />
                       ) : (
                         <Play className="h-3 w-3 text-white" />
@@ -546,7 +538,7 @@ const GlobalHeatmap = () => {
                         onClick={(e) => playTrack(track, e)}
                         className="opacity-0 group-hover:opacity-100 transition-opacity"
                       >
-                        {currentTrack?.id === track.id && isPlaying ? (
+                        {globalCurrentTrack?.id === track.id && globalIsPlaying ? (
                           <Pause className="h-4 w-4 text-white" />
                         ) : (
                           <Play className="h-4 w-4 text-white" />
@@ -601,7 +593,7 @@ const GlobalHeatmap = () => {
                       onClick={(e) => playTrack(track, e)}
                       className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
                     >
-                      {currentTrack?.id === track.id && isPlaying ? (
+                      {globalCurrentTrack?.id === track.id && globalIsPlaying ? (
                         <Pause className="h-3 w-3 text-white" />
                       ) : (
                         <Play className="h-3 w-3 text-white" />
@@ -638,48 +630,7 @@ const GlobalHeatmap = () => {
           </div>
         </section>
       </main>
-
-      {/* Fixed Audio Player */}
-      {currentTrack && (
-        <div className="fixed bottom-0 left-0 right-0 bg-black/95 border-t border-white/10 p-3 z-50">
-          <div className="max-w-7xl mx-auto flex items-center gap-4">
-            <img src={currentTrack.artwork} alt="" className="w-12 h-12 rounded-lg object-cover" />
-            <button
-              onClick={() => {
-                if (isPlaying) {
-                  audioRef.current?.pause();
-                  setIsPlaying(false);
-                } else {
-                  audioRef.current?.play();
-                  setIsPlaying(true);
-                }
-              }}
-              className="w-10 h-10 rounded-full bg-[#4ade80] flex items-center justify-center flex-shrink-0"
-            >
-              {isPlaying ? <Pause className="h-5 w-5 text-black" /> : <Play className="h-5 w-5 text-black" />}
-            </button>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-white truncate">{currentTrack.title}</p>
-              <p className="text-xs text-white/50 truncate">{currentTrack.artist}</p>
-            </div>
-            <div className="hidden sm:flex items-center gap-2">
-              {currentTrack.spotifyUrl && (
-                <a href={currentTrack.spotifyUrl} target="_blank" rel="noopener noreferrer" className="text-[#1DB954] hover:scale-110 transition-transform">
-                  <SpotifyIcon />
-                </a>
-              )}
-              {currentTrack.deezerUrl && (
-                <a href={currentTrack.deezerUrl} target="_blank" rel="noopener noreferrer" className="text-[#FEAA2D] hover:scale-110 transition-transform">
-                  <DeezerIcon />
-                </a>
-              )}
-            </div>
-            <button onClick={() => { setCurrentTrack(null); setIsPlaying(false); audioRef.current?.pause(); }}>
-              <X className="h-4 w-4 text-white/50 hover:text-white" />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Audio player handled by GlobalAudioPlayer component */}
     </div>
   );
 };

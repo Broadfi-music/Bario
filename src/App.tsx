@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import GlobalAudioPlayer from "@/components/GlobalAudioPlayer";
+import GlobalBattleNotification from "@/components/podcast/GlobalBattleNotification";
 
 import Index from "@/pages/Index";
 import Auth from "@/pages/Auth";
@@ -43,12 +44,15 @@ const App = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <GlobalBattleNotification />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/advanced" element={<Advanced />} />
+                <Route path="/heatmap" element={<GlobalHeatmap />} />
                 <Route path="/global-heatmap" element={<GlobalHeatmap />} />
                 <Route path="/global-heatmap/:id" element={<HeatmapDetail />} />
+                <Route path="/heatmap/:id" element={<HeatmapDetail />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/dashboard/settings" element={<DashboardSettings />} />
                 <Route path="/dashboard/profile" element={<DashboardProfile />} />
