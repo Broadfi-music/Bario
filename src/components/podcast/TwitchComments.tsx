@@ -101,10 +101,10 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
         .select('*')
         .eq('session_id', sessionId)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(50);
       
       if (data) {
-        // Reverse to show oldest first
+        // Reverse to show oldest first, keep all messages visible
         setComments(data.reverse() as Comment[]);
       }
     };
@@ -113,7 +113,7 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
 
     // Subscribe to ALL new comments - everyone should see everyone's messages
     const channel = supabase
-      .channel(`comments-realtime-${sessionId}`)
+      .channel(`chat-${sessionId}`)
       .on(
         'postgres_changes',
         {
@@ -124,33 +124,33 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
         },
         (payload) => {
           const newComment = payload.new as Comment;
-          console.log('💬 New comment received:', newComment.content);
+          console.log('💬 New comment received by all users:', newComment.content);
           
           // Add to comments - remove local duplicate if exists
           setComments(prev => {
+            // Check if this comment already exists
+            if (prev.some(c => c.id === newComment.id)) {
+              return prev;
+            }
             // Remove any local version of this comment
             const filtered = prev.filter(c => 
               !(c.id.startsWith('local-') && 
                 c.user_id === newComment.user_id && 
                 c.content === newComment.content)
             );
-            return [...filtered.slice(-49), newComment];
+            // Keep last 100 messages
+            return [...filtered.slice(-99), newComment];
           });
-          
-          // Schedule fadeout and removal after display duration
-          setTimeout(() => {
-            setComments(prev => prev.map(c => 
-              c.id === newComment.id ? { ...c, fadeOut: true } : c
-            ));
-          }, MESSAGE_DISPLAY_DURATION - 200);
-          
-          setTimeout(() => {
-            setComments(prev => prev.filter(c => c.id !== newComment.id));
-          }, MESSAGE_DISPLAY_DURATION);
         }
       )
-      .subscribe((status) => {
-        console.log('💬 Chat subscription status:', status);
+      .subscribe((status, err) => {
+        console.log('💬 Chat subscription status:', status, err);
+        if (status === 'CHANNEL_ERROR') {
+          console.log('Retrying chat subscription...');
+          setTimeout(() => {
+            channel.subscribe();
+          }, 2000);
+        }
       });
 
     return () => {
@@ -158,15 +158,16 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
     };
   }, [sessionId]);
 
-  // Cleanup interval to remove any stale comments
+  // Keep messages visible longer - only remove very old ones (5 minutes)
   useEffect(() => {
     const cleanup = setInterval(() => {
       setComments(prev => prev.filter(c => {
-        if (!c.created_at || c.id.startsWith('demo-')) return true;
+        if (!c.created_at || c.id.startsWith('demo-') || c.id.startsWith('local-')) return true;
         const age = Date.now() - new Date(c.created_at).getTime();
-        return age < MESSAGE_DISPLAY_DURATION + 500;
+        // Keep messages for 5 minutes instead of 10 seconds
+        return age < 300000;
       }));
-    }, 500);
+    }, 30000); // Check every 30 seconds
     
     return () => clearInterval(cleanup);
   }, []);
@@ -193,21 +194,10 @@ const sendComment = async (content: string, isEmoji = false) => {
       created_at: new Date().toISOString(),
     };
 
-    // Add comment immediately and show it
+    // Add comment immediately - visible to sender
     setComments(prev => [...prev, newLocalComment]);
     setNewComment('');
     setShowEmojis(false);
-
-    // Schedule fadeout and removal after 0.9 seconds
-    setTimeout(() => {
-      setComments(prev => prev.map(c => 
-        c.id === commentId ? { ...c, fadeOut: true } : c
-      ));
-    }, MESSAGE_DISPLAY_DURATION - 200);
-    
-    setTimeout(() => {
-      setComments(prev => prev.filter(c => c.id !== commentId));
-    }, MESSAGE_DISPLAY_DURATION);
 
     // For demo sessions, don't save to database
     if (isDemoSession(sessionId)) {
@@ -221,6 +211,7 @@ const sendComment = async (content: string, isEmoji = false) => {
       return;
     }
 
+    // Save to database - realtime subscription will broadcast to all users
     const { error } = await supabase.from('podcast_comments').insert({
       session_id: sessionId,
       user_id: user.id,

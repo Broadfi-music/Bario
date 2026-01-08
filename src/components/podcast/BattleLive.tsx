@@ -91,14 +91,21 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
   // Track if we've initiated audio connection
   const audioConnectionRef = useRef(false);
 
-  // Connect audio when battle is active
+  // Auto-connect audio immediately for participants (no need to wait for 'active' status)
   useEffect(() => {
-    const shouldConnect = battle.session_id && user && isParticipant && battleStatus === 'active';
+    // Connect as soon as we have a session and are a participant
+    const shouldConnect = battle.session_id && user && isParticipant;
     
     if (shouldConnect && !audioConnectionRef.current) {
-      console.log('🎙️ Connecting audio for battle participant');
+      console.log('🎙️ Auto-connecting audio for battle participant...');
       audioConnectionRef.current = true;
-      connectAudio();
+      
+      // Small delay to ensure component is fully mounted
+      const connectTimeout = setTimeout(() => {
+        connectAudio();
+      }, 500);
+      
+      return () => clearTimeout(connectTimeout);
     }
     
     return () => {
@@ -109,7 +116,7 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
         disconnectAudio();
       }
     };
-  }, [battle.session_id, user?.id, isParticipant, battleStatus]);
+  }, [battle.session_id, user?.id, isParticipant]);
 
   // Calculate progress bar percentages
   const totalScore = hostScore + opponentScore || 1;
@@ -333,41 +340,30 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     setShowGiftModal(true);
   };
 
-  // Handle leave battle
+  // Handle leave battle - end battle and session immediately
   const handleLeave = async () => {
-    if (isHost && battleStatus === 'active' && timeRemaining > 0) {
+    // End the battle immediately
+    await supabase
+      .from('podcast_battles')
+      .update({
+        status: 'ended',
+        ended_at: new Date().toISOString()
+      })
+      .eq('id', battle.id);
+
+    // End the session too
+    if (battle.session_id) {
       await supabase
-        .from('podcast_battles')
+        .from('podcast_sessions')
         .update({
-          host_id: battle.opponent_id,
-          opponent_id: null,
-          status: 'pending'
+          status: 'ended',
+          ended_at: new Date().toISOString()
         })
-        .eq('id', battle.id);
-      
-      const { data: activeUsers } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .neq('user_id', battle.opponent_id)
-        .neq('user_id', user?.id)
-        .limit(10);
-      
-      if (activeUsers && activeUsers.length > 0) {
-        const randomUser = activeUsers[Math.floor(Math.random() * activeUsers.length)];
-        await supabase
-          .from('battle_invites')
-          .insert({
-            battle_id: battle.id,
-            from_user_id: battle.opponent_id,
-            to_user_id: randomUser.user_id,
-            status: 'pending'
-          });
-      }
-      
-      toast.info('You left the battle. Challenger promoted to host.');
+        .eq('id', battle.session_id);
     }
     
     disconnectAudio();
+    toast.info('You left the battle.');
     onClose();
   };
 
