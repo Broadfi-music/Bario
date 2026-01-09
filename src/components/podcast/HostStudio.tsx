@@ -303,6 +303,31 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     }
 
     try {
+      // Check for existing live session to prevent duplicates
+      const { data: existingSession } = await supabase
+        .from('podcast_sessions')
+        .select('id, title')
+        .eq('host_id', user.id)
+        .eq('status', 'live')
+        .is('ended_at', null)
+        .maybeSingle();
+      
+      if (existingSession) {
+        console.log('🔄 Using existing live session:', existingSession.id);
+        setSessionId(existingSession.id);
+        setTitle(existingSession.title);
+        setIsLive(true);
+        subscribeToUpdates(existingSession.id);
+        
+        // Connect to audio for existing session
+        if (!isAudioConnected && !isAudioConnecting) {
+          await connectAudio(existingSession.id);
+        }
+        
+        toast.info('Reconnected to your existing live session');
+        return;
+      }
+
       const { data, error } = await supabase
         .from('podcast_sessions')
         .insert({
