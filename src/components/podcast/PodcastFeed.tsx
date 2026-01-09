@@ -180,8 +180,13 @@ const PodcastFeed = () => {
         event: 'UPDATE', 
         schema: 'public', 
         table: 'podcast_sessions' 
-      }, (payload) => {
+      }, (payload: any) => {
         console.log('Session updated:', payload);
+        // Immediately remove ended sessions from UI
+        if (payload.new.status === 'ended' || payload.new.ended_at) {
+          console.log('Session ended, removing from state:', payload.new.id);
+          setLiveHosts(prev => prev.filter(h => h.id !== payload.new.id));
+        }
         fetchLiveSessions();
       })
       .on('postgres_changes', { 
@@ -334,11 +339,16 @@ const PodcastFeed = () => {
     console.log('Fetching live sessions...');
     
     try {
-      // Step 1: Fetch live sessions
+      // Calculate staleness threshold - only show sessions from last 2 hours
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+      
+      // Step 1: Fetch live sessions with staleness filter
       const { data: sessions, error: sessionsError } = await supabase
         .from('podcast_sessions')
         .select('*')
         .eq('status', 'live')
+        .is('ended_at', null) // Extra safety - only sessions that haven't ended
+        .gte('created_at', twoHoursAgo) // Only sessions from last 2 hours
         .order('listener_count', { ascending: false });
 
       // Handle JWT errors with retry
@@ -349,6 +359,7 @@ const PodcastFeed = () => {
           await supabase.auth.refreshSession();
           return fetchLiveSessions(retryCount + 1);
         }
+        setLiveHosts([]); // Clear state on error
         return;
       }
 
@@ -368,25 +379,39 @@ const PodcastFeed = () => {
 
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
-      // Step 3: Combine data
-      const realSessions = sessions.map(s => {
-        const profile = profileMap.get(s.host_id);
-        return {
-          id: s.id,
-          host_id: s.host_id,
-          title: s.title,
-          description: s.description || '',
-          listener_count: s.listener_count || 0,
-          host_name: profile?.full_name || profile?.username || 'Host',
-          host_avatar: profile?.avatar_url || null,
-          category: 'Music',
-          cover_image_url: s.cover_image_url
-        };
-      });
+      // Step 3: Combine data and filter out any remaining stale sessions
+      const realSessions = sessions
+        .filter(s => {
+          // Extra client-side filter for sessions older than 1 hour without activity
+          if (s.started_at) {
+            const startedAt = new Date(s.started_at).getTime();
+            const oneHourAgo = Date.now() - 60 * 60 * 1000;
+            if (startedAt < oneHourAgo) {
+              console.log('Filtering out stale session:', s.id, s.title);
+              return false;
+            }
+          }
+          return true;
+        })
+        .map(s => {
+          const profile = profileMap.get(s.host_id);
+          return {
+            id: s.id,
+            host_id: s.host_id,
+            title: s.title,
+            description: s.description || '',
+            listener_count: s.listener_count || 0,
+            host_name: profile?.full_name || profile?.username || 'Host',
+            host_avatar: profile?.avatar_url || null,
+            category: 'Music',
+            cover_image_url: s.cover_image_url
+          };
+        });
       
       setLiveHosts(realSessions);
     } catch (err) {
       console.error('Unexpected error fetching live sessions:', err);
+      setLiveHosts([]); // Clear state on error
     }
   };
 
