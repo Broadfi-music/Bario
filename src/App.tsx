@@ -29,6 +29,7 @@ import Podcasts from "@/pages/Podcasts";
 import PodcastHost from "@/pages/PodcastHost";
 import HostProfile from "@/pages/HostProfile";
 import BarioMusic from "@/pages/BarioMusic";
+import BarioMusicDetail from "@/pages/BarioMusicDetail";
 import Rewards from "@/pages/Rewards";
 import ThreeStrike from "@/pages/ThreeStrike";
 import NotFound from "@/pages/NotFound";
@@ -69,6 +70,7 @@ const App = () => {
                 <Route path="/podcast-host/:hostId" element={<PodcastHost />} />
                 <Route path="/host/:hostId" element={<HostProfile />} />
                 <Route path="/bario-music" element={<BarioMusic />} />
+                <Route path="/bario-music/:id" element={<BarioMusicDetail />} />
                 <Route path="/dashboard/rewards" element={<Rewards />} />
                 <Route path="/three-strike" element={<ThreeStrike />} />
                 <Route path="/pricing" element={<Pricing />} />

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Search, Star, TrendingUp, TrendingDown, ExternalLink, Filter, Clock,
-  Play, Pause, Users, ChevronRight, Sparkles, Zap, ChevronLeft, Volume2, X, Flame
+  Play, Pause, Users, ChevronRight, Sparkles, Zap, ChevronLeft, Volume2, X, Flame, Globe
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -304,6 +304,15 @@ const GlobalHeatmap = () => {
           >
             <Flame className="h-3 w-3 mr-1" />
             Three Strike
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate('/global-heatmap')}
+            className="flex-1 text-[9px] h-7 border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20"
+          >
+            <Globe className="h-3 w-3 mr-1" />
+            Global
           </Button>
           <Button
             size="sm"

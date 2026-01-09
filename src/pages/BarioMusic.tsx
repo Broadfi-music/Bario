@@ -261,6 +261,7 @@ const BarioMusic = () => {
             {filteredUploads.slice(0, 8).map((track) => (
               <div
                 key={track.id}
+                onClick={() => navigate(`/bario-music/${track.id}`)}
                 className="flex-shrink-0 flex items-center gap-2 sm:gap-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-xl p-2 sm:p-3 cursor-pointer transition-all min-w-[180px] sm:min-w-[220px] group"
               >
                 <div className="relative">
@@ -327,6 +328,7 @@ const BarioMusic = () => {
               {filteredUploads.map((track) => (
                 <div
                   key={track.id}
+                  onClick={() => navigate(`/bario-music/${track.id}`)}
                   className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-xl p-3 cursor-pointer transition-all group"
                 >
                   <div className="relative aspect-square mb-2">
