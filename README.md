@@ -2,9 +2,6 @@
 
 A social music platform for creators with live streaming, battles, and community features.
 
-## Project info
-
-**URL**: https://lovable.dev/projects/1ff696be-2053-4114-9595-c26ec1f36f30
 
 ---
 
@@ -285,14 +282,3 @@ This project is built with:
 - Supabase (Database, Auth, Edge Functions, Realtime)
 - Agora (Real-time audio)
 
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/1ff696be-2053-4114-9595-c26ec1f36f30) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
