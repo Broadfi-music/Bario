@@ -224,15 +224,9 @@ const channel = supabase
 
 ---
 
-## How can I edit this code?
+## 
 
-There are several ways of editing your application.
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/1ff696be-2053-4114-9595-c26ec1f36f30) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
 
 **Use your preferred IDE**
 
