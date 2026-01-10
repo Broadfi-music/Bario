@@ -243,8 +243,13 @@ export function useTrackDetail(trackId: string | undefined) {
     
     try {
       setLoading(true);
+      setError(null);
+      
+      // Encode track ID for URL safety - handles both numeric IDs and search-result IDs
+      const encodedId = encodeURIComponent(trackId);
+      
       const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/heatmap-track-detail?id=${trackId}`,
+        `${SUPABASE_URL}/functions/v1/heatmap-track-detail?id=${encodedId}`,
         {
           method: 'GET',
           headers: {
@@ -255,7 +260,8 @@ export function useTrackDetail(trackId: string | undefined) {
       );
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.details || errorData.error || `HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();

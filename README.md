@@ -16,6 +16,14 @@ All API endpoints are deployed as serverless edge functions. Base URL: `https://
 
 | Function | Method | Description | Auth Required |
 |----------|--------|-------------|---------------|
+| `/bario-api?endpoint=tracks` | GET | Get trending tracks with search/filter | No |
+| `/bario-api?endpoint=track&id=xxx` | GET | Get single track details | No |
+| `/bario-api?endpoint=uploads` | GET | Get Bario Music user uploads | No |
+| `/bario-api?endpoint=upload&id=xxx` | GET | Get single upload details | No |
+| `/bario-api?endpoint=live` | GET | Get live podcast sessions | No |
+| `/bario-api?endpoint=creators` | GET | Get top creators | No |
+| `/bario-api?endpoint=coin-packages` | GET | Get available coin packages | No |
+| `/bario-api?endpoint=health` | GET | API health check | No |
 | `/agora-token` | POST | Generate Agora RTC token for audio rooms | Yes |
 | `/remix` | POST | AI-powered music remix processing | Yes |
 | `/music-search` | POST | Search music across multiple platforms | No |

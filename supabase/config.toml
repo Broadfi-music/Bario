@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.agora-token]
 verify_jwt = false
+
+[functions.bario-api]
+verify_jwt = false

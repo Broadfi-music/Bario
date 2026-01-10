@@ -49,6 +49,111 @@ export type Database = {
           },
         ]
       }
+      coin_packages: {
+        Row: {
+          bonus_coins: number
+          coins: number
+          created_at: string
+          id: string
+          is_active: boolean
+          is_popular: boolean
+          name: string
+          price_usd: number
+        }
+        Insert: {
+          bonus_coins?: number
+          coins: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          name: string
+          price_usd: number
+        }
+        Update: {
+          bonus_coins?: number
+          coins?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          name?: string
+          price_usd?: number
+        }
+        Relationships: []
+      }
+      coin_transactions: {
+        Row: {
+          amount: number
+          coins: number
+          created_at: string
+          description: string | null
+          id: string
+          reference_id: string | null
+          status: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          coins: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          status?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          coins?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          status?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      creator_earnings: {
+        Row: {
+          created_at: string
+          id: string
+          pending_earnings_usd: number
+          total_coins_received: number
+          total_earnings_usd: number
+          updated_at: string
+          user_id: string
+          withdrawal_threshold_usd: number
+          withdrawn_earnings_usd: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pending_earnings_usd?: number
+          total_coins_received?: number
+          total_earnings_usd?: number
+          updated_at?: string
+          user_id: string
+          withdrawal_threshold_usd?: number
+          withdrawn_earnings_usd?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pending_earnings_usd?: number
+          total_coins_received?: number
+          total_earnings_usd?: number
+          updated_at?: string
+          user_id?: string
+          withdrawal_threshold_usd?: number
+          withdrawn_earnings_usd?: number
+        }
+        Relationships: []
+      }
       follows: {
         Row: {
           created_at: string
@@ -1010,6 +1115,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_coins: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          total_earned: number
+          total_purchased: number
+          total_spent: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          total_earned?: number
+          total_purchased?: number
+          total_spent?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          total_earned?: number
+          total_purchased?: number
+          total_spent?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_favorites: {
         Row: {
           artist_name: string
@@ -1166,6 +1304,45 @@ export type Database = {
           updated_at?: string
           user_id?: string
           youtube_url?: string | null
+        }
+        Relationships: []
+      }
+      withdrawal_requests: {
+        Row: {
+          account_name: string | null
+          account_number: string | null
+          amount_usd: number
+          bank_name: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          processed_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          account_name?: string | null
+          account_number?: string | null
+          amount_usd: number
+          bank_name?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          account_name?: string | null
+          account_number?: string | null
+          amount_usd?: number
+          bank_name?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          status?: string
+          user_id?: string
         }
         Relationships: []
       }

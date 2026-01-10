@@ -305,15 +305,23 @@ const GlobalHeatmap = () => {
             <Flame className="h-3 w-3 mr-1" />
             Three Strike
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => navigate('/global-heatmap')}
-            className="flex-1 text-[9px] h-7 border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20"
-          >
-            <Globe className="h-3 w-3 mr-1" />
-            Global
-          </Button>
+          
+          {/* Top Chart Dropdown */}
+          <div className="relative flex-1">
+            <select
+              value={selectedCountry}
+              onChange={(e) => handleCountryChange(e.target.value)}
+              className="w-full appearance-none bg-green-500/10 border border-green-500/30 text-green-400 text-[9px] h-7 px-2 pr-6 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 cursor-pointer"
+            >
+              {countries.map((country) => (
+                <option key={country.code} value={country.code} className="bg-black text-white">
+                  {country.name}
+                </option>
+              ))}
+            </select>
+            <TrendingUp className="absolute right-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-green-400 pointer-events-none" />
+          </div>
+          
           <Button
             size="sm"
             variant="outline"
