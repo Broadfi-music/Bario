@@ -124,7 +124,7 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const trackId = url.searchParams.get('id');
+    let trackId = url.searchParams.get('id');
     
     if (!trackId) {
       return new Response(JSON.stringify({ error: 'Track ID required' }), {
@@ -133,34 +133,47 @@ serve(async (req) => {
       });
     }
     
+    // Decode if URL-encoded
+    trackId = decodeURIComponent(trackId);
+    
     console.log(`Fetching track details for: ${trackId}`);
     
-    // Try to get track from Deezer
-    let deezerTrack = await getDeezerTrack(trackId);
+    // Try to get track from Deezer by ID first
+    let deezerTrack = null;
+    
+    // Check if it's a numeric Deezer ID
+    if (/^\d+$/.test(trackId)) {
+      deezerTrack = await getDeezerTrack(trackId);
+    }
     
     // If not found by ID, try searching
     if (!deezerTrack) {
       console.log('Track not found by ID, trying search...');
-      // The ID might be encoded, try decoding
+      
+      // Try to decode base64 if it looks encoded
+      let searchQuery = trackId;
       try {
         const decoded = atob(trackId);
-        const searchResults = await searchDeezer(decoded, 1);
-        if (searchResults.length > 0) {
-          deezerTrack = await getDeezerTrack(String(searchResults[0].id));
+        if (decoded && decoded.length > 0) {
+          searchQuery = decoded;
         }
       } catch (e) {
-        // Try searching with the ID as-is
-        const searchResults = await searchDeezer(trackId, 1);
-        if (searchResults.length > 0) {
-          deezerTrack = await getDeezerTrack(String(searchResults[0].id));
-        }
+        // Not base64, use as-is
+      }
+      
+      // Search Deezer with the query
+      const searchResults = await searchDeezer(searchQuery, 5);
+      
+      if (searchResults.length > 0) {
+        // Get the first result's full details
+        deezerTrack = await getDeezerTrack(String(searchResults[0].id));
       }
     }
     
     if (!deezerTrack) {
       return new Response(JSON.stringify({ 
         error: 'Track not found',
-        details: 'Could not find track in Deezer database'
+        details: 'Could not find track. Try searching by song title instead of artist name.'
       }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

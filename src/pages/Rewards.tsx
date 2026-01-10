@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, ChevronLeft, DollarSign, Users, CreditCard, Copy, ExternalLink, TrendingUp, Wallet, Award, Upload } from 'lucide-react';
+import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, ChevronLeft, DollarSign, Users, CreditCard, Copy, ExternalLink, TrendingUp, Wallet, Award, Upload, Coins, ShoppingCart, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,25 +11,31 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
+interface CoinPackage {
+  id: string;
+  name: string;
+  coins: number;
+  price_usd: number;
+  bonus_coins: number;
+  is_popular: boolean;
+}
+
 interface EarningsData {
-  totalEarnings: number;
-  pendingEarnings: number;
-  withdrawnEarnings: number;
-  giftEarnings: number;
-  subscriptionEarnings: number;
-  referralEarnings: number;
-  subscribers: number;
-  referrals: number;
-  giftsReceived: number;
+  totalCoinsReceived: number;
+  totalEarningsUsd: number;
+  pendingEarningsUsd: number;
+  withdrawnEarningsUsd: number;
+  withdrawalThreshold: number;
 }
 
 interface Transaction {
   id: string;
-  type: 'gift' | 'subscription' | 'referral' | 'withdrawal';
+  type: string;
   amount: number;
+  coins: number;
   description: string;
-  date: string;
-  status: 'completed' | 'pending';
+  created_at: string;
+  status: string;
 }
 
 const Rewards = () => {
@@ -37,22 +43,21 @@ const Rewards = () => {
   const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [buyCoinsOpen, setBuyCoinsOpen] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<CoinPackage | null>(null);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [bankDetails, setBankDetails] = useState({ bankName: '', accountNumber: '', accountName: '' });
   const [dataLoading, setDataLoading] = useState(true);
   
+  const [userCoins, setUserCoins] = useState(0);
+  const [coinPackages, setCoinPackages] = useState<CoinPackage[]>([]);
   const [earnings, setEarnings] = useState<EarningsData>({
-    totalEarnings: 0,
-    pendingEarnings: 0,
-    withdrawnEarnings: 0,
-    giftEarnings: 0,
-    subscriptionEarnings: 0,
-    referralEarnings: 0,
-    subscribers: 0,
-    referrals: 0,
-    giftsReceived: 0,
+    totalCoinsReceived: 0,
+    totalEarningsUsd: 0,
+    pendingEarningsUsd: 0,
+    withdrawnEarningsUsd: 0,
+    withdrawalThreshold: 100
   });
-
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   const referralLink = user ? `https://bario.app/ref/${user.id.slice(0, 8)}` : '';
@@ -65,71 +70,75 @@ const Rewards = () => {
 
   useEffect(() => {
     if (user) {
-      fetchEarningsData();
+      fetchData();
     }
   }, [user]);
 
-  const fetchEarningsData = async () => {
+  const fetchData = async () => {
     if (!user) return;
     setDataLoading(true);
     
     try {
-      // Fetch gifts received
-      const { data: giftsData } = await supabase
-        .from('podcast_gifts')
-        .select('points_value')
-        .eq('recipient_id', user.id);
+      // Fetch coin packages
+      const { data: packages } = await supabase
+        .from('coin_packages')
+        .select('*')
+        .eq('is_active', true)
+        .order('coins', { ascending: true });
       
-      const giftEarnings = (giftsData || []).reduce((sum, g) => sum + (g.points_value * 0.01), 0);
-      
-      // Fetch followers count (as subscribers proxy)
-      const { count: subscriberCount } = await supabase
-        .from('follows')
-        .select('*', { count: 'exact', head: true })
-        .eq('following_id', user.id);
-      
-      // Calculate simulated earnings
-      const subscriptionEarnings = (subscriberCount || 0) * 0.50;
-      const referralEarnings = 0; // Will be tracked separately
-      const totalEarnings = giftEarnings + subscriptionEarnings + referralEarnings;
-      
-      setEarnings({
-        totalEarnings,
-        pendingEarnings: totalEarnings * 0.3,
-        withdrawnEarnings: 0,
-        giftEarnings,
-        subscriptionEarnings,
-        referralEarnings,
-        subscribers: subscriberCount || 0,
-        referrals: 0,
-        giftsReceived: giftsData?.length || 0,
-      });
+      if (packages) {
+        setCoinPackages(packages as CoinPackage[]);
+      }
 
-      // Create sample transactions
-      const txns: Transaction[] = [];
-      if (giftsData && giftsData.length > 0) {
-        txns.push({
-          id: '1',
-          type: 'gift',
-          amount: giftEarnings,
-          description: `${giftsData.length} gifts received`,
-          date: new Date().toISOString(),
-          status: 'completed',
+      // Fetch user coins
+      let { data: coinsData } = await supabase
+        .from('user_coins')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (!coinsData) {
+        // Create initial coin record
+        await supabase.from('user_coins').insert({
+          user_id: user.id,
+          balance: 100 // Free starter coins
+        });
+        setUserCoins(100);
+      } else {
+        setUserCoins(coinsData.balance);
+      }
+
+      // Fetch creator earnings
+      const { data: earningsData } = await supabase
+        .from('creator_earnings')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (earningsData) {
+        const ed = earningsData as any;
+        setEarnings({
+          totalCoinsReceived: ed.total_coins_received || 0,
+          totalEarningsUsd: parseFloat(String(ed.total_earnings_usd || 0)),
+          pendingEarningsUsd: parseFloat(String(ed.pending_earnings_usd || 0)),
+          withdrawnEarningsUsd: parseFloat(String(ed.withdrawn_earnings_usd || 0)),
+          withdrawalThreshold: parseFloat(String(ed.withdrawal_threshold_usd || 100))
         });
       }
-      if (subscriberCount && subscriberCount > 0) {
-        txns.push({
-          id: '2',
-          type: 'subscription',
-          amount: subscriptionEarnings,
-          description: `${subscriberCount} subscriber earnings`,
-          date: new Date().toISOString(),
-          status: 'pending',
-        });
+
+      // Fetch recent transactions
+      const { data: txns } = await supabase
+        .from('coin_transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (txns) {
+        setTransactions(txns as Transaction[]);
       }
-      setTransactions(txns);
     } catch (error) {
-      console.error('Error fetching earnings:', error);
+      console.error('Error fetching data:', error);
     } finally {
       setDataLoading(false);
     }
@@ -140,13 +149,59 @@ const Rewards = () => {
     toast.success('Referral link copied!');
   };
 
+  const handleBuyCoins = async (pkg: CoinPackage) => {
+    if (!user) return;
+    
+    // Simulate payment processing
+    toast.loading('Processing payment...', { id: 'payment' });
+    
+    try {
+      const totalCoins = pkg.coins + pkg.bonus_coins;
+      
+      // Update user coins
+      const { error: coinError } = await supabase
+        .from('user_coins')
+        .update({ 
+          balance: userCoins + totalCoins,
+          total_purchased: userCoins + totalCoins
+        })
+        .eq('user_id', user.id);
+
+      if (coinError) throw coinError;
+
+      // Record transaction
+      await supabase.from('coin_transactions').insert({
+        user_id: user.id,
+        type: 'purchase',
+        amount: pkg.price_usd,
+        coins: totalCoins,
+        description: `Purchased ${pkg.name} package (${pkg.coins} + ${pkg.bonus_coins} bonus coins)`
+      });
+
+      setUserCoins(prev => prev + totalCoins);
+      setBuyCoinsOpen(false);
+      toast.success(`Successfully purchased ${totalCoins} coins!`, { id: 'payment' });
+      fetchData();
+    } catch (error) {
+      console.error('Purchase error:', error);
+      toast.error('Failed to process payment', { id: 'payment' });
+    }
+  };
+
   const handleWithdraw = async () => {
-    if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
+    if (!user) return;
+
+    const amount = parseFloat(withdrawAmount);
+    if (isNaN(amount) || amount <= 0) {
       toast.error('Enter a valid amount');
       return;
     }
-    if (parseFloat(withdrawAmount) > earnings.pendingEarnings) {
+    if (amount > earnings.pendingEarningsUsd) {
       toast.error('Insufficient balance');
+      return;
+    }
+    if (earnings.pendingEarningsUsd < earnings.withdrawalThreshold) {
+      toast.error(`Minimum withdrawal is $${earnings.withdrawalThreshold}`);
       return;
     }
     if (!bankDetails.bankName || !bankDetails.accountNumber || !bankDetails.accountName) {
@@ -154,10 +209,41 @@ const Rewards = () => {
       return;
     }
     
-    // Simulate withdrawal processing
-    toast.success(`Withdrawal of $${withdrawAmount} initiated. Processing in 2-3 business days.`);
-    setWithdrawOpen(false);
-    setWithdrawAmount('');
+    try {
+      // Create withdrawal request
+      await supabase.from('withdrawal_requests').insert({
+        user_id: user.id,
+        amount_usd: amount,
+        bank_name: bankDetails.bankName,
+        account_number: bankDetails.accountNumber,
+        account_name: bankDetails.accountName
+      });
+
+      // Update earnings
+      await supabase
+        .from('creator_earnings')
+        .update({
+          pending_earnings_usd: earnings.pendingEarningsUsd - amount
+        })
+        .eq('user_id', user.id);
+
+      // Record transaction
+      await supabase.from('coin_transactions').insert({
+        user_id: user.id,
+        type: 'withdrawal',
+        amount: amount,
+        coins: 0,
+        description: `Withdrawal request for $${amount.toFixed(2)}`
+      });
+
+      toast.success(`Withdrawal of $${amount.toFixed(2)} initiated. Processing in 2-3 business days.`);
+      setWithdrawOpen(false);
+      setWithdrawAmount('');
+      fetchData();
+    } catch (error) {
+      console.error('Withdrawal error:', error);
+      toast.error('Failed to process withdrawal');
+    }
   };
 
   const sidebarItems = [
@@ -206,65 +292,85 @@ const Rewards = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')} className="h-8 w-8"><ChevronLeft className="h-5 w-5" /></Button>
             <div>
               <h1 className="text-lg font-bold text-foreground">Reward & Earn</h1>
-              <p className="text-xs text-muted-foreground">Track your earnings and withdraw</p>
+              <p className="text-xs text-muted-foreground">Buy coins to gift creators & earn money</p>
             </div>
           </div>
 
-          {/* Earnings Overview Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            <Card className="p-4 bg-gradient-to-br from-green-500/10 to-emerald-500/5 border-green-500/20">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-2 bg-green-500/20 rounded-lg">
-                  <DollarSign className="h-4 w-4 text-green-500" />
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground">Total Earnings</p>
-              <p className="text-xl font-bold text-foreground">{formatCurrency(earnings.totalEarnings)}</p>
-            </Card>
-
+          {/* Coin Balance & Buy Coins */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
             <Card className="p-4 bg-gradient-to-br from-yellow-500/10 to-orange-500/5 border-yellow-500/20">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-2 bg-yellow-500/20 rounded-lg">
-                  <Wallet className="h-4 w-4 text-yellow-500" />
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-yellow-500/20 rounded-lg">
+                    <Coins className="h-5 w-5 text-yellow-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Your Coins</p>
+                    <p className="text-2xl font-bold text-foreground">{userCoins.toLocaleString()}</p>
+                  </div>
                 </div>
+                <Button 
+                  onClick={() => setBuyCoinsOpen(true)}
+                  className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white"
+                >
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  Buy Coins
+                </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Available to Withdraw</p>
-              <p className="text-xl font-bold text-foreground">{formatCurrency(earnings.pendingEarnings)}</p>
+              <p className="text-[10px] text-muted-foreground">
+                Use coins to gift your favorite creators during live streams
+              </p>
             </Card>
 
-            <Card className="p-4 bg-gradient-to-br from-purple-500/10 to-pink-500/5 border-purple-500/20">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-2 bg-purple-500/20 rounded-lg">
-                  <Gift className="h-4 w-4 text-purple-500" />
+            <Card className="p-4 bg-gradient-to-br from-green-500/10 to-emerald-500/5 border-green-500/20">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-green-500/20 rounded-lg">
+                    <DollarSign className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Creator Earnings</p>
+                    <p className="text-2xl font-bold text-foreground">{formatCurrency(earnings.pendingEarningsUsd)}</p>
+                  </div>
                 </div>
+                <Button 
+                  onClick={() => setWithdrawOpen(true)}
+                  disabled={earnings.pendingEarningsUsd < earnings.withdrawalThreshold}
+                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Withdraw
+                </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Gift Earnings</p>
-              <p className="text-xl font-bold text-foreground">{formatCurrency(earnings.giftEarnings)}</p>
-              <p className="text-[10px] text-muted-foreground">{earnings.giftsReceived} gifts received</p>
-            </Card>
-
-            <Card className="p-4 bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border-blue-500/20">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="p-2 bg-blue-500/20 rounded-lg">
-                  <Users className="h-4 w-4 text-blue-500" />
+              {earnings.pendingEarningsUsd < earnings.withdrawalThreshold && (
+                <div className="flex items-center gap-1 text-[10px] text-yellow-500">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>Minimum ${earnings.withdrawalThreshold} to withdraw ({formatCurrency(earnings.withdrawalThreshold - earnings.pendingEarningsUsd)} more needed)</span>
                 </div>
-              </div>
-              <p className="text-xs text-muted-foreground">Subscribers</p>
-              <p className="text-xl font-bold text-foreground">{earnings.subscribers}</p>
-              <p className="text-[10px] text-muted-foreground">{formatCurrency(earnings.subscriptionEarnings)} earned</p>
+              )}
             </Card>
           </div>
 
-          {/* Withdraw Button */}
-          <div className="mb-6">
-            <Button 
-              onClick={() => setWithdrawOpen(true)} 
-              className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
-              disabled={earnings.pendingEarnings <= 0}
-            >
-              <CreditCard className="h-4 w-4 mr-2" />
-              Withdraw Earnings
-            </Button>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <Card className="p-4">
+              <p className="text-xs text-muted-foreground">Total Earned</p>
+              <p className="text-xl font-bold text-foreground">{formatCurrency(earnings.totalEarningsUsd)}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-muted-foreground">Withdrawn</p>
+              <p className="text-xl font-bold text-foreground">{formatCurrency(earnings.withdrawnEarningsUsd)}</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-muted-foreground">Gifts Received</p>
+              <p className="text-xl font-bold text-foreground">{earnings.totalCoinsReceived.toLocaleString()}</p>
+              <p className="text-[10px] text-muted-foreground">coins</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-muted-foreground">Conversion Rate</p>
+              <p className="text-xl font-bold text-foreground">$0.007</p>
+              <p className="text-[10px] text-muted-foreground">per coin</p>
+            </Card>
           </div>
 
           {/* Referral Section */}
@@ -274,82 +380,82 @@ const Rewards = () => {
               <h3 className="font-semibold text-foreground">Bario Referral Program</h3>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              Earn $5 for every new user who signs up using your referral link!
+              Earn 100 free coins for every new user who signs up using your referral link!
             </p>
             <div className="flex gap-2">
-              <Input 
-                value={referralLink} 
-                readOnly 
-                className="text-xs bg-background"
-              />
+              <Input value={referralLink} readOnly className="text-xs bg-background" />
               <Button onClick={handleCopyReferral} variant="outline" size="sm">
-                <Copy className="h-3 w-3 mr-1" />
-                Copy
+                <Copy className="h-3 w-3 mr-1" />Copy
               </Button>
-            </div>
-            <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
-              <span>{earnings.referrals} referrals</span>
-              <span>•</span>
-              <span>{formatCurrency(earnings.referralEarnings)} earned</span>
             </div>
           </Card>
 
-          {/* Earnings Breakdown */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-            <Card className="p-4">
-              <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Earnings Breakdown
-              </h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center py-2 border-b border-border">
-                  <div className="flex items-center gap-2">
-                    <Gift className="h-4 w-4 text-purple-500" />
-                    <span className="text-sm">Gifts</span>
-                  </div>
-                  <span className="font-medium">{formatCurrency(earnings.giftEarnings)}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-border">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm">Subscriptions</span>
-                  </div>
-                  <span className="font-medium">{formatCurrency(earnings.subscriptionEarnings)}</span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <div className="flex items-center gap-2">
-                    <Award className="h-4 w-4 text-yellow-500" />
-                    <span className="text-sm">Referrals</span>
-                  </div>
-                  <span className="font-medium">{formatCurrency(earnings.referralEarnings)}</span>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-4">
-              <h3 className="font-semibold text-foreground mb-3">Recent Transactions</h3>
-              {transactions.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">No transactions yet</p>
-              ) : (
-                <div className="space-y-2">
-                  {transactions.map((tx) => (
-                    <div key={tx.id} className="flex justify-between items-center py-2 border-b border-border last:border-0">
-                      <div>
-                        <p className="text-sm font-medium capitalize">{tx.type}</p>
-                        <p className="text-xs text-muted-foreground">{tx.description}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-green-500">+{formatCurrency(tx.amount)}</p>
-                        <p className="text-[10px] text-muted-foreground capitalize">{tx.status}</p>
-                      </div>
+          {/* Recent Transactions */}
+          <Card className="p-4">
+            <h3 className="font-semibold text-foreground mb-3">Recent Transactions</h3>
+            {transactions.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">No transactions yet</p>
+            ) : (
+              <div className="space-y-2">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="flex justify-between items-center py-2 border-b border-border last:border-0">
+                    <div>
+                      <p className="text-sm font-medium capitalize">{tx.type.replace('_', ' ')}</p>
+                      <p className="text-xs text-muted-foreground">{tx.description}</p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-medium ${tx.coins > 0 ? 'text-green-500' : tx.coins < 0 ? 'text-red-500' : 'text-foreground'}`}>
+                        {tx.coins > 0 ? '+' : ''}{tx.coins.toLocaleString()} coins
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">{new Date(tx.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
       </main>
+
+      {/* Buy Coins Dialog */}
+      <Dialog open={buyCoinsOpen} onOpenChange={setBuyCoinsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Coins className="h-5 w-5 text-yellow-500" />
+              Buy Coins
+            </DialogTitle>
+            <DialogDescription>
+              Choose a coin package to support your favorite creators
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto">
+            {coinPackages.map((pkg) => (
+              <Card 
+                key={pkg.id}
+                className={`p-3 cursor-pointer transition-all hover:scale-105 ${pkg.is_popular ? 'border-yellow-500 ring-1 ring-yellow-500/50' : 'border-border'}`}
+                onClick={() => handleBuyCoins(pkg)}
+              >
+                {pkg.is_popular && (
+                  <div className="text-[9px] bg-yellow-500 text-black px-2 py-0.5 rounded-full w-fit mb-2 font-bold">
+                    POPULAR
+                  </div>
+                )}
+                <div className="flex items-center gap-2 mb-2">
+                  <Coins className="h-8 w-8 text-yellow-500" />
+                  <div>
+                    <p className="font-bold text-lg">{pkg.coins.toLocaleString()}</p>
+                    {pkg.bonus_coins > 0 && (
+                      <p className="text-[10px] text-green-500">+{pkg.bonus_coins} bonus</p>
+                    )}
+                  </div>
+                </div>
+                <p className="text-sm font-semibold">{formatCurrency(pkg.price_usd)}</p>
+              </Card>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Withdraw Dialog */}
       <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
@@ -357,13 +463,13 @@ const Rewards = () => {
           <DialogHeader>
             <DialogTitle>Withdraw Earnings</DialogTitle>
             <DialogDescription>
-              Enter your bank details to withdraw your earnings.
+              Enter your bank details to withdraw your earnings. Minimum withdrawal is ${earnings.withdrawalThreshold}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="p-3 bg-muted rounded-lg">
               <p className="text-xs text-muted-foreground">Available Balance</p>
-              <p className="text-xl font-bold">{formatCurrency(earnings.pendingEarnings)}</p>
+              <p className="text-xl font-bold">{formatCurrency(earnings.pendingEarningsUsd)}</p>
             </div>
             <div className="space-y-2">
               <Label>Amount to Withdraw</Label>
@@ -398,7 +504,7 @@ const Rewards = () => {
                 onChange={(e) => setBankDetails({ ...bankDetails, accountName: e.target.value })}
               />
             </div>
-            <Button onClick={handleWithdraw} className="w-full">
+            <Button onClick={handleWithdraw} className="w-full" disabled={earnings.pendingEarningsUsd < earnings.withdrawalThreshold}>
               Withdraw {withdrawAmount ? formatCurrency(parseFloat(withdrawAmount)) : ''}
             </Button>
           </div>
