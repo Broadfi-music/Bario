@@ -153,27 +153,50 @@ serve(async (req) => {
       // Try to decode base64 if it looks encoded
       let searchQuery = trackId;
       try {
-        const decoded = atob(trackId);
-        if (decoded && decoded.length > 0) {
+        // Handle URL-safe base64
+        const base64 = trackId.replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = atob(base64);
+        if (decoded && decoded.length > 0 && !decoded.includes('\u0000')) {
           searchQuery = decoded;
+          console.log(`Decoded base64 search query: ${searchQuery}`);
         }
       } catch (e) {
         // Not base64, use as-is
+        console.log('Not base64, using as-is:', trackId);
       }
       
-      // Search Deezer with the query
-      const searchResults = await searchDeezer(searchQuery, 5);
+      // Search Deezer with the query - search for tracks, not just artist
+      console.log(`Searching Deezer for: ${searchQuery}`);
+      const searchResults = await searchDeezer(searchQuery, 10);
       
       if (searchResults.length > 0) {
         // Get the first result's full details
+        console.log(`Found ${searchResults.length} results, using first: ${searchResults[0].title} by ${searchResults[0].artist?.name}`);
         deezerTrack = await getDeezerTrack(String(searchResults[0].id));
+      } else {
+        // If no exact results, try searching just for tracks by this artist
+        const artistSearchResults = await searchDeezer(`artist:"${searchQuery}"`, 5);
+        if (artistSearchResults.length > 0) {
+          console.log(`Found artist tracks, using first: ${artistSearchResults[0].title}`);
+          deezerTrack = await getDeezerTrack(String(artistSearchResults[0].id));
+        }
+      }
+    }
+    
+    if (!deezerTrack) {
+      // Still return a useful response even if track not found directly
+      // Try one more search with just the query
+      const fallbackResults = await searchDeezer(trackId, 1);
+      if (fallbackResults.length > 0) {
+        deezerTrack = await getDeezerTrack(String(fallbackResults[0].id));
       }
     }
     
     if (!deezerTrack) {
       return new Response(JSON.stringify({ 
         error: 'Track not found',
-        details: 'Could not find track. Try searching by song title instead of artist name.'
+        searchQuery: trackId,
+        suggestion: 'Try clicking on a specific song from the search results'
       }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

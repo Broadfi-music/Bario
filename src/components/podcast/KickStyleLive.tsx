@@ -12,6 +12,7 @@ import TwitchComments from './TwitchComments';
 import GiftModal from './GiftModal';
 import GiftAnimation from './GiftAnimation';
 import ShareModal from './ShareModal';
+import TikTokGiftDisplay from './TikTokGiftDisplay';
 import { toast } from 'sonner';
 import { isValidUUID } from '@/lib/authUtils';
 
@@ -620,6 +621,9 @@ const KickStyleLive = ({
 
       {/* Gift Animation Overlay - TikTok style */}
       <GiftAnimation sessionId={currentSession.id} />
+      
+      {/* TikTok-style gift display */}
+      <TikTokGiftDisplay sessionId={currentSession.id} />
 
       {/* Modals */}
       <GiftModal
@@ -627,6 +631,7 @@ const KickStyleLive = ({
         onClose={() => setShowGiftModal(false)}
         sessionId={currentSession.id}
         hostId={currentSession.host_id}
+        hostName={currentSession.host_name}
       />
 
       <ShareModal
