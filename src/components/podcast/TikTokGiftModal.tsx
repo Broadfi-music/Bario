@@ -11,6 +11,7 @@ interface TikTokGiftModalProps {
   onClose: () => void;
   sessionId: string;
   hostId: string;
+  hostName?: string;
   onGiftSent?: (giftType: string, count: number, senderName: string) => void;
 }
 
@@ -21,7 +22,7 @@ const GIFTS = [
   { type: 'tofu', image: '/gifts/gift-tofu.png', label: 'Tofu', coins: 3, color: 'from-green-500/20 to-emerald-500/20' },
 ];
 
-const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, onGiftSent }: TikTokGiftModalProps) => {
+const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftSent }: TikTokGiftModalProps) => {
   const { user } = useAuth();
   const [sending, setSending] = useState<string | null>(null);
   const [giftCount, setGiftCount] = useState<{ [key: string]: number }>({});
@@ -188,7 +189,9 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, onGiftSent }: Tik
           </button>
 
           <DialogHeader className="mb-4">
-            <DialogTitle className="text-white text-center text-lg font-semibold">Send Gift</DialogTitle>
+            <DialogTitle className="text-white text-center text-lg font-semibold">
+              Send Gift{hostName ? ` to ${hostName}` : ''}
+            </DialogTitle>
           </DialogHeader>
 
           {/* Coin Balance */}

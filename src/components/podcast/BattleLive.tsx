@@ -592,12 +592,13 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
       {/* Gift Animation Overlay */}
       {battle.session_id && <GiftAnimation sessionId={battle.session_id} />}
 
-      {/* Gift Modal */}
+      {/* Gift Modal - Show creator name */}
       <GiftModal
         isOpen={showGiftModal}
         onClose={() => setShowGiftModal(false)}
         sessionId={battle.session_id || ''}
         hostId={selectedCreator === 'host' ? battle.host_id : battle.opponent_id}
+        hostName={selectedCreator === 'host' ? battle.host_name : battle.opponent_name}
       />
 
       {/* Share Modal */}

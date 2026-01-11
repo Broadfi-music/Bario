@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
 export interface DashboardTrack {
   id: string | number;
@@ -28,6 +30,7 @@ export interface DashboardData {
 }
 
 export function useDashboardMusic() {
+  const { user } = useAuth();
   const [data, setData] = useState<DashboardData>({
     trendingSongs: [],
     newSongs: [],
@@ -67,6 +70,37 @@ export function useDashboardMusic() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Fetch liked tracks from database on mount
+  useEffect(() => {
+    const fetchLikedTracks = async () => {
+      if (!user) {
+        // Load from localStorage if not logged in
+        const stored = localStorage.getItem('likedTracks');
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            setLikedTracks(new Set(parsed));
+          } catch (e) {
+            console.error('Failed to parse liked tracks:', e);
+          }
+        }
+        return;
+      }
+
+      // Fetch from database
+      const { data: favorites } = await supabase
+        .from('user_favorites')
+        .select('track_id')
+        .eq('user_id', user.id);
+
+      if (favorites) {
+        setLikedTracks(new Set(favorites.map(f => f.track_id)));
+      }
+    };
+
+    fetchLikedTracks();
+  }, [user]);
 
   // Real-time updates for trending songs and remixes every 30 seconds
   useEffect(() => {
@@ -110,7 +144,10 @@ export function useDashboardMusic() {
     return () => clearInterval(interval);
   }, []);
 
-  const toggleLike = useCallback((trackId: string | number) => {
+  const toggleLike = useCallback(async (trackId: string | number, trackData?: { title: string; artist: string; artwork?: string; preview?: string }) => {
+    const isLiked = likedTracks.has(trackId);
+
+    // Optimistic update
     setLikedTracks(prev => {
       const newSet = new Set(prev);
       if (newSet.has(trackId)) {
@@ -118,24 +155,55 @@ export function useDashboardMusic() {
       } else {
         newSet.add(trackId);
       }
-      // Store in localStorage for persistence
+      // Store in localStorage for persistence (backup)
       localStorage.setItem('likedTracks', JSON.stringify([...newSet]));
       return newSet;
     });
-  }, []);
 
-  // Load liked tracks from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem('likedTracks');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setLikedTracks(new Set(parsed));
-      } catch (e) {
-        console.error('Failed to parse liked tracks:', e);
-      }
+    if (!user) {
+      toast.success(isLiked ? 'Removed from favorites' : 'Added to favorites');
+      return;
     }
-  }, []);
+
+    try {
+      if (isLiked) {
+        // Remove from database
+        await supabase
+          .from('user_favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('track_id', String(trackId));
+        toast.success('Removed from favorites');
+      } else {
+        // Add to database
+        await supabase
+          .from('user_favorites')
+          .insert({
+            user_id: user.id,
+            track_id: String(trackId),
+            track_title: trackData?.title || 'Unknown Track',
+            artist_name: trackData?.artist || 'Unknown Artist',
+            cover_image_url: trackData?.artwork,
+            preview_url: trackData?.preview,
+            source: 'dashboard'
+          });
+        toast.success('Added to favorites');
+      }
+    } catch (err) {
+      console.error('Toggle like error:', err);
+      // Revert optimistic update on error
+      setLikedTracks(prev => {
+        const newSet = new Set(prev);
+        if (isLiked) {
+          newSet.add(trackId);
+        } else {
+          newSet.delete(trackId);
+        }
+        return newSet;
+      });
+      toast.error('Failed to update favorites');
+    }
+  }, [user, likedTracks]);
 
   return { data, loading, error, refetch: fetchData, likedTracks, toggleLike };
 }

@@ -322,9 +322,13 @@ export const useAgoraAudio = ({
       // Create and publish audio track if user can publish
       if (credentials.canPublish) {
         try {
-          console.log('🎤 Creating microphone track...');
+          console.log('🎤 Creating microphone track with echo cancellation...');
           const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
             encoderConfig: 'speech_standard',
+            // Enable echo cancellation, noise suppression, and auto gain control
+            AEC: true,
+            AGC: true,
+            ANS: true,
           });
           localAudioTrackRef.current = audioTrack;
 
@@ -426,9 +430,12 @@ export const useAgoraAudio = ({
     // If no audio track exists but we have publish rights, create one
     if (!localAudioTrackRef.current && canPublish && clientRef.current) {
       try {
-        console.log('🎤 Creating microphone track on unmute...');
+        console.log('🎤 Creating microphone track on unmute with echo cancellation...');
         const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
           encoderConfig: 'speech_standard',
+          AEC: true,
+          AGC: true,
+          ANS: true,
         });
         localAudioTrackRef.current = audioTrack;
         
@@ -474,9 +481,12 @@ export const useAgoraAudio = ({
     // If no track exists, create one
     if (!localAudioTrackRef.current) {
       try {
-        console.log('🎤 Creating microphone track...');
+        console.log('🎤 Creating microphone track with echo cancellation...');
         const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
           encoderConfig: 'speech_standard',
+          AEC: true,
+          AGC: true,
+          ANS: true,
         });
         localAudioTrackRef.current = audioTrack;
         
