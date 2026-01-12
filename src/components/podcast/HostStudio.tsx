@@ -422,9 +422,22 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     toast(`${sound.label} played!`);
   };
 
+  const MAX_SPEAKERS = 4; // 1 host + 3 speakers/co-hosts maximum
+
+  // Count current speakers
+  const currentSpeakers = allParticipants.filter(p => 
+    p.role === 'host' || p.role === 'co_host' || p.role === 'speaker'
+  ).length;
+
   const promoteSpeaker = async (participantId: string) => {
     const authSession = await getFreshSession();
     if (!authSession) return;
+
+    // Check speaker limit
+    if (currentSpeakers >= MAX_SPEAKERS) {
+      toast.error(`Maximum ${MAX_SPEAKERS} speakers reached (1 host + 3 co-hosts/speakers)`);
+      return;
+    }
 
     await supabase
       .from('podcast_participants')

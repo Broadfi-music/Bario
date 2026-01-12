@@ -278,6 +278,14 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
   };
 
   const MAX_PARTICIPANTS = 100;
+  const MAX_SPEAKERS = 4; // 1 host + 3 speakers/co-hosts maximum
+
+  // Count current speakers (host, co_host, speaker roles)
+  const currentSpeakers = participants.filter(p => 
+    p.role === 'host' || p.role === 'co_host' || p.role === 'speaker'
+  ).length;
+
+  const canPromoteToSpeaker = currentSpeakers < MAX_SPEAKERS;
 
   const joinSession = async () => {
     if (!user) {

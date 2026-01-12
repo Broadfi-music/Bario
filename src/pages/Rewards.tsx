@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, ChevronLeft, DollarSign, Users, CreditCard, Copy, ExternalLink, TrendingUp, Wallet, Award, Upload, Coins, ShoppingCart, AlertCircle } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, ChevronLeft, DollarSign, Users, CreditCard, Copy, ExternalLink, TrendingUp, Wallet, Award, Upload, Coins, ShoppingCart, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -40,6 +40,7 @@ interface Transaction {
 
 const Rewards = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
@@ -48,6 +49,7 @@ const Rewards = () => {
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [bankDetails, setBankDetails] = useState({ bankName: '', accountNumber: '', accountName: '' });
   const [dataLoading, setDataLoading] = useState(true);
+  const [paymentLoading, setPaymentLoading] = useState(false);
   
   const [userCoins, setUserCoins] = useState(0);
   const [coinPackages, setCoinPackages] = useState<CoinPackage[]>([]);
@@ -56,11 +58,45 @@ const Rewards = () => {
     totalEarningsUsd: 0,
     pendingEarningsUsd: 0,
     withdrawnEarningsUsd: 0,
-    withdrawalThreshold: 100
+    withdrawalThreshold: 50
   });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   const referralLink = user ? `https://bario.app/ref/${user.id.slice(0, 8)}` : '';
+
+  // Handle payment callback
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment');
+    const reference = searchParams.get('reference');
+    
+    if (paymentStatus === 'success' && reference) {
+      verifyPayment(reference);
+    }
+  }, [searchParams]);
+
+  const verifyPayment = async (reference: string) => {
+    try {
+      toast.loading('Verifying payment...', { id: 'verify-payment' });
+      
+      const { data, error } = await supabase.functions.invoke('paystack-payment', {
+        body: { action: 'verify', reference }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success(`${data.coins_credited} coins added to your account!`, { id: 'verify-payment' });
+        fetchData();
+        // Clean up URL
+        window.history.replaceState({}, '', '/dashboard/rewards');
+      } else {
+        toast.error('Payment verification failed', { id: 'verify-payment' });
+      }
+    } catch (error) {
+      console.error('Payment verification error:', error);
+      toast.error('Failed to verify payment', { id: 'verify-payment' });
+    }
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -90,7 +126,7 @@ const Rewards = () => {
         setCoinPackages(packages as CoinPackage[]);
       }
 
-      // Fetch user coins
+      // Fetch user coins - don't give free coins by default anymore
       let { data: coinsData } = await supabase
         .from('user_coins')
         .select('*')
@@ -98,12 +134,12 @@ const Rewards = () => {
         .single();
       
       if (!coinsData) {
-        // Create initial coin record
+        // Create initial coin record with 0 balance
         await supabase.from('user_coins').insert({
           user_id: user.id,
-          balance: 100 // Free starter coins
+          balance: 0
         });
-        setUserCoins(100);
+        setUserCoins(0);
       } else {
         setUserCoins(coinsData.balance);
       }
@@ -122,7 +158,7 @@ const Rewards = () => {
           totalEarningsUsd: parseFloat(String(ed.total_earnings_usd || 0)),
           pendingEarningsUsd: parseFloat(String(ed.pending_earnings_usd || 0)),
           withdrawnEarningsUsd: parseFloat(String(ed.withdrawn_earnings_usd || 0)),
-          withdrawalThreshold: parseFloat(String(ed.withdrawal_threshold_usd || 100))
+          withdrawalThreshold: parseFloat(String(ed.withdrawal_threshold_usd || 50))
         });
       }
 
@@ -152,39 +188,44 @@ const Rewards = () => {
   const handleBuyCoins = async (pkg: CoinPackage) => {
     if (!user) return;
     
-    // Simulate payment processing
-    toast.loading('Processing payment...', { id: 'payment' });
+    setPaymentLoading(true);
+    toast.loading('Initializing payment...', { id: 'payment' });
     
     try {
-      const totalCoins = pkg.coins + pkg.bonus_coins;
+      // Get user email
+      const { data: { user: authUser } } = await supabase.auth.getUser();
       
-      // Update user coins
-      const { error: coinError } = await supabase
-        .from('user_coins')
-        .update({ 
-          balance: userCoins + totalCoins,
-          total_purchased: userCoins + totalCoins
-        })
-        .eq('user_id', user.id);
+      if (!authUser?.email) {
+        toast.error('Please update your email in settings', { id: 'payment' });
+        return;
+      }
 
-      if (coinError) throw coinError;
-
-      // Record transaction
-      await supabase.from('coin_transactions').insert({
-        user_id: user.id,
-        type: 'purchase',
-        amount: pkg.price_usd,
-        coins: totalCoins,
-        description: `Purchased ${pkg.name} package (${pkg.coins} + ${pkg.bonus_coins} bonus coins)`
+      // Initialize Paystack payment
+      const { data, error } = await supabase.functions.invoke('paystack-payment', {
+        body: {
+          action: 'initialize',
+          userId: user.id,
+          email: authUser.email,
+          packageId: pkg.id,
+          amount: pkg.price_usd * 100, // Convert to cents for API
+          callbackUrl: window.location.origin
+        }
       });
 
-      setUserCoins(prev => prev + totalCoins);
-      setBuyCoinsOpen(false);
-      toast.success(`Successfully purchased ${totalCoins} coins!`, { id: 'payment' });
-      fetchData();
+      if (error) throw error;
+
+      if (data.authorization_url) {
+        toast.dismiss('payment');
+        // Redirect to Paystack checkout
+        window.location.href = data.authorization_url;
+      } else {
+        toast.error('Failed to initialize payment', { id: 'payment' });
+      }
     } catch (error) {
       console.error('Purchase error:', error);
       toast.error('Failed to process payment', { id: 'payment' });
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
@@ -311,7 +352,7 @@ const Rewards = () => {
                 </div>
                 <Button 
                   onClick={() => setBuyCoinsOpen(true)}
-                  className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white"
+                  className="bg-black hover:bg-black/80 text-white"
                 >
                   <ShoppingCart className="h-4 w-4 mr-2" />
                   Buy Coins
@@ -336,7 +377,7 @@ const Rewards = () => {
                 <Button 
                   onClick={() => setWithdrawOpen(true)}
                   disabled={earnings.pendingEarningsUsd < earnings.withdrawalThreshold}
-                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
+                  className="bg-black hover:bg-black/80 text-white disabled:opacity-50"
                 >
                   <CreditCard className="h-4 w-4 mr-2" />
                   Withdraw
@@ -367,9 +408,9 @@ const Rewards = () => {
               <p className="text-[10px] text-muted-foreground">coins</p>
             </Card>
             <Card className="p-4">
-              <p className="text-xs text-muted-foreground">Conversion Rate</p>
-              <p className="text-xl font-bold text-foreground">$0.007</p>
-              <p className="text-[10px] text-muted-foreground">per coin</p>
+              <p className="text-xs text-muted-foreground">Creator Share</p>
+              <p className="text-xl font-bold text-foreground">70%</p>
+              <p className="text-[10px] text-muted-foreground">of gifts</p>
             </Card>
           </div>
 
@@ -384,7 +425,7 @@ const Rewards = () => {
             </p>
             <div className="flex gap-2">
               <Input value={referralLink} readOnly className="text-xs bg-background" />
-              <Button onClick={handleCopyReferral} variant="outline" size="sm">
+              <Button onClick={handleCopyReferral} variant="outline" size="sm" className="bg-black text-white hover:bg-black/80">
                 <Copy className="h-3 w-3 mr-1" />Copy
               </Button>
             </div>
@@ -433,7 +474,7 @@ const Rewards = () => {
             {coinPackages.map((pkg) => (
               <Card 
                 key={pkg.id}
-                className={`p-3 cursor-pointer transition-all hover:scale-105 ${pkg.is_popular ? 'border-yellow-500 ring-1 ring-yellow-500/50' : 'border-border'}`}
+                className={`p-3 cursor-pointer transition-all hover:scale-105 ${pkg.is_popular ? 'border-yellow-500 ring-1 ring-yellow-500/50' : 'border-border'} ${paymentLoading ? 'opacity-50 pointer-events-none' : ''}`}
                 onClick={() => handleBuyCoins(pkg)}
               >
                 {pkg.is_popular && (
@@ -454,6 +495,12 @@ const Rewards = () => {
               </Card>
             ))}
           </div>
+          {paymentLoading && (
+            <div className="flex items-center justify-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Processing...</span>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -483,7 +530,7 @@ const Rewards = () => {
             <div className="space-y-2">
               <Label>Bank Name</Label>
               <Input
-                placeholder="e.g., Chase Bank"
+                placeholder="e.g., GTBank, First Bank"
                 value={bankDetails.bankName}
                 onChange={(e) => setBankDetails({ ...bankDetails, bankName: e.target.value })}
               />
@@ -504,7 +551,7 @@ const Rewards = () => {
                 onChange={(e) => setBankDetails({ ...bankDetails, accountName: e.target.value })}
               />
             </div>
-            <Button onClick={handleWithdraw} className="w-full" disabled={earnings.pendingEarningsUsd < earnings.withdrawalThreshold}>
+            <Button onClick={handleWithdraw} className="w-full bg-black hover:bg-black/80 text-white" disabled={earnings.pendingEarningsUsd < earnings.withdrawalThreshold}>
               Withdraw {withdrawAmount ? formatCurrency(parseFloat(withdrawAmount)) : ''}
             </Button>
           </div>
