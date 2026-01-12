@@ -41,3 +41,9 @@ verify_jwt = false
 
 [functions.bario-api]
 verify_jwt = false
+
+[functions.paystack-payment]
+verify_jwt = false
+
+[functions.gift-transaction]
+verify_jwt = false
