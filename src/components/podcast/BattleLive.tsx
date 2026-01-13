@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import TwitchComments from './TwitchComments';
-import GiftModal from './GiftModal';
+import TikTokGiftModal from './TikTokGiftModal';
+import TikTokGiftDisplay from './TikTokGiftDisplay';
 import GiftAnimation from './GiftAnimation';
 import ShareModal from './ShareModal';
 import { toast } from 'sonner';
@@ -589,16 +590,17 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
         )}
       </div>
 
-      {/* Gift Animation Overlay */}
-      {battle.session_id && <GiftAnimation sessionId={battle.session_id} />}
+      {/* TikTok-style Gift Display */}
+      {battle.session_id && <TikTokGiftDisplay sessionId={battle.session_id} />}
 
       {/* Gift Modal - Show creator name */}
-      <GiftModal
+      <TikTokGiftModal
         isOpen={showGiftModal}
         onClose={() => setShowGiftModal(false)}
         sessionId={battle.session_id || ''}
         hostId={selectedCreator === 'host' ? battle.host_id : battle.opponent_id}
         hostName={selectedCreator === 'host' ? battle.host_name : battle.opponent_name}
+        onGiftSent={() => {}}
       />
 
       {/* Share Modal */}

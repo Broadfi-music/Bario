@@ -168,6 +168,31 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     setIsBanned(!!data);
   }, [sessionId, user]);
 
+  // Auto-connect audio for listening (without joining session as participant)
+  // This allows listeners to hear the stream without clicking "Join Session"
+  const [isListening, setIsListening] = useState(false);
+  
+  useEffect(() => {
+    // Auto-connect to audio as a listener when viewing the session
+    // Listeners can hear without needing to click join
+    const autoConnectAudio = async () => {
+      if (!isAudioConnected && !isAudioConnecting && !isListening && sessionId) {
+        console.log('🔊 Auto-connecting audio for listening...');
+        setIsListening(true);
+        try {
+          await connectAudio(sessionId);
+        } catch (err) {
+          console.error('Auto-connect failed:', err);
+          setIsListening(false);
+        }
+      }
+    };
+
+    // Small delay to allow component to mount
+    const timer = setTimeout(autoConnectAudio, 1000);
+    return () => clearTimeout(timer);
+  }, [sessionId, isAudioConnected, isAudioConnecting]);
+
   useEffect(() => {
     fetchParticipants();
     checkBanStatus();

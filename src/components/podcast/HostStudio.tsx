@@ -927,15 +927,21 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
               {raisedHands.length > 0 && (
                 <div className="space-y-1.5">
                   <h4 className="text-[10px] text-yellow-400 uppercase tracking-wider flex items-center gap-1">
-                    <HandMetal className="h-3 w-3" /> Wants to Speak
+                    <HandMetal className="h-3 w-3" /> Wants to Speak ({currentSpeakers}/{MAX_SPEAKERS} speakers)
                   </h4>
+                  {currentSpeakers >= MAX_SPEAKERS && (
+                    <p className="text-[10px] text-red-400 bg-red-500/10 px-2 py-1 rounded">
+                      ⚠️ Maximum {MAX_SPEAKERS} speakers reached (1 host + 3 co-hosts/speakers). Remove a speaker to add more.
+                    </p>
+                  )}
                   <div className="flex flex-wrap gap-1.5">
                     {raisedHands.map((p) => (
                       <Button
                         key={p.id}
                         onClick={() => promoteSpeaker(p.id)}
                         size="sm"
-                        className="bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 h-7 text-xs"
+                        disabled={currentSpeakers >= MAX_SPEAKERS}
+                        className={`h-7 text-xs ${currentSpeakers >= MAX_SPEAKERS ? 'bg-gray-500/20 text-gray-400' : 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'}`}
                       >
                         Allow User {p.user_id.slice(0, 4)}
                       </Button>
