@@ -138,23 +138,44 @@ serve(async (req) => {
     
     console.log(`Fetching track details for: ${trackId}`);
     
-    // Try to get track from Deezer by ID first
+    // Handle prefixed IDs from heatmap-tracks function
     let deezerTrack = null;
+    let actualId = trackId;
     
-    // Check if it's a numeric Deezer ID
-    if (/^\d+$/.test(trackId)) {
-      deezerTrack = await getDeezerTrack(trackId);
+    // Extract source and clean ID
+    if (trackId.startsWith('spotify_')) {
+      // For Spotify tracks, search by the Spotify ID
+      actualId = trackId.replace('spotify_', '');
+      console.log(`Spotify track detected, ID: ${actualId}`);
+      
+      // Search Deezer using Spotify track info (we'll search by title/artist)
+      // For now, fall through to search
+    } else if (trackId.startsWith('audius_')) {
+      actualId = trackId.replace('audius_', '');
+      console.log(`Audius track detected, ID: ${actualId}`);
+      // Will search Deezer as fallback
+    } else if (trackId.startsWith('user_')) {
+      // User upload - try to get from database and return minimal info
+      actualId = trackId.replace('user_', '');
+      console.log(`User upload detected, ID: ${actualId}`);
+      // Will search Deezer as fallback
     }
     
-    // If not found by ID, try searching
+    // Try to get track from Deezer by ID first (only if it looks like a numeric Deezer ID)
+    if (/^\d+$/.test(actualId)) {
+      deezerTrack = await getDeezerTrack(actualId);
+    }
+    
+    // If not found by ID, try searching with the original ID as query
     if (!deezerTrack) {
       console.log('Track not found by ID, trying search...');
       
+      let searchQuery = actualId;
+      
       // Try to decode base64 if it looks encoded
-      let searchQuery = trackId;
       try {
         // Handle URL-safe base64
-        const base64 = trackId.replace(/-/g, '+').replace(/_/g, '/');
+        const base64 = searchQuery.replace(/-/g, '+').replace(/_/g, '/');
         const decoded = atob(base64);
         if (decoded && decoded.length > 0 && !decoded.includes('\u0000')) {
           searchQuery = decoded;
@@ -162,10 +183,10 @@ serve(async (req) => {
         }
       } catch (e) {
         // Not base64, use as-is
-        console.log('Not base64, using as-is:', trackId);
+        console.log('Not base64, using as-is:', searchQuery);
       }
       
-      // Search Deezer with the query - search for tracks, not just artist
+      // Search Deezer with the query
       console.log(`Searching Deezer for: ${searchQuery}`);
       const searchResults = await searchDeezer(searchQuery, 10);
       
@@ -185,7 +206,7 @@ serve(async (req) => {
     
     if (!deezerTrack) {
       // Still return a useful response even if track not found directly
-      // Try one more search with just the query
+      // Try one more search with just the original trackId
       const fallbackResults = await searchDeezer(trackId, 1);
       if (fallbackResults.length > 0) {
         deezerTrack = await getDeezerTrack(String(fallbackResults[0].id));
