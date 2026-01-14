@@ -207,7 +207,6 @@ const Rewards = () => {
           userId: user.id,
           email: authUser.email,
           packageId: pkg.id,
-          amount: pkg.price_usd * 100, // Convert to cents for API
           callbackUrl: window.location.origin
         }
       });
@@ -291,7 +290,6 @@ const Rewards = () => {
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Library, label: 'Library', path: '/dashboard/library' },
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
-    { icon: Sparkles, label: 'Megashuffle', path: '/dashboard/megashuffle' },
     { icon: Gift, label: 'Reward & Earn', path: '/dashboard/rewards' },
     { icon: Upload, label: 'Upload', path: '/dashboard/upload' },
   ];

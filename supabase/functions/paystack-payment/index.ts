@@ -14,6 +14,9 @@ interface CoinPackage {
   bonus_coins: number;
 }
 
+// Current USD to NGN exchange rate (approximate - should be fetched from API in production)
+const USD_TO_NGN_RATE = 1550;
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -32,9 +35,9 @@ serve(async (req) => {
 
     if (action === 'initialize') {
       // Initialize payment
-      const { userId, email, packageId, amount, currency = 'NGN' } = params;
+      const { userId, email, packageId, currency = 'NGN' } = params;
       
-      if (!userId || !email || !packageId || !amount) {
+      if (!userId || !email || !packageId) {
         return new Response(
           JSON.stringify({ error: 'Missing required fields' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -55,9 +58,12 @@ serve(async (req) => {
         );
       }
 
-      // Convert USD to kobo (Nigerian currency base)
-      // Paystack expects amounts in the smallest currency unit
-      const amountInKobo = Math.round(amount * 100);
+      // Convert USD price to NGN, then to kobo (smallest Nigerian currency unit)
+      // Paystack expects amounts in kobo (1 NGN = 100 kobo)
+      const priceInNgn = pkg.price_usd * USD_TO_NGN_RATE;
+      const amountInKobo = Math.round(priceInNgn * 100);
+      
+      console.log(`[Paystack] Converting $${pkg.price_usd} USD to ${priceInNgn} NGN (${amountInKobo} kobo)`);
       
       // Create payment reference
       const reference = `BARIO_${Date.now()}_${userId.slice(0, 8)}`;

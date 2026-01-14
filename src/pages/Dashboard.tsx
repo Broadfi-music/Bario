@@ -101,38 +101,13 @@ const Dashboard = () => {
       return;
     }
     
-    const trackId = track.id.toString();
-    const isCurrentlyLiked = likedTracks.has(track.id);
-    toggleLike(track.id);
-    
-    if (!isCurrentlyLiked) {
-      try {
-        await supabase.from('user_favorites').insert({
-          user_id: user.id,
-          track_id: trackId,
-          track_title: track.title,
-          artist_name: track.artist,
-          cover_image_url: track.artwork,
-          preview_url: track.preview || '',
-          source: 'dashboard',
-        });
-        toast.success('Added to favorites');
-      } catch (err) {
-        console.error('Failed to save favorite:', err);
-        toast.error('Failed to save favorite');
-      }
-    } else {
-      // Remove from database
-      try {
-        await supabase.from('user_favorites')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('track_id', trackId);
-        toast.success('Removed from favorites');
-      } catch (err) {
-        console.error('Failed to remove favorite:', err);
-      }
-    }
+    // Pass track data to toggleLike for proper saving
+    toggleLike(track.id, {
+      title: track.title || 'Unknown Track',
+      artist: track.artist || 'Unknown Artist',
+      artwork: track.artwork,
+      preview: track.preview
+    });
   };
 
   const handlePlay = (track: DashboardTrack) => {
@@ -204,28 +179,13 @@ const Dashboard = () => {
       return;
     }
     
-    const trackId = result.id.toString();
-    toggleLike(result.id);
-    
-    if (!likedTracks.has(result.id)) {
-      try {
-        await supabase.from('user_favorites').insert({
-          user_id: user.id,
-          track_id: trackId,
-          track_title: result.title,
-          artist_name: result.artist,
-          cover_image_url: result.artwork,
-          preview_url: result.preview || '',
-          source: result.source || 'search',
-        });
-        toast.success('Added to favorites');
-      } catch (err) {
-        console.error('Failed to save favorite:', err);
-        toast.error('Failed to save favorite');
-      }
-    } else {
-      toast.success('Removed from favorites');
-    }
+    // Pass track data to toggleLike for proper saving
+    toggleLike(result.id, {
+      title: result.title || 'Unknown Track',
+      artist: result.artist || 'Unknown Artist',
+      artwork: result.artwork,
+      preview: result.preview
+    });
   };
 
 

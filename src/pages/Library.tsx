@@ -147,7 +147,6 @@ const Library = () => {
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: LibraryIcon, label: 'Library', path: '/dashboard/library' },
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
-    { icon: Sparkles, label: 'Megashuffle', path: '/dashboard/megashuffle' },
     { icon: Gift, label: 'Reward & Earn', path: '/dashboard/rewards' },
   ];
 
