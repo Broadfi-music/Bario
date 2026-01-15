@@ -232,15 +232,14 @@ async function getUserUploads(supabase: any, search: string = '', genre: string 
         spotify_url,
         apple_url,
         soundcloud_url,
-        youtube_url,
-        profiles!user_uploads_user_id_fkey(full_name, username, avatar_url)
+        youtube_url
       `)
       .eq('is_published', true)
       .order('created_at', { ascending: false })
       .limit(limit);
 
     if (search) {
-      query = query.ilike('title', `%${search}%`);
+      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
     }
     
     if (genre && genre !== 'All') {
@@ -268,7 +267,8 @@ function formatUserUpload(upload: any, index: number) {
   const likeCount = upload.like_count || 0;
   const change24h = (Math.random() * 20 - 2); // Community tracks tend to grow
   const attentionScore = Math.round(playCount * 10 + likeCount * 50 + 5000); // Boost user uploads
-  const artistName = upload.profiles?.full_name || upload.profiles?.username || 'Bario Artist';
+  // Use user_id for now - we can fetch profile later if needed
+  const artistName = 'Bario Artist';
 
   return {
     id: `user_${upload.id}`,
