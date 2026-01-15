@@ -66,11 +66,17 @@ const Podcasts = () => {
         .eq('status', 'live')
         .single();
       
-      setHostLiveSession(data ? {
-        id: data.id,
-        title: data.title,
-        listener_count: data.listener_count || 0
-      } : null);
+      if (data) {
+        setHostLiveSession({
+          id: data.id,
+          title: data.title,
+          listener_count: data.listener_count || 0
+        });
+        // Auto-open Host Studio when host has active session (on page refresh)
+        setShowHostStudio(true);
+      } else {
+        setHostLiveSession(null);
+      }
     };
 
     const checkHostBattle = async () => {
@@ -144,6 +150,43 @@ const Podcasts = () => {
       }
     }
   }, [searchParams, liveSessions]);
+
+  // Handle battle URL parameter - open battle view directly
+  useEffect(() => {
+    const battleId = searchParams.get('battle');
+    if (battleId && user) {
+      fetchBattleById(battleId);
+    }
+  }, [searchParams, user]);
+
+  const fetchBattleById = async (battleId: string) => {
+    if (!isValidUUID(battleId)) return;
+
+    const { data: battle } = await supabase
+      .from('podcast_battles')
+      .select('*')
+      .eq('id', battleId)
+      .single();
+
+    if (battle) {
+      // Fetch profiles for host and opponent
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, username, avatar_url')
+        .in('user_id', [battle.host_id, battle.opponent_id]);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      
+      setHostBattle({
+        id: battle.id,
+        host_name: profileMap.get(battle.host_id)?.full_name || profileMap.get(battle.host_id)?.username || 'Host',
+        opponent_name: profileMap.get(battle.opponent_id)?.full_name || profileMap.get(battle.opponent_id)?.username || 'Opponent',
+      });
+      
+      // Open battle session view
+      setShowBattleSession(true);
+    }
+  };
 
   const fetchSessionById = async (sessionId: string) => {
     if (!isValidUUID(sessionId)) return;

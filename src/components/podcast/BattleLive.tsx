@@ -592,6 +592,9 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
 
       {/* TikTok-style Gift Display */}
       {battle.session_id && <TikTokGiftDisplay sessionId={battle.session_id} />}
+      
+      {/* Full-screen Video Gift Animations */}
+      {battle.session_id && <GiftAnimation sessionId={battle.session_id} />}
 
       {/* Gift Modal - Show creator name */}
       <TikTokGiftModal

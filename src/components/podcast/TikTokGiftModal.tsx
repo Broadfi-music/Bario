@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Coins, X } from 'lucide-react';
+import { Coins, X, Flame, Star, Diamond, Crown } from 'lucide-react';
 import { getFreshSession, isDemoSession, isDemoUser } from '@/lib/authUtils';
 
 interface TikTokGiftModalProps {
@@ -16,10 +16,16 @@ interface TikTokGiftModalProps {
 }
 
 const GIFTS = [
+  // Image-based gifts
   { type: 'rose', image: '/gifts/gift-rose.png', label: 'Rose', coins: 1, color: 'from-red-500/20 to-pink-500/20' },
   { type: 'heart', image: '/gifts/gift-red-heart.png', label: 'Heart', coins: 5, color: 'from-pink-500/20 to-rose-500/20' },
   { type: 'flame_heart', image: '/gifts/gift-flame-heart.png', label: 'Flames', coins: 10, color: 'from-orange-500/20 to-red-500/20' },
   { type: 'tofu', image: '/gifts/gift-tofu.png', label: 'Tofu', coins: 3, color: 'from-green-500/20 to-emerald-500/20' },
+  // Video animation gifts (premium)
+  { type: 'fire', icon: Flame, label: 'Fire', coins: 50, color: 'from-orange-600/30 to-red-600/30', isVideo: true },
+  { type: 'star', icon: Star, label: 'Star', coins: 100, color: 'from-yellow-500/30 to-amber-500/30', isVideo: true },
+  { type: 'diamond', icon: Diamond, label: 'Diamond', coins: 200, color: 'from-cyan-500/30 to-blue-500/30', isVideo: true },
+  { type: 'crown', icon: Crown, label: 'Crown', coins: 500, color: 'from-purple-500/30 to-pink-500/30', isVideo: true },
 ];
 
 const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftSent }: TikTokGiftModalProps) => {
@@ -202,43 +208,61 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftS
           </div>
 
           {/* Gift Grid */}
-          <div className="grid grid-cols-4 gap-3 mb-4">
+          <div className="grid grid-cols-4 gap-2 mb-4">
             {GIFTS.map((gift) => {
               const count = giftCount[gift.type] || 1;
               const totalCost = gift.coins * count;
               const canAfford = userCoins >= totalCost;
+              const IconComponent = (gift as any).icon;
+              const isVideoGift = (gift as any).isVideo;
 
               return (
                 <div key={gift.type} className="flex flex-col items-center">
                   <button
                     onClick={() => sendGift(gift.type, gift.coins)}
                     disabled={sending === gift.type || !canAfford}
-                    className={`relative flex flex-col items-center gap-1 p-2 rounded-xl bg-gradient-to-b ${gift.color} border border-white/10 hover:border-white/30 hover:scale-105 transition-all disabled:opacity-50 w-full aspect-square`}
+                    className={`relative flex flex-col items-center gap-1 p-2 rounded-xl bg-gradient-to-b ${gift.color} border ${isVideoGift ? 'border-yellow-500/50' : 'border-white/10'} hover:border-white/30 hover:scale-105 transition-all disabled:opacity-50 w-full aspect-square`}
                   >
-                    <img 
-                      src={gift.image} 
-                      alt={gift.label}
-                      className={`h-10 w-10 object-contain ${sending === gift.type ? 'animate-bounce' : ''}`}
-                    />
-                    <span className="text-[9px] text-white/80 font-medium">{gift.label}</span>
+                    {/* Premium badge for video gifts */}
+                    {isVideoGift && (
+                      <div className="absolute -top-1 -right-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-[6px] font-bold text-black px-1 rounded">
+                        VIP
+                      </div>
+                    )}
+                    
+                    {IconComponent ? (
+                      <IconComponent className={`h-8 w-8 ${sending === gift.type ? 'animate-bounce' : ''} ${
+                        gift.type === 'fire' ? 'text-orange-500' :
+                        gift.type === 'star' ? 'text-yellow-400' :
+                        gift.type === 'diamond' ? 'text-cyan-400' :
+                        gift.type === 'crown' ? 'text-purple-400' : 'text-white'
+                      }`} />
+                    ) : (
+                      <img 
+                        src={(gift as any).image} 
+                        alt={gift.label}
+                        className={`h-8 w-8 object-contain ${sending === gift.type ? 'animate-bounce' : ''}`}
+                      />
+                    )}
+                    <span className="text-[8px] text-white/80 font-medium">{gift.label}</span>
                     <div className="flex items-center gap-0.5">
-                      <Coins className="h-2.5 w-2.5 text-yellow-400" />
-                      <span className="text-[9px] text-yellow-400 font-bold">{gift.coins}</span>
+                      <Coins className="h-2 w-2 text-yellow-400" />
+                      <span className="text-[8px] text-yellow-400 font-bold">{gift.coins}</span>
                     </div>
                   </button>
                   
                   {/* Count selector */}
-                  <div className="flex items-center gap-1 mt-1.5">
+                  <div className="flex items-center gap-1 mt-1">
                     <button
                       onClick={() => updateGiftCount(gift.type, -1)}
-                      className="w-5 h-5 rounded bg-white/10 text-white/60 text-xs hover:bg-white/20 flex items-center justify-center"
+                      className="w-4 h-4 rounded bg-white/10 text-white/60 text-[10px] hover:bg-white/20 flex items-center justify-center"
                     >
                       -
                     </button>
-                    <span className="text-[10px] text-white w-4 text-center">{count}</span>
+                    <span className="text-[9px] text-white w-3 text-center">{count}</span>
                     <button
                       onClick={() => updateGiftCount(gift.type, 1)}
-                      className="w-5 h-5 rounded bg-white/10 text-white/60 text-xs hover:bg-white/20 flex items-center justify-center"
+                      className="w-4 h-4 rounded bg-white/10 text-white/60 text-[10px] hover:bg-white/20 flex items-center justify-center"
                     >
                       +
                     </button>
