@@ -180,6 +180,12 @@ export const useAgoraAudio = ({
       return;
     }
 
+    // Skip if already connected to same session (unless force)
+    if (!force && isConnected && currentSessionRef.current === targetSessionId) {
+      console.log('Already connected to this session');
+      return;
+    }
+
     // CRITICAL: Always cleanup existing connection first to prevent UID_CONFLICT
     if (clientRef.current) {
       console.log('🧹 Pre-connect cleanup: existing client found');
@@ -203,12 +209,8 @@ export const useAgoraAudio = ({
       }
     }
 
-    // Skip this check when force=true (used by reconnect after cleanup)
-    if (!force && isConnecting) {
-      console.log('Already connecting, please wait');
-      return;
-    }
-    
+    // Reset isConnecting if it's stale (more than 10 seconds)
+    // This prevents stuck states where isConnecting never gets reset
     console.log(`🔌 Connect called: force=${force}, isConnecting=${isConnecting}`);
 
     setIsConnected(false);

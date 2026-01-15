@@ -270,29 +270,27 @@ const GlobalHeatmap = () => {
             )}
           </div>
           
-          {/* Right side - Buttons */}
-          <div className="flex items-center gap-1 sm:gap-2">
-            {/* AI Remix - Always visible on desktop */}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => navigate('/ai-remix')}
-              className="hidden sm:flex text-[9px] h-7 px-2 border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20"
-            >
-              <Sparkles className="h-3 w-3 mr-1" />
-              AI Remix
-            </Button>
-            
-            {/* Podcast - Visible on desktop */}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => navigate('/podcasts')}
-              className="hidden sm:flex text-[9px] h-7 px-2 border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
-            >
-              <Volume2 className="h-3 w-3 mr-1" />
-              Podcast
-            </Button>
+          {/* Right side - Nav Links */}
+          <div className="flex items-center gap-1 sm:gap-3">
+            {/* Desktop Nav Links */}
+            <nav className="hidden sm:flex items-center gap-3 text-[10px]">
+              <Link to="/ai-remix" className="text-white/70 hover:text-cyan-400 transition-colors flex items-center gap-1">
+                <Sparkles className="h-3 w-3" />
+                AI Remix
+              </Link>
+              <Link to="/podcasts" className="text-white/70 hover:text-purple-400 transition-colors flex items-center gap-1">
+                <Volume2 className="h-3 w-3" />
+                Podcast
+              </Link>
+              <Link to="/three-strike" className="text-white/70 hover:text-orange-400 transition-colors flex items-center gap-1">
+                <Zap className="h-3 w-3" />
+                Three Strike
+              </Link>
+              <Link to="/bario-music" className="text-white/70 hover:text-green-400 transition-colors flex items-center gap-1">
+                <Globe className="h-3 w-3" />
+                Bario Music
+              </Link>
+            </nav>
             
             {/* Dashboard/Login - Always visible */}
             {user ? (
@@ -319,27 +317,24 @@ const GlobalHeatmap = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation Buttons - Below search */}
-        <div className="sm:hidden border-t border-white/5 px-3 py-2 flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => navigate('/ai-remix')}
-            className="flex-1 text-[9px] h-7 border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20"
-          >
-            <Sparkles className="h-3 w-3 mr-1" />
+        {/* Mobile Navigation Links - Below search */}
+        <div className="sm:hidden border-t border-white/5 px-3 py-2 flex items-center gap-3 overflow-x-auto">
+          <Link to="/ai-remix" className="text-[9px] text-white/70 hover:text-cyan-400 whitespace-nowrap flex items-center gap-1">
+            <Sparkles className="h-3 w-3" />
             AI Remix
-          </Button>
-          
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => navigate('/podcasts')}
-            className="flex-1 text-[9px] h-7 border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
-          >
-            <Volume2 className="h-3 w-3 mr-1" />
+          </Link>
+          <Link to="/podcasts" className="text-[9px] text-white/70 hover:text-purple-400 whitespace-nowrap flex items-center gap-1">
+            <Volume2 className="h-3 w-3" />
             Podcast
-          </Button>
+          </Link>
+          <Link to="/three-strike" className="text-[9px] text-white/70 hover:text-orange-400 whitespace-nowrap flex items-center gap-1">
+            <Zap className="h-3 w-3" />
+            Three Strike
+          </Link>
+          <Link to="/bario-music" className="text-[9px] text-white/70 hover:text-green-400 whitespace-nowrap flex items-center gap-1">
+            <Globe className="h-3 w-3" />
+            Bario Music
+          </Link>
           
           {/* Top Chart Dropdown */}
           <div className="relative flex-1">
