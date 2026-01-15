@@ -497,19 +497,41 @@ serve(async (req) => {
     const formattedUserUploads = userUploads.map((u: any, i: number) => formatUserUpload(u, i));
     
     if (search) {
-      // Search all sources in parallel
-      const [spotifyResults, deezerResults, audiusResults] = await Promise.all([
-        searchSpotify(search, 15),
-        searchDeezer(search, 30),
+      // Search Deezer first - they always have preview URLs
+      // Then Spotify and Audius as secondary sources
+      const [deezerResults, spotifyResults, audiusResults] = await Promise.all([
+        searchDeezer(search, 40),  // Deezer first with more results (has previews)
+        searchSpotify(search, 10), // Reduced Spotify (often no previews)
         searchAudius(search, 10)
       ]);
       
-      const spotifyTracks = spotifyResults.map((t: any, i: number) => formatSpotifyTrack(t, i, country));
-      const deezerTracks = deezerResults.map((t: any, i: number) => formatDeezerTrack(t, i + spotifyTracks.length, country));
-      const audiusTracks = audiusResults.map((t: any, i: number) => formatAudiusTrack(t, i + spotifyTracks.length + deezerTracks.length));
+      // Format Deezer tracks first - they have previews
+      const deezerTracks = deezerResults.map((t: any, i: number) => formatDeezerTrack(t, i, country));
       
-      tracks = [...formattedUserUploads, ...spotifyTracks, ...deezerTracks, ...audiusTracks];
-      console.log(`Search results: User=${formattedUserUploads.length}, Spotify=${spotifyTracks.length}, Deezer=${deezerTracks.length}, Audius=${audiusTracks.length}`);
+      // For Spotify tracks, try to find Deezer preview if Spotify has none
+      const spotifyTracksWithPreview = await Promise.all(
+        spotifyResults.map(async (t: any, i: number) => {
+          const formatted = formatSpotifyTrack(t, i + deezerTracks.length, country);
+          
+          // If no Spotify preview, search Deezer for this track
+          if (!formatted.previewUrl && t.name && t.artists?.[0]?.name) {
+            const deezerSearch = await searchDeezer(`${t.name} ${t.artists[0].name}`, 1);
+            if (deezerSearch.length > 0 && deezerSearch[0].preview) {
+              formatted.previewUrl = deezerSearch[0].preview;
+              formatted.deezerUrl = deezerSearch[0].link || `https://www.deezer.com/track/${deezerSearch[0].id}`;
+              (formatted as any).deezerId = String(deezerSearch[0].id);
+              console.log(`Found Deezer preview for Spotify track: ${t.name}`);
+            }
+          }
+          return formatted;
+        })
+      );
+      
+      const audiusTracks = audiusResults.map((t: any, i: number) => formatAudiusTrack(t, i + deezerTracks.length + spotifyTracksWithPreview.length));
+      
+      // Put Deezer first (guaranteed previews), then Spotify (with fallback previews)
+      tracks = [...formattedUserUploads, ...deezerTracks, ...spotifyTracksWithPreview, ...audiusTracks];
+      console.log(`Search results: User=${formattedUserUploads.length}, Deezer=${deezerTracks.length}, Spotify=${spotifyTracksWithPreview.length}, Audius=${audiusTracks.length}`);
       
     } else if (country && country !== 'GLOBAL') {
       // Get country-specific charts from Spotify and Deezer
