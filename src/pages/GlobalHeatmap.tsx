@@ -207,14 +207,14 @@ const GlobalHeatmap = () => {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-sm border-b border-white/5">
         <div className="flex items-center justify-between h-12 sm:h-14 px-2 sm:px-6">
-          {/* Left side - Back button */}
-          <button 
-            onClick={() => navigate('/')} 
-            className="flex items-center gap-1 text-white/60 hover:text-white transition-colors"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            <span className="hidden sm:inline text-xs">Back</span>
-          </button>
+          {/* Left side - Bario Logo */}
+          <Link to="/" className="flex items-center gap-2">
+            <img 
+              src="/bario-logo.png" 
+              alt="Bario" 
+              className="h-6 sm:h-8 w-auto object-contain"
+            />
+          </Link>
           
           {/* Center - Search (visible on all screens) */}
           <div className="relative flex-1 max-w-xs sm:max-w-md mx-2 sm:mx-4">
@@ -272,42 +272,49 @@ const GlobalHeatmap = () => {
           
           {/* Right side - Buttons */}
           <div className="flex items-center gap-1 sm:gap-2">
-            {/* Three Strike - Always visible on desktop */}
+            {/* AI Remix - Always visible on desktop */}
             <Button
               size="sm"
               variant="outline"
-              onClick={() => navigate('/three-strike')}
-              className="hidden sm:flex text-[9px] h-7 px-2 border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"
-            >
-              <Flame className="h-3 w-3 mr-1" />
-              Three Strike
-            </Button>
-            
-            {/* Bario Music - Visible on desktop */}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => navigate('/bario-music')}
-              className="hidden sm:flex text-[9px] h-7 px-2 border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+              onClick={() => navigate('/ai-remix')}
+              className="hidden sm:flex text-[9px] h-7 px-2 border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20"
             >
               <Sparkles className="h-3 w-3 mr-1" />
-              Bario Music
+              AI Remix
+            </Button>
+            
+            {/* Podcast - Visible on desktop */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => navigate('/podcasts')}
+              className="hidden sm:flex text-[9px] h-7 px-2 border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+            >
+              <Volume2 className="h-3 w-3 mr-1" />
+              Podcast
             </Button>
             
             {/* Dashboard/Login - Always visible */}
             {user ? (
               <Link to="/dashboard">
-                <Button size="sm" className="bg-white text-black hover:bg-white/90 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 rounded-lg font-medium">
+                <Button size="sm" className="bg-[#4ade80] text-black hover:bg-[#4ade80]/90 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 rounded-lg font-medium">
                   <span className="hidden sm:inline">Dashboard</span>
                   <span className="sm:hidden">Dash</span>
                 </Button>
               </Link>
             ) : (
-              <Link to="/auth">
-                <Button size="sm" className="bg-white text-black hover:bg-white/90 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 rounded-lg font-medium">
-                  Log In
-                </Button>
-              </Link>
+              <div className="flex items-center gap-1">
+                <Link to="/auth">
+                  <Button size="sm" variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link to="/auth">
+                  <Button size="sm" className="bg-[#4ade80] text-black hover:bg-[#4ade80]/90 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 rounded-lg font-medium">
+                    Sign Up
+                  </Button>
+                </Link>
+              </div>
             )}
           </div>
         </div>
@@ -317,11 +324,21 @@ const GlobalHeatmap = () => {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => navigate('/three-strike')}
-            className="flex-1 text-[9px] h-7 border-orange-500/30 bg-orange-500/10 text-orange-400 hover:bg-orange-500/20"
+            onClick={() => navigate('/ai-remix')}
+            className="flex-1 text-[9px] h-7 border-cyan-500/30 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20"
           >
-            <Flame className="h-3 w-3 mr-1" />
-            Three Strike
+            <Sparkles className="h-3 w-3 mr-1" />
+            AI Remix
+          </Button>
+          
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate('/podcasts')}
+            className="flex-1 text-[9px] h-7 border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+          >
+            <Volume2 className="h-3 w-3 mr-1" />
+            Podcast
           </Button>
           
           {/* Top Chart Dropdown */}
@@ -339,16 +356,6 @@ const GlobalHeatmap = () => {
             </select>
             <TrendingUp className="absolute right-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-green-400 pointer-events-none" />
           </div>
-          
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => navigate('/bario-music')}
-            className="flex-1 text-[9px] h-7 border-purple-500/30 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
-          >
-            <Sparkles className="h-3 w-3 mr-1" />
-            Bario Music
-          </Button>
         </div>
 
         {/* Global Stats Bar */}

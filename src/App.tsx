@@ -8,7 +8,8 @@ import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import GlobalAudioPlayer from "@/components/GlobalAudioPlayer";
 import GlobalBattleNotification from "@/components/podcast/GlobalBattleNotification";
 
-import Index from "@/pages/Index";
+import GlobalHeatmap from "@/pages/GlobalHeatmap";
+import AIRemix from "@/pages/AIRemix";
 import Auth from "@/pages/Auth";
 import Advanced from "@/pages/Advanced";
 import Dashboard from "@/pages/Dashboard";
@@ -20,7 +21,6 @@ import Library from "@/pages/Library";
 import Pricing from "@/pages/Pricing";
 import CreatorProfile from "@/pages/CreatorProfile";
 import MusicResultPage from "@/pages/MusicResultPage";
-import GlobalHeatmap from "@/pages/GlobalHeatmap";
 import HeatmapDetail from "@/pages/HeatmapDetail";
 import Analytics from "@/pages/Analytics";
 import Upload from "@/pages/Upload";
@@ -47,7 +47,9 @@ const App = () => {
             <BrowserRouter>
               <GlobalBattleNotification />
               <Routes>
-                <Route path="/" element={<Index />} />
+                {/* Heatmap is the new homepage */}
+                <Route path="/" element={<GlobalHeatmap />} />
+                <Route path="/ai-remix" element={<AIRemix />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/advanced" element={<Advanced />} />
                 <Route path="/heatmap" element={<GlobalHeatmap />} />
