@@ -217,7 +217,7 @@ const GlobalHeatmap = () => {
           </Link>
           
           {/* Center - Search (visible on all screens) */}
-          <div className="relative flex-1 max-w-xs sm:max-w-md mx-2 sm:mx-4">
+          <div className="relative flex-1 max-w-[120px] sm:max-w-md mx-1 sm:mx-4">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40" />
             <Input
               ref={searchInputRef}
@@ -274,20 +274,16 @@ const GlobalHeatmap = () => {
           <div className="flex items-center gap-1 sm:gap-3">
             {/* Desktop Nav Links */}
             <nav className="hidden sm:flex items-center gap-3 text-[10px]">
-              <Link to="/ai-remix" className="text-white/70 hover:text-cyan-400 transition-colors flex items-center gap-1">
-                <Sparkles className="h-3 w-3" />
+              <Link to="/ai-remix" className="text-white/70 hover:text-cyan-400 transition-colors">
                 AI Remix
               </Link>
-              <Link to="/podcasts" className="text-white/70 hover:text-purple-400 transition-colors flex items-center gap-1">
-                <Volume2 className="h-3 w-3" />
+              <Link to="/podcasts" className="text-white/70 hover:text-purple-400 transition-colors">
                 Podcast
               </Link>
-              <Link to="/three-strike" className="text-white/70 hover:text-orange-400 transition-colors flex items-center gap-1">
-                <Zap className="h-3 w-3" />
+              <Link to="/three-strike" className="text-white/70 hover:text-orange-400 transition-colors">
                 Three Strike
               </Link>
-              <Link to="/bario-music" className="text-white/70 hover:text-green-400 transition-colors flex items-center gap-1">
-                <Globe className="h-3 w-3" />
+              <Link to="/bario-music" className="text-white/70 hover:text-green-400 transition-colors">
                 Bario Music
               </Link>
             </nav>
@@ -319,21 +315,17 @@ const GlobalHeatmap = () => {
 
         {/* Mobile Navigation Links - Below search */}
         <div className="sm:hidden border-t border-white/5 px-3 py-2 flex items-center gap-3 overflow-x-auto">
-          <Link to="/ai-remix" className="text-[9px] text-white/70 hover:text-cyan-400 whitespace-nowrap flex items-center gap-1">
-            <Sparkles className="h-3 w-3" />
+          <Link to="/ai-remix" className="text-[9px] text-white/70 hover:text-cyan-400 whitespace-nowrap">
             AI Remix
           </Link>
-          <Link to="/podcasts" className="text-[9px] text-white/70 hover:text-purple-400 whitespace-nowrap flex items-center gap-1">
-            <Volume2 className="h-3 w-3" />
+          <Link to="/bario-music" className="text-[9px] text-white/70 hover:text-green-400 whitespace-nowrap">
+            Bario Music
+          </Link>
+          <Link to="/podcasts" className="text-[9px] text-white/70 hover:text-purple-400 whitespace-nowrap">
             Podcast
           </Link>
-          <Link to="/three-strike" className="text-[9px] text-white/70 hover:text-orange-400 whitespace-nowrap flex items-center gap-1">
-            <Zap className="h-3 w-3" />
+          <Link to="/three-strike" className="text-[9px] text-white/70 hover:text-orange-400 whitespace-nowrap">
             Three Strike
-          </Link>
-          <Link to="/bario-music" className="text-[9px] text-white/70 hover:text-green-400 whitespace-nowrap flex items-center gap-1">
-            <Globe className="h-3 w-3" />
-            Bario Music
           </Link>
           
           {/* Top Chart Dropdown */}

@@ -380,21 +380,18 @@ const Podcasts = () => {
           <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === 'feed') setSelectedSession(null); }} className="w-auto">
             <TabsList className="bg-white/5 h-8">
               <TabsTrigger value="feed" className="text-xs px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7">
-                <Home className="h-3 w-3 mr-1.5" />
                 Feed
               </TabsTrigger>
               <TabsTrigger value="live" className="text-xs px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7">
-                <Radio className="h-3 w-3 mr-1.5" />
                 Live
               </TabsTrigger>
             </TabsList>
           </Tabs>
 
           {/* Additional nav links */}
-          <div className="hidden sm:flex items-center gap-1 ml-2">
-            <Link to="/global-heatmap">
+          <div className="flex items-center gap-1 ml-2">
+            <Link to="/">
               <Button variant="ghost" size="sm" className="text-white/60 hover:text-white h-8 px-2 text-xs">
-                <Flame className="h-3 w-3 mr-1" />
                 Heatmap
               </Button>
             </Link>
