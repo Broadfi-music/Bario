@@ -339,15 +339,34 @@ serve(async (req) => {
         const artistName = spotifyTrack.artists?.[0]?.name || 'Unknown Artist';
         const trackTitle = spotifyTrack.name;
         
-        // Fetch additional data in parallel
-        const [spotifyArtist, spotifyTopTracks, lastfmTrackInfo, lastfmArtistInfo] = await Promise.all([
+        // Fetch additional data in parallel, including Deezer search for preview fallback
+        const [spotifyArtist, spotifyTopTracks, lastfmTrackInfo, lastfmArtistInfo, deezerSearchResults] = await Promise.all([
           artistId ? getSpotifyArtist(artistId) : null,
           artistId ? getSpotifyArtistTopTracks(artistId) : [],
           getLastfmTrackInfo(artistName, trackTitle),
-          getLastfmArtistInfo(artistName)
+          getLastfmArtistInfo(artistName),
+          searchDeezer(`${trackTitle} ${artistName}`, 1)  // Search Deezer for preview fallback
         ]);
         
-        const response = buildSpotifyResponse(spotifyTrack, spotifyArtist, spotifyTopTracks, lastfmTrackInfo, lastfmArtistInfo);
+        // If Spotify has no preview, use Deezer preview
+        let previewUrl = spotifyTrack.preview_url;
+        let deezerTrackData = null;
+        
+        if (!previewUrl && deezerSearchResults.length > 0) {
+          deezerTrackData = deezerSearchResults[0];
+          previewUrl = deezerTrackData.preview;
+          console.log(`Using Deezer preview for Spotify track: ${trackTitle} - ${previewUrl}`);
+        }
+        
+        // Override the preview URL in spotifyTrack before building response
+        const trackWithPreview = { ...spotifyTrack, preview_url: previewUrl };
+        
+        const response = buildSpotifyResponse(trackWithPreview, spotifyArtist, spotifyTopTracks, lastfmTrackInfo, lastfmArtistInfo);
+        
+        // Add Deezer URL if we found a match
+        if (deezerTrackData) {
+          response.platforms.deezer.url = deezerTrackData.link || `https://www.deezer.com/track/${deezerTrackData.id}`;
+        }
         
         return new Response(JSON.stringify(response), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
