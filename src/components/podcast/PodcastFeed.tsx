@@ -689,11 +689,8 @@ const PodcastFeed = () => {
                 <div 
                   key={battle.id}
                   onClick={() => {
-                    setActiveBattle({
-                      ...battle,
-                      host_score: 0,
-                      opponent_score: 0,
-                    });
+                    // Navigate to battle view using URL parameter
+                    navigate(`/podcasts?battle=${battle.id}`);
                   }}
                   className="group block cursor-pointer"
                 >
