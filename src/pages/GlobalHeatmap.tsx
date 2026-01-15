@@ -106,16 +106,18 @@ const GlobalHeatmap = () => {
         setShowSearchResults(true);
       } else {
         setShowSearchResults(false);
+        setSearchResults([]);
         refetch();
       }
-    }, 500);
+    }, 300); // Reduced debounce for faster response
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Update search results when tracks change
+  // Update search results when tracks change during search
   useEffect(() => {
-    if (searchQuery.trim() && tracks.length > 0) {
+    if (searchQuery.trim()) {
       setSearchResults(tracks);
+      setShowSearchResults(tracks.length > 0);
     }
   }, [tracks, searchQuery]);
 
@@ -229,25 +231,36 @@ const GlobalHeatmap = () => {
             )}
             
             {/* Search Results Dropdown */}
-            {showSearchResults && searchResults.length > 0 && (
+            {showSearchResults && searchQuery.trim() && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-black/95 border border-white/10 rounded-lg shadow-xl max-h-64 overflow-y-auto z-50">
-                {searchResults.slice(0, 10).map((track) => (
-                  <div
-                    key={track.id}
-                    onClick={() => {
-                      navigate(`/global-heatmap/${track.id}`);
-                      clearSearch();
-                    }}
-                    className="flex items-center gap-2 p-2 hover:bg-white/10 cursor-pointer"
-                  >
-                    <img src={track.artwork} alt="" className="w-8 h-8 rounded object-cover" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[10px] text-white truncate">{track.title}</p>
-                      <p className="text-[9px] text-white/50 truncate">{track.artist}</p>
-                    </div>
-                    <span className="text-[8px] text-white/40">{formatListeners(track.metrics.lastfmListeners)}</span>
+                {loading ? (
+                  <div className="flex items-center justify-center p-4">
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-green-500"></div>
+                    <span className="ml-2 text-[10px] text-white/50">Searching...</span>
                   </div>
-                ))}
+                ) : searchResults.length > 0 ? (
+                  searchResults.slice(0, 10).map((track) => (
+                    <div
+                      key={track.id}
+                      onClick={() => {
+                        navigate(`/global-heatmap/${track.id}`);
+                        clearSearch();
+                      }}
+                      className="flex items-center gap-2 p-2 hover:bg-white/10 cursor-pointer"
+                    >
+                      <img src={track.artwork} alt="" className="w-8 h-8 rounded object-cover" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] text-white truncate">{track.title}</p>
+                        <p className="text-[9px] text-white/50 truncate">{track.artist}</p>
+                      </div>
+                      <span className="text-[8px] text-white/40">{formatListeners(track.metrics.lastfmListeners)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-[10px] text-white/50">
+                    No results found for "{searchQuery}"
+                  </div>
+                )}
               </div>
             )}
           </div>
