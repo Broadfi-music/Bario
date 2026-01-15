@@ -94,7 +94,7 @@ export interface TrackDetail {
   chartData: Array<{ timestamp: string; value: number; listeners: number }>;
   smartFeed: Array<{ id: string; type: string; title: string; description: string; source: string; timestamp: string }>;
   comments: Array<{ user_name: string; user_avatar: string; content: string; sentiment: string; likes: number; created_at: string }>;
-  relatedTracks: Array<{ id: string; rank: number; title: string; artwork: string; previewUrl: string | null; playcount: number; listeners: number }>;
+  relatedTracks: Array<{ id: string; rank?: number; title: string; artist?: string; artwork: string; previewUrl: string | null; playcount?: number; listeners: number }>;
 }
 
 const SUPABASE_URL = 'https://sufbohhsxlrefkoubmed.supabase.co';

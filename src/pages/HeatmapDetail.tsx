@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeft, Star, TrendingUp, TrendingDown, ExternalLink, Share2, Play, Pause,
@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTrackDetail } from '@/hooks/useHeatmapData';
+import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
 
 // Platform icons
 const SpotifyIcon = () => (
@@ -52,14 +53,12 @@ const HeatmapDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [activeTab, setActiveTab] = useState('charts');
   const [timeRange, setTimeRange] = useState('7D');
   const [showAllListeners, setShowAllListeners] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
   
   const { track, loading, error } = useTrackDetail(id);
+  const { playTrack: globalPlayTrack, pauseTrack: globalPauseTrack, currentTrack, isPlaying: globalIsPlaying } = useAudioPlayer();
 
   // Real-time updates simulation
   const [realtimeListeners, setRealtimeListeners] = useState(0);
@@ -113,26 +112,37 @@ const HeatmapDetail = () => {
     if (shareUrl) window.open(shareUrl, '_blank', 'width=600,height=400');
   };
 
-  const playTrack = (previewUrl: string | null, trackId: string) => {
+  const playTrack = useCallback((previewUrl: string | null | undefined, trackId: string, title?: string, artist?: string, artwork?: string) => {
+    console.log('Playing track:', { previewUrl, trackId, title });
+    
     if (!previewUrl) {
-      toast.error('No preview available');
+      toast.error('No preview available - try streaming platforms', {
+        action: {
+          label: 'Open Deezer',
+          onClick: () => window.open(track?.platforms?.deezer?.url || `https://www.deezer.com/track/${trackId}`, '_blank')
+        }
+      });
       return;
     }
     
-    if (playingTrackId === trackId && isPlaying) {
-      audioRef.current?.pause();
-      setIsPlaying(false);
-      setPlayingTrackId(null);
+    // Use global audio player for consistent experience
+    const isCurrentlyPlaying = currentTrack?.id === trackId && globalIsPlaying;
+    
+    if (isCurrentlyPlaying) {
+      globalPauseTrack();
       return;
     }
     
-    if (audioRef.current) {
-      audioRef.current.src = previewUrl;
-      audioRef.current.play();
-      setIsPlaying(true);
-      setPlayingTrackId(trackId);
-    }
-  };
+    // Play using global player
+    globalPlayTrack({
+      id: trackId,
+      title: title || track?.title || 'Unknown Track',
+      artist: artist || track?.artist?.name || 'Unknown Artist',
+      audioUrl: previewUrl,
+      coverUrl: artwork || track?.artwork,
+      type: 'music'
+    });
+  }, [currentTrack, globalIsPlaying, globalPauseTrack, globalPlayTrack, track]);
 
   if (loading) {
     return (
@@ -158,14 +168,11 @@ const HeatmapDetail = () => {
     );
   }
 
+  // Check if current track is playing via global player
+  const isTrackPlaying = (trackId: string) => currentTrack?.id === trackId && globalIsPlaying;
+
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Hidden Audio Element */}
-      <audio 
-        ref={audioRef} 
-        onEnded={() => { setIsPlaying(false); setPlayingTrackId(null); }}
-        onError={() => { setIsPlaying(false); toast.error('Failed to play'); }}
-      />
+    <div className="min-h-screen bg-black text-white pb-20">
       
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-sm border-b border-white/5">
@@ -213,10 +220,10 @@ const HeatmapDetail = () => {
                   <div className="relative group">
                     <img src={track.artwork} alt={track.title} className="w-16 h-16 rounded-xl object-cover" />
                     <button
-                      onClick={() => playTrack(track.previewUrl, track.id)}
+                      onClick={() => playTrack(track.previewUrl, track.id, track.title, track.artist.name, track.artwork)}
                       className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"
                     >
-                      {playingTrackId === track.id && isPlaying ? (
+                      {isTrackPlaying(track.id) ? (
                         <Pause className="h-6 w-6 text-white" />
                       ) : (
                         <Play className="h-6 w-6 text-white" />
@@ -398,10 +405,10 @@ const HeatmapDetail = () => {
                               <div className="relative">
                                 <img src={t.artwork} alt="" className="w-8 h-8 rounded object-cover" />
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); playTrack(t.previewUrl, t.id); }}
+                                  onClick={(e) => { e.stopPropagation(); playTrack(t.previewUrl, t.id, t.title, track.artist.name, t.artwork); }}
                                   className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded"
                                 >
-                                  {playingTrackId === t.id && isPlaying ? (
+                                  {isTrackPlaying(t.id) ? (
                                     <Pause className="h-3 w-3 text-white" />
                                   ) : (
                                     <Play className="h-3 w-3 text-white" />
@@ -524,10 +531,10 @@ const HeatmapDetail = () => {
                       <div className="relative">
                         <img src={t.artwork} alt="" className="w-10 h-10 rounded object-cover" />
                         <button
-                          onClick={(e) => { e.stopPropagation(); playTrack(t.previewUrl, t.id); }}
+                          onClick={(e) => { e.stopPropagation(); playTrack(t.previewUrl, t.id, t.title, t.artist || track.artist.name, t.artwork); }}
                           className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded"
                         >
-                          {playingTrackId === t.id && isPlaying ? (
+                          {isTrackPlaying(t.id) ? (
                             <Pause className="h-3 w-3 text-white" />
                           ) : (
                             <Play className="h-3 w-3 text-white" />
@@ -546,33 +553,6 @@ const HeatmapDetail = () => {
           </div>
         </div>
       </main>
-
-      {/* Fixed Audio Player */}
-      {playingTrackId && (
-        <div className="fixed bottom-0 left-0 right-0 bg-black/95 border-t border-white/10 p-3">
-          <div className="max-w-7xl mx-auto flex items-center gap-4">
-            <button
-              onClick={() => {
-                if (isPlaying) {
-                  audioRef.current?.pause();
-                  setIsPlaying(false);
-                } else {
-                  audioRef.current?.play();
-                  setIsPlaying(true);
-                }
-              }}
-              className="w-10 h-10 rounded-full bg-[#4ade80] flex items-center justify-center"
-            >
-              {isPlaying ? <Pause className="h-5 w-5 text-black" /> : <Play className="h-5 w-5 text-black" />}
-            </button>
-            <div className="flex-1">
-              <p className="text-sm text-white">{playingTrackId === track?.id ? track.title : 'Now Playing'}</p>
-              <p className="text-xs text-white/50">{playingTrackId === track?.id ? track.artist.name : ''}</p>
-            </div>
-            <Volume2 className="h-4 w-4 text-white/50" />
-          </div>
-        </div>
-      )}
     </div>
   );
 };
