@@ -91,33 +91,41 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
 
   // Track if we've initiated audio connection
   const audioConnectionRef = useRef(false);
+  const connectionAttemptRef = useRef(0);
 
   // Auto-connect audio immediately for participants (no need to wait for 'active' status)
   useEffect(() => {
     // Connect as soon as we have a session and are a participant
     const shouldConnect = battle.session_id && user && isParticipant;
     
-    if (shouldConnect && !audioConnectionRef.current) {
-      console.log('🎙️ Auto-connecting audio for battle participant...');
+    if (shouldConnect && !audioConnected) {
+      const attemptId = ++connectionAttemptRef.current;
+      console.log('🎙️ Auto-connecting audio for battle participant... Attempt:', attemptId);
       audioConnectionRef.current = true;
       
       // Small delay to ensure component is fully mounted
       const connectTimeout = setTimeout(() => {
-        connectAudio();
+        // Only proceed if this is still the latest attempt
+        if (attemptId === connectionAttemptRef.current) {
+          console.log('🎙️ Executing audio connection for attempt:', attemptId);
+          connectAudio(battle.session_id || battle.id, true); // Force connection
+        }
       }, 500);
       
       return () => clearTimeout(connectTimeout);
     }
-    
+  }, [battle.session_id, battle.id, user?.id, isParticipant, audioConnected, connectAudio]);
+
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
-      // Always cleanup on unmount
       if (audioConnectionRef.current) {
         console.log('🧹 Disconnecting audio on cleanup');
         audioConnectionRef.current = false;
         disconnectAudio();
       }
     };
-  }, [battle.session_id, user?.id, isParticipant]);
+  }, [disconnectAudio]);
 
   // Calculate progress bar percentages
   const totalScore = hostScore + opponentScore || 1;
