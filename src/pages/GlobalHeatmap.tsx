@@ -98,26 +98,31 @@ const GlobalHeatmap = () => {
     }
   }, [tracks]);
 
-  // Handle search with debounce
+  // Handle search with debounce - show dropdown immediately on typing
   useEffect(() => {
+    if (searchQuery.trim()) {
+      // Show dropdown immediately with loading state
+      setShowSearchResults(true);
+    } else {
+      setShowSearchResults(false);
+      setSearchResults([]);
+    }
+    
     const timer = setTimeout(() => {
       if (searchQuery.trim()) {
         searchTracks(searchQuery);
-        setShowSearchResults(true);
       } else {
-        setShowSearchResults(false);
-        setSearchResults([]);
         refetch();
       }
-    }, 300); // Reduced debounce for faster response
+    }, 200); // Fast 200ms debounce
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Update search results when tracks change during search
+  // Update search results when tracks change - keep dropdown open during search
   useEffect(() => {
     if (searchQuery.trim()) {
       setSearchResults(tracks);
-      setShowSearchResults(tracks.length > 0);
+      // Keep dropdown open - don't close based on results count
     }
   }, [tracks, searchQuery]);
 
