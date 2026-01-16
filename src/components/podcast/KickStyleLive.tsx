@@ -635,6 +635,13 @@ const KickStyleLive = ({
         sessionId={currentSession.id}
         hostId={currentSession.host_id}
         hostName={currentSession.host_name}
+        onGiftSent={(giftType) => {
+          // Trigger TikTokGiftDisplay for visual feedback
+          const senderName = user?.email?.split('@')[0] || 'You';
+          if ((window as any).__addGift) {
+            (window as any).__addGift(giftType, 1, senderName);
+          }
+        }}
       />
 
       <ShareModal

@@ -306,8 +306,8 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     fetchTopGifters();
   }, [fetchTopGifters]);
 
-  // Double-like handler
-  const handleDoubleTap = async (side: 'host' | 'opponent') => {
+  // Double-like handler - with safeguards to prevent crashes
+  const handleDoubleTap = useCallback(async (side: 'host' | 'opponent') => {
     if (!user) {
       toast.error('Please sign in to boost');
       return;
@@ -316,38 +316,52 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     const now = Date.now();
     const lastTap = lastTapTime[side];
     
+    // Update tap time first to avoid race conditions
+    setLastTapTime(prev => ({ ...prev, [side]: now }));
+    
     if (now - lastTap < 300) {
       const boostPoints = 5;
       
+      // Show animation in a safe way
       setShowHeartAnimation(prev => ({ ...prev, [side]: true }));
-      setTimeout(() => {
-        setShowHeartAnimation(prev => ({ ...prev, [side]: false }));
-      }, 800);
       
-      if (side === 'host') {
-        const newScore = hostScore + boostPoints;
-        setHostScore(newScore);
-        await supabase
-          .from('podcast_battles')
-          .update({ host_score: newScore })
-          .eq('id', battle.id);
-      } else {
-        const newScore = opponentScore + boostPoints;
-        setOpponentScore(newScore);
-        await supabase
-          .from('podcast_battles')
-          .update({ opponent_score: newScore })
-          .eq('id', battle.id);
+      // Use requestAnimationFrame for safer animation cleanup
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          setShowHeartAnimation(prev => ({ ...prev, [side]: false }));
+        }, 800);
+      });
+      
+      try {
+        if (side === 'host') {
+          const newScore = hostScore + boostPoints;
+          setHostScore(newScore);
+          await supabase
+            .from('podcast_battles')
+            .update({ host_score: newScore })
+            .eq('id', battle.id);
+        } else {
+          const newScore = opponentScore + boostPoints;
+          setOpponentScore(newScore);
+          await supabase
+            .from('podcast_battles')
+            .update({ opponent_score: newScore })
+            .eq('id', battle.id);
+        }
+      } catch (error) {
+        console.error('Double-tap update error:', error);
       }
     }
-    
-    setLastTapTime(prev => ({ ...prev, [side]: now }));
-  };
+  }, [user, lastTapTime, hostScore, opponentScore, battle.id]);
 
-  const handleGiftCreator = (creator: 'host' | 'opponent') => {
+  const handleGiftCreator = useCallback((creator: 'host' | 'opponent', e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setSelectedCreator(creator);
     setShowGiftModal(true);
-  };
+  }, []);
 
   // Handle leave battle - end battle and session immediately
   const handleLeave = async () => {
@@ -495,10 +509,10 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
               </div>
               <Button
                 size="sm"
-                onClick={(e) => { e.stopPropagation(); handleGiftCreator('host'); }}
-                className="h-5 bg-[#53fc18] hover:bg-[#45d914] text-black text-[8px] px-2"
+                onClick={(e) => handleGiftCreator('host', e)}
+                className="h-6 bg-[#53fc18] hover:bg-[#45d914] text-black text-[10px] px-3 z-10"
               >
-                <Gift className="h-2 w-2 mr-0.5" />
+                <Gift className="h-3 w-3 mr-1" />
                 Gift
               </Button>
             </div>
@@ -553,10 +567,10 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
               </div>
               <Button
                 size="sm"
-                onClick={(e) => { e.stopPropagation(); handleGiftCreator('opponent'); }}
-                className="h-5 bg-pink-500 hover:bg-pink-600 text-white text-[8px] px-2"
+                onClick={(e) => handleGiftCreator('opponent', e)}
+                className="h-6 bg-pink-500 hover:bg-pink-600 text-white text-[10px] px-3 z-10"
               >
-                <Gift className="h-2 w-2 mr-0.5" />
+                <Gift className="h-3 w-3 mr-1" />
                 Gift
               </Button>
             </div>
@@ -611,7 +625,12 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
         sessionId={battle.session_id || ''}
         hostId={selectedCreator === 'host' ? battle.host_id : battle.opponent_id}
         hostName={selectedCreator === 'host' ? battle.host_name : battle.opponent_name}
-        onGiftSent={() => {}}
+        onGiftSent={(giftType, count, senderName) => {
+          // Trigger TikTokGiftDisplay for visual feedback
+          if ((window as any).__addGift) {
+            (window as any).__addGift(giftType, count, senderName);
+          }
+        }}
       />
 
       {/* Share Modal */}
