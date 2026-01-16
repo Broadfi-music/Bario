@@ -173,16 +173,27 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
     };
   }, [sessionId]);
 
-  // Real-time message fade out like TikTok - messages disappear after 10 seconds
+  // Real-time message fade out - messages disappear after 10 seconds
+  // FIXED: Properly handles local messages and demo messages
   useEffect(() => {
     const cleanup = setInterval(() => {
       const now = Date.now();
       setComments(prev => {
+        // Skip if no messages or all demo
+        if (prev.length === 0) return prev;
+        
         // First, mark old messages for fadeOut
         const updated = prev.map(c => {
+          // Demo messages don't fade
           if (c.id.startsWith('demo-')) return c;
-          if (!c.created_at) return c;
-          const age = now - new Date(c.created_at).getTime();
+          
+          // For local messages without created_at, use current time
+          const messageTime = c.created_at 
+            ? new Date(c.created_at).getTime() 
+            : now - MESSAGE_DISPLAY_DURATION; // Force fade if no timestamp
+          
+          const age = now - messageTime;
+          
           // Mark for fadeout at 10 seconds
           if (age > MESSAGE_DISPLAY_DURATION && !c.fadeOut) {
             return { ...c, fadeOut: true };
@@ -190,14 +201,24 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
           return c;
         });
         
-        // Then remove messages that have been fading out for 500ms+
-        return updated.filter(c => {
-          if (c.id.startsWith('demo-') || c.id.startsWith('local-')) return true;
-          if (!c.created_at) return true;
-          const age = now - new Date(c.created_at).getTime();
-          // Keep messages for 11 seconds total (10s visible + 1s fade animation)
-          return age < MESSAGE_DISPLAY_DURATION + 1000;
+        // Then remove messages that have been fading out
+        const filtered = updated.filter(c => {
+          // Keep demo messages
+          if (c.id.startsWith('demo-')) return true;
+          
+          // Get message age
+          const messageTime = c.created_at 
+            ? new Date(c.created_at).getTime() 
+            : now - MESSAGE_DISPLAY_DURATION - 2000; // Force removal if no timestamp
+          
+          const age = now - messageTime;
+          
+          // Remove messages older than 12 seconds (10s visible + 2s fade buffer)
+          return age < MESSAGE_DISPLAY_DURATION + 2000;
         });
+        
+        // Also limit total messages to prevent memory issues
+        return filtered.slice(-50);
       });
     }, MESSAGE_CLEANUP_INTERVAL);
     

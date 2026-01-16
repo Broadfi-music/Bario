@@ -590,49 +590,39 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
             </div>
           </div>
 
-          {/* FLOATING GIFT BUTTONS - Completely separate layer with full pointer events */}
-          <div className="absolute inset-0 flex pointer-events-none z-40">
-            {/* Host Gift Button */}
-            <div className="flex-1 flex items-end justify-center pb-2">
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  console.log('🎁 Host gift button clicked');
-                  handleGiftCreator('host', e);
-                }}
-                onTouchEnd={(e) => {
-                  e.stopPropagation();
-                  console.log('🎁 Host gift button touched');
-                  handleGiftCreator('host');
-                }}
-                className="h-9 bg-[#53fc18] hover:bg-[#45d914] active:bg-[#3ec512] text-black text-xs px-5 pointer-events-auto shadow-xl touch-manipulation"
-              >
-                <Gift className="h-4 w-4 mr-1.5" />
-                Gift
-              </Button>
-            </div>
-            {/* Opponent Gift Button */}
-            <div className="flex-1 flex items-end justify-center pb-2">
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  console.log('🎁 Opponent gift button clicked');
-                  handleGiftCreator('opponent', e);
-                }}
-                onTouchEnd={(e) => {
-                  e.stopPropagation();
-                  console.log('🎁 Opponent gift button touched');
-                  handleGiftCreator('opponent');
-                }}
-                className="h-9 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 text-white text-xs px-5 pointer-events-auto shadow-xl touch-manipulation"
-              >
-                <Gift className="h-4 w-4 mr-1.5" />
-                Gift
-              </Button>
-            </div>
-          </div>
+        </div>
+
+        {/* MOBILE GIFT BUTTONS - Separate action bar above chat */}
+        <div className="shrink-0 flex items-center justify-center gap-4 py-2 px-4 bg-black/50 border-y border-white/5">
+          <Button
+            size="sm"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('🎁 Host gift button pressed (mobile/desktop)');
+              setSelectedCreator('host');
+              setShowGiftModal(true);
+            }}
+            className="h-10 bg-[#53fc18] hover:bg-[#45d914] active:bg-[#3ec512] text-black text-sm px-6 shadow-xl touch-none select-none"
+          >
+            <Gift className="h-4 w-4 mr-2" />
+            Gift {battle.host_name?.split(' ')[0]}
+          </Button>
+          
+          <Button
+            size="sm"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('🎁 Opponent gift button pressed (mobile/desktop)');
+              setSelectedCreator('opponent');
+              setShowGiftModal(true);
+            }}
+            className="h-10 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 text-white text-sm px-6 shadow-xl touch-none select-none"
+          >
+            <Gift className="h-4 w-4 mr-2" />
+            Gift {battle.opponent_name?.split(' ')[0]}
+          </Button>
         </div>
 
         {/* Chat Section - Always Visible */}
