@@ -15,17 +15,19 @@ interface TikTokGiftModalProps {
   onGiftSent?: (giftType: string, count: number, senderName: string) => void;
 }
 
+// Gift definitions with coin costs and creator earnings
+// Earning formula: Each gift has a specific USD earning rate for creators
 const GIFTS = [
   // Image-based gifts
-  { type: 'rose', image: '/gifts/gift-rose.png', label: 'Rose', coins: 1, color: 'from-red-500/20 to-pink-500/20' },
-  { type: 'heart', image: '/gifts/gift-red-heart.png', label: 'Heart', coins: 5, color: 'from-pink-500/20 to-rose-500/20' },
-  { type: 'flame_heart', image: '/gifts/gift-flame-heart.png', label: 'Flames', coins: 10, color: 'from-orange-500/20 to-red-500/20' },
-  { type: 'tofu', image: '/gifts/gift-tofu.png', label: 'Tofu', coins: 3, color: 'from-green-500/20 to-emerald-500/20' },
+  { type: 'rose', image: '/gifts/gift-rose.png', label: 'Rose', coins: 1, earnings: 0.0128, color: 'from-red-500/20 to-pink-500/20' },
+  { type: 'heart', image: '/gifts/gift-red-heart.png', label: 'Heart', coins: 5, earnings: 0.064, color: 'from-pink-500/20 to-rose-500/20' },
+  { type: 'tofu', image: '/gifts/gift-tofu.png', label: 'Tofu', coins: 5, earnings: 0.064, color: 'from-green-500/20 to-emerald-500/20' },
+  { type: 'flame', image: '/gifts/gift-flame-heart.png', label: 'Flame', coins: 10, earnings: 0.128, color: 'from-orange-500/20 to-red-500/20' },
   // Video animation gifts (premium)
-  { type: 'fire', icon: Flame, label: 'Fire', coins: 50, color: 'from-orange-600/30 to-red-600/30', isVideo: true },
-  { type: 'star', icon: Star, label: 'Star', coins: 100, color: 'from-yellow-500/30 to-amber-500/30', isVideo: true },
-  { type: 'diamond', icon: Diamond, label: 'Diamond', coins: 200, color: 'from-cyan-500/30 to-blue-500/30', isVideo: true },
-  { type: 'crown', icon: Crown, label: 'Crown', coins: 500, color: 'from-purple-500/30 to-pink-500/30', isVideo: true },
+  { type: 'fire', icon: Flame, label: 'Fire', coins: 50, earnings: 0.64, color: 'from-orange-600/30 to-red-600/30', isVideo: true },
+  { type: 'star', icon: Star, label: 'Star', coins: 100, earnings: 1.28, color: 'from-yellow-500/30 to-amber-500/30', isVideo: true },
+  { type: 'diamond', icon: Diamond, label: 'Diamond', coins: 200, earnings: 2.56, color: 'from-cyan-500/30 to-blue-500/30', isVideo: true },
+  { type: 'crown', icon: Crown, label: 'Crown', coins: 500, earnings: 6.40, color: 'from-purple-500/30 to-pink-500/30', isVideo: true },
 ];
 
 const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftSent }: TikTokGiftModalProps) => {
@@ -75,7 +77,7 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftS
     });
   };
 
-  const sendGift = async (giftType: string, coinsPerGift: number) => {
+  const sendGift = async (giftType: string, coinsPerGift: number, earningsPerGift: number) => {
     if (!user) {
       toast.error('Please sign in to send gifts');
       return;
@@ -83,6 +85,7 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftS
 
     const count = giftCount[giftType] || 1;
     const totalCoins = coinsPerGift * count;
+    const totalEarnings = earningsPerGift * count;
 
     // For demo sessions, just show success without database call
     if (isDemoSession(sessionId) || isDemoUser(hostId)) {
@@ -110,70 +113,31 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftS
     }
 
     try {
-      // Deduct coins from sender
-      const { error: coinError } = await supabase
-        .from('user_coins')
-        .update({ 
-          balance: userCoins - totalCoins,
-          total_spent: userCoins + totalCoins 
-        })
-        .eq('user_id', user.id);
-
-      if (coinError) throw coinError;
-
-      // Record transaction
-      await supabase.from('coin_transactions').insert({
-        user_id: user.id,
-        type: 'gift_sent',
-        amount: totalCoins,
-        coins: -totalCoins,
-        description: `Sent ${count}x ${giftType} gift`,
-        reference_id: sessionId
+      // Call edge function to handle the gift transaction
+      const { data, error } = await supabase.functions.invoke('gift-transaction', {
+        body: {
+          action: 'send_gift',
+          senderId: user.id,
+          recipientId: hostId,
+          sessionId: sessionId,
+          giftType: giftType,
+          coinsCost: totalCoins,
+          earningsUsd: totalEarnings,
+          giftCount: count
+        }
       });
 
-      // Send gift(s)
-      for (let i = 0; i < count; i++) {
-        await supabase.from('podcast_gifts').insert({
-          session_id: sessionId,
-          sender_id: user.id,
-          recipient_id: hostId,
-          gift_type: giftType,
-          points_value: coinsPerGift
-        });
-      }
-
-      // Update creator earnings
-      const { data: creatorEarnings } = await supabase
-        .from('creator_earnings')
-        .select('*')
-        .eq('user_id', hostId)
-        .single();
-
-      const earningsUsd = totalCoins * 0.007; // Each coin = $0.007 to creator
-      const creatorData = creatorEarnings as any;
-
-      if (creatorData) {
-        await supabase
-          .from('creator_earnings')
-          .update({
-            total_coins_received: (creatorData.total_coins_received || 0) + totalCoins,
-            total_earnings_usd: parseFloat(String(creatorData.total_earnings_usd || 0)) + earningsUsd,
-            pending_earnings_usd: parseFloat(String(creatorData.pending_earnings_usd || 0)) + earningsUsd
-          })
-          .eq('user_id', hostId);
-      } else {
-        await supabase.from('creator_earnings').insert({
-          user_id: hostId,
-          total_coins_received: totalCoins,
-          total_earnings_usd: earningsUsd,
-          pending_earnings_usd: earningsUsd
-        });
+      if (error) throw error;
+      
+      if (data?.error) {
+        toast.error(data.error);
+        return;
       }
 
       const senderName = userProfile?.full_name || userProfile?.username || 'Anonymous';
       onGiftSent?.(giftType, count, senderName);
-      setUserCoins(prev => prev - totalCoins);
-      toast.success(`Sent ${count}x ${giftType} to host!`);
+      setUserCoins(data.new_balance || userCoins - totalCoins);
+      toast.success(`Sent ${count}x ${giftType} to host! Creator earned $${totalEarnings.toFixed(2)}`);
       onClose();
     } catch (error) {
       console.error('Send gift error:', error);
@@ -219,7 +183,7 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftS
               return (
                 <div key={gift.type} className="flex flex-col items-center">
                   <button
-                    onClick={() => sendGift(gift.type, gift.coins)}
+                    onClick={() => sendGift(gift.type, gift.coins, gift.earnings)}
                     disabled={sending === gift.type || !canAfford}
                     className={`relative flex flex-col items-center gap-1 p-2 rounded-xl bg-gradient-to-b ${gift.color} border ${isVideoGift ? 'border-yellow-500/50' : 'border-white/10'} hover:border-white/30 hover:scale-105 transition-all disabled:opacity-50 w-full aspect-square`}
                   >

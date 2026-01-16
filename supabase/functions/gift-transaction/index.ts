@@ -6,13 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Platform takes 30%, creator gets 70%
-const CREATOR_SHARE = 0.70;
-const PLATFORM_FEE = 0.30;
-
-// Coin to USD conversion rate (based on ~$0.99 for 65 coins)
-const COIN_TO_USD_RATE = 0.015; // ~$0.015 per coin
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -27,14 +20,16 @@ serve(async (req) => {
     console.log(`[Gift Transaction] Action: ${action}`);
 
     if (action === 'send_gift') {
-      const { senderId, recipientId, sessionId, giftType, coinsCost, pointsValue } = params;
+      const { senderId, recipientId, sessionId, giftType, coinsCost, earningsUsd, giftCount = 1 } = params;
 
-      if (!senderId || !recipientId || !sessionId || !giftType || !coinsCost) {
+      if (!senderId || !recipientId || !sessionId || !giftType || !coinsCost || earningsUsd === undefined) {
         return new Response(
           JSON.stringify({ error: 'Missing required fields' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      console.log(`[Gift Transaction] Processing: ${giftCount}x ${giftType}, coins: ${coinsCost}, earnings: $${earningsUsd}`);
 
       // 1. Check sender's coin balance
       const { data: senderCoins } = await supabase
@@ -51,7 +46,7 @@ serve(async (req) => {
       }
 
       // 2. Deduct coins from sender
-      await supabase
+      const { error: updateError } = await supabase
         .from('user_coins')
         .update({
           balance: senderCoins.balance - coinsCost,
@@ -60,20 +55,29 @@ serve(async (req) => {
         })
         .eq('user_id', senderId);
 
-      // 3. Record the gift
-      await supabase.from('podcast_gifts').insert({
-        session_id: sessionId,
-        sender_id: senderId,
-        recipient_id: recipientId,
-        gift_type: giftType,
-        points_value: pointsValue || coinsCost
-      });
+      if (updateError) {
+        console.error('[Gift Transaction] Failed to update sender coins:', updateError);
+        throw updateError;
+      }
 
-      // 4. Calculate creator earnings (70% of coin value)
-      const coinValueUsd = coinsCost * COIN_TO_USD_RATE;
-      const creatorEarning = coinValueUsd * CREATOR_SHARE;
+      // 3. Record gift(s) in podcast_gifts
+      const giftRecords = [];
+      for (let i = 0; i < giftCount; i++) {
+        giftRecords.push({
+          session_id: sessionId,
+          sender_id: senderId,
+          recipient_id: recipientId,
+          gift_type: giftType,
+          points_value: Math.round(coinsCost / giftCount)
+        });
+      }
+      
+      const { error: giftError } = await supabase.from('podcast_gifts').insert(giftRecords);
+      if (giftError) {
+        console.error('[Gift Transaction] Failed to record gifts:', giftError);
+      }
 
-      // 5. Update creator's earnings
+      // 4. Update creator's earnings with the exact USD amount
       const { data: existingEarnings } = await supabase
         .from('creator_earnings')
         .select('*')
@@ -85,8 +89,8 @@ serve(async (req) => {
           .from('creator_earnings')
           .update({
             total_coins_received: existingEarnings.total_coins_received + coinsCost,
-            total_earnings_usd: parseFloat(existingEarnings.total_earnings_usd) + creatorEarning,
-            pending_earnings_usd: parseFloat(existingEarnings.pending_earnings_usd) + creatorEarning,
+            total_earnings_usd: parseFloat(existingEarnings.total_earnings_usd) + earningsUsd,
+            pending_earnings_usd: parseFloat(existingEarnings.pending_earnings_usd) + earningsUsd,
             updated_at: new Date().toISOString()
           })
           .eq('user_id', recipientId);
@@ -94,28 +98,29 @@ serve(async (req) => {
         await supabase.from('creator_earnings').insert({
           user_id: recipientId,
           total_coins_received: coinsCost,
-          total_earnings_usd: creatorEarning,
-          pending_earnings_usd: creatorEarning
+          total_earnings_usd: earningsUsd,
+          pending_earnings_usd: earningsUsd
         });
       }
 
-      // 6. Record transaction for sender
+      // 5. Record transaction for sender
       await supabase.from('coin_transactions').insert({
         user_id: senderId,
         type: 'gift_sent',
         amount: 0,
         coins: -coinsCost,
-        description: `Sent ${giftType} gift`,
-        status: 'completed'
+        description: `Sent ${giftCount}x ${giftType} gift`,
+        status: 'completed',
+        reference_id: sessionId
       });
 
-      console.log(`[Gift Transaction] Gift sent: ${coinsCost} coins, creator earns $${creatorEarning.toFixed(4)}`);
+      console.log(`[Gift Transaction] Success: ${giftCount}x ${giftType}, creator earns $${earningsUsd.toFixed(4)}`);
 
       return new Response(
         JSON.stringify({
           success: true,
           coins_spent: coinsCost,
-          creator_earning: creatorEarning,
+          creator_earning: earningsUsd,
           new_balance: senderCoins.balance - coinsCost
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
