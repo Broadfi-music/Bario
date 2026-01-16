@@ -291,9 +291,8 @@ const GlobalHeatmap = () => {
             {/* Dashboard/Login - Always visible */}
             {user ? (
               <Link to="/dashboard">
-                <Button size="sm" className="bg-[#4ade80] text-black hover:bg-[#4ade80]/90 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 rounded-lg font-medium">
-                  <span className="hidden sm:inline">Dashboard</span>
-                  <span className="sm:hidden">Dash</span>
+                <Button size="sm" className="bg-black text-white hover:bg-black/90 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 rounded-lg font-medium">
+                  Dashboard
                 </Button>
               </Link>
             ) : (

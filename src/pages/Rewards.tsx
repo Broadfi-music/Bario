@@ -391,7 +391,7 @@ const Rewards = () => {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-3 gap-3 mb-6">
             <Card className="p-4">
               <p className="text-xs text-muted-foreground">Total Earned</p>
               <p className="text-xl font-bold text-foreground">{formatCurrency(earnings.totalEarningsUsd)}</p>
@@ -405,25 +405,20 @@ const Rewards = () => {
               <p className="text-xl font-bold text-foreground">{earnings.totalCoinsReceived.toLocaleString()}</p>
               <p className="text-[10px] text-muted-foreground">coins</p>
             </Card>
-            <Card className="p-4">
-              <p className="text-xs text-muted-foreground">Creator Share</p>
-              <p className="text-xl font-bold text-foreground">70%</p>
-              <p className="text-[10px] text-muted-foreground">of gifts</p>
-            </Card>
           </div>
 
           {/* Referral Section */}
-          <Card className="p-4 mb-6 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+          <Card className="p-4 mb-6 bg-black border-white/10">
             <div className="flex items-center gap-2 mb-3">
               <Award className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold text-foreground">Bario Referral Program</h3>
+              <h3 className="font-semibold text-white">Bario Referral Program</h3>
             </div>
-            <p className="text-xs text-muted-foreground mb-3">
+            <p className="text-xs text-white/70 mb-3">
               Earn 100 free coins for every new user who signs up using your referral link!
             </p>
             <div className="flex gap-2">
-              <Input value={referralLink} readOnly className="text-xs bg-background" />
-              <Button onClick={handleCopyReferral} variant="outline" size="sm" className="bg-black text-white hover:bg-black/80">
+              <Input value={referralLink} readOnly className="text-xs bg-white/10 border-white/20 text-white" />
+              <Button onClick={handleCopyReferral} variant="outline" size="sm" className="bg-white text-black hover:bg-white/90">
                 <Copy className="h-3 w-3 mr-1" />Copy
               </Button>
             </div>
