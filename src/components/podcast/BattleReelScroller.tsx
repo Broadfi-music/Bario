@@ -34,13 +34,22 @@ const BattleReelScroller = ({ initialBattle, onClose }: BattleReelScrollerProps)
   const touchStartY = useRef(0);
   const touchEndY = useRef(0);
 
-  // Fetch active battles
+  // Fetch active battles (include both 'active' and 'pending' status)
   const fetchBattles = useCallback(async () => {
-    const { data } = await supabase
+    console.log('🔍 Fetching active battles...');
+    
+    const { data, error } = await supabase
       .from('podcast_battles')
       .select('*')
-      .eq('status', 'active')
-      .order('started_at', { ascending: false });
+      .in('status', ['active', 'pending']) // Include both pending and active
+      .order('started_at', { ascending: false, nullsFirst: false });
+
+    if (error) {
+      console.error('❌ Error fetching battles:', error);
+      return;
+    }
+
+    console.log('📦 Battles found:', data?.length || 0, data);
 
     if (data && data.length > 0) {
       const userIds = [...new Set(data.flatMap(b => [b.host_id, b.opponent_id]))];
@@ -76,13 +85,19 @@ const BattleReelScroller = ({ initialBattle, onClose }: BattleReelScrollerProps)
           const [battle] = enrichedBattles.splice(initialIndex, 1);
           enrichedBattles.unshift(battle);
         } else if (initialIndex === -1) {
+          // Add initial battle if not in list
           enrichedBattles.unshift(initialBattle);
         }
       }
 
+      console.log('✅ Enriched battles:', enrichedBattles.length);
       setBattles(enrichedBattles);
     } else if (initialBattle) {
+      console.log('📦 Using initial battle only');
       setBattles([initialBattle]);
+    } else {
+      console.log('⚠️ No battles found');
+      setBattles([]);
     }
   }, [initialBattle]);
 

@@ -112,41 +112,54 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
     fetchRecentComments();
 
     // Subscribe to ALL new comments - everyone should see everyone's messages
+    // CRITICAL: Use a unique channel name and subscribe to all events for REPLICA IDENTITY FULL
+    const channelName = `chat-realtime-${sessionId}-${Date.now()}`;
+    console.log('💬 Creating chat channel:', channelName);
+    
     const channel = supabase
-      .channel(`chat-${sessionId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
           schema: 'public',
           table: 'podcast_comments',
           filter: `session_id=eq.${sessionId}`
         },
         (payload) => {
-          const newComment = payload.new as Comment;
-          console.log('💬 New comment received by all users:', newComment.content);
+          console.log('💬 Realtime payload received:', payload.eventType, payload);
           
-          // Add to comments - remove local duplicate if exists
-          setComments(prev => {
-            // Check if this comment already exists
-            if (prev.some(c => c.id === newComment.id)) {
-              return prev;
-            }
-            // Remove any local version of this comment
-            const filtered = prev.filter(c => 
-              !(c.id.startsWith('local-') && 
-                c.user_id === newComment.user_id && 
-                c.content === newComment.content)
-            );
-            // Keep last 100 messages
-            return [...filtered.slice(-99), newComment];
-          });
+          if (payload.eventType === 'INSERT') {
+            const newComment = payload.new as Comment;
+            console.log('💬 New comment received by all users:', newComment.content, 'from:', newComment.user_id);
+            
+            // Add to comments - remove local duplicate if exists
+            setComments(prev => {
+              // Check if this comment already exists by ID
+              if (prev.some(c => c.id === newComment.id)) {
+                console.log('💬 Duplicate comment, skipping');
+                return prev;
+              }
+              // Remove any local version of this comment (matching user and content)
+              const filtered = prev.filter(c => 
+                !(c.id.startsWith('local-') && 
+                  c.user_id === newComment.user_id && 
+                  c.content === newComment.content)
+              );
+              // Keep last 100 messages
+              const updated = [...filtered.slice(-99), newComment];
+              console.log('💬 Comments updated, total:', updated.length);
+              return updated;
+            });
+          }
         }
       )
       .subscribe((status, err) => {
-        console.log('💬 Chat subscription status:', status, err);
-        if (status === 'CHANNEL_ERROR') {
-          console.log('Retrying chat subscription...');
+        console.log('💬 Chat subscription status:', status, err ? `Error: ${err}` : '');
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Chat subscription active - all users will see messages');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Chat channel error, retrying in 2s...');
           setTimeout(() => {
             channel.subscribe();
           }, 2000);
@@ -154,6 +167,7 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
       });
 
     return () => {
+      console.log('💬 Removing chat channel:', channelName);
       supabase.removeChannel(channel);
     };
   }, [sessionId]);
