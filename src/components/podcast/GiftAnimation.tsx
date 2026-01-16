@@ -17,6 +17,10 @@ interface GiftEvent {
   created_at: string;
 }
 
+// PREMIUM video gifts only - these are the only gifts that show full-screen video animation
+// Image-based gifts (rose, heart, tofu, flame_heart) are handled by TikTokGiftDisplay with static icons
+const PREMIUM_VIDEO_GIFTS = ['fire', 'star', 'diamond', 'crown'];
+
 const GIFT_CONFIG: Record<string, { 
   icon: React.ComponentType<{ className?: string }>;
   color: string;
@@ -25,7 +29,60 @@ const GIFT_CONFIG: Record<string, {
   size: string;
   videoUrl: string;
   coins: number;
+  isVideoGift: boolean;
 }> = {
+  // Image-based affordable gifts - NO video animation, just icon display
+  rose: {
+    icon: Heart,
+    color: 'text-red-400',
+    bgColor: 'from-red-500/30 to-pink-500/30',
+    label: 'Rose',
+    size: 'h-8 w-8',
+    videoUrl: '', // No video
+    coins: 1,
+    isVideoGift: false
+  },
+  heart: {
+    icon: Heart,
+    color: 'text-pink-500',
+    bgColor: 'from-pink-500/30 to-rose-500/30',
+    label: 'Heart',
+    size: 'h-8 w-8',
+    videoUrl: '', // No video - this is the icon-based heart
+    coins: 5,
+    isVideoGift: false
+  },
+  tofu: {
+    icon: Heart,
+    color: 'text-green-400',
+    bgColor: 'from-green-500/30 to-emerald-500/30',
+    label: 'Tofu',
+    size: 'h-8 w-8',
+    videoUrl: '', // No video
+    coins: 5,
+    isVideoGift: false
+  },
+  flame_heart: {
+    icon: Flame,
+    color: 'text-orange-400',
+    bgColor: 'from-orange-500/30 to-red-500/30',
+    label: 'Flames',
+    size: 'h-8 w-8',
+    videoUrl: '', // No video
+    coins: 10,
+    isVideoGift: false
+  },
+  flame: {
+    icon: Flame,
+    color: 'text-orange-400',
+    bgColor: 'from-orange-500/30 to-red-500/30',
+    label: 'Flame',
+    size: 'h-8 w-8',
+    videoUrl: '', // No video
+    coins: 10,
+    isVideoGift: false
+  },
+  // Premium video gifts - these show full-screen video animation
   fire: { 
     icon: Flame, 
     color: 'text-orange-500', 
@@ -33,16 +90,8 @@ const GIFT_CONFIG: Record<string, {
     label: 'Fire',
     size: 'h-10 w-10',
     videoUrl: '/gifts/gift-fire.mp4',
-    coins: 50
-  },
-  heart: { 
-    icon: Heart, 
-    color: 'text-pink-500', 
-    bgColor: 'from-pink-500/30 to-rose-500/30',
-    label: 'Heart',
-    size: 'h-12 w-12',
-    videoUrl: '/gifts/gift-heart.mp4',
-    coins: 100
+    coins: 50,
+    isVideoGift: true
   },
   star: { 
     icon: Star, 
@@ -51,7 +100,8 @@ const GIFT_CONFIG: Record<string, {
     label: 'Star',
     size: 'h-14 w-14',
     videoUrl: '/gifts/gift-star.mp4',
-    coins: 299
+    coins: 100,
+    isVideoGift: true
   },
   diamond: { 
     icon: Diamond, 
@@ -60,7 +110,8 @@ const GIFT_CONFIG: Record<string, {
     label: 'Diamond',
     size: 'h-16 w-16',
     videoUrl: '/gifts/gift-diamond.mp4',
-    coins: 999
+    coins: 200,
+    isVideoGift: true
   },
   crown: { 
     icon: Crown, 
@@ -69,7 +120,8 @@ const GIFT_CONFIG: Record<string, {
     label: 'Crown',
     size: 'h-20 w-20',
     videoUrl: '/gifts/gift-crown.mp4',
-    coins: 2999
+    coins: 500,
+    isVideoGift: true
   },
 };
 
@@ -111,6 +163,17 @@ const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
   }, []);
 
   const handleNewGift = (gift: GiftEvent) => {
+    const config = GIFT_CONFIG[gift.gift_type];
+    
+    // Only process premium video gifts in this component
+    // Image-based gifts (rose, heart, tofu, flame_heart, flame) are handled by TikTokGiftDisplay
+    if (!config?.isVideoGift) {
+      console.log(`🎁 Non-video gift "${gift.gift_type}" - skipping video animation`);
+      return;
+    }
+
+    console.log(`🎬 Premium video gift "${gift.gift_type}" - showing video animation`);
+
     // Add gift to display queue
     setGiftEvents(prev => [...prev, gift]);
 
@@ -121,7 +184,7 @@ const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
       [comboKey]: (prev[comboKey] || 0) + 1,
     }));
 
-    // Show big video celebration for ALL gifts (TikTok style)
+    // Show big video celebration ONLY for premium video gifts
     setBigGift(gift);
 
     // Remove gift after animation completes (4 seconds)

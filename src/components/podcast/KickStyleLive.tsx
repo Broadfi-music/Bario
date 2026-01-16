@@ -212,10 +212,10 @@ const KickStyleLive = ({
     };
   }, [currentSession]);
 
-  // Fetch recommended sessions (other live audio rooms)
+  // Fetch recommended sessions (other live audio rooms - exclude battle sessions)
   useEffect(() => {
     const fetchRecommended = async () => {
-      // Fetch all live sessions from database
+      // IMPORTANT: Filter out battle sessions (they have "Battle:" prefix in title)
       const { data: liveSessions } = await supabase
         .from('podcast_sessions')
         .select(`
@@ -229,6 +229,7 @@ const KickStyleLive = ({
           started_at
         `)
         .eq('status', 'live')
+        .not('title', 'ilike', 'Battle:%') // Exclude battle sessions
         .neq('id', currentSession?.id || '')
         .limit(8);
 
@@ -336,15 +337,17 @@ const KickStyleLive = ({
     }
   }, [handleWheel]);
 
-  // Fallback fetch if sessions prop is empty
+  // Fallback fetch if sessions prop is empty - exclude battle sessions
   useEffect(() => {
     if (sessions.length === 0 && !selectedSession) {
       const fetchFallbackSessions = async () => {
         try {
+          // IMPORTANT: Filter out battle sessions
           const { data, error } = await supabase
             .from('podcast_sessions')
             .select('*')
             .eq('status', 'live')
+            .not('title', 'ilike', 'Battle:%') // Exclude battle sessions
             .order('listener_count', { ascending: false })
             .limit(10);
           
