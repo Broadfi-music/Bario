@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { isDemoSession } from '@/lib/authUtils';
 
@@ -18,6 +18,7 @@ const GIFT_IMAGES: { [key: string]: string } = {
   rose: '/gifts/gift-rose.png',
   heart: '/gifts/gift-red-heart.png',
   flame_heart: '/gifts/gift-flame-heart.png',
+  flame: '/gifts/gift-flame-heart.png',
   tofu: '/gifts/gift-tofu.png',
   // Legacy gifts
   fire: '/gifts/gift-fire.mp4',
@@ -28,38 +29,68 @@ const GIFT_IMAGES: { [key: string]: string } = {
 
 const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
   const [gifts, setGifts] = useState<GiftEvent[]>([]);
+  const giftQueueRef = useRef<GiftEvent[]>([]);
+  const processingRef = useRef(false);
 
-  const addGift = (giftType: string, count: number, senderName: string) => {
+  // Add gift with fast TikTok-style display
+  const addGift = useCallback((giftType: string, count: number, senderName: string) => {
     const newGift: GiftEvent = {
-      id: `${Date.now()}-${Math.random()}`,
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       giftType,
       count,
       senderName,
       timestamp: Date.now()
     };
 
-    setGifts(prev => [...prev, newGift]);
+    // Add to queue and process
+    giftQueueRef.current.push(newGift);
+    processGiftQueue();
+  }, []);
 
-    // Remove after animation
+  // Process gift queue - show gifts quickly like TikTok
+  const processGiftQueue = useCallback(() => {
+    if (processingRef.current || giftQueueRef.current.length === 0) return;
+    
+    processingRef.current = true;
+    const gift = giftQueueRef.current.shift()!;
+    
+    setGifts(prev => {
+      // Keep max 5 gifts visible at once
+      const updated = [...prev, gift].slice(-5);
+      return updated;
+    });
+
+    // Remove after animation (3.5s total display time)
     setTimeout(() => {
-      setGifts(prev => prev.filter(g => g.id !== newGift.id));
-    }, 4000);
-  };
+      setGifts(prev => prev.filter(g => g.id !== gift.id));
+    }, 3500);
 
-  // Expose addGift to parent via window for demo purposes
+    // Process next gift after short delay (stagger display)
+    setTimeout(() => {
+      processingRef.current = false;
+      if (giftQueueRef.current.length > 0) {
+        processGiftQueue();
+      }
+    }, 200);
+  }, []);
+
+  // Expose addGift to parent via window for local sender feedback
   useEffect(() => {
     (window as any).__addGift = addGift;
     return () => {
       delete (window as any).__addGift;
     };
-  }, []);
+  }, [addGift]);
 
-  // Subscribe to real-time gifts
+  // Subscribe to real-time gifts - THIS IS THE KEY FIX
+  // Everyone connected to this session will see gifts via real-time subscription
   useEffect(() => {
-    if (isDemoSession(sessionId)) return;
+    if (!sessionId || isDemoSession(sessionId)) return;
+
+    console.log('🎁 TikTokGiftDisplay: Subscribing to gifts for session:', sessionId);
 
     const channel = supabase
-      .channel(`gifts-${sessionId}`)
+      .channel(`tiktok-gifts-display-${sessionId}`)
       .on(
         'postgres_changes',
         {
@@ -69,9 +100,10 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
           filter: `session_id=eq.${sessionId}`
         },
         async (payload) => {
+          console.log('🎁 Real-time gift received:', payload.new);
           const gift = payload.new as any;
           
-          // Fetch sender profile
+          // Fetch sender profile for name
           const { data: profile } = await supabase
             .from('profiles')
             .select('full_name, username')
@@ -79,52 +111,64 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
             .single();
           
           const senderName = profile?.full_name || profile?.username || 'Anonymous';
-          addGift(gift.gift_type, 1, senderName);
+          
+          // Get gift count from the payload (if available) or default to 1
+          const giftCount = gift.gift_count || 1;
+          
+          // Display the gift for everyone!
+          addGift(gift.gift_type, giftCount, senderName);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('🎁 TikTokGiftDisplay subscription status:', status);
+      });
 
     return () => {
+      console.log('🎁 TikTokGiftDisplay: Unsubscribing from gifts');
       supabase.removeChannel(channel);
     };
-  }, [sessionId]);
+  }, [sessionId, addGift]);
 
   if (gifts.length === 0) return null;
 
   return (
-    <div className="fixed left-4 bottom-28 z-50 flex flex-col gap-2 pointer-events-none">
-      {gifts.map((gift) => (
+    <div className="fixed left-4 bottom-28 z-50 flex flex-col gap-1.5 pointer-events-none max-w-[200px]">
+      {gifts.map((gift, index) => (
         <div
           key={gift.id}
-          className="flex items-center gap-2 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1.5 animate-gift-slide-in"
+          className="flex items-center gap-2 bg-black/70 backdrop-blur-md rounded-full px-3 py-1.5 shadow-lg"
           style={{
-            animation: 'giftSlideIn 0.3s ease-out forwards, giftFadeOut 0.5s ease-in 3.5s forwards'
+            animation: 'giftSlideIn 0.15s ease-out forwards',
+            opacity: 1 - (index * 0.1), // Fade older gifts slightly
           }}
         >
-          {/* Sender name */}
-          <span className="text-white text-xs font-medium max-w-20 truncate">
+          {/* Sender name with shoutout styling */}
+          <span className="text-white text-xs font-semibold max-w-16 truncate">
             {gift.senderName}
           </span>
           
-          <span className="text-white/60 text-[10px]">sent</span>
+          <span className="text-white/50 text-[10px]">sent</span>
           
-          {/* Gift icon */}
-          <div className="relative">
+          {/* Gift icon - larger for visibility */}
+          <div className="relative flex-shrink-0">
             <img 
               src={GIFT_IMAGES[gift.giftType] || '/gifts/gift-rose.png'} 
               alt={gift.giftType}
-              className="h-8 w-8 object-contain"
+              className="h-7 w-7 object-contain animate-bounce"
+              style={{ animationDuration: '0.5s' }}
             />
           </div>
           
-          {/* Count badge */}
-          {gift.count > 1 && (
-            <div className="flex items-center">
-              <span className="text-white text-xs">x</span>
-              <span className="text-yellow-400 font-bold text-sm animate-count-pop">
+          {/* Count badge - TikTok style with animation */}
+          {gift.count > 1 ? (
+            <div className="flex items-center bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full px-1.5 py-0.5">
+              <span className="text-black text-[10px] font-bold">x</span>
+              <span className="text-black font-black text-sm animate-count-pop">
                 {gift.count}
               </span>
             </div>
+          ) : (
+            <div className="w-1 h-1 rounded-full bg-green-400 animate-pulse" />
           )}
         </div>
       ))}
@@ -133,7 +177,7 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
         @keyframes giftSlideIn {
           from {
             opacity: 0;
-            transform: translateX(-50px) scale(0.8);
+            transform: translateX(-30px) scale(0.9);
           }
           to {
             opacity: 1;
@@ -141,20 +185,9 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
           }
         }
         
-        @keyframes giftFadeOut {
-          from {
-            opacity: 1;
-            transform: translateY(0);
-          }
-          to {
-            opacity: 0;
-            transform: translateY(-20px);
-          }
-        }
-        
         @keyframes countPop {
           0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.3); }
+          50% { transform: scale(1.4); }
         }
         
         .animate-count-pop {

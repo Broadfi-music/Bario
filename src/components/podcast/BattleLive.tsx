@@ -66,9 +66,10 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
   const [hostTopGifters, setHostTopGifters] = useState<TopGifter[]>([]);
   const [opponentTopGifters, setOpponentTopGifters] = useState<TopGifter[]>([]);
   
-  // Double-like state
-  const [lastTapTime, setLastTapTime] = useState<{ host: number; opponent: number }>({ host: 0, opponent: 0 });
+  // Double-like state - USE REF FOR INSTANT ACCESS (no state delay)
+  const lastTapTimeRef = useRef<{ host: number; opponent: number }>({ host: 0, opponent: 0 });
   const [showHeartAnimation, setShowHeartAnimation] = useState<{ host: boolean; opponent: boolean }>({ host: false, opponent: false });
+  const doubleTapDebounceRef = useRef<{ host: boolean; opponent: boolean }>({ host: false, opponent: false });
   
   // Check if current user is a participant (host or challenger)
   const isParticipant = user?.id === battle.host_id || user?.id === battle.opponent_id;
@@ -93,9 +94,8 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
   const audioConnectionRef = useRef(false);
   const connectionAttemptRef = useRef(0);
 
-  // Auto-connect audio immediately for participants (no need to wait for 'active' status)
+  // Auto-connect audio immediately for participants
   useEffect(() => {
-    // Connect as soon as we have a session and are a participant
     const shouldConnect = battle.session_id && user && isParticipant;
     
     if (shouldConnect && !audioConnected) {
@@ -103,12 +103,10 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
       console.log('🎙️ Auto-connecting audio for battle participant... Attempt:', attemptId);
       audioConnectionRef.current = true;
       
-      // Small delay to ensure component is fully mounted
       const connectTimeout = setTimeout(() => {
-        // Only proceed if this is still the latest attempt
         if (attemptId === connectionAttemptRef.current) {
           console.log('🎙️ Executing audio connection for attempt:', attemptId);
-          connectAudio(battle.session_id || battle.id, true); // Force connection
+          connectAudio(battle.session_id || battle.id, true);
         }
       }, 500);
       
@@ -184,10 +182,10 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     }
   };
 
-  // Real-time score updates
+  // Real-time battle status updates - AUTO CLOSE WHEN BATTLE ENDS
   useEffect(() => {
     const channel = supabase
-      .channel(`battle-scores-${battle.id}`)
+      .channel(`battle-status-${battle.id}`)
       .on(
         'postgres_changes',
         {
@@ -197,11 +195,29 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
           filter: `id=eq.${battle.id}`
         },
         (payload: any) => {
+          console.log('🔴 Battle status update:', payload.new.status);
           setHostScore(payload.new.host_score);
           setOpponentScore(payload.new.opponent_score);
-          if (payload.new.status) {
+          
+          if (payload.new.status === 'ended') {
+            setBattleStatus('ended');
+            setWinnerId(payload.new.winner_id);
+            
+            // Disconnect audio and navigate away after showing winner
+            disconnectAudio();
+            
+            if (!payload.new.winner_id) {
+              // No winner means someone left - close immediately
+              toast.info('Battle ended');
+              setTimeout(() => {
+                onClose();
+                navigate('/podcasts');
+              }, 1000);
+            }
+          } else if (payload.new.status) {
             setBattleStatus(payload.new.status);
           }
+          
           if (payload.new.winner_id) {
             setWinnerId(payload.new.winner_id);
           }
@@ -212,7 +228,7 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [battle.id]);
+  }, [battle.id, disconnectAudio, navigate, onClose]);
 
   // Listen for gifts and update scores
   useEffect(() => {
@@ -306,31 +322,37 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     fetchTopGifters();
   }, [fetchTopGifters]);
 
-  // Double-like handler - with safeguards to prevent crashes
+  // Double-tap handler - FIXED with useRef for instant timing
   const handleDoubleTap = useCallback(async (side: 'host' | 'opponent') => {
     if (!user) {
       toast.error('Please sign in to boost');
       return;
     }
 
+    // Debounce to prevent rapid fire
+    if (doubleTapDebounceRef.current[side]) return;
+
     const now = Date.now();
-    const lastTap = lastTapTime[side];
+    const lastTap = lastTapTimeRef.current[side];
     
-    // Update tap time first to avoid race conditions
-    setLastTapTime(prev => ({ ...prev, [side]: now }));
+    // Update tap time immediately using ref (no state delay)
+    lastTapTimeRef.current[side] = now;
     
-    if (now - lastTap < 300) {
+    // Check for double-tap within 400ms window (increased from 300ms)
+    if (now - lastTap < 400 && lastTap > 0) {
       const boostPoints = 5;
       
-      // Show animation in a safe way
-      setShowHeartAnimation(prev => ({ ...prev, [side]: true }));
+      // Set debounce
+      doubleTapDebounceRef.current[side] = true;
+      setTimeout(() => {
+        doubleTapDebounceRef.current[side] = false;
+      }, 300);
       
-      // Use requestAnimationFrame for safer animation cleanup
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          setShowHeartAnimation(prev => ({ ...prev, [side]: false }));
-        }, 800);
-      });
+      // Show animation
+      setShowHeartAnimation(prev => ({ ...prev, [side]: true }));
+      setTimeout(() => {
+        setShowHeartAnimation(prev => ({ ...prev, [side]: false }));
+      }, 800);
       
       try {
         if (side === 'host') {
@@ -348,17 +370,22 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
             .update({ opponent_score: newScore })
             .eq('id', battle.id);
         }
+        
+        // Visual feedback for successful boost
+        toast.success(`+${boostPoints} boost!`, { duration: 1000 });
       } catch (error) {
         console.error('Double-tap update error:', error);
       }
     }
-  }, [user, lastTapTime, hostScore, opponentScore, battle.id]);
+  }, [user, hostScore, opponentScore, battle.id]);
 
+  // Gift button handler - FIXED to work properly
   const handleGiftCreator = useCallback((creator: 'host' | 'opponent', e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
+    console.log('🎁 Opening gift modal for:', creator);
     setSelectedCreator(creator);
     setShowGiftModal(true);
   }, []);
@@ -388,6 +415,7 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     disconnectAudio();
     toast.info('You left the battle.');
     onClose();
+    navigate('/podcasts');
   };
 
   // Check if participant is speaking
@@ -407,7 +435,13 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
             <p className="text-white/60 mb-6">
               {hostScore} - {opponentScore}
             </p>
-            <Button onClick={onClose} className="bg-[#53fc18] text-black hover:bg-[#45d914]">
+            <Button 
+              onClick={() => {
+                onClose();
+                navigate('/podcasts');
+              }} 
+              className="bg-[#53fc18] text-black hover:bg-[#45d914]"
+            >
               Close Battle
             </Button>
           </div>
@@ -460,12 +494,13 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
       <div className="flex-1 flex flex-col min-h-0">
         {/* Host vs Opponent Split - Enlarged */}
         <div className="shrink-0 flex flex-row h-48 lg:h-56 border-b border-white/10">
-          {/* Host Side */}
-          <div 
-            className="flex-1 relative border-r border-white/10 flex items-center justify-center"
-            onClick={() => handleDoubleTap('host')}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-[#53fc18]/5 to-transparent" />
+          {/* Host Side - Double tap area EXCLUDES the button */}
+          <div className="flex-1 relative border-r border-white/10 flex items-center justify-center">
+            {/* Double tap overlay - positioned behind buttons */}
+            <div 
+              className="absolute inset-0 bg-gradient-to-br from-[#53fc18]/5 to-transparent cursor-pointer"
+              onClick={() => handleDoubleTap('host')}
+            />
             
             {showHeartAnimation.host && (
               <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
@@ -473,7 +508,7 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
               </div>
             )}
             
-            <div className="flex flex-col items-center gap-1.5">
+            <div className="flex flex-col items-center gap-1.5 relative z-10 pointer-events-none">
               <div className="relative">
                 {battle.host_avatar ? (
                   <img 
@@ -507,23 +542,26 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
                   ))}
                 </div>
               </div>
+              
+              {/* Gift Button - OUTSIDE double tap, with pointer-events-auto */}
               <Button
                 size="sm"
                 onClick={(e) => handleGiftCreator('host', e)}
-                className="h-6 bg-[#53fc18] hover:bg-[#45d914] text-black text-[10px] px-3 z-10"
+                className="h-8 bg-[#53fc18] hover:bg-[#45d914] text-black text-xs px-4 pointer-events-auto z-30 shadow-lg"
               >
-                <Gift className="h-3 w-3 mr-1" />
+                <Gift className="h-4 w-4 mr-1.5" />
                 Gift
               </Button>
             </div>
           </div>
 
           {/* Opponent Side */}
-          <div 
-            className="flex-1 relative flex items-center justify-center"
-            onClick={() => handleDoubleTap('opponent')}
-          >
-            <div className="absolute inset-0 bg-gradient-to-bl from-pink-500/5 to-transparent" />
+          <div className="flex-1 relative flex items-center justify-center">
+            {/* Double tap overlay */}
+            <div 
+              className="absolute inset-0 bg-gradient-to-bl from-pink-500/5 to-transparent cursor-pointer"
+              onClick={() => handleDoubleTap('opponent')}
+            />
             
             {showHeartAnimation.opponent && (
               <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
@@ -531,7 +569,7 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
               </div>
             )}
             
-            <div className="flex flex-col items-center gap-1.5">
+            <div className="flex flex-col items-center gap-1.5 relative z-10 pointer-events-none">
               <div className="relative">
                 {battle.opponent_avatar ? (
                   <img 
@@ -565,12 +603,14 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
                 </div>
                 <Crown className="h-2.5 w-2.5 text-yellow-400" />
               </div>
+              
+              {/* Gift Button - OUTSIDE double tap */}
               <Button
                 size="sm"
                 onClick={(e) => handleGiftCreator('opponent', e)}
-                className="h-6 bg-pink-500 hover:bg-pink-600 text-white text-[10px] px-3 z-10"
+                className="h-8 bg-pink-500 hover:bg-pink-600 text-white text-xs px-4 pointer-events-auto z-30 shadow-lg"
               >
-                <Gift className="h-3 w-3 mr-1" />
+                <Gift className="h-4 w-4 mr-1.5" />
                 Gift
               </Button>
             </div>
@@ -625,12 +665,6 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
         sessionId={battle.session_id || ''}
         hostId={selectedCreator === 'host' ? battle.host_id : battle.opponent_id}
         hostName={selectedCreator === 'host' ? battle.host_name : battle.opponent_name}
-        onGiftSent={(giftType, count, senderName) => {
-          // Trigger TikTokGiftDisplay for visual feedback
-          if ((window as any).__addGift) {
-            (window as any).__addGift(giftType, count, senderName);
-          }
-        }}
       />
 
       {/* Share Modal */}

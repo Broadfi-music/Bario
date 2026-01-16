@@ -60,21 +60,19 @@ serve(async (req) => {
         throw updateError;
       }
 
-      // 3. Record gift(s) in podcast_gifts
-      const giftRecords = [];
-      for (let i = 0; i < giftCount; i++) {
-        giftRecords.push({
-          session_id: sessionId,
-          sender_id: senderId,
-          recipient_id: recipientId,
-          gift_type: giftType,
-          points_value: Math.round(coinsCost / giftCount)
-        });
-      }
+      // 3. Record gift in podcast_gifts with gift_count
+      // Single insert with gift_count for real-time visibility to all users
+      const { error: giftError } = await supabase.from('podcast_gifts').insert({
+        session_id: sessionId,
+        sender_id: senderId,
+        recipient_id: recipientId,
+        gift_type: giftType,
+        points_value: coinsCost,
+        gift_count: giftCount
+      });
       
-      const { error: giftError } = await supabase.from('podcast_gifts').insert(giftRecords);
       if (giftError) {
-        console.error('[Gift Transaction] Failed to record gifts:', giftError);
+        console.error('[Gift Transaction] Failed to record gift:', giftError);
       }
 
       // 4. Update creator's earnings with the exact USD amount
