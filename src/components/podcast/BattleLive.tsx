@@ -493,22 +493,19 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
       {/* Battle Content Area */}
       <div className="flex-1 flex flex-col min-h-0">
         {/* Host vs Opponent Split - Enlarged */}
-        <div className="shrink-0 flex flex-row h-48 lg:h-56 border-b border-white/10">
-          {/* Host Side - Double tap area EXCLUDES the button */}
-          <div className="flex-1 relative border-r border-white/10 flex items-center justify-center">
-            {/* Double tap overlay - positioned behind buttons */}
-            <div 
-              className="absolute inset-0 bg-gradient-to-br from-[#53fc18]/5 to-transparent cursor-pointer"
-              onClick={() => handleDoubleTap('host')}
-            />
-            
+        <div className="shrink-0 flex flex-row h-48 lg:h-56 border-b border-white/10 relative">
+          {/* Host Side */}
+          <div 
+            className="flex-1 relative border-r border-white/10 flex items-center justify-center bg-gradient-to-br from-[#53fc18]/5 to-transparent cursor-pointer"
+            onClick={() => handleDoubleTap('host')}
+          >
             {showHeartAnimation.host && (
               <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
                 <Heart className="h-16 w-16 text-red-500 animate-ping" fill="currentColor" />
               </div>
             )}
             
-            <div className="flex flex-col items-center gap-1.5 relative z-10 pointer-events-none">
+            <div className="flex flex-col items-center gap-1.5 pointer-events-none">
               <div className="relative">
                 {battle.host_avatar ? (
                   <img 
@@ -542,34 +539,21 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
                   ))}
                 </div>
               </div>
-              
-              {/* Gift Button - OUTSIDE double tap, with pointer-events-auto */}
-              <Button
-                size="sm"
-                onClick={(e) => handleGiftCreator('host', e)}
-                className="h-8 bg-[#53fc18] hover:bg-[#45d914] text-black text-xs px-4 pointer-events-auto z-30 shadow-lg"
-              >
-                <Gift className="h-4 w-4 mr-1.5" />
-                Gift
-              </Button>
             </div>
           </div>
 
           {/* Opponent Side */}
-          <div className="flex-1 relative flex items-center justify-center">
-            {/* Double tap overlay */}
-            <div 
-              className="absolute inset-0 bg-gradient-to-bl from-pink-500/5 to-transparent cursor-pointer"
-              onClick={() => handleDoubleTap('opponent')}
-            />
-            
+          <div 
+            className="flex-1 relative flex items-center justify-center bg-gradient-to-bl from-pink-500/5 to-transparent cursor-pointer"
+            onClick={() => handleDoubleTap('opponent')}
+          >
             {showHeartAnimation.opponent && (
               <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
                 <Heart className="h-16 w-16 text-red-500 animate-ping" fill="currentColor" />
               </div>
             )}
             
-            <div className="flex flex-col items-center gap-1.5 relative z-10 pointer-events-none">
+            <div className="flex flex-col items-center gap-1.5 pointer-events-none">
               <div className="relative">
                 {battle.opponent_avatar ? (
                   <img 
@@ -603,12 +587,46 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
                 </div>
                 <Crown className="h-2.5 w-2.5 text-yellow-400" />
               </div>
-              
-              {/* Gift Button - OUTSIDE double tap */}
+            </div>
+          </div>
+
+          {/* FLOATING GIFT BUTTONS - Completely separate layer with full pointer events */}
+          <div className="absolute inset-0 flex pointer-events-none z-40">
+            {/* Host Gift Button */}
+            <div className="flex-1 flex items-end justify-center pb-2">
               <Button
                 size="sm"
-                onClick={(e) => handleGiftCreator('opponent', e)}
-                className="h-8 bg-pink-500 hover:bg-pink-600 text-white text-xs px-4 pointer-events-auto z-30 shadow-lg"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  console.log('🎁 Host gift button clicked');
+                  handleGiftCreator('host', e);
+                }}
+                onTouchEnd={(e) => {
+                  e.stopPropagation();
+                  console.log('🎁 Host gift button touched');
+                  handleGiftCreator('host');
+                }}
+                className="h-9 bg-[#53fc18] hover:bg-[#45d914] active:bg-[#3ec512] text-black text-xs px-5 pointer-events-auto shadow-xl touch-manipulation"
+              >
+                <Gift className="h-4 w-4 mr-1.5" />
+                Gift
+              </Button>
+            </div>
+            {/* Opponent Gift Button */}
+            <div className="flex-1 flex items-end justify-center pb-2">
+              <Button
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  console.log('🎁 Opponent gift button clicked');
+                  handleGiftCreator('opponent', e);
+                }}
+                onTouchEnd={(e) => {
+                  e.stopPropagation();
+                  console.log('🎁 Opponent gift button touched');
+                  handleGiftCreator('opponent');
+                }}
+                className="h-9 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 text-white text-xs px-5 pointer-events-auto shadow-xl touch-manipulation"
               >
                 <Gift className="h-4 w-4 mr-1.5" />
                 Gift

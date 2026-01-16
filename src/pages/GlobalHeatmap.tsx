@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Search, Star, TrendingUp, TrendingDown, ExternalLink, Filter, Clock,
-  Play, Pause, Users, ChevronRight, Sparkles, Zap, ChevronLeft, Volume2, X, Flame, Globe
+  Play, Pause, Users, ChevronRight, Sparkles, Zap, ChevronLeft, Volume2, X, Flame, Globe,
+  Mic, Radio, Calendar, Swords
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,33 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
 import { toast } from 'sonner';
 import { useHeatmapTracks, useSyncHeatmap, HeatmapTrack } from '@/hooks/useHeatmapData';
+import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
+
+// Live session interface
+interface LiveSession {
+  id: string;
+  title: string;
+  host_id: string;
+  host_name: string;
+  host_avatar: string | null;
+  listener_count: number;
+  status: string;
+  is_battle: boolean;
+  battle_id?: string;
+  opponent_name?: string;
+}
+
+// Schedule interface
+interface UpcomingSchedule {
+  id: string;
+  title: string;
+  description: string | null;
+  scheduled_at: string;
+  user_id: string;
+  host_name: string;
+  host_avatar: string | null;
+}
 
 // Platform icons
 const SpotifyIcon = () => (
@@ -61,8 +89,153 @@ const GlobalHeatmap = () => {
   const [marketEvents, setMarketEvents] = useState<MarketEvent[]>([]);
   const [selectedGenre, setSelectedGenre] = useState<string>('');
   const [selectedCountry, setSelectedCountry] = useState<string>('GLOBAL');
+  // Live sessions and schedules state
+  const [liveSessions, setLiveSessions] = useState<LiveSession[]>([]);
+  const [upcomingSchedules, setUpcomingSchedules] = useState<UpcomingSchedule[]>([]);
+  const [loadingLive, setLoadingLive] = useState(true);
   
   const { tracks, genres, summary, loading, error, refetch, searchTracks, filterByGenre, filterByCountry } = useHeatmapTracks(99);
+
+  // Fetch live sessions (podcasts and battles)
+  const fetchLiveSessions = useCallback(async () => {
+    try {
+      // Fetch live podcast sessions
+      const { data: sessions } = await supabase
+        .from('podcast_sessions')
+        .select('id, title, host_id, listener_count, status')
+        .eq('status', 'live')
+        .order('listener_count', { ascending: false })
+        .limit(4);
+
+      if (!sessions || sessions.length === 0) {
+        setLiveSessions([]);
+        setLoadingLive(false);
+        return;
+      }
+
+      // Get host profiles
+      const hostIds = [...new Set(sessions.map(s => s.host_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, username, avatar_url')
+        .in('user_id', hostIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      // Check for active battles
+      const { data: battles } = await supabase
+        .from('podcast_battles')
+        .select('id, session_id, opponent_id, status')
+        .eq('status', 'active')
+        .in('session_id', sessions.map(s => s.id));
+
+      const battleMap = new Map(battles?.map(b => [b.session_id, b]) || []);
+
+      // Get opponent profiles if battles exist
+      const opponentIds = battles?.map(b => b.opponent_id).filter(Boolean) || [];
+      let opponentMap = new Map();
+      if (opponentIds.length > 0) {
+        const { data: opponentProfiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, username')
+          .in('user_id', opponentIds);
+        opponentMap = new Map(opponentProfiles?.map(p => [p.user_id, p]) || []);
+      }
+
+      const formattedSessions: LiveSession[] = sessions.map(session => {
+        const host = profileMap.get(session.host_id);
+        const battle = battleMap.get(session.id);
+        const opponent = battle ? opponentMap.get(battle.opponent_id) : null;
+
+        return {
+          id: session.id,
+          title: session.title,
+          host_id: session.host_id,
+          host_name: host?.full_name || host?.username || 'Host',
+          host_avatar: host?.avatar_url || null,
+          listener_count: session.listener_count || 0,
+          status: session.status,
+          is_battle: !!battle,
+          battle_id: battle?.id,
+          opponent_name: opponent?.full_name || opponent?.username
+        };
+      });
+
+      setLiveSessions(formattedSessions);
+    } catch (error) {
+      console.error('Error fetching live sessions:', error);
+    } finally {
+      setLoadingLive(false);
+    }
+  }, []);
+
+  // Fetch upcoming schedules
+  const fetchSchedules = useCallback(async () => {
+    try {
+      const { data: schedules } = await supabase
+        .from('podcast_schedules')
+        .select('id, title, description, scheduled_at, user_id')
+        .gt('scheduled_at', new Date().toISOString())
+        .order('scheduled_at', { ascending: true })
+        .limit(6);
+
+      if (!schedules || schedules.length === 0) {
+        setUpcomingSchedules([]);
+        return;
+      }
+
+      // Get host profiles
+      const userIds = [...new Set(schedules.map(s => s.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, username, avatar_url')
+        .in('user_id', userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+
+      const formattedSchedules: UpcomingSchedule[] = schedules.map(schedule => {
+        const host = profileMap.get(schedule.user_id);
+        return {
+          id: schedule.id,
+          title: schedule.title,
+          description: schedule.description,
+          scheduled_at: schedule.scheduled_at,
+          user_id: schedule.user_id,
+          host_name: host?.full_name || host?.username || 'Creator',
+          host_avatar: host?.avatar_url || null
+        };
+      });
+
+      setUpcomingSchedules(formattedSchedules);
+    } catch (error) {
+      console.error('Error fetching schedules:', error);
+    }
+  }, []);
+
+  // Load live sessions and schedules on mount
+  useEffect(() => {
+    fetchLiveSessions();
+    fetchSchedules();
+
+    // Set up real-time subscription for live sessions
+    const channel = supabase
+      .channel('heatmap-live-sessions')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'podcast_sessions' },
+        () => fetchLiveSessions()
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'podcast_battles' },
+        () => fetchLiveSessions()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchLiveSessions, fetchSchedules]);
   
   const countries = [
     { code: 'GLOBAL', name: '🌍 Global' },
@@ -412,6 +585,140 @@ const GlobalHeatmap = () => {
             ))}
           </div>
         </section>
+
+        {/* 🔴 LIVE NOW - Live Sessions & Battles */}
+        {liveSessions.length > 0 && (
+          <section className="mb-6 animate-fade-in">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Radio className="h-4 w-4 text-red-500 animate-pulse" />
+                <h2 className="text-[11px] sm:text-sm font-semibold text-white">Live Now</h2>
+                <span className="text-[8px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full animate-pulse">● LIVE</span>
+              </div>
+              <Link to="/podcasts" className="text-[9px] sm:text-[10px] text-white/50 hover:text-white flex items-center gap-1">
+                View all <ChevronRight className="h-3 w-3" />
+              </Link>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {liveSessions.slice(0, 4).map((session) => (
+                <div
+                  key={session.id}
+                  onClick={() => navigate(`/podcast/${session.id}`)}
+                  className="relative bg-gradient-to-br from-red-500/10 to-purple-500/10 hover:from-red-500/20 hover:to-purple-500/20 border border-red-500/20 rounded-xl p-3 cursor-pointer transition-all group"
+                >
+                  {/* Battle badge */}
+                  {session.is_battle && (
+                    <div className="absolute top-2 right-2 flex items-center gap-1 bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">
+                      <Swords className="h-2.5 w-2.5" />
+                      <span className="text-[8px] font-medium">Battle</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-3">
+                    {/* Host avatar */}
+                    <div className="relative">
+                      {session.host_avatar ? (
+                        <img 
+                          src={session.host_avatar} 
+                          alt={session.host_name}
+                          className="w-12 h-12 rounded-full object-cover ring-2 ring-red-500/50"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-purple-500 flex items-center justify-center">
+                          <Mic className="h-5 w-5 text-white" />
+                        </div>
+                      )}
+                      {/* Live indicator */}
+                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-red-500 rounded-full border-2 border-black flex items-center justify-center">
+                        <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                      </div>
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] sm:text-xs font-medium text-white truncate">
+                        {session.is_battle 
+                          ? `${session.host_name} vs ${session.opponent_name}` 
+                          : session.title}
+                      </p>
+                      <p className="text-[9px] text-white/60 truncate">{session.host_name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="flex items-center gap-1 text-[8px] text-red-400">
+                          <Users className="h-2.5 w-2.5" />
+                          {session.listener_count}
+                        </span>
+                        {session.is_battle && (
+                          <span className="text-[8px] text-yellow-400">⚔️ Battle</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 📅 Upcoming Shows */}
+        {upcomingSchedules.length > 0 && (
+          <section className="mb-6 animate-fade-in">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-purple-400" />
+                <h2 className="text-[11px] sm:text-sm font-semibold text-white">Upcoming Shows</h2>
+              </div>
+              <Link to="/podcasts" className="text-[9px] sm:text-[10px] text-white/50 hover:text-white flex items-center gap-1">
+                View all <ChevronRight className="h-3 w-3" />
+              </Link>
+            </div>
+            
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              {upcomingSchedules.slice(0, 6).map((schedule) => (
+                <div
+                  key={schedule.id}
+                  onClick={() => navigate(`/host/${schedule.user_id}`)}
+                  className="flex-shrink-0 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-xl p-3 cursor-pointer transition-all min-w-[200px] sm:min-w-[240px] group"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    {schedule.host_avatar ? (
+                      <img 
+                        src={schedule.host_avatar} 
+                        alt={schedule.host_name}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                        <Mic className="h-4 w-4 text-white" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] sm:text-xs font-medium text-white truncate">{schedule.title}</p>
+                      <p className="text-[9px] text-white/60 truncate">{schedule.host_name}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1 text-[9px] text-purple-400">
+                      <Clock className="h-3 w-3" />
+                      <span>{format(new Date(schedule.scheduled_at), 'MMM d, h:mm a')}</span>
+                    </div>
+                    <Button 
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-[8px] text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toast.success('Reminder set!');
+                      }}
+                    >
+                      Remind me
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Trending Now */}
         <section className="mb-6 animate-fade-in">
