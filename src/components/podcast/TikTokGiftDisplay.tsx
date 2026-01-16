@@ -20,7 +20,6 @@ const GIFT_IMAGES: { [key: string]: string } = {
   flame_heart: '/gifts/gift-flame-heart.png',
   flame: '/gifts/gift-flame-heart.png',
   tofu: '/gifts/gift-tofu.png',
-  // Legacy gifts
   fire: '/gifts/gift-fire.mp4',
   star: '/gifts/gift-star.mp4',
   diamond: '/gifts/gift-diamond.mp4',
@@ -29,11 +28,22 @@ const GIFT_IMAGES: { [key: string]: string } = {
 
 const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
   const [gifts, setGifts] = useState<GiftEvent[]>([]);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
   const giftQueueRef = useRef<GiftEvent[]>([]);
   const processingRef = useRef(false);
+  const channelRef = useRef<any>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastGiftIdRef = useRef<string | null>(null);
 
   // Add gift with fast TikTok-style display
-  const addGift = useCallback((giftType: string, count: number, senderName: string) => {
+  const addGift = useCallback((giftType: string, count: number, senderName: string, giftId?: string) => {
+    // Prevent duplicate gifts
+    if (giftId && giftId === lastGiftIdRef.current) {
+      console.log('🎁 Skipping duplicate gift:', giftId);
+      return;
+    }
+    if (giftId) lastGiftIdRef.current = giftId;
+
     const newGift: GiftEvent = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       giftType,
@@ -42,7 +52,7 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
       timestamp: Date.now()
     };
 
-    // Add to queue and process
+    console.log('🎁 Adding gift to display:', newGift);
     giftQueueRef.current.push(newGift);
     processGiftQueue();
   }, []);
@@ -55,7 +65,6 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
     const gift = giftQueueRef.current.shift()!;
     
     setGifts(prev => {
-      // Keep max 5 gifts visible at once
       const updated = [...prev, gift].slice(-5);
       return updated;
     });
@@ -65,7 +74,7 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
       setGifts(prev => prev.filter(g => g.id !== gift.id));
     }, 3500);
 
-    // Process next gift after short delay (stagger display)
+    // Process next gift after short delay
     setTimeout(() => {
       processingRef.current = false;
       if (giftQueueRef.current.length > 0) {
@@ -82,15 +91,59 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
     };
   }, [addGift]);
 
-  // Subscribe to real-time gifts - THIS IS THE KEY FIX
-  // Everyone connected to this session will see gifts via real-time subscription
-  useEffect(() => {
-    if (!sessionId || isDemoSession(sessionId)) return;
+  // Fallback polling for gifts (in case real-time fails)
+  const startPolling = useCallback(async () => {
+    if (pollingIntervalRef.current || !sessionId || isDemoSession(sessionId)) return;
+    
+    console.log('🎁 Starting fallback polling for gifts');
+    
+    const poll = async () => {
+      try {
+        const { data: recentGifts } = await supabase
+          .from('podcast_gifts')
+          .select('*, profiles:sender_id(full_name, username)')
+          .eq('session_id', sessionId)
+          .order('created_at', { ascending: false })
+          .limit(5);
+        
+        if (recentGifts && recentGifts.length > 0) {
+          const latestGift = recentGifts[0];
+          const giftTime = new Date(latestGift.created_at).getTime();
+          const now = Date.now();
+          
+          // Only show gifts from the last 5 seconds
+          if (now - giftTime < 5000) {
+            const profile = latestGift.profiles as any;
+            const senderName = profile?.full_name || profile?.username || 'Anonymous';
+            const giftCount = (latestGift as any).gift_count || 1;
+            addGift(latestGift.gift_type, giftCount, senderName, latestGift.id);
+          }
+        }
+      } catch (error) {
+        console.error('🎁 Polling error:', error);
+      }
+    };
+    
+    pollingIntervalRef.current = setInterval(poll, 3000);
+  }, [sessionId, addGift]);
 
-    console.log('🎁 TikTokGiftDisplay: Subscribing to gifts for session:', sessionId);
+  // Subscribe to real-time gifts
+  useEffect(() => {
+    if (!sessionId || isDemoSession(sessionId)) {
+      console.log('🎁 Skipping subscription for demo session');
+      return;
+    }
+
+    console.log('🎁 Setting up real-time gift subscription for session:', sessionId);
+    setConnectionStatus('connecting');
+
+    // Clean up existing channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+    }
 
     const channel = supabase
-      .channel(`tiktok-gifts-display-${sessionId}`)
+      .channel(`tiktok-gifts-${sessionId}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -103,7 +156,7 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
           console.log('🎁 Real-time gift received:', payload.new);
           const gift = payload.new as any;
           
-          // Fetch sender profile for name
+          // Fetch sender profile
           const { data: profile } = await supabase
             .from('profiles')
             .select('full_name, username')
@@ -111,23 +164,51 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
             .single();
           
           const senderName = profile?.full_name || profile?.username || 'Anonymous';
-          
-          // Get gift count from the payload (if available) or default to 1
           const giftCount = gift.gift_count || 1;
           
-          // Display the gift for everyone!
-          addGift(gift.gift_type, giftCount, senderName);
+          addGift(gift.gift_type, giftCount, senderName, gift.id);
         }
       )
-      .subscribe((status) => {
-        console.log('🎁 TikTokGiftDisplay subscription status:', status);
+      .subscribe((status, err) => {
+        console.log('🎁 Subscription status:', status, err);
+        
+        if (status === 'SUBSCRIBED') {
+          setConnectionStatus('connected');
+          // Stop polling if real-time works
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('🎁 Real-time subscription failed, starting polling fallback');
+          setConnectionStatus('error');
+          startPolling();
+        }
       });
 
+    channelRef.current = channel;
+
+    // Start polling as backup after 3 seconds if not connected
+    const pollingTimeout = setTimeout(() => {
+      if (connectionStatus !== 'connected') {
+        console.log('🎁 Real-time not connected after 3s, starting polling');
+        startPolling();
+      }
+    }, 3000);
+
     return () => {
-      console.log('🎁 TikTokGiftDisplay: Unsubscribing from gifts');
-      supabase.removeChannel(channel);
+      console.log('🎁 Cleaning up gift subscriptions');
+      clearTimeout(pollingTimeout);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
     };
-  }, [sessionId, addGift]);
+  }, [sessionId, addGift, startPolling, connectionStatus]);
 
   if (gifts.length === 0) return null;
 
@@ -139,17 +220,15 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
           className="flex items-center gap-2 bg-black/70 backdrop-blur-md rounded-full px-3 py-1.5 shadow-lg"
           style={{
             animation: 'giftSlideIn 0.15s ease-out forwards',
-            opacity: 1 - (index * 0.1), // Fade older gifts slightly
+            opacity: 1 - (index * 0.1),
           }}
         >
-          {/* Sender name with shoutout styling */}
           <span className="text-white text-xs font-semibold max-w-16 truncate">
             {gift.senderName}
           </span>
           
           <span className="text-white/50 text-[10px]">sent</span>
           
-          {/* Gift icon - larger for visibility */}
           <div className="relative flex-shrink-0">
             <img 
               src={GIFT_IMAGES[gift.giftType] || '/gifts/gift-rose.png'} 
@@ -159,7 +238,6 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
             />
           </div>
           
-          {/* Count badge - TikTok style with animation */}
           {gift.count > 1 ? (
             <div className="flex items-center bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full px-1.5 py-0.5">
               <span className="text-black text-[10px] font-bold">x</span>
