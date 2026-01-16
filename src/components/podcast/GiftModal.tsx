@@ -12,7 +12,6 @@ interface GiftModalProps {
   sessionId: string;
   hostId: string;
   hostName?: string;
-  onGiftSent?: (giftType: string) => void;
 }
 
 // Updated gift definitions with correct USD earnings (same as TikTokGiftModal)
@@ -29,7 +28,7 @@ const GIFTS = [
   { type: 'crown', icon: Crown, label: 'Crown', coins: 500, earningsUsd: 6.40, color: 'text-purple-500', bgColor: 'from-purple-500/20 to-pink-500/20' },
 ];
 
-const GiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftSent }: GiftModalProps) => {
+const GiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: GiftModalProps) => {
   const { user } = useAuth();
   const [sending, setSending] = useState<string | null>(null);
   const [userCoins, setUserCoins] = useState<number>(0);
@@ -67,7 +66,6 @@ const GiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftSent }:
     // For demo sessions, just show success without database call
     if (isDemoSession(sessionId) || isDemoUser(hostId)) {
       toast.success(`Sent ${giftType} to ${hostName || 'host'}!`);
-      onGiftSent?.(giftType);
       onClose();
       return;
     }
@@ -125,7 +123,6 @@ const GiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftSent }:
       }
 
       toast.success(`Sent ${giftType} to ${hostName || 'host'}!`);
-      onGiftSent?.(giftType);
       onClose();
     } catch (error: any) {
       console.error('Send gift error:', error);

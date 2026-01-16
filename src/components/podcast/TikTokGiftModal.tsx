@@ -12,11 +12,9 @@ interface TikTokGiftModalProps {
   sessionId: string;
   hostId: string;
   hostName?: string;
-  onGiftSent?: (giftType: string, count: number, senderName: string) => void;
 }
 
 // Gift definitions with coin costs and creator earnings
-// Earning formula: Each gift has a specific USD earning rate for creators
 const GIFTS = [
   // Image-based gifts
   { type: 'rose', image: '/gifts/gift-rose.png', label: 'Rose', coins: 1, earnings: 0.0128, color: 'from-red-500/20 to-pink-500/20' },
@@ -30,7 +28,7 @@ const GIFTS = [
   { type: 'crown', icon: Crown, label: 'Crown', coins: 500, earnings: 6.40, color: 'from-purple-500/30 to-pink-500/30', isVideo: true },
 ];
 
-const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftSent }: TikTokGiftModalProps) => {
+const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: TikTokGiftModalProps) => {
   const { user } = useAuth();
   const [sending, setSending] = useState<string | null>(null);
   const [giftCount, setGiftCount] = useState<{ [key: string]: number }>({});
@@ -89,8 +87,6 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftS
 
     // For demo sessions, just show success without database call
     if (isDemoSession(sessionId) || isDemoUser(hostId)) {
-      const senderName = userProfile?.full_name || userProfile?.username || 'Anonymous';
-      onGiftSent?.(giftType, count, senderName);
       toast.success(`Sent ${count}x ${giftType} to host!`);
       onClose();
       return;
@@ -114,6 +110,7 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftS
 
     try {
       // Call edge function to handle the gift transaction
+      // The edge function will insert into podcast_gifts which triggers real-time for everyone
       const { data, error } = await supabase.functions.invoke('gift-transaction', {
         body: {
           action: 'send_gift',
@@ -134,10 +131,8 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftS
         return;
       }
 
-      const senderName = userProfile?.full_name || userProfile?.username || 'Anonymous';
-      onGiftSent?.(giftType, count, senderName);
       setUserCoins(data.new_balance || userCoins - totalCoins);
-      toast.success(`Sent ${count}x ${giftType} to host! Creator earned $${totalEarnings.toFixed(2)}`);
+      toast.success(`Sent ${count}x ${giftType}! Creator earned $${totalEarnings.toFixed(2)}`);
       onClose();
     } catch (error) {
       console.error('Send gift error:', error);
@@ -219,14 +214,14 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftS
                   <div className="flex items-center gap-1 mt-1">
                     <button
                       onClick={() => updateGiftCount(gift.type, -1)}
-                      className="w-4 h-4 rounded bg-white/10 text-white/60 text-[10px] hover:bg-white/20 flex items-center justify-center"
+                      className="w-5 h-5 rounded bg-white/10 text-white/60 text-xs hover:bg-white/20 flex items-center justify-center font-bold"
                     >
                       -
                     </button>
-                    <span className="text-[9px] text-white w-3 text-center">{count}</span>
+                    <span className="text-[10px] text-white w-4 text-center font-semibold">{count}</span>
                     <button
                       onClick={() => updateGiftCount(gift.type, 1)}
-                      className="w-4 h-4 rounded bg-white/10 text-white/60 text-[10px] hover:bg-white/20 flex items-center justify-center"
+                      className="w-5 h-5 rounded bg-white/10 text-white/60 text-xs hover:bg-white/20 flex items-center justify-center font-bold"
                     >
                       +
                     </button>
@@ -237,7 +232,7 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftS
           </div>
 
           <p className="text-center text-[10px] text-white/40">
-            Tap a gift to send • Creators earn from your gifts
+            Tap a gift to send • Creators earn from your gifts • Everyone sees it!
           </p>
         </div>
       </DialogContent>
