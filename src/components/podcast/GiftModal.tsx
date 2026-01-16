@@ -122,6 +122,13 @@ const GiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: GiftModalPr
         setUserCoins(prev => prev - coins);
       }
 
+      // Trigger local gift display immediately for instant feedback
+      if (typeof (window as any).__addGift === 'function') {
+        const senderName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'You';
+        const senderAvatar = user?.user_metadata?.avatar_url;
+        (window as any).__addGift(giftType, 1, senderName, senderAvatar, `local-${Date.now()}`);
+      }
+
       toast.success(`Sent ${giftType} to ${hostName || 'host'}!`);
       onClose();
     } catch (error: any) {
