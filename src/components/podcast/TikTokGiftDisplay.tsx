@@ -162,9 +162,9 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
       }
     };
     
-    // Poll immediately, then every 1.5 seconds for faster updates
+    // Poll immediately, then every 800ms for faster gift detection
     poll();
-    pollingIntervalRef.current = setInterval(poll, 1500);
+    pollingIntervalRef.current = setInterval(poll, 800);
   }, [sessionId, addGift]);
 
   // Subscribe to real-time gifts + start polling
