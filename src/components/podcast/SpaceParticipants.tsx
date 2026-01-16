@@ -193,6 +193,57 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     return () => clearTimeout(timer);
   }, [sessionId, isAudioConnected, isAudioConnecting]);
 
+  // Listen for session ending - when host ends session, all listeners should leave
+  useEffect(() => {
+    if (isDemoSession(sessionId)) return;
+    
+    const checkSessionStatus = async () => {
+      const { data: session } = await supabase
+        .from('podcast_sessions')
+        .select('status, ended_at')
+        .eq('id', sessionId)
+        .single();
+      
+      if (session && session.status === 'ended') {
+        console.log('📴 Session has ended by host');
+        toast.info('This session has ended');
+        disconnectAudio();
+        setMyParticipation(null);
+        onLeave?.();
+        navigate('/podcasts');
+      }
+    };
+
+    const sessionChannel = supabase
+      .channel(`session-status-${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'podcast_sessions',
+          filter: `id=eq.${sessionId}`
+        },
+        (payload: any) => {
+          console.log('📡 Session update received:', payload.new);
+          if (payload.new.status === 'ended') {
+            console.log('📴 Host ended the session - disconnecting all listeners');
+            toast.info('The host has ended this session');
+            disconnectAudio();
+            setMyParticipation(null);
+            onLeave?.();
+            // Navigate back to podcasts feed
+            navigate('/podcasts');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(sessionChannel);
+    };
+  }, [sessionId, disconnectAudio, onLeave, navigate]);
+
   useEffect(() => {
     fetchParticipants();
     checkBanStatus();

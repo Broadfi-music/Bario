@@ -249,10 +249,13 @@ const Podcasts = () => {
 
   const fetchLiveSessions = async (retryCount = 0) => {
     try {
+      // IMPORTANT: Filter out battle sessions (they have "Battle:" prefix in title)
+      // Battle sessions should NOT appear in the regular live feed
       const { data: sessions, error } = await supabase
         .from('podcast_sessions')
         .select('*')
         .eq('status', 'live')
+        .not('title', 'ilike', 'Battle:%') // Exclude battle sessions
         .order('listener_count', { ascending: false });
       
       // Handle JWT errors with retry
@@ -376,7 +379,7 @@ const Podcasts = () => {
             </Link>
           </div>
 
-          {/* Center: Tabs */}
+          {/* Center: Tabs - Add Battle tab */}
           <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === 'feed') setSelectedSession(null); }} className="w-auto">
             <TabsList className="bg-white/5 h-8">
               <TabsTrigger value="feed" className="text-xs px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7">
@@ -384,6 +387,10 @@ const Podcasts = () => {
               </TabsTrigger>
               <TabsTrigger value="live" className="text-xs px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7">
                 Live
+              </TabsTrigger>
+              <TabsTrigger value="battles" className="text-xs px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7 flex items-center gap-1">
+                <Swords className="h-3 w-3" />
+                Battles
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -433,6 +440,10 @@ const Podcasts = () => {
           onSessionSelect={setSelectedSession}
           hostLiveSession={hostLiveSession}
         />
+      ) : activeTab === 'battles' ? (
+        <div className="pt-16">
+          <BattleReelScroller onClose={() => setActiveTab('feed')} />
+        </div>
       ) : (
         <PodcastFeed />
       )}

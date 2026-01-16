@@ -139,14 +139,15 @@ const BattleInviteModal = ({ isOpen, onClose, sessionId, onBattleStart }: Battle
 
     setIsLoading(true);
     try {
-      // IMPORTANT: Create a podcast_session for the battle audio channel
+      // IMPORTANT: Create a BATTLE-SPECIFIC session that won't show in regular live feed
+      // We mark it by putting "Battle:" prefix in title
       const { data: session, error: sessionError } = await supabase
         .from('podcast_sessions')
         .insert({
           host_id: user.id,
           title: `Battle: ${user.email?.split('@')[0]} vs ${selectedCreator.full_name || selectedCreator.username}`,
           status: 'live',
-          description: 'Live battle session'
+          description: 'Battle session - not shown in regular feed'
         })
         .select()
         .single();
@@ -202,9 +203,14 @@ const BattleInviteModal = ({ isOpen, onClose, sessionId, onBattleStart }: Battle
       toast.success(`Battle invite sent to ${selectedCreator.full_name || selectedCreator.username}!`);
       onClose();
       
+      // IMPORTANT: Navigate host directly to battle page instead of calling onBattleStart
+      // This takes them to the battle livestreaming page with audio working
       if (onBattleStart) {
         onBattleStart(battle.id);
       }
+      
+      // Navigate to the battle directly
+      window.location.href = `/podcasts?battle=${battle.id}`;
     } catch (error) {
       console.error('Error creating battle:', error);
       toast.error('Failed to send battle invite');

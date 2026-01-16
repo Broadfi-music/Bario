@@ -29,8 +29,9 @@ interface TwitchCommentsProps {
   isHost?: boolean;
 }
 
-// Message display duration in ms (10 seconds - visible to all)
+// Message display duration in ms (10 seconds - then starts fade out)
 const MESSAGE_DISPLAY_DURATION = 10000;
+const MESSAGE_CLEANUP_INTERVAL = 2000; // Check every 2 seconds
 
 // Emotes like Kick.com
 const EMOTES = [
@@ -172,16 +173,33 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
     };
   }, [sessionId]);
 
-  // Keep messages visible longer - only remove very old ones (5 minutes)
+  // Real-time message fade out like TikTok - messages disappear after 10 seconds
   useEffect(() => {
     const cleanup = setInterval(() => {
-      setComments(prev => prev.filter(c => {
-        if (!c.created_at || c.id.startsWith('demo-') || c.id.startsWith('local-')) return true;
-        const age = Date.now() - new Date(c.created_at).getTime();
-        // Keep messages for 5 minutes instead of 10 seconds
-        return age < 300000;
-      }));
-    }, 30000); // Check every 30 seconds
+      const now = Date.now();
+      setComments(prev => {
+        // First, mark old messages for fadeOut
+        const updated = prev.map(c => {
+          if (c.id.startsWith('demo-')) return c;
+          if (!c.created_at) return c;
+          const age = now - new Date(c.created_at).getTime();
+          // Mark for fadeout at 10 seconds
+          if (age > MESSAGE_DISPLAY_DURATION && !c.fadeOut) {
+            return { ...c, fadeOut: true };
+          }
+          return c;
+        });
+        
+        // Then remove messages that have been fading out for 500ms+
+        return updated.filter(c => {
+          if (c.id.startsWith('demo-') || c.id.startsWith('local-')) return true;
+          if (!c.created_at) return true;
+          const age = now - new Date(c.created_at).getTime();
+          // Keep messages for 11 seconds total (10s visible + 1s fade animation)
+          return age < MESSAGE_DISPLAY_DURATION + 1000;
+        });
+      });
+    }, MESSAGE_CLEANUP_INTERVAL);
     
     return () => clearInterval(cleanup);
   }, []);
