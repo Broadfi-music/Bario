@@ -14,8 +14,9 @@ interface CoinPackage {
   bonus_coins: number;
 }
 
-// Current USD to NGN exchange rate (approximate - should be fetched from API in production)
-const USD_TO_NGN_RATE = 1550;
+// Current USD to NGN exchange rate 
+// $5.99 should be ₦8,524 (rate ~1424)
+const USD_TO_NGN_RATE = 1424;
 
 serve(async (req) => {
   // Handle CORS preflight
