@@ -1,11 +1,9 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { Swords, Clock, X } from 'lucide-react';
+import { Swords, Loader2 } from 'lucide-react';
 
 interface BattleInvite {
   id: string;
@@ -27,90 +25,28 @@ interface BattleInvite {
 const GlobalBattleNotification = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [invite, setInvite] = useState<BattleInvite | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const processedInvitesRef = useRef<Set<string>>(new Set());
 
-  // Listen for incoming battle invites globally
-  useEffect(() => {
-    if (!user) return;
+  // Auto-accept battle invite and navigate
+  const autoAcceptBattle = useCallback(async (invite: BattleInvite) => {
+    if (!user || isProcessing) return;
+    if (processedInvitesRef.current.has(invite.id)) return;
+    
+    processedInvitesRef.current.add(invite.id);
+    setIsProcessing(true);
 
-    // Check for existing pending invites
-    const checkPendingInvites = async () => {
-      const { data } = await supabase
-        .from('battle_invites')
-        .select('*')
-        .eq('to_user_id', user.id)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (data && data.length > 0) {
-        await enrichInvite(data[0]);
-      }
-    };
-
-    const enrichInvite = async (rawInvite: any) => {
-      // Get sender's profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, username, avatar_url')
-        .eq('user_id', rawInvite.from_user_id)
-        .single();
-
-      // Get battle details
-      const { data: battle } = await supabase
-        .from('podcast_battles')
-        .select('duration_seconds, session_id')
-        .eq('id', rawInvite.battle_id)
-        .single();
-
-      setInvite({
-        ...rawInvite,
-        from_user: profile || undefined,
-        battle: battle || undefined
-      });
-
-      // Request browser notification permission and show notification
-      if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Battle Challenge!', {
-          body: `${profile?.full_name || profile?.username || 'Someone'} wants to battle you!`,
-          icon: '/bario-logo.png'
-        });
-      } else if ('Notification' in window && Notification.permission !== 'denied') {
-        Notification.requestPermission();
-      }
-    };
-
-    checkPendingInvites();
-
-    // Subscribe to new invites
-    const channel = supabase
-      .channel(`global-battle-invites-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'battle_invites',
-          filter: `to_user_id=eq.${user.id}`
-        },
-        async (payload: any) => {
-          console.log('📩 New battle invite received:', payload);
-          await enrichInvite(payload.new);
-        }
-      )
-      .subscribe((status) => {
-        console.log('🔔 Global battle invite subscription:', status);
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
-  const handleAccept = async () => {
-    if (!invite || !user) return;
-    setIsLoading(true);
+    const senderName = invite.from_user?.full_name || invite.from_user?.username || 'Someone';
+    
+    // Show toast notification
+    toast.info(
+      <div className="flex items-center gap-2">
+        <Swords className="h-4 w-4 text-yellow-400" />
+        <span><strong>{senderName}</strong> challenged you to battle!</span>
+        <Loader2 className="h-3 w-3 animate-spin ml-2" />
+      </div>,
+      { duration: 3000 }
+    );
 
     try {
       // Update invite status
@@ -138,6 +74,7 @@ const GlobalBattleNotification = () => {
         if (sessionError || !newSession) {
           console.error('Failed to create session:', sessionError);
           toast.error('Failed to create battle session');
+          setIsProcessing(false);
           return;
         }
 
@@ -171,107 +108,94 @@ const GlobalBattleNotification = () => {
           is_muted: false
         });
 
-      toast.success('Battle accepted! Get ready!');
-      setInvite(null);
+      toast.success('Battle started! Get ready!', { duration: 2000 });
       
-      // Navigate to podcasts page with battle
+      // Navigate immediately to battle
       navigate(`/podcasts?battle=${invite.battle_id}`);
     } catch (error) {
-      console.error('Error accepting battle:', error);
-      toast.error('Failed to accept battle');
+      console.error('Error auto-accepting battle:', error);
+      toast.error('Failed to join battle');
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
-  };
+  }, [user, navigate, isProcessing]);
 
-  const handleDecline = async () => {
-    if (!invite) return;
-    setIsLoading(true);
+  // Listen for incoming battle invites globally
+  useEffect(() => {
+    if (!user) return;
 
-    try {
-      await supabase
+    // Check for existing pending invites
+    const checkPendingInvites = async () => {
+      const { data } = await supabase
         .from('battle_invites')
-        .update({ status: 'declined' })
-        .eq('id', invite.id);
+        .select('*')
+        .eq('to_user_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      await supabase
+      if (data && data.length > 0) {
+        await enrichAndAcceptInvite(data[0]);
+      }
+    };
+
+    const enrichAndAcceptInvite = async (rawInvite: any) => {
+      // Skip if already processed
+      if (processedInvitesRef.current.has(rawInvite.id)) return;
+      
+      // Get sender's profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, username, avatar_url')
+        .eq('user_id', rawInvite.from_user_id)
+        .single();
+
+      // Get battle details
+      const { data: battle } = await supabase
         .from('podcast_battles')
-        .update({ status: 'ended', ended_at: new Date().toISOString() })
-        .eq('id', invite.battle_id);
+        .select('duration_seconds, session_id')
+        .eq('id', rawInvite.battle_id)
+        .single();
 
-      toast.info('Battle declined');
-      setInvite(null);
-    } catch (error) {
-      console.error('Error declining battle:', error);
-      toast.error('Failed to decline battle');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      const enrichedInvite: BattleInvite = {
+        ...rawInvite,
+        from_user: profile || undefined,
+        battle: battle || undefined
+      };
 
-  if (!invite) return null;
+      // Auto-accept immediately without dialog
+      autoAcceptBattle(enrichedInvite);
+    };
 
-  const durationMinutes = Math.floor((invite.battle?.duration_seconds || 300) / 60);
+    checkPendingInvites();
 
-  return (
-    <Dialog open={!!invite} onOpenChange={() => setInvite(null)}>
-      <DialogContent className="bg-[#18181b] border-white/10 text-white max-w-sm z-[100]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <Swords className="h-5 w-5 text-yellow-400 animate-pulse" />
-            Battle Challenge!
-          </DialogTitle>
-        </DialogHeader>
+    // Subscribe to new invites
+    const channel = supabase
+      .channel(`global-battle-invites-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'battle_invites',
+          filter: `to_user_id=eq.${user.id}`
+        },
+        async (payload: any) => {
+          console.log('📩 New battle invite received:', payload);
+          await enrichAndAcceptInvite(payload.new);
+        }
+      )
+      .subscribe((status) => {
+        console.log('🔔 Global battle invite subscription:', status);
+      });
 
-        <div className="space-y-4">
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-pink-500/20 to-purple-500/20 border border-pink-500/30">
-            <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-pink-500">
-              {invite.from_user?.avatar_url ? (
-                <img src={invite.from_user.avatar_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-pink-500 to-purple-600" />
-              )}
-            </div>
-            <div className="flex-1">
-              <p className="font-bold text-lg">
-                {invite.from_user?.full_name || invite.from_user?.username || 'Creator'}
-              </p>
-              <p className="text-sm text-white/60">wants to battle you!</p>
-            </div>
-          </div>
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, autoAcceptBattle]);
 
-          <div className="flex items-center justify-center gap-2 text-white/60">
-            <Clock className="h-4 w-4" />
-            <span className="text-sm">{durationMinutes} minute battle</span>
-          </div>
-
-          <p className="text-xs text-center text-white/40">
-            Audio will start automatically when you accept
-          </p>
-
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleDecline}
-              disabled={isLoading}
-              className="flex-1 border-white/20 text-white hover:bg-white/10"
-            >
-              <X className="h-4 w-4 mr-1" />
-              Decline
-            </Button>
-            <Button
-              onClick={handleAccept}
-              disabled={isLoading}
-              className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white"
-            >
-              <Swords className="h-4 w-4 mr-1" />
-              {isLoading ? 'Joining...' : 'Accept Battle'}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+  // No visible UI - just auto-accepts in background
+  return null;
 };
 
 export default GlobalBattleNotification;

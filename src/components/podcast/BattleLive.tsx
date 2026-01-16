@@ -633,6 +633,7 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
               hostId={battle.host_id}
               onSendGift={() => setShowGiftModal(true)}
               sessionTitle={`${battle.host_name} vs ${battle.opponent_name}`}
+              hideGiftButton={true}
             />
           )}
         </div>
@@ -666,13 +667,18 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
       {/* Full-screen Video Gift Animations */}
       {battle.session_id && <GiftAnimation sessionId={battle.session_id} />}
 
-      {/* Gift Modal - Show creator name */}
+      {/* Gift Modal - Battle mode with creator selection */}
       <TikTokGiftModal
         isOpen={showGiftModal}
         onClose={() => setShowGiftModal(false)}
         sessionId={battle.session_id || ''}
         hostId={selectedCreator === 'host' ? battle.host_id : battle.opponent_id}
         hostName={selectedCreator === 'host' ? battle.host_name : battle.opponent_name}
+        battleMode={true}
+        creators={[
+          { id: battle.host_id, name: battle.host_name || 'Host', avatar: battle.host_avatar },
+          { id: battle.opponent_id, name: battle.opponent_name || 'Opponent', avatar: battle.opponent_avatar }
+        ]}
       />
 
       {/* Share Modal */}

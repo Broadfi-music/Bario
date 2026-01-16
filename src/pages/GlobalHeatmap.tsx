@@ -604,7 +604,14 @@ const GlobalHeatmap = () => {
               {liveSessions.slice(0, 4).map((session) => (
                 <div
                   key={session.id}
-                  onClick={() => navigate(`/podcast/${session.id}`)}
+                  onClick={() => {
+                    // Navigate to correct page based on session type
+                    if (session.is_battle && session.battle_id) {
+                      navigate(`/podcasts?battle=${session.battle_id}`);
+                    } else {
+                      navigate(`/podcasts?session=${session.id}`);
+                    }
+                  }}
                   className="relative bg-gradient-to-br from-red-500/10 to-purple-500/10 hover:from-red-500/20 hover:to-purple-500/20 border border-red-500/20 rounded-xl p-3 cursor-pointer transition-all group"
                 >
                   {/* Battle badge */}

@@ -6,12 +6,21 @@ import { toast } from 'sonner';
 import { Coins, X, Flame, Star, Diamond, Crown } from 'lucide-react';
 import { getFreshSession, isDemoSession, isDemoUser } from '@/lib/authUtils';
 
+interface Creator {
+  id: string;
+  name: string;
+  avatar?: string | null;
+}
+
 interface TikTokGiftModalProps {
   isOpen: boolean;
   onClose: () => void;
   sessionId: string;
   hostId: string;
   hostName?: string;
+  // Battle mode - optional second creator
+  battleMode?: boolean;
+  creators?: Creator[];
 }
 
 // Gift definitions with coin costs and creator earnings
@@ -28,18 +37,29 @@ const GIFTS = [
   { type: 'crown', icon: Crown, label: 'Crown', coins: 500, earnings: 6.40, color: 'from-purple-500/30 to-pink-500/30', isVideo: true },
 ];
 
-const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: TikTokGiftModalProps) => {
+const TikTokGiftModal = ({ 
+  isOpen, 
+  onClose, 
+  sessionId, 
+  hostId, 
+  hostName,
+  battleMode = false,
+  creators = []
+}: TikTokGiftModalProps) => {
   const { user } = useAuth();
   const [sending, setSending] = useState<string | null>(null);
   const [giftCount, setGiftCount] = useState<{ [key: string]: number }>({});
   const [userCoins, setUserCoins] = useState<number>(0);
   const [userProfile, setUserProfile] = useState<{ full_name?: string; username?: string } | null>(null);
+  const [selectedCreatorId, setSelectedCreatorId] = useState<string>(hostId);
 
   useEffect(() => {
     if (user && isOpen) {
       fetchUserData();
+      // Reset selected creator when modal opens
+      setSelectedCreatorId(hostId);
     }
-  }, [user, isOpen]);
+  }, [user, isOpen, hostId]);
 
   const fetchUserData = async () => {
     if (!user) return;
@@ -85,9 +105,12 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: TikTo
     const totalCoins = coinsPerGift * count;
     const totalEarnings = earningsPerGift * count;
 
+    // Use selected creator in battle mode, otherwise use hostId
+    const recipientId = battleMode && selectedCreatorId ? selectedCreatorId : hostId;
+
     // For demo sessions, just show success without database call
-    if (isDemoSession(sessionId) || isDemoUser(hostId)) {
-      toast.success(`Sent ${count}x ${giftType} to host!`);
+    if (isDemoSession(sessionId) || isDemoUser(recipientId)) {
+      toast.success(`Sent ${count}x ${giftType}!`);
       onClose();
       return;
     }
@@ -110,12 +133,11 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: TikTo
 
     try {
       // Call edge function to handle the gift transaction
-      // The edge function will insert into podcast_gifts which triggers real-time for everyone
       const { data, error } = await supabase.functions.invoke('gift-transaction', {
         body: {
           action: 'send_gift',
           senderId: user.id,
-          recipientId: hostId,
+          recipientId: recipientId,
           sessionId: sessionId,
           giftType: giftType,
           coinsCost: totalCoins,
@@ -132,7 +154,13 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: TikTo
       }
 
       setUserCoins(data.new_balance || userCoins - totalCoins);
-      toast.success(`Sent ${count}x ${giftType}! Creator earned $${totalEarnings.toFixed(2)}`);
+      
+      // Get recipient name for toast
+      const recipientName = battleMode 
+        ? creators.find(c => c.id === recipientId)?.name || 'Creator'
+        : hostName || 'Host';
+      
+      toast.success(`Sent ${count}x ${giftType} to ${recipientName}!`);
       onClose();
     } catch (error) {
       console.error('Send gift error:', error);
@@ -140,6 +168,14 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: TikTo
     } finally {
       setSending(null);
     }
+  };
+
+  // Get selected creator name for display
+  const getSelectedCreatorName = () => {
+    if (battleMode && creators.length > 0) {
+      return creators.find(c => c.id === selectedCreatorId)?.name || 'Creator';
+    }
+    return hostName || 'Host';
   };
 
   return (
@@ -155,9 +191,41 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: TikTo
 
           <DialogHeader className="mb-4">
             <DialogTitle className="text-white text-center text-lg font-semibold">
-              Send Gift{hostName ? ` to ${hostName}` : ''}
+              Send Gift to {getSelectedCreatorName()}
             </DialogTitle>
           </DialogHeader>
+
+          {/* Creator Selector for Battle Mode */}
+          {battleMode && creators.length > 0 && (
+            <div className="flex items-center justify-center gap-3 mb-4">
+              {creators.map((creator) => (
+                <button
+                  key={creator.id}
+                  onClick={() => setSelectedCreatorId(creator.id)}
+                  className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
+                    selectedCreatorId === creator.id 
+                      ? 'bg-gradient-to-r from-pink-500/30 to-purple-500/30 ring-2 ring-pink-500' 
+                      : 'bg-white/5 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-white/20">
+                    {creator.avatar ? (
+                      <img src={creator.avatar} alt={creator.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+                        <span className="text-white font-bold">
+                          {creator.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-white/80 font-medium truncate max-w-[60px]">
+                    {creator.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Coin Balance */}
           <div className="flex items-center justify-center gap-2 mb-4 p-2 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-lg">
@@ -232,7 +300,7 @@ const TikTokGiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: TikTo
           </div>
 
           <p className="text-center text-[10px] text-white/40">
-            Tap a gift to send • Creators earn from your gifts • Everyone sees it!
+            Tap a gift to send • Everyone sees it live!
           </p>
         </div>
       </DialogContent>
