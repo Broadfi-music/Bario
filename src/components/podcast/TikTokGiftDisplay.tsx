@@ -7,6 +7,7 @@ interface GiftEvent {
   giftType: string;
   count: number;
   senderName: string;
+  senderAvatar?: string;
   timestamp: number;
 }
 
@@ -35,10 +36,13 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const processedGiftIdsRef = useRef<Set<string>>(new Set());
   const lastPollTimeRef = useRef<string | null>(null);
+  const mountedRef = useRef(true);
 
-  // Add gift with fast TikTok-style display
-  const addGift = useCallback((giftType: string, count: number, senderName: string, giftId?: string) => {
-    // Prevent duplicate gifts using a Set for O(1) lookup
+  // Add gift with TikTok-style display
+  const addGift = useCallback((giftType: string, count: number, senderName: string, senderAvatar?: string, giftId?: string) => {
+    if (!mountedRef.current) return;
+    
+    // Prevent duplicate gifts
     if (giftId) {
       if (processedGiftIdsRef.current.has(giftId)) {
         console.log('🎁 Skipping duplicate gift:', giftId);
@@ -57,6 +61,7 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
       giftType,
       count,
       senderName,
+      senderAvatar,
       timestamp: Date.now()
     };
 
@@ -65,33 +70,36 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
     processGiftQueue();
   }, []);
 
-  // Process gift queue - show gifts quickly like TikTok
+  // Process gift queue - show gifts like TikTok
   const processGiftQueue = useCallback(() => {
+    if (!mountedRef.current) return;
     if (processingRef.current || giftQueueRef.current.length === 0) return;
     
     processingRef.current = true;
     const gift = giftQueueRef.current.shift()!;
     
     setGifts(prev => {
-      const updated = [...prev, gift].slice(-5);
+      const updated = [...prev, gift].slice(-4); // Show max 4 gifts
       return updated;
     });
 
-    // Remove after animation (4 seconds total display time)
+    // Remove after animation (5 seconds total display time)
     setTimeout(() => {
-      setGifts(prev => prev.filter(g => g.id !== gift.id));
-    }, 4000);
+      if (mountedRef.current) {
+        setGifts(prev => prev.filter(g => g.id !== gift.id));
+      }
+    }, 5000);
 
     // Process next gift after short delay
     setTimeout(() => {
       processingRef.current = false;
-      if (giftQueueRef.current.length > 0) {
+      if (giftQueueRef.current.length > 0 && mountedRef.current) {
         processGiftQueue();
       }
-    }, 300);
+    }, 400);
   }, []);
 
-  // Expose addGift to parent via window for local sender feedback
+  // Expose addGift globally for local sender feedback
   useEffect(() => {
     (window as any).__addGift = addGift;
     return () => {
@@ -106,6 +114,8 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
     console.log('🎁 Starting gift polling for session:', sessionId);
     
     const poll = async () => {
+      if (!mountedRef.current) return;
+      
       try {
         // Fetch gifts from the last 10 seconds or since last poll
         const since = lastPollTimeRef.current || new Date(Date.now() - 10000).toISOString();
@@ -130,18 +140,21 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
           
           // Process each gift
           for (const gift of recentGifts) {
+            if (!mountedRef.current) break;
+            
             // Skip if already processed
             if (processedGiftIdsRef.current.has(gift.id)) continue;
             
-            // Fetch sender profile
+            // Fetch sender profile with avatar
             const { data: profile } = await supabase
               .from('profiles')
-              .select('full_name, username')
+              .select('full_name, username, avatar_url')
               .eq('user_id', gift.sender_id)
               .single();
             
-            const senderName = profile?.full_name || profile?.username || 'Anonymous';
-            addGift(gift.gift_type, 1, senderName, gift.id);
+            const senderName = profile?.full_name || profile?.username || 'Fan';
+            const senderAvatar = profile?.avatar_url || undefined;
+            addGift(gift.gift_type, 1, senderName, senderAvatar, gift.id);
           }
         }
       } catch (error) {
@@ -149,13 +162,15 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
       }
     };
     
-    // Poll immediately, then every 2 seconds
+    // Poll immediately, then every 1.5 seconds for faster updates
     poll();
-    pollingIntervalRef.current = setInterval(poll, 2000);
+    pollingIntervalRef.current = setInterval(poll, 1500);
   }, [sessionId, addGift]);
 
-  // Subscribe to real-time gifts + start polling as backup
+  // Subscribe to real-time gifts + start polling
   useEffect(() => {
+    mountedRef.current = true;
+    
     if (!sessionId || isDemoSession(sessionId)) {
       console.log('🎁 Skipping subscription for demo session');
       return;
@@ -172,7 +187,7 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
       supabase.removeChannel(channelRef.current);
     }
 
-    // Real-time subscription
+    // Real-time subscription for instant updates
     const channel = supabase
       .channel(`gifts-realtime-${sessionId}-${Date.now()}`)
       .on(
@@ -184,6 +199,7 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
           filter: `session_id=eq.${sessionId}`
         },
         async (payload) => {
+          if (!mountedRef.current) return;
           console.log('🎁 Real-time gift received:', payload.new);
           const gift = payload.new as any;
           
@@ -193,15 +209,16 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
             return;
           }
           
-          // Fetch sender profile
+          // Fetch sender profile with avatar
           const { data: profile } = await supabase
             .from('profiles')
-            .select('full_name, username')
+            .select('full_name, username, avatar_url')
             .eq('user_id', gift.sender_id)
             .single();
           
-          const senderName = profile?.full_name || profile?.username || 'Anonymous';
-          addGift(gift.gift_type, 1, senderName, gift.id);
+          const senderName = profile?.full_name || profile?.username || 'Fan';
+          const senderAvatar = profile?.avatar_url || undefined;
+          addGift(gift.gift_type, 1, senderName, senderAvatar, gift.id);
         }
       )
       .subscribe((status, err) => {
@@ -222,6 +239,7 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
 
     return () => {
       console.log('🎁 Cleaning up gift subscriptions');
+      mountedRef.current = false;
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
@@ -234,88 +252,125 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
     };
   }, [sessionId, addGift, startPolling]);
 
-  // Always render container - show status indicator when no gifts
+  // Always render container
   return (
-    <div className="fixed left-2 top-1/3 z-[100] flex flex-col gap-2 pointer-events-none max-w-[220px]">
-      {/* Connection status indicator - small dot */}
-      <div className="flex items-center gap-1.5 mb-1">
+    <div className="fixed left-3 top-[35%] z-[9999] flex flex-col gap-3 pointer-events-none max-w-[280px]">
+      {/* Connection status - tiny indicator */}
+      <div className="flex items-center gap-1 mb-0.5">
         <div 
-          className={`w-2 h-2 rounded-full ${
+          className={`w-1.5 h-1.5 rounded-full ${
             connectionStatus === 'connected' ? 'bg-green-500' : 
             connectionStatus === 'error' ? 'bg-yellow-500' : 
             'bg-blue-500 animate-pulse'
           }`}
         />
-        <span className="text-[9px] text-white/40">
+        <span className="text-[8px] text-white/30">
           {connectionStatus === 'connected' ? 'Live' : connectionStatus === 'error' ? 'Polling' : '...'}
         </span>
       </div>
       
-      {gifts.map((gift, index) => (
-        <div
-          key={gift.id}
-          className="flex items-center gap-2 bg-black/80 backdrop-blur-md rounded-full px-3 py-2 shadow-2xl border border-white/10"
-          style={{
-            animation: 'giftSlideIn 0.2s ease-out forwards',
-            opacity: 1 - (index * 0.1),
-          }}
-        >
-          {/* Sender name with shoutout */}
-          <span className="text-white text-xs font-bold max-w-20 truncate">
-            {gift.senderName}
-          </span>
-          
-          <span className="text-white/50 text-[10px]">sent</span>
-          
-          {/* Gift image */}
-          <div className="relative flex-shrink-0">
-            {GIFT_IMAGES[gift.giftType]?.endsWith('.mp4') ? (
-              <video 
-                src={GIFT_IMAGES[gift.giftType]} 
-                autoPlay 
-                loop 
-                muted 
-                playsInline
-                className="h-8 w-8 object-contain"
-              />
-            ) : (
-              <img 
-                src={GIFT_IMAGES[gift.giftType] || '/gifts/gift-rose.png'} 
-                alt={gift.giftType}
-                className="h-8 w-8 object-contain animate-bounce"
-                style={{ animationDuration: '0.5s' }}
-              />
+      {gifts.map((gift, index) => {
+        const isVideoGift = GIFT_IMAGES[gift.giftType]?.endsWith('.mp4');
+        
+        return (
+          <div
+            key={gift.id}
+            className="flex items-center gap-2 bg-black/85 backdrop-blur-md rounded-full pl-1 pr-4 py-1.5 shadow-2xl border border-white/20 animate-gift-slide-in"
+            style={{
+              animationDelay: `${index * 50}ms`,
+            }}
+          >
+            {/* Sender Avatar - TikTok style */}
+            <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 ring-2 ring-pink-500/50">
+              {gift.senderAvatar ? (
+                <img 
+                  src={gift.senderAvatar} 
+                  alt={gift.senderName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">
+                    {gift.senderName.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+            </div>
+            
+            {/* Sender name + "sent" text */}
+            <div className="flex flex-col min-w-0">
+              <span className="text-white text-xs font-bold truncate max-w-[90px]">
+                {gift.senderName}
+              </span>
+              <span className="text-white/50 text-[9px]">sent a gift</span>
+            </div>
+            
+            {/* Gift image/video */}
+            <div className="relative flex-shrink-0 ml-auto">
+              {isVideoGift ? (
+                <video 
+                  src={GIFT_IMAGES[gift.giftType]} 
+                  autoPlay 
+                  loop 
+                  muted 
+                  playsInline
+                  className="h-10 w-10 object-contain"
+                />
+              ) : (
+                <img 
+                  src={GIFT_IMAGES[gift.giftType] || '/gifts/gift-rose.png'} 
+                  alt={gift.giftType}
+                  className="h-10 w-10 object-contain animate-gift-bounce"
+                />
+              )}
+            </div>
+            
+            {/* Count badge */}
+            {gift.count > 1 && (
+              <div className="flex items-center bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full px-2 py-0.5">
+                <span className="text-black text-[9px] font-bold">x</span>
+                <span className="text-black font-black text-sm animate-count-pop">
+                  {gift.count}
+                </span>
+              </div>
             )}
           </div>
-          
-          {gift.count > 1 ? (
-            <div className="flex items-center bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full px-2 py-0.5">
-              <span className="text-black text-[10px] font-bold">x</span>
-              <span className="text-black font-black text-sm animate-count-pop">
-                {gift.count}
-              </span>
-            </div>
-          ) : (
-            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          )}
-        </div>
-      ))}
+        );
+      })}
       
       <style>{`
         @keyframes giftSlideIn {
-          from {
+          0% {
             opacity: 0;
-            transform: translateX(-40px) scale(0.8);
+            transform: translateX(-60px) scale(0.7);
           }
-          to {
+          50% {
+            transform: translateX(10px) scale(1.05);
+          }
+          100% {
             opacity: 1;
             transform: translateX(0) scale(1);
           }
         }
         
+        .animate-gift-slide-in {
+          animation: giftSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        
+        @keyframes giftBounce {
+          0%, 100% { transform: scale(1) rotate(0deg); }
+          25% { transform: scale(1.2) rotate(-10deg); }
+          50% { transform: scale(1.1) rotate(5deg); }
+          75% { transform: scale(1.15) rotate(-5deg); }
+        }
+        
+        .animate-gift-bounce {
+          animation: giftBounce 0.6s ease-in-out infinite;
+        }
+        
         @keyframes countPop {
           0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.4); }
+          50% { transform: scale(1.5); }
         }
         
         .animate-count-pop {

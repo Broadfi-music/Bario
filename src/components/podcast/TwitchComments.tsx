@@ -27,6 +27,7 @@ interface TwitchCommentsProps {
   onSendGift: () => void;
   sessionTitle?: string;
   isHost?: boolean;
+  hideGiftButton?: boolean;
 }
 
 // Message display duration in ms (10 seconds - then starts fade out)
@@ -76,7 +77,7 @@ const demoComments: Comment[] = [
   { id: 'demo-5', user_id: 'user5', content: 'Keep it going!', is_emoji: false, created_at: '' },
 ];
 
-const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHost = false }: TwitchCommentsProps) => {
+const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHost = false, hideGiftButton = false }: TwitchCommentsProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [comments, setComments] = useState<Comment[]>([]);
@@ -425,15 +426,17 @@ return (
             <Share2 className="h-4 w-4" />
           </Button>
 
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            onClick={onSendGift}
-            className="text-yellow-400 hover:text-yellow-300 h-8 w-8"
-          >
-            <Gift className="h-4 w-4" />
-          </Button>
+          {!hideGiftButton && (
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={onSendGift}
+              className="text-yellow-400 hover:text-yellow-300 h-8 w-8"
+            >
+              <Gift className="h-4 w-4" />
+            </Button>
+          )}
 
           {isHost && (
             <Button
