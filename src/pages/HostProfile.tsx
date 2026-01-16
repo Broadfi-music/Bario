@@ -361,9 +361,11 @@ const HostProfile = () => {
     const { error } = await supabase
       .from('podcast_episodes')
       .delete()
-      .eq('id', episodeId);
+      .eq('id', episodeId)
+      .eq('host_id', user.id);
 
     if (error) {
+      console.error('Delete episode error:', error);
       toast.error('Failed to delete episode');
       // Refetch to restore state on error
       fetchHostData();

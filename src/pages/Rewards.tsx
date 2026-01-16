@@ -298,12 +298,9 @@ const Rewards = () => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
 
-  if (loading || dataLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground animate-pulse">Loading...</div>
-      </div>
-    );
+  // Redirect if not logged in
+  if (!loading && !user) {
+    return null;
   }
 
   return (
