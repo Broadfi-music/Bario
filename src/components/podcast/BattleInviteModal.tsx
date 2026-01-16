@@ -158,14 +158,16 @@ const BattleInviteModal = ({ isOpen, onClose, sessionId, onBattleStart }: Battle
 
       console.log('Created battle session:', session.id);
 
-      // Create the battle record WITH session_id
+      // Create the battle record WITH session_id - set status to 'active' immediately
+      // and set started_at so the timer works
       const { data: battle, error: battleError } = await supabase
         .from('podcast_battles')
         .insert({
           session_id: session.id, // Link to audio session
           host_id: user.id,
           opponent_id: selectedCreator.user_id,
-          status: 'pending',
+          status: 'active', // Start as active immediately
+          started_at: new Date().toISOString(), // Set start time for timer
           duration_seconds: duration * 60,
           rules: { gift_types: 'all' }
         })
@@ -173,6 +175,8 @@ const BattleInviteModal = ({ isOpen, onClose, sessionId, onBattleStart }: Battle
         .single();
 
       if (battleError) throw battleError;
+      
+      console.log('✅ Battle created with active status:', battle.id);
 
       // Add host as speaker in participants
       await supabase

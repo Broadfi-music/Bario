@@ -12,23 +12,24 @@ interface GiftModalProps {
   sessionId: string;
   hostId: string;
   hostName?: string;
+  onGiftSent?: (giftType: string) => void;
 }
 
-// New TikTok-style image gifts + legacy video gifts
+// Updated gift definitions with correct USD earnings (same as TikTokGiftModal)
 const GIFTS = [
   // TikTok-style image gifts (affordable)
-  { type: 'rose', image: '/gifts/gift-rose.png', label: 'Rose', points: 1, coins: 1, color: 'text-red-400', bgColor: 'from-red-500/20 to-pink-500/20' },
-  { type: 'heart', image: '/gifts/gift-red-heart.png', label: 'Heart', points: 5, coins: 5, color: 'text-pink-400', bgColor: 'from-pink-500/20 to-rose-500/20' },
-  { type: 'tofu', image: '/gifts/gift-tofu.png', label: 'Tofu', points: 3, coins: 3, color: 'text-green-400', bgColor: 'from-green-500/20 to-emerald-500/20' },
-  { type: 'flame_heart', image: '/gifts/gift-flame-heart.png', label: 'Flames', points: 10, coins: 10, color: 'text-orange-400', bgColor: 'from-orange-500/20 to-red-500/20' },
+  { type: 'rose', image: '/gifts/gift-rose.png', label: 'Rose', coins: 1, earningsUsd: 0.0128, color: 'text-red-400', bgColor: 'from-red-500/20 to-pink-500/20' },
+  { type: 'heart', image: '/gifts/gift-red-heart.png', label: 'Heart', coins: 5, earningsUsd: 0.064, color: 'text-pink-400', bgColor: 'from-pink-500/20 to-rose-500/20' },
+  { type: 'tofu', image: '/gifts/gift-tofu.png', label: 'Tofu', coins: 5, earningsUsd: 0.064, color: 'text-green-400', bgColor: 'from-green-500/20 to-emerald-500/20' },
+  { type: 'flame_heart', image: '/gifts/gift-flame-heart.png', label: 'Flames', coins: 10, earningsUsd: 0.128, color: 'text-orange-400', bgColor: 'from-orange-500/20 to-red-500/20' },
   // Legacy video gifts (premium)
-  { type: 'fire', icon: Flame, label: 'Fire', points: 50, coins: 50, color: 'text-orange-500', bgColor: 'from-orange-500/20 to-red-500/20' },
-  { type: 'star', icon: Star, label: 'Star', points: 100, coins: 100, color: 'text-yellow-400', bgColor: 'from-yellow-400/20 to-amber-500/20' },
-  { type: 'diamond', icon: Diamond, label: 'Diamond', points: 200, coins: 200, color: 'text-cyan-400', bgColor: 'from-cyan-400/20 to-blue-500/20' },
-  { type: 'crown', icon: Crown, label: 'Crown', points: 500, coins: 500, color: 'text-purple-500', bgColor: 'from-purple-500/20 to-pink-500/20' },
+  { type: 'fire', icon: Flame, label: 'Fire', coins: 50, earningsUsd: 0.64, color: 'text-orange-500', bgColor: 'from-orange-500/20 to-red-500/20' },
+  { type: 'star', icon: Star, label: 'Star', coins: 100, earningsUsd: 1.28, color: 'text-yellow-400', bgColor: 'from-yellow-400/20 to-amber-500/20' },
+  { type: 'diamond', icon: Diamond, label: 'Diamond', coins: 200, earningsUsd: 2.56, color: 'text-cyan-400', bgColor: 'from-cyan-400/20 to-blue-500/20' },
+  { type: 'crown', icon: Crown, label: 'Crown', coins: 500, earningsUsd: 6.40, color: 'text-purple-500', bgColor: 'from-purple-500/20 to-pink-500/20' },
 ];
 
-const GiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: GiftModalProps) => {
+const GiftModal = ({ isOpen, onClose, sessionId, hostId, hostName, onGiftSent }: GiftModalProps) => {
   const { user } = useAuth();
   const [sending, setSending] = useState<string | null>(null);
   const [userCoins, setUserCoins] = useState<number>(0);
@@ -42,18 +43,22 @@ const GiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: GiftModalPr
   const fetchUserCoins = async () => {
     if (!user) return;
     
-    const { data } = await supabase
-      .from('user_coins')
-      .select('balance')
-      .eq('user_id', user.id)
-      .single();
-    
-    if (data) {
-      setUserCoins(data.balance);
+    try {
+      const { data } = await supabase
+        .from('user_coins')
+        .select('balance')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (data) {
+        setUserCoins(data.balance);
+      }
+    } catch (error) {
+      console.error('Error fetching coins:', error);
     }
   };
 
-  const sendGift = async (giftType: string, points: number, coins: number) => {
+  const sendGift = async (giftType: string, coins: number, earningsUsd: number) => {
     if (!user) {
       toast.error('Please sign in to send gifts');
       return;
@@ -62,6 +67,7 @@ const GiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: GiftModalPr
     // For demo sessions, just show success without database call
     if (isDemoSession(sessionId) || isDemoUser(hostId)) {
       toast.success(`Sent ${giftType} to ${hostName || 'host'}!`);
+      onGiftSent?.(giftType);
       onClose();
       return;
     }
@@ -74,78 +80,56 @@ const GiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: GiftModalPr
 
     setSending(giftType);
 
-    // Ensure fresh auth session
-    const session = await getFreshSession();
-    if (!session) {
-      setSending(null);
-      toast.error('Session expired. Please sign in again.');
-      return;
-    }
-
     try {
-      // Deduct coins
-      await supabase
-        .from('user_coins')
-        .update({ 
-          balance: userCoins - coins,
-          total_spent: userCoins + coins 
-        })
-        .eq('user_id', user.id);
-
-      // Record transaction
-      await supabase.from('coin_transactions').insert({
-        user_id: user.id,
-        type: 'gift_sent',
-        amount: coins,
-        coins: -coins,
-        description: `Sent ${giftType} gift`,
-        reference_id: sessionId
-      });
-
-      // Send gift
-      const { error } = await supabase.from('podcast_gifts').insert({
-        session_id: sessionId,
-        sender_id: user.id,
-        recipient_id: hostId,
-        gift_type: giftType,
-        points_value: points
-      });
-
-      if (error) throw error;
-
-      // Update creator earnings
-      const earningsUsd = coins * 0.007;
-      const { data: existing } = await supabase
-        .from('creator_earnings')
-        .select('*')
-        .eq('user_id', hostId)
-        .single();
-
-      const existingData = existing as any;
-      if (existingData) {
-        await supabase
-          .from('creator_earnings')
-          .update({
-            total_coins_received: (existingData.total_coins_received || 0) + coins,
-            total_earnings_usd: parseFloat(String(existingData.total_earnings_usd || 0)) + earningsUsd,
-            pending_earnings_usd: parseFloat(String(existingData.pending_earnings_usd || 0)) + earningsUsd
-          })
-          .eq('user_id', hostId);
-      } else {
-        await supabase.from('creator_earnings').insert({
-          user_id: hostId,
-          total_coins_received: coins,
-          total_earnings_usd: earningsUsd,
-          pending_earnings_usd: earningsUsd
-        });
+      // Ensure fresh auth session
+      const session = await getFreshSession();
+      if (!session) {
+        setSending(null);
+        toast.error('Session expired. Please sign in again.');
+        return;
       }
 
-      setUserCoins(prev => prev - coins);
+      // Use the gift-transaction edge function for atomic operations
+      const { data, error } = await supabase.functions.invoke('gift-transaction', {
+        body: {
+          action: 'send_gift',
+          senderId: user.id,
+          recipientId: hostId,
+          sessionId: sessionId,
+          giftType: giftType,
+          coinsCost: coins,
+          earningsUsd: earningsUsd,
+          giftCount: 1
+        }
+      });
+
+      if (error) {
+        console.error('Gift transaction error:', error);
+        throw new Error(error.message || 'Failed to send gift');
+      }
+
+      if (data?.error) {
+        if (data.error === 'Insufficient coins') {
+          toast.error(`Not enough coins! You have ${data.balance} coins.`);
+        } else {
+          throw new Error(data.error);
+        }
+        return;
+      }
+
+      // Update local coin balance
+      if (data?.new_balance !== undefined) {
+        setUserCoins(data.new_balance);
+      } else {
+        setUserCoins(prev => prev - coins);
+      }
+
       toast.success(`Sent ${giftType} to ${hostName || 'host'}!`);
+      onGiftSent?.(giftType);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Send gift error:', error);
-      toast.error('Failed to send gift');
+      toast.error(error.message || 'Failed to send gift');
     } finally {
       setSending(null);
     }
@@ -175,7 +159,7 @@ const GiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: GiftModalPr
             return (
               <button
                 key={gift.type}
-                onClick={() => sendGift(gift.type, gift.points, gift.coins)}
+                onClick={() => sendGift(gift.type, gift.coins, gift.earningsUsd)}
                 disabled={sending === gift.type || !canAfford}
                 className={`flex flex-col items-center gap-1.5 p-3 rounded-xl bg-gradient-to-b ${gift.bgColor} border border-white/10 hover:border-white/30 hover:scale-105 transition-all disabled:opacity-50`}
               >

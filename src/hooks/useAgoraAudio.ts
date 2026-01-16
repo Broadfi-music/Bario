@@ -31,6 +31,10 @@ interface UseAgoraAudioProps {
 // Store mapping of UID to user info
 const uidToUserMap = new Map<number, { identity: string; name: string }>();
 
+// Global connection lock to prevent multiple simultaneous connections
+let globalConnectionLock = false;
+let globalConnectedSession: string | null = null;
+
 export const useAgoraAudio = ({
   sessionId,
   userId,
@@ -51,10 +55,13 @@ export const useAgoraAudio = ({
   const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
   const volumeIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const currentSessionRef = useRef<string | null>(null);
+  const isCleaningUp = useRef(false);
+  const connectionAttemptId = useRef(0);
 
   // Cleanup function with proper error handling
   const cleanup = useCallback(async () => {
     console.log('🧹 Agora audio cleanup');
+    isCleaningUp.current = true;
     
     // Stop volume monitoring
     if (volumeIntervalRef.current) {
@@ -62,9 +69,11 @@ export const useAgoraAudio = ({
       volumeIntervalRef.current = null;
     }
 
-    // Stop and close local track
+    // Stop and close local track - prevent echo by ensuring track is fully stopped
     if (localAudioTrackRef.current) {
       try {
+        console.log('🔇 Stopping local audio track to prevent echo');
+        localAudioTrackRef.current.setEnabled(false);
         localAudioTrackRef.current.stop();
         localAudioTrackRef.current.close();
       } catch (e) {
@@ -76,6 +85,15 @@ export const useAgoraAudio = ({
     // Leave channel and cleanup client - handle WS_ABORT errors gracefully
     if (clientRef.current) {
       try {
+        // Unsubscribe from all remote users first
+        for (const user of clientRef.current.remoteUsers) {
+          try {
+            await clientRef.current.unsubscribe(user);
+          } catch (e) {
+            // Ignore
+          }
+        }
+        
         // Only leave if connected
         if (clientRef.current.connectionState === 'CONNECTED' || 
             clientRef.current.connectionState === 'CONNECTING') {
@@ -92,6 +110,9 @@ export const useAgoraAudio = ({
 
     uidToUserMap.clear();
     currentSessionRef.current = null;
+    globalConnectedSession = null;
+    globalConnectionLock = false;
+    isCleaningUp.current = false;
     setIsConnected(false);
     setIsConnecting(false);
     setParticipants([]);
@@ -173,6 +194,7 @@ export const useAgoraAudio = ({
   // Connect to Agora channel
   const connect = useCallback(async (overrideSessionId?: string, force: boolean = false) => {
     const targetSessionId = overrideSessionId || sessionId;
+    const attemptId = ++connectionAttemptId.current;
 
     if (!targetSessionId) {
       console.error('No session ID provided');
@@ -186,14 +208,35 @@ export const useAgoraAudio = ({
       return;
     }
 
+    // Check global connection lock to prevent simultaneous connections
+    if (globalConnectionLock && !force) {
+      console.log('🔒 Global connection lock active, waiting...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (globalConnectionLock) {
+        console.log('🔒 Connection still locked, aborting');
+        return;
+      }
+    }
+
+    // If globally connected to a different session, disconnect first
+    if (globalConnectedSession && globalConnectedSession !== targetSessionId && !force) {
+      console.log('🔄 Already connected to different session, will reconnect');
+    }
+
+    // Acquire global lock
+    globalConnectionLock = true;
+
     // CRITICAL: Always cleanup existing connection first to prevent UID_CONFLICT
-    if (clientRef.current) {
-      console.log('🧹 Pre-connect cleanup: existing client found');
+    if (clientRef.current || isCleaningUp.current) {
+      console.log('🧹 Pre-connect cleanup: existing client found or cleanup in progress');
+      isCleaningUp.current = true;
       try {
-        if (clientRef.current.connectionState === 'CONNECTED' || 
-            clientRef.current.connectionState === 'CONNECTING') {
-          console.log('🧹 Leaving existing channel before reconnecting');
-          await clientRef.current.leave();
+        if (clientRef.current) {
+          if (clientRef.current.connectionState === 'CONNECTED' || 
+              clientRef.current.connectionState === 'CONNECTING') {
+            console.log('🧹 Leaving existing channel before reconnecting');
+            await clientRef.current.leave();
+          }
         }
       } catch (e: any) {
         // Ignore cleanup errors (WS_ABORT, etc.)
@@ -203,15 +246,27 @@ export const useAgoraAudio = ({
       }
       clientRef.current = null;
       if (localAudioTrackRef.current) {
-        localAudioTrackRef.current.stop();
-        localAudioTrackRef.current.close();
+        try {
+          localAudioTrackRef.current.stop();
+          localAudioTrackRef.current.close();
+        } catch (e) {
+          // Ignore
+        }
         localAudioTrackRef.current = null;
       }
+      isCleaningUp.current = false;
+      // Wait a bit for cleanup to complete
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
 
-    // Reset isConnecting if it's stale (more than 10 seconds)
-    // This prevents stuck states where isConnecting never gets reset
-    console.log(`🔌 Connect called: force=${force}, isConnecting=${isConnecting}`);
+    // Check if this attempt is still valid
+    if (attemptId !== connectionAttemptId.current) {
+      console.log('🚫 Connection attempt superseded, aborting');
+      globalConnectionLock = false;
+      return;
+    }
+
+    console.log(`🔌 Connect called: force=${force}, attemptId=${attemptId}`);
 
     setIsConnected(false);
     setIsConnecting(true);
@@ -324,6 +379,19 @@ export const useAgoraAudio = ({
       // Create and publish audio track if user can publish
       if (credentials.canPublish) {
         try {
+          // CRITICAL: Check if we already have a local audio track to prevent echo
+          if (localAudioTrackRef.current) {
+            console.log('🔇 Existing audio track found, stopping it first...');
+            try {
+              localAudioTrackRef.current.setEnabled(false);
+              localAudioTrackRef.current.stop();
+              localAudioTrackRef.current.close();
+            } catch (e) {
+              console.warn('Error cleaning up existing track:', e);
+            }
+            localAudioTrackRef.current = null;
+          }
+          
           console.log('🎤 Creating microphone track with echo cancellation...');
           const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
             encoderConfig: 'speech_standard',
@@ -351,6 +419,8 @@ export const useAgoraAudio = ({
 
       setIsConnected(true);
       setIsConnecting(false);
+      globalConnectedSession = targetSessionId;
+      globalConnectionLock = false;
       updateParticipants();
       startVolumeMonitoring();
       toast.success('Connected to audio room!');
@@ -362,9 +432,19 @@ export const useAgoraAudio = ({
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(message);
       setIsConnecting(false);
-      toast.error('Failed to connect: ' + message);
+      globalConnectionLock = false;
+      
+      // Handle specific errors
+      if (message.includes('UID_CONFLICT')) {
+        toast.error('Audio conflict detected. Please refresh the page.');
+      } else if (message.includes('WS_ABORT')) {
+        // Ignore WS_ABORT - it's a cleanup side effect
+        console.log('WS_ABORT during connect - ignoring');
+      } else {
+        toast.error('Failed to connect: ' + message);
+      }
     }
-  }, [sessionId, userId, userName, isHost, isConnected, isConnecting, updateParticipants, startVolumeMonitoring, onParticipantJoined, onParticipantLeft]);
+  }, [sessionId, userId, userName, isHost, isConnected, updateParticipants, startVolumeMonitoring, onParticipantJoined, onParticipantLeft]);
 
   // Reconnect with fresh token - CRITICAL for when user is promoted to speaker
   const reconnect = useCallback(async () => {
