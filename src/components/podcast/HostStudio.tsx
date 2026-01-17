@@ -3,16 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 import { 
-  Mic, MicOff, Radio, Users, Music, Share2, 
-  HandMetal, Volume2, X, Plus, MessageSquare, Play, Pause,
-  Circle, StopCircle, Upload, List, Trash2, Minimize2, Maximize2, VolumeX, Loader2
+  Mic, MicOff, Radio, Users, Share2, 
+  HandMetal, Volume2, X,
+  Circle, StopCircle, Minimize2, Maximize2, VolumeX, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAgoraAudio } from '@/hooks/useAgoraAudio';
-import { useHostPlaylists } from '@/hooks/useHostPlaylists';
 
 interface HostStudioProps {
   isOpen: boolean;
@@ -24,29 +23,6 @@ interface HostStudioProps {
   } | null;
 }
 
-const SOUND_EFFECTS = [
-  { id: 'clap', label: '👏', name: 'Clap', frequency: 800, duration: 150 },
-  { id: 'airhorn', label: '📢', name: 'Airhorn', frequency: 400, duration: 300 },
-  { id: 'drum', label: '🥁', name: 'Drum', frequency: 150, duration: 200 },
-  { id: 'laugh', label: '😂', name: 'Laugh', frequency: 500, duration: 400 },
-  { id: 'wow', label: '😮', name: 'Wow', frequency: 300, duration: 250 },
-  { id: 'boo', label: '👎', name: 'Boo', frequency: 200, duration: 350 },
-];
-
-const CURATED_MUSIC = [
-  { id: '1', title: 'Lo-Fi Beats', artist: 'ChillHop', url: '' },
-  { id: '2', title: 'Jazz Vibes', artist: 'Smooth Jazz', url: '' },
-  { id: '3', title: 'Afrobeats Mix', artist: 'Various', url: '' },
-  { id: '4', title: 'Hip-Hop Classics', artist: 'Various', url: '' },
-];
-
-interface UploadedMusic {
-  id: string;
-  title: string;
-  artist: string;
-  url: string;
-  type: 'background' | 'playlist';
-}
 
 interface ParticipantInfo {
   id: string;
@@ -63,34 +39,14 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
   const [isLive, setIsLive] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [listenerCount, setListenerCount] = useState(0);
-  const [showMusicPicker, setShowMusicPicker] = useState(false);
-  const [currentMusic, setCurrentMusic] = useState<(typeof CURATED_MUSIC[0] & { url?: string }) | null>(null);
-  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
   const [title, setTitle] = useState(session?.title || '');
   const [sessionId, setSessionId] = useState(session?.id || '');
   const [raisedHands, setRaisedHands] = useState<ParticipantInfo[]>([]);
   const [allParticipants, setAllParticipants] = useState<ParticipantInfo[]>([]);
-  const [uploadedMusic, setUploadedMusic] = useState<UploadedMusic[]>([]);
-  const [isUploadingMusic, setIsUploadingMusic] = useState(false);
-  const [showPlaylistManager, setShowPlaylistManager] = useState(false);
-  const [newPlaylistName, setNewPlaylistName] = useState('');
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   const [isMicTesting, setIsMicTesting] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [remainingTime, setRemainingTime] = useState(MAX_SESSION_DURATION_SECONDS);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Persistent Playlists
-  const {
-    playlists,
-    loading: playlistsLoading,
-    createPlaylist,
-    addTrackToPlaylist,
-    removeTrackFromPlaylist,
-    deletePlaylist
-  } = useHostPlaylists();
 
   // Agora Audio Hook - Reliable audio rooms
   const {
@@ -400,27 +356,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     onClose();
   };
 
-  const playSound = (sound: typeof SOUND_EFFECTS[0]) => {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.value = sound.frequency;
-    oscillator.type = sound.id === 'drum' ? 'triangle' : sound.id === 'airhorn' ? 'sawtooth' : 'sine';
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + sound.duration / 1000);
-    
-    oscillator.start();
-    setTimeout(() => {
-      oscillator.stop();
-      audioContext.close();
-    }, sound.duration);
-    
-    toast(`${sound.label} played!`);
-  };
 
   const MAX_SPEAKERS = 4; // 1 host + 3 speakers/co-hosts maximum
 
@@ -454,31 +389,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     toast.success('Session link copied!');
   };
 
-  const playMusic = (music: typeof CURATED_MUSIC[0] | UploadedMusic) => {
-    setCurrentMusic(music);
-    setShowMusicPicker(false);
-    
-    if (music.url && audioRef.current) {
-      audioRef.current.src = music.url;
-      audioRef.current.play();
-      setIsMusicPlaying(true);
-    } else {
-      setIsMusicPlaying(true);
-    }
-    toast(`Now playing: ${music.title}`);
-  };
-
-  const toggleMusic = () => {
-    if (audioRef.current) {
-      if (isMusicPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-    }
-    setIsMusicPlaying(!isMusicPlaying);
-    toast(isMusicPlaying ? 'Music paused' : 'Music playing');
-  };
 
   const handleToggleRecording = async () => {
     if (isRecording) {
@@ -488,66 +398,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     }
   };
 
-  // Multi-file upload handler
-  const handleMusicUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    const audioFiles = Array.from(files).filter(file => file.type.startsWith('audio/'));
-    if (audioFiles.length === 0) {
-      toast.error('Please upload audio files');
-      return;
-    }
-
-    setIsUploadingMusic(true);
-    
-    try {
-      const authSession = await getFreshSession();
-      if (!authSession) {
-        toast.error('Please sign in to upload music');
-        return;
-      }
-
-      const uploadedTracks: UploadedMusic[] = [];
-
-      for (const file of audioFiles) {
-        const fileName = `${user?.id}/${Date.now()}-${file.name}`;
-        const { data, error } = await supabase.storage
-          .from('user-uploads')
-          .upload(fileName, file);
-
-        if (error) {
-          console.error('Upload error:', error);
-          continue;
-        }
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('user-uploads')
-          .getPublicUrl(fileName);
-
-        uploadedTracks.push({
-          id: Date.now().toString() + Math.random(),
-          title: file.name.replace(/\.[^/.]+$/, ''),
-          artist: 'Uploaded',
-          url: publicUrl,
-          type: 'playlist'
-        });
-      }
-
-      if (uploadedTracks.length > 0) {
-        setUploadedMusic(prev => [...prev, ...uploadedTracks]);
-        toast.success(`${uploadedTracks.length} track(s) uploaded successfully!`);
-      }
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Failed to upload music');
-    } finally {
-      setIsUploadingMusic(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
 
   // Track mic permission state
   const [micPermissionGranted, setMicPermissionGranted] = useState(false);
@@ -654,19 +504,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
             )}
           </DialogTitle>
         </DialogHeader>
-
-        {/* Hidden audio element for music playback */}
-        <audio ref={audioRef} className="hidden" onEnded={() => setIsMusicPlaying(false)} />
-        
-        {/* Hidden file input for multi-file music upload */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="audio/*"
-          multiple
-          className="hidden"
-          onChange={handleMusicUpload}
-        />
 
         <div className="space-y-4">
           {/* Session Title */}
@@ -802,22 +639,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
                 </div>
               )}
 
-              {/* Sound Effects */}
-              <div className="space-y-1.5">
-                <h4 className="text-[10px] text-white/60 uppercase tracking-wider">Sound Effects</h4>
-                <div className="grid grid-cols-6 gap-1.5">
-                  {SOUND_EFFECTS.map((sound) => (
-                    <button
-                      key={sound.id}
-                      onClick={() => playSound(sound)}
-                      className="p-2.5 bg-white/5 rounded-lg hover:bg-white/10 transition-colors text-center active:scale-95"
-                    >
-                      <span className="text-lg">{sound.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* All Participants with Mute Controls */}
               {allParticipants.filter(p => p.role !== 'host').length > 0 && (
                 <div className="space-y-1.5">
@@ -847,81 +668,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
                   </div>
                 </div>
               )}
-
-              {/* Music Section */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-[10px] text-white/60 uppercase tracking-wider">Background Music</h4>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowPlaylistManager(true)}
-                      className="h-6 text-xs"
-                    >
-                      <List className="h-3 w-3 mr-1" />
-                      Playlists ({playlists.length})
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isUploadingMusic}
-                      className="h-6 text-xs"
-                    >
-                      <Upload className="h-3 w-3 mr-1" />
-                      {isUploadingMusic ? '...' : 'Upload'}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowMusicPicker(true)}
-                      className="h-6 text-xs"
-                    >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Add
-                    </Button>
-                  </div>
-                </div>
-                
-                {currentMusic && (
-                  <div className="flex items-center gap-2 p-2 bg-white/5 rounded-lg">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={toggleMusic}
-                      className="h-8 w-8 bg-purple-500/30"
-                    >
-                      {isMusicPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                    </Button>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-white truncate">{currentMusic.title}</p>
-                      <p className="text-[10px] text-white/60">{currentMusic.artist}</p>
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={() => setCurrentMusic(null)} className="h-6 w-6">
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
-
-                {/* Saved Playlists Quick Access */}
-                {playlists.length > 0 && (
-                  <div className="flex gap-1.5 overflow-x-auto pb-1">
-                    {playlists.slice(0, 3).map(playlist => (
-                      <button
-                        key={playlist.id}
-                        onClick={() => {
-                          setSelectedPlaylistId(playlist.id);
-                          setShowPlaylistManager(true);
-                        }}
-                        className="flex-shrink-0 px-2 py-1 bg-purple-500/10 rounded text-[10px] text-purple-400 hover:bg-purple-500/20"
-                      >
-                        {playlist.name} ({playlist.tracks.length})
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
 
               {/* Raised Hands */}
               {raisedHands.length > 0 && (
@@ -954,172 +700,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
           )}
         </div>
 
-        {/* Music Picker Modal */}
-        {showMusicPicker && (
-          <div className="absolute inset-0 bg-black/90 flex items-center justify-center rounded-lg">
-            <div className="bg-white/5 rounded-xl p-3 w-full max-w-xs space-y-2">
-              <div className="flex items-center justify-between">
-                <h4 className="text-white font-medium text-sm">Select Music</h4>
-                <Button variant="ghost" size="icon" onClick={() => setShowMusicPicker(false)} className="h-6 w-6">
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-              
-              {/* Uploaded Music */}
-              {uploadedMusic.length > 0 && (
-                <>
-                  <p className="text-[10px] text-white/40 uppercase">Your Uploads</p>
-                  {uploadedMusic.map((music) => (
-                    <button
-                      key={music.id}
-                      onClick={() => playMusic(music)}
-                      className="w-full flex items-center gap-2 p-2 bg-purple-500/10 rounded-lg hover:bg-purple-500/20 transition-colors text-left"
-                    >
-                      <div className="w-8 h-8 rounded bg-purple-500/30 flex items-center justify-center">
-                        <Music className="h-4 w-4 text-purple-400" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-white">{music.title}</p>
-                        <p className="text-[10px] text-white/60">{music.artist}</p>
-                      </div>
-                    </button>
-                  ))}
-                </>
-              )}
-
-              <p className="text-[10px] text-white/40 uppercase">Curated</p>
-              {CURATED_MUSIC.map((music) => (
-                <button
-                  key={music.id}
-                  onClick={() => playMusic(music)}
-                  className="w-full flex items-center gap-2 p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-colors text-left"
-                >
-                  <div className="w-8 h-8 rounded bg-purple-500/30 flex items-center justify-center">
-                    <Music className="h-4 w-4 text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-white">{music.title}</p>
-                    <p className="text-[10px] text-white/60">{music.artist}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Playlist Manager Modal */}
-        {showPlaylistManager && (
-          <div className="absolute inset-0 bg-black/95 flex flex-col rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between p-3 border-b border-white/10">
-              <h4 className="text-white font-medium text-sm flex items-center gap-2">
-                <List className="h-4 w-4" />
-                Your Playlists
-              </h4>
-              <Button variant="ghost" size="icon" onClick={() => setShowPlaylistManager(false)} className="h-6 w-6">
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-3 space-y-3">
-              {/* Create New Playlist */}
-              <div className="flex gap-2">
-                <Input
-                  placeholder="New playlist name..."
-                  value={newPlaylistName}
-                  onChange={(e) => setNewPlaylistName(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white text-xs h-8"
-                />
-                <Button
-                  size="sm"
-                  onClick={async () => {
-                    if (newPlaylistName.trim()) {
-                      await createPlaylist(newPlaylistName.trim());
-                      setNewPlaylistName('');
-                    }
-                  }}
-                  className="h-8 px-3 text-xs"
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Create
-                </Button>
-              </div>
-
-              {playlistsLoading ? (
-                <p className="text-white/40 text-xs text-center py-4">Loading playlists...</p>
-              ) : playlists.length === 0 ? (
-                <p className="text-white/40 text-xs text-center py-4">No playlists yet. Create one above!</p>
-              ) : (
-                <div className="space-y-2">
-                  {playlists.map(playlist => (
-                    <div key={playlist.id} className="bg-white/5 rounded-lg p-2">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs text-white font-medium">{playlist.name}</p>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deletePlaylist(playlist.id)}
-                            className="h-5 w-5 text-red-400 hover:text-red-300"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                      {playlist.tracks.length === 0 ? (
-                        <p className="text-[10px] text-white/40">No tracks. Upload music and add to this playlist.</p>
-                      ) : (
-                        <div className="space-y-1">
-                          {playlist.tracks.map(track => (
-                            <div
-                              key={track.id}
-                              className="flex items-center gap-2 p-1.5 bg-white/5 rounded hover:bg-white/10 cursor-pointer"
-                              onClick={() => {
-                                playMusic({ id: track.id, title: track.title, artist: 'Playlist', url: track.audio_url });
-                                setShowPlaylistManager(false);
-                              }}
-                            >
-                              <Play className="h-3 w-3 text-purple-400" />
-                              <span className="text-[10px] text-white truncate flex-1">{track.title}</span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeTrackFromPlaylist(playlist.id, track.id);
-                                }}
-                                className="h-4 w-4 text-white/40 hover:text-red-400"
-                              >
-                                <X className="h-2.5 w-2.5" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      
-                      {/* Add uploaded music to this playlist */}
-                      {uploadedMusic.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-white/10">
-                          <p className="text-[10px] text-white/40 mb-1">Add uploaded track:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {uploadedMusic.filter(m => !playlist.tracks.some(t => t.audio_url === m.url)).map(music => (
-                              <button
-                                key={music.id}
-                                onClick={() => addTrackToPlaylist(playlist.id, { audio_url: music.url, title: music.title })}
-                                className="text-[9px] px-1.5 py-0.5 bg-purple-500/20 text-purple-400 rounded hover:bg-purple-500/30"
-                              >
-                                + {music.title}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );
