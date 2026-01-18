@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Play, Pause, Clock, Heart, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
+import { toast } from 'sonner';
 
 interface Episode {
   id: string;
@@ -13,12 +15,13 @@ interface Episode {
   play_count: number;
   like_count: number;
   created_at: string;
+  host_id: string;
 }
 
 const PodcastEpisodes = () => {
   const [episodes, setEpisodes] = useState<Episode[]>([]);
-  const [playingId, setPlayingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const { currentTrack, isPlaying, playTrack, pauseTrack } = useAudioPlayer();
 
   useEffect(() => {
     fetchEpisodes();
@@ -42,8 +45,37 @@ const PodcastEpisodes = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const togglePlay = (id: string) => {
-    setPlayingId(playingId === id ? null : id);
+  const handlePlayEpisode = async (episode: Episode) => {
+    if (!episode.audio_url) {
+      toast.error('No audio available for this episode');
+      return;
+    }
+
+    // If this episode is already playing, pause it
+    if (currentTrack?.id === episode.id && isPlaying) {
+      pauseTrack();
+      return;
+    }
+
+    // Play the episode using the global audio player
+    playTrack({
+      id: episode.id,
+      title: episode.title,
+      artist: 'Podcast Episode',
+      audioUrl: episode.audio_url,
+      coverUrl: episode.cover_image_url || undefined,
+      type: 'podcast'
+    });
+
+    // Increment play count
+    await supabase
+      .from('podcast_episodes')
+      .update({ play_count: (episode.play_count || 0) + 1 })
+      .eq('id', episode.id);
+  };
+
+  const isEpisodePlaying = (episodeId: string) => {
+    return currentTrack?.id === episodeId && isPlaying;
   };
 
   if (loading) {
@@ -84,10 +116,15 @@ const PodcastEpisodes = () => {
               <div className="w-full h-full bg-gradient-to-br from-purple-600 to-pink-500" />
             )}
             <button
-              onClick={() => togglePlay(episode.id)}
-              className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={() => handlePlayEpisode(episode)}
+              disabled={!episode.audio_url}
+              className={`absolute inset-0 flex items-center justify-center bg-black/40 transition-opacity ${
+                episode.audio_url ? 'opacity-0 group-hover:opacity-100 cursor-pointer' : 'opacity-100 cursor-not-allowed'
+              }`}
             >
-              {playingId === episode.id ? (
+              {!episode.audio_url ? (
+                <span className="text-[8px] text-white/60">No audio</span>
+              ) : isEpisodePlaying(episode.id) ? (
                 <Pause className="h-6 w-6 text-white" />
               ) : (
                 <Play className="h-6 w-6 text-white ml-1" />
