@@ -744,6 +744,7 @@ export type Database = {
       podcast_gifts: {
         Row: {
           created_at: string
+          gift_count: number | null
           gift_type: string
           id: string
           points_value: number
@@ -753,6 +754,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          gift_count?: number | null
           gift_type: string
           id?: string
           points_value?: number
@@ -762,6 +764,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          gift_count?: number | null
           gift_type?: string
           id?: string
           points_value?: number

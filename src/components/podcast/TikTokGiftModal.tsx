@@ -123,6 +123,18 @@ const TikTokGiftModal = ({
 
     setSending(giftType);
 
+    // INSTANT FEEDBACK: Show gift immediately before API call
+    if (typeof (window as any).__addGift === 'function') {
+      const senderName = userProfile?.full_name || userProfile?.username || user?.email?.split('@')[0] || 'You';
+      const senderAvatar = user?.user_metadata?.avatar_url;
+      // Add each gift with faster stagger for combo effect
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+          (window as any).__addGift(giftType, 1, senderName, senderAvatar, `local-${Date.now()}-${i}`);
+        }, i * 80); // Faster stagger
+      }
+    }
+
     // Ensure fresh auth session
     const session = await getFreshSession();
     if (!session) {
@@ -154,18 +166,6 @@ const TikTokGiftModal = ({
       }
 
       setUserCoins(data.new_balance || userCoins - totalCoins);
-      
-      // Trigger local gift display immediately for instant feedback
-      if (typeof (window as any).__addGift === 'function') {
-        const senderName = userProfile?.full_name || userProfile?.username || user?.email?.split('@')[0] || 'You';
-        const senderAvatar = user?.user_metadata?.avatar_url;
-        // Add each gift with slight delay for combo effect
-        for (let i = 0; i < count; i++) {
-          setTimeout(() => {
-            (window as any).__addGift(giftType, 1, senderName, senderAvatar, `local-${Date.now()}-${i}`);
-          }, i * 150);
-        }
-      }
       
       // Get recipient name for toast
       const recipientName = battleMode 
