@@ -16,13 +16,16 @@ const DashboardProfile = () => {
   const { user, loading } = useAuth();
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState({
     username: '',
     displayName: '',
     bio: '',
     email: '',
     avatar: '',
+    coverImage: '',
     spotify: '',
     soundcloud: '',
     twitter: '',
@@ -63,12 +66,67 @@ const DashboardProfile = () => {
         displayName: data.full_name || prev.displayName,
         bio: data.bio || '',
         avatar: data.avatar_url || '',
+        coverImage: (data as any).cover_image_url || '',
         spotify: data.spotify_url || '',
         soundcloud: data.soundcloud_url || '',
         twitter: data.twitter_url || '',
         instagram: data.instagram_url || '',
         youtube: data.youtube_url || ''
       }));
+    }
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    setUploadingCover(true);
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/cover-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('user-uploads')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        toast.error('Failed to upload cover image');
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('user-uploads')
+        .getPublicUrl(fileName);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ cover_image_url: publicUrl })
+        .eq('user_id', user.id);
+
+      if (updateError) {
+        toast.error('Failed to update profile');
+        return;
+      }
+
+      setProfile(prev => ({ ...prev, coverImage: publicUrl }));
+      toast.success('Cover image updated!');
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to upload cover image');
+    } finally {
+      setUploadingCover(false);
     }
   };
 
@@ -140,6 +198,7 @@ const DashboardProfile = () => {
         full_name: profile.displayName,
         bio: profile.bio,
         avatar_url: profile.avatar,
+        cover_image_url: profile.coverImage,
         spotify_url: profile.spotify,
         soundcloud_url: profile.soundcloud,
         twitter_url: profile.twitter,
@@ -187,6 +246,41 @@ const DashboardProfile = () => {
 
         <Card className="p-4 sm:p-8">
           <div className="space-y-5">
+            {/* Cover Image Section */}
+            <div className="space-y-2">
+              <Label className="text-sm">Cover Image</Label>
+              <div 
+                className="relative w-full h-32 sm:h-40 rounded-xl overflow-hidden bg-muted cursor-pointer group"
+                onClick={() => coverInputRef.current?.click()}
+              >
+                {profile.coverImage ? (
+                  <img 
+                    src={profile.coverImage} 
+                    alt="Cover" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-r from-primary/20 to-secondary/20 flex items-center justify-center">
+                    <span className="text-muted-foreground text-sm">Click to upload cover image</span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  {uploadingCover ? (
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
+                  ) : (
+                    <Camera className="h-6 w-6 text-white" />
+                  )}
+                </div>
+                <input
+                  ref={coverInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleCoverUpload}
+                />
+              </div>
+            </div>
+
             {/* Avatar Section */}
             <div className="flex items-center gap-4 sm:gap-6">
               <div className="relative">
