@@ -78,6 +78,13 @@ const GiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: GiftModalPr
 
     setSending(giftType);
 
+    // INSTANT FEEDBACK: Show gift immediately before API call
+    if (typeof (window as any).__addGift === 'function') {
+      const senderName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'You';
+      const senderAvatar = user?.user_metadata?.avatar_url;
+      (window as any).__addGift(giftType, 1, senderName, senderAvatar, `local-${Date.now()}`);
+    }
+
     try {
       // Ensure fresh auth session
       const session = await getFreshSession();
@@ -120,13 +127,6 @@ const GiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: GiftModalPr
         setUserCoins(data.new_balance);
       } else {
         setUserCoins(prev => prev - coins);
-      }
-
-      // Trigger local gift display immediately for instant feedback
-      if (typeof (window as any).__addGift === 'function') {
-        const senderName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'You';
-        const senderAvatar = user?.user_metadata?.avatar_url;
-        (window as any).__addGift(giftType, 1, senderName, senderAvatar, `local-${Date.now()}`);
       }
 
       toast.success(`Sent ${giftType} to ${hostName || 'host'}!`);
