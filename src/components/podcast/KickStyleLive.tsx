@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import SpaceParticipants from './SpaceParticipants';
 import TwitchComments from './TwitchComments';
-import GiftModal from './GiftModal';
+import TikTokGiftModal from './TikTokGiftModal';
 import GiftAnimation from './GiftAnimation';
 import ShareModal from './ShareModal';
 import TikTokGiftDisplay from './TikTokGiftDisplay';
@@ -629,12 +629,13 @@ const KickStyleLive = ({
       <TikTokGiftDisplay sessionId={currentSession.id} />
 
       {/* Modals */}
-      <GiftModal
+      <TikTokGiftModal
         isOpen={showGiftModal}
         onClose={() => setShowGiftModal(false)}
         sessionId={currentSession.id}
         hostId={currentSession.host_id}
         hostName={currentSession.host_name}
+        battleMode={false}
       />
 
       <ShareModal
