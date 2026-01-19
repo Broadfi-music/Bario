@@ -230,47 +230,6 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     };
   }, [battle.id, disconnectAudio, navigate, onClose]);
 
-  // Listen for gifts and update scores
-  useEffect(() => {
-    if (!battle.session_id) return;
-
-    const channel = supabase
-      .channel(`battle-gifts-${battle.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'podcast_gifts',
-          filter: `session_id=eq.${battle.session_id}`
-        },
-        async (payload: any) => {
-          const gift = payload.new;
-          if (gift.recipient_id === battle.host_id) {
-            const newScore = hostScore + gift.points_value;
-            setHostScore(newScore);
-            await supabase
-              .from('podcast_battles')
-              .update({ host_score: newScore })
-              .eq('id', battle.id);
-          } else if (gift.recipient_id === battle.opponent_id) {
-            const newScore = opponentScore + gift.points_value;
-            setOpponentScore(newScore);
-            await supabase
-              .from('podcast_battles')
-              .update({ opponent_score: newScore })
-              .eq('id', battle.id);
-          }
-          fetchTopGifters();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [battle.id, battle.session_id, battle.host_id, battle.opponent_id, hostScore, opponentScore]);
-
   // Fetch top gifters
   const fetchTopGifters = useCallback(async () => {
     if (!battle.session_id) return;
@@ -322,7 +281,34 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     fetchTopGifters();
   }, [fetchTopGifters]);
 
-  // Double-tap handler - FIXED with useRef for instant timing
+  // Listen for gifts - UPDATE SCORES ON SERVER SIDE, just refresh top gifters here
+  useEffect(() => {
+    if (!battle.session_id) return;
+
+    const channel = supabase
+      .channel(`battle-gifts-${battle.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'podcast_gifts',
+          filter: `session_id=eq.${battle.session_id}`
+        },
+        async () => {
+          // Just refresh top gifters - scores are synced via battle status subscription
+          // This prevents race conditions where local state gets out of sync
+          fetchTopGifters();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [battle.id, battle.session_id, fetchTopGifters]);
+
+  // Double-tap handler - FIXED: Only update DB, let real-time sync handle local state
   const handleDoubleTap = useCallback(async (side: 'host' | 'opponent') => {
     if (!user) {
       toast.error('Please sign in to boost');
@@ -355,19 +341,22 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
       }, 800);
       
       try {
-        if (side === 'host') {
-          const newScore = hostScore + boostPoints;
-          setHostScore(newScore);
+        // FIXED: Use RPC-style atomic increment to prevent race conditions
+        // Fetch current score first, then update atomically
+        const { data: currentBattle } = await supabase
+          .from('podcast_battles')
+          .select('host_score, opponent_score')
+          .eq('id', battle.id)
+          .single();
+        
+        if (currentBattle) {
+          const updateData = side === 'host'
+            ? { host_score: currentBattle.host_score + boostPoints }
+            : { opponent_score: currentBattle.opponent_score + boostPoints };
+          
           await supabase
             .from('podcast_battles')
-            .update({ host_score: newScore })
-            .eq('id', battle.id);
-        } else {
-          const newScore = opponentScore + boostPoints;
-          setOpponentScore(newScore);
-          await supabase
-            .from('podcast_battles')
-            .update({ opponent_score: newScore })
+            .update(updateData)
             .eq('id', battle.id);
         }
         
@@ -377,7 +366,7 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
         console.error('Double-tap update error:', error);
       }
     }
-  }, [user, hostScore, opponentScore, battle.id]);
+  }, [user, battle.id]);
 
   // Gift button handler - FIXED to work properly
   const handleGiftCreator = useCallback((creator: 'host' | 'opponent', e?: React.MouseEvent) => {

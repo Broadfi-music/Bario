@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,7 @@ interface BattleInviteModalProps {
 
 const BattleInviteModal = ({ isOpen, onClose, sessionId, onBattleStart }: BattleInviteModalProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [creators, setCreators] = useState<OnlineCreator[]>([]);
   const [selectedCreator, setSelectedCreator] = useState<OnlineCreator | null>(null);
@@ -201,16 +203,16 @@ const BattleInviteModal = ({ isOpen, onClose, sessionId, onBattleStart }: Battle
       if (inviteError) throw inviteError;
 
       toast.success(`Battle invite sent to ${selectedCreator.full_name || selectedCreator.username}!`);
-      onClose();
       
-      // IMPORTANT: Navigate host directly to battle page instead of calling onBattleStart
-      // This takes them to the battle livestreaming page with audio working
+      // IMPORTANT: Navigate host directly to battle page using React Router
+      // This avoids page reload and "leave site" warning
       if (onBattleStart) {
         onBattleStart(battle.id);
       }
       
-      // Navigate to the battle directly
-      window.location.href = `/podcasts?battle=${battle.id}`;
+      // Close modal first, then navigate without page reload
+      onClose();
+      navigate(`/podcasts?battle=${battle.id}`);
     } catch (error) {
       console.error('Error creating battle:', error);
       toast.error('Failed to send battle invite');
