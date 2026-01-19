@@ -341,23 +341,17 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
       }, 800);
       
       try {
-        // FIXED: Use RPC-style atomic increment to prevent race conditions
-        // Fetch current score first, then update atomically
-        const { data: currentBattle } = await supabase
-          .from('podcast_battles')
-          .select('host_score, opponent_score')
-          .eq('id', battle.id)
-          .single();
+        // Use atomic database function to prevent race conditions
+        // This ensures ALL viewers see the same score in real-time
+        const { error } = await supabase.rpc('increment_battle_score', {
+          battle_uuid: battle.id,
+          score_side: side,
+          increment_by: boostPoints
+        });
         
-        if (currentBattle) {
-          const updateData = side === 'host'
-            ? { host_score: currentBattle.host_score + boostPoints }
-            : { opponent_score: currentBattle.opponent_score + boostPoints };
-          
-          await supabase
-            .from('podcast_battles')
-            .update(updateData)
-            .eq('id', battle.id);
+        if (error) {
+          console.error('Score increment error:', error);
+          return;
         }
         
         // Visual feedback for successful boost
@@ -585,14 +579,17 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
         <div className="shrink-0 flex items-center justify-center gap-4 py-2 px-4 bg-black/50 border-y border-white/5">
           <Button
             size="sm"
-            onPointerDown={(e) => {
+            onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              console.log('🎁 Host gift button pressed (mobile/desktop)');
-              setSelectedCreator('host');
-              setShowGiftModal(true);
+              console.log('🎁 Host gift button clicked');
+              // Use requestAnimationFrame to ensure modal opens after all events processed
+              requestAnimationFrame(() => {
+                setSelectedCreator('host');
+                setShowGiftModal(true);
+              });
             }}
-            className="h-10 bg-[#53fc18] hover:bg-[#45d914] active:bg-[#3ec512] text-black text-sm px-6 shadow-xl touch-none select-none"
+            className="h-10 bg-[#53fc18] hover:bg-[#45d914] active:bg-[#3ec512] text-black text-sm px-6 shadow-xl"
           >
             <Gift className="h-4 w-4 mr-2" />
             Gift {battle.host_name?.split(' ')[0]}
@@ -600,14 +597,16 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
           
           <Button
             size="sm"
-            onPointerDown={(e) => {
+            onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              console.log('🎁 Opponent gift button pressed (mobile/desktop)');
-              setSelectedCreator('opponent');
-              setShowGiftModal(true);
+              console.log('🎁 Opponent gift button clicked');
+              requestAnimationFrame(() => {
+                setSelectedCreator('opponent');
+                setShowGiftModal(true);
+              });
             }}
-            className="h-10 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 text-white text-sm px-6 shadow-xl touch-none select-none"
+            className="h-10 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 text-white text-sm px-6 shadow-xl"
           >
             <Gift className="h-4 w-4 mr-2" />
             Gift {battle.opponent_name?.split(' ')[0]}

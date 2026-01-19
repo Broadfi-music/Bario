@@ -183,7 +183,7 @@ const TikTokGiftModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-black/95 border-white/10 max-w-sm p-0 overflow-hidden">
+      <DialogContent className="bg-black/95 border-white/10 max-w-sm p-0 overflow-hidden z-[100]">
         <div className="relative p-4">
           <button
             onClick={onClose}

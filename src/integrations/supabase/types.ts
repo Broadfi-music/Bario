@@ -1357,7 +1357,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_battle_score: {
+        Args: { battle_uuid: string; increment_by?: number; score_side: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

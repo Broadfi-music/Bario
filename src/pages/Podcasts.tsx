@@ -72,8 +72,11 @@ const Podcasts = () => {
           title: data.title,
           listener_count: data.listener_count || 0
         });
-        // Auto-open Host Studio when host has active session (on page refresh)
-        setShowHostStudio(true);
+        // IMPORTANT: Skip auto-opening HostStudio for battle sessions
+        // Battle sessions have "Battle:" prefix in title
+        if (!data.title?.startsWith('Battle:')) {
+          setShowHostStudio(true);
+        }
       } else {
         setHostLiveSession(null);
       }
