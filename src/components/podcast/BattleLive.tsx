@@ -343,21 +343,26 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
       try {
         // Use atomic database function to prevent race conditions
         // This ensures ALL viewers see the same score in real-time
-        const { error } = await supabase.rpc('increment_battle_score', {
+        console.log('🎯 Calling increment_battle_score RPC:', { battle_uuid: battle.id, score_side: side, increment_by: boostPoints });
+        
+        const { data, error } = await supabase.rpc('increment_battle_score', {
           battle_uuid: battle.id,
           score_side: side,
           increment_by: boostPoints
         });
         
         if (error) {
-          console.error('Score increment error:', error);
+          console.error('❌ Score increment RPC error:', error.message, error);
+          toast.error('Boost failed - please try again');
           return;
         }
         
+        console.log('✅ Score increment success:', data);
         // Visual feedback for successful boost
         toast.success(`+${boostPoints} boost!`, { duration: 1000 });
       } catch (error) {
-        console.error('Double-tap update error:', error);
+        console.error('❌ Double-tap update error:', error);
+        toast.error('Boost failed');
       }
     }
   }, [user, battle.id]);
