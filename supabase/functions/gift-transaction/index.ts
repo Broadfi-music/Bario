@@ -75,7 +75,36 @@ serve(async (req) => {
         console.error('[Gift Transaction] Failed to record gift:', giftError);
       }
 
-      // 4. Update creator's earnings with the exact USD amount
+      // 4. Check if this session is part of a battle and update battle scores
+      const { data: battle } = await supabase
+        .from('podcast_battles')
+        .select('id, host_id, opponent_id, host_score, opponent_score, status')
+        .eq('session_id', sessionId)
+        .eq('status', 'active')
+        .single();
+
+      if (battle) {
+        console.log(`[Gift Transaction] Battle found: ${battle.id}, updating scores...`);
+        
+        // Update the correct participant's score based on who received the gift
+        if (recipientId === battle.host_id) {
+          const newScore = battle.host_score + coinsCost;
+          await supabase
+            .from('podcast_battles')
+            .update({ host_score: newScore })
+            .eq('id', battle.id);
+          console.log(`[Gift Transaction] Updated host_score to ${newScore}`);
+        } else if (recipientId === battle.opponent_id) {
+          const newScore = battle.opponent_score + coinsCost;
+          await supabase
+            .from('podcast_battles')
+            .update({ opponent_score: newScore })
+            .eq('id', battle.id);
+          console.log(`[Gift Transaction] Updated opponent_score to ${newScore}`);
+        }
+      }
+
+      // 5. Update creator's earnings with the exact USD amount
       const { data: existingEarnings } = await supabase
         .from('creator_earnings')
         .select('*')
@@ -101,7 +130,7 @@ serve(async (req) => {
         });
       }
 
-      // 5. Record transaction for sender
+      // 6. Record transaction for sender
       await supabase.from('coin_transactions').insert({
         user_id: senderId,
         type: 'gift_sent',

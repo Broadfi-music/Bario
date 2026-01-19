@@ -78,12 +78,8 @@ const GiftModal = ({ isOpen, onClose, sessionId, hostId, hostName }: GiftModalPr
 
     setSending(giftType);
 
-    // INSTANT FEEDBACK: Show gift immediately before API call
-    if (typeof (window as any).__addGift === 'function') {
-      const senderName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'You';
-      const senderAvatar = user?.user_metadata?.avatar_url;
-      (window as any).__addGift(giftType, 1, senderName, senderAvatar, `local-${Date.now()}`);
-    }
+    // NOTE: Removed instant local feedback - now ALL viewers see gift at the same time
+    // via real-time database subscription after the gift is saved
 
     try {
       // Ensure fresh auth session
