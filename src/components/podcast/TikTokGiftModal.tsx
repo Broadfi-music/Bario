@@ -135,6 +135,16 @@ const TikTokGiftModal = ({
     }
 
     try {
+      console.log('🎁 [TikTokGiftModal] Calling gift-transaction edge function...', {
+        senderId: user.id,
+        recipientId: recipientId,
+        sessionId: sessionId,
+        giftType: giftType,
+        coinsCost: totalCoins,
+        earningsUsd: totalEarnings,
+        giftCount: count
+      });
+      
       // Call edge function to handle the gift transaction
       const { data, error } = await supabase.functions.invoke('gift-transaction', {
         body: {
@@ -149,13 +159,18 @@ const TikTokGiftModal = ({
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [TikTokGiftModal] Edge function error:', error);
+        throw error;
+      }
       
       if (data?.error) {
+        console.error('❌ [TikTokGiftModal] Gift transaction error:', data.error);
         toast.error(data.error);
         return;
       }
 
+      console.log('✅ [TikTokGiftModal] Gift sent successfully:', data);
       setUserCoins(data.new_balance || userCoins - totalCoins);
       
       // Get recipient name for toast
@@ -163,10 +178,10 @@ const TikTokGiftModal = ({
         ? creators.find(c => c.id === recipientId)?.name || 'Creator'
         : hostName || 'Host';
       
-      toast.success(`Sent ${count}x ${giftType} to ${recipientName}!`);
+      toast.success(`Sent ${count}x ${giftType} to ${recipientName}! Creator earns $${totalEarnings.toFixed(4)}`);
       onClose();
     } catch (error) {
-      console.error('Send gift error:', error);
+      console.error('❌ [TikTokGiftModal] Send gift error:', error);
       toast.error('Failed to send gift');
     } finally {
       setSending(null);

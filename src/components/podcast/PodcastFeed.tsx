@@ -116,25 +116,29 @@ const PodcastFeed = () => {
       )
     : liveHosts;
 
-  // Fetch active battles
+  // Fetch active battles - include both pending and active status
   const fetchActiveBattles = async () => {
     try {
+      console.log('🔍 PodcastFeed: Fetching active battles...');
+      
       const { data: battles, error } = await supabase
         .from('podcast_battles')
         .select('*')
-        .eq('status', 'active')
-        .is('ended_at', null) // Extra safety: only battles that haven't ended
+        .in('status', ['active', 'pending']) // Include BOTH pending and active battles
+        .is('ended_at', null) // Only battles that haven't ended
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching battles:', error);
-        setActiveBattles([]); // Clear state on error
+        console.error('❌ Error fetching battles:', error);
+        setActiveBattles([]);
         return;
       }
 
+      console.log('📦 PodcastFeed: Battles found:', battles?.length || 0);
+
       if (!battles || battles.length === 0) {
-        console.log('No active battles found, clearing state');
-        setActiveBattles([]); // Explicitly clear state
+        console.log('ℹ️ No active/pending battles found');
+        setActiveBattles([]);
         return;
       }
 
@@ -146,15 +150,18 @@ const PodcastFeed = () => {
 
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
-      setActiveBattles(battles.map(b => ({
+      const enrichedBattles = battles.map(b => ({
         ...b,
         host_name: profileMap.get(b.host_id)?.full_name || profileMap.get(b.host_id)?.username || 'Host',
         host_avatar: profileMap.get(b.host_id)?.avatar_url,
         opponent_name: profileMap.get(b.opponent_id)?.full_name || profileMap.get(b.opponent_id)?.username || 'Opponent',
         opponent_avatar: profileMap.get(b.opponent_id)?.avatar_url,
-      })));
+      }));
+      
+      console.log('✅ PodcastFeed: Enriched battles:', enrichedBattles.length);
+      setActiveBattles(enrichedBattles);
     } catch (err) {
-      console.error('Battle fetch error:', err);
+      console.error('❌ Battle fetch error:', err);
       setActiveBattles([]);
     }
   };
