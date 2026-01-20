@@ -50,6 +50,8 @@ const formatTime = (seconds: number) => {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
+const WINNER_THRESHOLD = 650; // Score threshold to win early
+
 const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -61,6 +63,11 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
   const [timeRemaining, setTimeRemaining] = useState(battle.duration_seconds);
   const [battleStatus, setBattleStatus] = useState(battle.status);
   const [winnerId, setWinnerId] = useState<string | null>(battle.winner_id);
+  
+  // Winner celebration state for 650 threshold
+  const [showWinnerCelebration, setShowWinnerCelebration] = useState(false);
+  const [earlyWinner, setEarlyWinner] = useState<{ side: 'host' | 'opponent'; name: string; score: number } | null>(null);
+  const celebrationTriggeredRef = useRef(false);
   
   // Top gifters state
   const [hostTopGifters, setHostTopGifters] = useState<TopGifter[]>([]);
@@ -182,6 +189,44 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     }
   };
 
+  // Check for winner at 650 threshold
+  const checkWinnerThreshold = useCallback(async (newHostScore: number, newOpponentScore: number) => {
+    if (celebrationTriggeredRef.current || battleStatus === 'ended') return;
+    
+    if (newHostScore >= WINNER_THRESHOLD) {
+      celebrationTriggeredRef.current = true;
+      console.log('🏆 Host reached 650 - WINNER!');
+      setEarlyWinner({ side: 'host', name: battle.host_name || 'Host', score: newHostScore });
+      setShowWinnerCelebration(true);
+      
+      // Update database to end battle with winner
+      await supabase
+        .from('podcast_battles')
+        .update({
+          status: 'ended',
+          ended_at: new Date().toISOString(),
+          winner_id: battle.host_id
+        })
+        .eq('id', battle.id);
+        
+    } else if (newOpponentScore >= WINNER_THRESHOLD) {
+      celebrationTriggeredRef.current = true;
+      console.log('🏆 Opponent reached 650 - WINNER!');
+      setEarlyWinner({ side: 'opponent', name: battle.opponent_name || 'Opponent', score: newOpponentScore });
+      setShowWinnerCelebration(true);
+      
+      // Update database to end battle with winner
+      await supabase
+        .from('podcast_battles')
+        .update({
+          status: 'ended',
+          ended_at: new Date().toISOString(),
+          winner_id: battle.opponent_id
+        })
+        .eq('id', battle.id);
+    }
+  }, [battle.id, battle.host_id, battle.host_name, battle.opponent_id, battle.opponent_name, battleStatus]);
+
   // Real-time battle status updates - AUTO CLOSE WHEN BATTLE ENDS
   useEffect(() => {
     const channel = supabase
@@ -195,9 +240,12 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
           filter: `id=eq.${battle.id}`
         },
         (payload: any) => {
-          console.log('🔴 Battle status update:', payload.new.status);
+          console.log('🔴 Battle status update:', payload.new.status, 'scores:', payload.new.host_score, payload.new.opponent_score);
           setHostScore(payload.new.host_score);
           setOpponentScore(payload.new.opponent_score);
+          
+          // Check for 650 threshold winner
+          checkWinnerThreshold(payload.new.host_score, payload.new.opponent_score);
           
           if (payload.new.status === 'ended') {
             setBattleStatus('ended');
@@ -228,7 +276,7 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [battle.id, disconnectAudio, navigate, onClose]);
+  }, [battle.id, disconnectAudio, navigate, onClose, checkWinnerThreshold]);
 
   // Fetch top gifters
   const fetchTopGifters = useCallback(async () => {
@@ -308,7 +356,7 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     };
   }, [battle.id, battle.session_id, fetchTopGifters]);
 
-  // Double-tap handler - FIXED: Only update DB, let real-time sync handle local state
+  // Double-tap handler - FIXED: Works on both mobile (touch) and desktop (click)
   const handleDoubleTap = useCallback(async (side: 'host' | 'opponent') => {
     if (!user) {
       toast.error('Please sign in to boost');
@@ -367,6 +415,12 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     }
   }, [user, battle.id]);
 
+  // Touch handler for mobile - prevents 300ms delay
+  const handleTouchEnd = useCallback((side: 'host' | 'opponent', e: React.TouchEvent) => {
+    e.preventDefault(); // Prevent ghost clicks
+    handleDoubleTap(side);
+  }, [handleDoubleTap]);
+
   // Gift button handler - FIXED to work properly
   const handleGiftCreator = useCallback((creator: 'host' | 'opponent', e?: React.MouseEvent) => {
     if (e) {
@@ -412,8 +466,77 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
 
   return (
     <div className="h-[100dvh] overflow-hidden bg-[#0e0e10] flex flex-col">
-      {/* Winner Overlay */}
-      {battleStatus === 'ended' && winnerId && (
+      {/* 🎉 WINNER CELEBRATION at 650 Score - Full screen animated overlay */}
+      {showWinnerCelebration && earlyWinner && (
+        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/90 overflow-hidden">
+          {/* Confetti particles */}
+          <div className="absolute inset-0 pointer-events-none">
+            {[...Array(50)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-3 h-3 animate-bounce"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  backgroundColor: ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'][i % 8],
+                  animationDelay: `${Math.random() * 2}s`,
+                  animationDuration: `${1 + Math.random() * 2}s`,
+                  borderRadius: Math.random() > 0.5 ? '50%' : '0',
+                  transform: `rotate(${Math.random() * 360}deg)`,
+                }}
+              />
+            ))}
+          </div>
+          
+          <div className="text-center animate-in zoom-in-50 duration-700 relative z-10">
+            {/* Glowing ring */}
+            <div className="relative mx-auto mb-6">
+              <div className={`absolute inset-0 rounded-full blur-xl ${earlyWinner.side === 'host' ? 'bg-[#53fc18]' : 'bg-pink-500'} opacity-50 animate-pulse`} 
+                   style={{ width: '140px', height: '140px', marginLeft: '-10px', marginTop: '-10px' }} />
+              <Trophy className="h-28 w-28 text-yellow-400 mx-auto animate-bounce relative z-10" 
+                      style={{ filter: 'drop-shadow(0 0 20px rgba(255, 215, 0, 0.8))' }} />
+            </div>
+            
+            {/* Winner text with glow */}
+            <div className="mb-4">
+              <span className="text-6xl mb-2 block">🎉</span>
+              <h1 className={`text-4xl md:text-5xl font-black mb-2 ${earlyWinner.side === 'host' ? 'text-[#53fc18]' : 'text-pink-500'}`}
+                  style={{ textShadow: `0 0 30px ${earlyWinner.side === 'host' ? '#53fc18' : '#ec4899'}` }}>
+                WINNER!
+              </h1>
+            </div>
+            
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-3 animate-pulse">
+              {earlyWinner.name}
+            </h2>
+            
+            <div className="flex items-center justify-center gap-2 mb-6">
+              <Crown className="h-6 w-6 text-yellow-400" />
+              <span className="text-2xl font-bold text-yellow-400">{earlyWinner.score} pts</span>
+              <Crown className="h-6 w-6 text-yellow-400" />
+            </div>
+            
+            <p className="text-white/60 text-lg mb-8">
+              Reached {WINNER_THRESHOLD} first! 🔥
+            </p>
+            
+            <Button 
+              onClick={() => {
+                setShowWinnerCelebration(false);
+                onClose();
+                navigate('/podcasts');
+              }} 
+              size="lg"
+              className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold hover:from-yellow-500 hover:to-orange-600 px-8 py-3 text-lg shadow-xl"
+            >
+              🏆 Close Battle
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Standard Winner Overlay (for timer-based wins) */}
+      {battleStatus === 'ended' && winnerId && !showWinnerCelebration && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80">
           <div className="text-center animate-in zoom-in-50 duration-500">
             <Trophy className="h-20 w-20 text-yellow-400 mx-auto mb-4 animate-bounce" />
@@ -480,12 +603,14 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
 
       {/* Battle Content Area */}
       <div className="flex-1 flex flex-col min-h-0">
-        {/* Host vs Opponent Split - Enlarged */}
+        {/* Host vs Opponent Split - Enlarged with Mobile Touch Support */}
         <div className="shrink-0 flex flex-row h-48 lg:h-56 border-b border-white/10 relative">
-          {/* Host Side */}
+          {/* Host Side - MOBILE TOUCH FIX: onTouchEnd + touch-action: manipulation */}
           <div 
-            className="flex-1 relative border-r border-white/10 flex items-center justify-center bg-gradient-to-br from-[#53fc18]/5 to-transparent cursor-pointer"
+            className="flex-1 relative border-r border-white/10 flex items-center justify-center bg-gradient-to-br from-[#53fc18]/5 to-transparent cursor-pointer select-none"
+            style={{ touchAction: 'manipulation' }}
             onClick={() => handleDoubleTap('host')}
+            onTouchEnd={(e) => handleTouchEnd('host', e)}
           >
             {showHeartAnimation.host && (
               <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
@@ -530,10 +655,12 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
             </div>
           </div>
 
-          {/* Opponent Side */}
+          {/* Opponent Side - MOBILE TOUCH FIX: onTouchEnd + touch-action: manipulation */}
           <div 
-            className="flex-1 relative flex items-center justify-center bg-gradient-to-bl from-pink-500/5 to-transparent cursor-pointer"
+            className="flex-1 relative flex items-center justify-center bg-gradient-to-bl from-pink-500/5 to-transparent cursor-pointer select-none"
+            style={{ touchAction: 'manipulation' }}
             onClick={() => handleDoubleTap('opponent')}
+            onTouchEnd={(e) => handleTouchEnd('opponent', e)}
           >
             {showHeartAnimation.opponent && (
               <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
