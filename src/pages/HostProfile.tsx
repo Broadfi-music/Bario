@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Users, Play, Calendar, Radio, Heart, Share2, Edit, MoreVertical, Pause, Plus, Mic, Trash2 } from 'lucide-react';
+import { ChevronLeft, Users, Play, Calendar, Radio, Heart, Share2, Edit, MoreVertical, Pause, Plus, Mic, Trash2, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { EditProfileModal } from '@/components/podcast/EditProfileModal';
 import { EditEpisodeModal } from '@/components/podcast/EditEpisodeModal';
 import { EditScheduleModal } from '@/components/podcast/EditScheduleModal';
+import WithdrawalModal from '@/components/podcast/WithdrawalModal';
 import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
 
 interface HostData {
@@ -152,6 +153,7 @@ const HostProfile = () => {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showEditEpisode, setShowEditEpisode] = useState(false);
   const [showEditSchedule, setShowEditSchedule] = useState(false);
+  const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   
@@ -535,6 +537,14 @@ const HostProfile = () => {
                   <Calendar className="h-4 w-4 mr-2" />
                   Create Schedule
                 </Button>
+                <Button
+                  onClick={() => setShowWithdrawalModal(true)}
+                  variant="outline"
+                  className="border-green-500/50 text-green-400 hover:bg-green-500/10"
+                >
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Withdraw Earnings
+                </Button>
               </>
             )}
           </div>
@@ -728,6 +738,12 @@ const HostProfile = () => {
           onUpdate={fetchHostData}
         />
       )}
+
+      {/* Withdrawal Modal */}
+      <WithdrawalModal
+        isOpen={showWithdrawalModal}
+        onClose={() => setShowWithdrawalModal(false)}
+      />
     </div>
   );
 };

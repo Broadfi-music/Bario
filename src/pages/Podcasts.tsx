@@ -165,13 +165,24 @@ const Podcasts = () => {
   const fetchBattleById = async (battleId: string) => {
     if (!isValidUUID(battleId)) return;
 
-    const { data: battle } = await supabase
+    console.log('🔍 Fetching battle by ID:', battleId);
+
+    // Include both pending and active battles - not just active
+    const { data: battle, error } = await supabase
       .from('podcast_battles')
       .select('*')
       .eq('id', battleId)
+      .in('status', ['pending', 'active']) // Include pending battles too
       .single();
 
+    if (error) {
+      console.error('❌ Error fetching battle:', error);
+      return;
+    }
+
     if (battle) {
+      console.log('✅ Battle found:', battle.id, 'status:', battle.status);
+      
       // Fetch profiles for host and opponent
       const { data: profiles } = await supabase
         .from('profiles')
@@ -188,6 +199,8 @@ const Podcasts = () => {
       
       // Open battle session view
       setShowBattleSession(true);
+    } else {
+      console.log('⚠️ Battle not found or already ended');
     }
   };
 
