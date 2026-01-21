@@ -322,6 +322,12 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       // Pass the session ID directly to connectAudio to avoid state timing issues
       await connectAudio(newSessionId);
       
+      // Auto-start recording when going live
+      console.log('🎙️ Auto-starting recording...');
+      setTimeout(() => {
+        startRecording();
+      }, 1500); // Wait for audio track to be established
+      
       toast.success('You are now LIVE!');
     } catch (err) {
       console.error('Failed to start session:', err);

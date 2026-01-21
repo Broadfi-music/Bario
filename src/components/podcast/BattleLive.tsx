@@ -51,6 +51,7 @@ const formatTime = (seconds: number) => {
 };
 
 const WINNER_THRESHOLD = 650; // Score threshold to win early
+const ROUND_DURATION = 300; // 5 minutes per round
 
 const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
   const { user } = useAuth();
@@ -63,6 +64,12 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
   const [timeRemaining, setTimeRemaining] = useState(battle.duration_seconds);
   const [battleStatus, setBattleStatus] = useState(battle.status);
   const [winnerId, setWinnerId] = useState<string | null>(battle.winner_id);
+  
+  // Two-round battle system
+  const [currentRound, setCurrentRound] = useState<1 | 2>(1);
+  const [showRoundWinner, setShowRoundWinner] = useState(false);
+  const [roundWinnerName, setRoundWinnerName] = useState<string>('');
+  const roundStartTimeRef = useRef<number>(Date.now());
   
   // Winner celebration state for 650 threshold
   const [showWinnerCelebration, setShowWinnerCelebration] = useState(false);
@@ -90,6 +97,8 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     connect: connectAudio,
     disconnect: disconnectAudio,
     toggleMute,
+    startRecording,
+    saveEpisode,
   } = useAgoraAudio({
     sessionId: battle.session_id || battle.id,
     userId: user?.id || '',
@@ -101,7 +110,7 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
   const audioConnectionRef = useRef(false);
   const connectionAttemptRef = useRef(0);
 
-  // Auto-connect audio immediately for participants
+  // Auto-connect audio immediately for participants + auto-start recording
   useEffect(() => {
     const shouldConnect = battle.session_id && user && isParticipant;
     
@@ -110,16 +119,24 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
       console.log('🎙️ Auto-connecting audio for battle participant... Attempt:', attemptId);
       audioConnectionRef.current = true;
       
-      const connectTimeout = setTimeout(() => {
+      const connectTimeout = setTimeout(async () => {
         if (attemptId === connectionAttemptRef.current) {
           console.log('🎙️ Executing audio connection for attempt:', attemptId);
-          connectAudio(battle.session_id || battle.id, true);
+          await connectAudio(battle.session_id || battle.id, true);
+          
+          // Auto-start recording for battles
+          if (isHost) {
+            console.log('🎙️ Auto-starting recording for battle host...');
+            setTimeout(() => {
+              startRecording();
+            }, 1500);
+          }
         }
       }, 500);
       
       return () => clearTimeout(connectTimeout);
     }
-  }, [battle.session_id, battle.id, user?.id, isParticipant, audioConnected, connectAudio]);
+  }, [battle.session_id, battle.id, user?.id, isParticipant, audioConnected, connectAudio, isHost, startRecording]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -137,28 +154,47 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
   const hostPercent = (hostScore / totalScore) * 100;
   const opponentPercent = (opponentScore / totalScore) * 100;
 
-  // Countdown timer
+  // Countdown timer with two rounds
   useEffect(() => {
-    if (battleStatus !== 'active' || !battle.started_at) return;
-
-    const startTime = new Date(battle.started_at).getTime();
-    const endTime = startTime + (battle.duration_seconds * 1000);
+    if (battleStatus !== 'active' || showRoundWinner) return;
 
     const interval = setInterval(() => {
       const now = Date.now();
-      const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
+      const elapsed = Math.floor((now - roundStartTimeRef.current) / 1000);
+      const remaining = Math.max(0, ROUND_DURATION - elapsed);
       setTimeRemaining(remaining);
 
       if (remaining === 0) {
         clearInterval(interval);
-        determineWinner();
+        
+        if (currentRound === 1) {
+          // End of Round 1 - announce round winner and start Round 2
+          const roundWinner = hostScore > opponentScore 
+            ? battle.host_name 
+            : opponentScore > hostScore 
+              ? battle.opponent_name 
+              : 'Tie';
+          setRoundWinnerName(roundWinner || 'Tie');
+          setShowRoundWinner(true);
+          
+          // After 5 seconds, start Round 2
+          setTimeout(() => {
+            setShowRoundWinner(false);
+            setCurrentRound(2);
+            roundStartTimeRef.current = Date.now();
+            setTimeRemaining(ROUND_DURATION);
+          }, 5000);
+        } else {
+          // End of Round 2 - determine final winner
+          determineWinner();
+        }
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [battleStatus, battle.started_at, battle.duration_seconds]);
+  }, [battleStatus, currentRound, showRoundWinner, hostScore, opponentScore, battle.host_name, battle.opponent_name]);
 
-  // Determine winner function
+  // Determine winner function - saves episode and ends battle
   const determineWinner = async () => {
     if (!isParticipant) return;
     
@@ -171,6 +207,19 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     setWinnerId(winner);
     setBattleStatus('ended');
     
+    // Save episode with recorded audio (only host saves)
+    if (isHost) {
+      console.log('🎙️ Saving battle episode...');
+      try {
+        await saveEpisode(
+          `Battle: ${battle.host_name} vs ${battle.opponent_name}`,
+          `Live battle recording. Winner: ${winner === battle.host_id ? battle.host_name : winner === battle.opponent_id ? battle.opponent_name : 'Tie'}. Final score: ${hostScore} - ${opponentScore}`
+        );
+      } catch (err) {
+        console.error('Failed to save battle episode:', err);
+      }
+    }
+    
     await supabase
       .from('podcast_battles')
       .update({
@@ -180,13 +229,37 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
       })
       .eq('id', battle.id);
     
+    // Also end the session
+    if (battle.session_id) {
+      await supabase
+        .from('podcast_sessions')
+        .update({
+          status: 'ended',
+          ended_at: new Date().toISOString()
+        })
+        .eq('id', battle.session_id);
+    }
+    
+    const winnerName = winner === battle.host_id 
+      ? battle.host_name 
+      : winner === battle.opponent_id 
+        ? battle.opponent_name 
+        : null;
+    
     if (winner === user?.id) {
-      toast.success('🏆 You won the battle!');
+      toast.success(`🏆 Congratulations! ${winnerName} wins the battle!`);
     } else if (winner) {
-      toast.info('Battle ended!');
+      toast.info(`🏆 ${winnerName} wins the battle!`);
     } else {
       toast.info("It's a tie!");
     }
+    
+    // Navigate away after showing winner - NO Host Studio
+    setTimeout(() => {
+      disconnectAudio();
+      onClose();
+      navigate('/podcasts');
+    }, 5000);
   };
 
   // Check for winner at 650 threshold
@@ -357,6 +430,7 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
   }, [battle.id, battle.session_id, fetchTopGifters]);
 
   // Double-tap handler - FIXED: Works on both mobile (touch) and desktop (click)
+  // Now with OPTIMISTIC LOCAL UPDATE so the tapper sees the score immediately
   const handleDoubleTap = useCallback(async (side: 'host' | 'opponent') => {
     if (!user) {
       toast.error('Please sign in to boost');
@@ -374,7 +448,7 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     
     // Check for double-tap within 400ms window (increased from 300ms)
     if (now - lastTap < 400 && lastTap > 0) {
-      const boostPoints = 5;
+      const boostPoints = 25; // Changed from 5 to 25 for faster battles
       
       // Set debounce
       doubleTapDebounceRef.current[side] = true;
@@ -387,6 +461,16 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
       setTimeout(() => {
         setShowHeartAnimation(prev => ({ ...prev, [side]: false }));
       }, 800);
+      
+      // OPTIMISTIC LOCAL UPDATE - show score immediately to the tapper
+      if (side === 'host') {
+        setHostScore(prev => prev + boostPoints);
+      } else {
+        setOpponentScore(prev => prev + boostPoints);
+      }
+      
+      // Visual feedback for successful boost
+      toast.success(`+${boostPoints} boost!`, { duration: 1000 });
       
       try {
         // Use atomic database function to prevent race conditions
@@ -401,15 +485,26 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
         
         if (error) {
           console.error('❌ Score increment RPC error:', error.message, error);
+          // Rollback optimistic update on error
+          if (side === 'host') {
+            setHostScore(prev => prev - boostPoints);
+          } else {
+            setOpponentScore(prev => prev - boostPoints);
+          }
           toast.error('Boost failed - please try again');
           return;
         }
         
         console.log('✅ Score increment success:', data);
-        // Visual feedback for successful boost
-        toast.success(`+${boostPoints} boost!`, { duration: 1000 });
+        // Real-time subscription will sync the final correct score for all viewers
       } catch (error) {
         console.error('❌ Double-tap update error:', error);
+        // Rollback optimistic update on error
+        if (side === 'host') {
+          setHostScore(prev => prev - boostPoints);
+        } else {
+          setOpponentScore(prev => prev - boostPoints);
+        }
         toast.error('Boost failed');
       }
     }
@@ -559,9 +654,30 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
         </div>
       )}
 
-      {/* Top Bar - Timer, Scores, Mic */}
+      {/* Round Winner Announcement Overlay */}
+      {showRoundWinner && (
+        <div className="absolute inset-0 z-[90] flex items-center justify-center bg-black/80 animate-in fade-in duration-300">
+          <div className="text-center animate-in zoom-in-50 duration-500">
+            <div className="text-6xl mb-4">🏆</div>
+            <h2 className="text-3xl font-bold text-yellow-400 mb-2">Round 1 Winner!</h2>
+            <p className="text-4xl font-black text-white mb-4">{roundWinnerName}</p>
+            <p className="text-white/60 text-lg">Round 2 starting in 5 seconds...</p>
+            <div className="mt-4 flex items-center justify-center gap-4">
+              <span className="text-[#53fc18] font-bold">{hostScore}</span>
+              <Swords className="h-5 w-5 text-yellow-400" />
+              <span className="text-pink-500 font-bold">{opponentScore}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Top Bar - Timer, Round Indicator, Scores, Mic */}
       <div className="shrink-0 bg-gradient-to-b from-black/90 to-transparent pt-14 pb-3 px-3 z-10">
         <div className="flex items-center justify-center gap-3 mb-2">
+          {/* Round indicator */}
+          <div className="bg-purple-600/90 text-white px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-bold">ROUND {currentRound}</span>
+          </div>
           <div className="flex items-center gap-1.5 bg-red-600/90 text-white px-3 py-1 rounded-full">
             <Timer className="h-3.5 w-3.5" />
             <span className="text-xs font-bold tabular-nums">{formatTime(timeRemaining)}</span>

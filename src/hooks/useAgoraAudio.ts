@@ -57,6 +57,11 @@ export const useAgoraAudio = ({
   const currentSessionRef = useRef<string | null>(null);
   const isCleaningUp = useRef(false);
   const connectionAttemptId = useRef(0);
+  
+  // MediaRecorder for actual audio recording
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const recordingStreamRef = useRef<MediaStream | null>(null);
 
   // Cleanup function with proper error handling
   const cleanup = useCallback(async () => {
@@ -595,21 +600,146 @@ export const useAgoraAudio = ({
     }
   }, [canPublish, updateParticipants]);
 
-  // Start recording (placeholder)
+  // Start recording using MediaRecorder
   const startRecording = useCallback(async () => {
-    toast.info('Recording feature coming soon');
-    setIsRecording(true);
+    if (!localAudioTrackRef.current) {
+      toast.error('No audio track available for recording');
+      return;
+    }
+    
+    try {
+      // Get the MediaStreamTrack from Agora's audio track
+      const mediaStreamTrack = localAudioTrackRef.current.getMediaStreamTrack();
+      const stream = new MediaStream([mediaStreamTrack]);
+      recordingStreamRef.current = stream;
+      
+      // Create MediaRecorder
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+        ? 'audio/webm;codecs=opus' 
+        : 'audio/webm';
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = mediaRecorder;
+      recordedChunksRef.current = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+          console.log('🎙️ Recording chunk received:', event.data.size, 'bytes');
+        }
+      };
+      
+      mediaRecorder.onstop = () => {
+        console.log('🎙️ Recording stopped, total chunks:', recordedChunksRef.current.length);
+      };
+      
+      mediaRecorder.onerror = (event: any) => {
+        console.error('🎙️ MediaRecorder error:', event.error);
+      };
+      
+      // Start recording with 1 second chunks
+      mediaRecorder.start(1000);
+      setIsRecording(true);
+      toast.success('Recording started!');
+      console.log('🎙️ MediaRecorder started successfully');
+    } catch (err) {
+      console.error('🎙️ Failed to start recording:', err);
+      toast.error('Failed to start recording');
+    }
   }, []);
 
-  // Save episode (placeholder)
-  const saveEpisode = useCallback(async (title: string, description: string) => {
-    setIsRecording(false);
-    toast.success('Episode saved');
+  // Stop recording and return the audio blob
+  const stopRecording = useCallback(async (): Promise<Blob | null> => {
+    return new Promise((resolve) => {
+      if (!mediaRecorderRef.current || mediaRecorderRef.current.state === 'inactive') {
+        console.log('🎙️ No active recording to stop');
+        setIsRecording(false);
+        resolve(null);
+        return;
+      }
+      
+      mediaRecorderRef.current.onstop = () => {
+        console.log('🎙️ Recording stopped, creating blob from', recordedChunksRef.current.length, 'chunks');
+        
+        if (recordedChunksRef.current.length === 0) {
+          console.warn('🎙️ No recorded chunks available');
+          setIsRecording(false);
+          resolve(null);
+          return;
+        }
+        
+        const audioBlob = new Blob(recordedChunksRef.current, { type: 'audio/webm' });
+        console.log('🎙️ Audio blob created:', audioBlob.size, 'bytes');
+        
+        recordedChunksRef.current = [];
+        mediaRecorderRef.current = null;
+        setIsRecording(false);
+        
+        resolve(audioBlob);
+      };
+      
+      mediaRecorderRef.current.stop();
+    });
   }, []);
+
+  // Save episode with recorded audio
+  const saveEpisode = useCallback(async (title: string, description: string) => {
+    const audioBlob = await stopRecording();
+    
+    if (!audioBlob || audioBlob.size === 0) {
+      console.warn('🎙️ No audio recorded, saving episode without audio');
+      toast.info('Episode saved (no audio recorded)');
+      return;
+    }
+    
+    try {
+      // Convert blob to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve, reject) => {
+        reader.onloadend = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+      });
+      reader.readAsDataURL(audioBlob);
+      
+      const audioData = await base64Promise;
+      console.log('🎙️ Audio converted to base64, size:', audioData.length);
+      
+      // Call podcast-recording edge function
+      const { data, error } = await supabase.functions.invoke('podcast-recording', {
+        body: {
+          action: 'save-episode',
+          sessionId: currentSessionRef.current,
+          userId: uidToUserMap.get(clientRef.current?.uid as number)?.identity,
+          audioData,
+          title,
+          description
+        }
+      });
+      
+      if (error) {
+        console.error('🎙️ Failed to save episode:', error);
+        toast.error('Failed to save episode');
+        return;
+      }
+      
+      console.log('🎙️ Episode saved successfully:', data);
+      toast.success('Episode saved with audio!');
+    } catch (err) {
+      console.error('🎙️ Error saving episode:', err);
+      toast.error('Failed to save episode');
+    }
+  }, [stopRecording]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Stop any active recording
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
       cleanup();
     };
   }, [cleanup]);
@@ -629,6 +759,7 @@ export const useAgoraAudio = ({
     toggleMute,
     enableMicrophone,
     startRecording,
+    stopRecording,
     saveEpisode,
   };
 };
