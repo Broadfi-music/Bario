@@ -85,6 +85,9 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
   const [showHeartAnimation, setShowHeartAnimation] = useState<{ host: boolean; opponent: boolean }>({ host: false, opponent: false });
   const doubleTapDebounceRef = useRef<{ host: boolean; opponent: boolean }>({ host: false, opponent: false });
   
+  // Timestamp for optimistic updates - prevents realtime from overwriting local taps
+  const lastOptimisticUpdateRef = useRef<number>(0);
+  
   // Check if current user is a participant (host or challenger)
   const isParticipant = user?.id === battle.host_id || user?.id === battle.opponent_id;
   const isHost = user?.id === battle.host_id;
@@ -314,8 +317,16 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
         },
         (payload: any) => {
           console.log('🔴 Battle status update:', payload.new.status, 'scores:', payload.new.host_score, payload.new.opponent_score);
-          setHostScore(payload.new.host_score);
-          setOpponentScore(payload.new.opponent_score);
+          
+          // Skip score updates if we just did an optimistic update (within 500ms)
+          // This prevents the database response from overwriting the local tap
+          const timeSinceOptimistic = Date.now() - lastOptimisticUpdateRef.current;
+          if (timeSinceOptimistic < 500) {
+            console.log('⏳ Skipping realtime score update - recent optimistic update:', timeSinceOptimistic, 'ms ago');
+          } else {
+            setHostScore(payload.new.host_score);
+            setOpponentScore(payload.new.opponent_score);
+          }
           
           // Check for 650 threshold winner
           checkWinnerThreshold(payload.new.host_score, payload.new.opponent_score);
@@ -461,6 +472,9 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
       setTimeout(() => {
         setShowHeartAnimation(prev => ({ ...prev, [side]: false }));
       }, 800);
+      
+      // Mark optimistic update timestamp to prevent realtime from overwriting
+      lastOptimisticUpdateRef.current = Date.now();
       
       // OPTIMISTIC LOCAL UPDATE - show score immediately to the tapper
       if (side === 'host') {

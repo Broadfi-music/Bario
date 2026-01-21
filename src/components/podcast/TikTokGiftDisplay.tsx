@@ -122,7 +122,7 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
         
         const { data: recentGifts, error } = await supabase
           .from('podcast_gifts')
-          .select('id, gift_type, sender_id, created_at, points_value')
+          .select('id, gift_type, sender_id, created_at, points_value, gift_count')
           .eq('session_id', sessionId)
           .gt('created_at', since)
           .order('created_at', { ascending: true });
@@ -154,9 +154,8 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
             
             const senderName = profile?.full_name || profile?.username || 'Fan';
             const senderAvatar = profile?.avatar_url || undefined;
-            // Calculate quantity from points_value / base gift value (approximation)
-            // For now, show 1 per record - multiple gifts = multiple records
-            addGift(gift.gift_type, 1, senderName, senderAvatar, gift.id);
+            // Use gift_count from database for proper multiplier display (e.g., "2x rose")
+            addGift(gift.gift_type, gift.gift_count || 1, senderName, senderAvatar, gift.id);
           }
         }
       } catch (error) {
@@ -220,7 +219,8 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
           
           const senderName = profile?.full_name || profile?.username || 'Fan';
           const senderAvatar = profile?.avatar_url || undefined;
-          addGift(gift.gift_type, 1, senderName, senderAvatar, gift.id);
+          // Use gift_count from realtime payload for proper multiplier display
+          addGift(gift.gift_type, gift.gift_count || 1, senderName, senderAvatar, gift.id);
         }
       )
       .subscribe((status, err) => {

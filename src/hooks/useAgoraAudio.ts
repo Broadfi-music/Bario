@@ -600,10 +600,19 @@ export const useAgoraAudio = ({
     }
   }, [canPublish, updateParticipants]);
 
-  // Start recording using MediaRecorder
+  // Start recording using MediaRecorder - with retry logic for audio track
   const startRecording = useCallback(async () => {
+    // Wait up to 3 seconds for audio track to be ready
+    let attempts = 0;
+    while (!localAudioTrackRef.current && attempts < 6) {
+      console.log('🎙️ Waiting for audio track...', attempts);
+      await new Promise(r => setTimeout(r, 500));
+      attempts++;
+    }
+    
     if (!localAudioTrackRef.current) {
-      toast.error('No audio track available for recording');
+      console.warn('🎙️ No audio track after waiting, proceeding without recording');
+      toast.info('Recording unavailable - no audio track');
       return;
     }
     
@@ -682,7 +691,7 @@ export const useAgoraAudio = ({
     });
   }, []);
 
-  // Save episode with recorded audio
+  // Save episode with recorded audio - uses userId prop directly for reliability
   const saveEpisode = useCallback(async (title: string, description: string) => {
     const audioBlob = await stopRecording();
     
@@ -707,12 +716,18 @@ export const useAgoraAudio = ({
       const audioData = await base64Promise;
       console.log('🎙️ Audio converted to base64, size:', audioData.length);
       
+      // Use session from ref or prop, and userId directly from prop (not uidToUserMap which may fail)
+      const targetSessionId = currentSessionRef.current || sessionId;
+      const targetUserId = userId; // Use prop directly for reliability
+      
+      console.log('🎙️ Saving episode:', { sessionId: targetSessionId, userId: targetUserId, title });
+      
       // Call podcast-recording edge function
       const { data, error } = await supabase.functions.invoke('podcast-recording', {
         body: {
           action: 'save-episode',
-          sessionId: currentSessionRef.current,
-          userId: uidToUserMap.get(clientRef.current?.uid as number)?.identity,
+          sessionId: targetSessionId,
+          userId: targetUserId,
           audioData,
           title,
           description
@@ -731,7 +746,7 @@ export const useAgoraAudio = ({
       console.error('🎙️ Error saving episode:', err);
       toast.error('Failed to save episode');
     }
-  }, [stopRecording]);
+  }, [stopRecording, sessionId, userId]);
 
   // Cleanup on unmount
   useEffect(() => {
