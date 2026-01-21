@@ -101,21 +101,28 @@ serve(async (req) => {
       }
       console.log(`[Gift Transaction] ✅ Coins deducted successfully`);
 
-      // 3. Record gift in podcast_gifts with gift_count
-      console.log(`[Gift Transaction] 📝 Recording gift in database`);
-      const { error: giftError } = await supabase.from('podcast_gifts').insert({
-        session_id: sessionId,
-        sender_id: senderId,
-        recipient_id: recipientId,
-        gift_type: giftType,
-        points_value: coinsCost,
-        gift_count: giftCount
-      });
+      // 3. Record gift(s) in podcast_gifts - insert one record per gift for proper display
+      console.log(`[Gift Transaction] 📝 Recording ${giftCount} gift(s) in database`);
+      
+      // Insert multiple records for giftCount > 1 so TikTokGiftDisplay shows each separately
+      // This allows "2x rose" etc to be displayed correctly with count badge
+      const giftRecords = [];
+      for (let i = 0; i < giftCount; i++) {
+        giftRecords.push({
+          session_id: sessionId,
+          sender_id: senderId,
+          recipient_id: recipientId,
+          gift_type: giftType,
+          points_value: Math.floor(coinsCost / giftCount)
+        });
+      }
+      
+      const { error: giftError } = await supabase.from('podcast_gifts').insert(giftRecords);
       
       if (giftError) {
         console.error('[Gift Transaction] ❌ Failed to record gift:', giftError);
       } else {
-        console.log('[Gift Transaction] ✅ Gift recorded in podcast_gifts');
+        console.log(`[Gift Transaction] ✅ ${giftCount} gift record(s) created in podcast_gifts`);
       }
 
       // 4. Check if this session is part of a battle and update battle scores

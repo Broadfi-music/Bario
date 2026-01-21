@@ -154,6 +154,8 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
             
             const senderName = profile?.full_name || profile?.username || 'Fan';
             const senderAvatar = profile?.avatar_url || undefined;
+            // Calculate quantity from points_value / base gift value (approximation)
+            // For now, show 1 per record - multiple gifts = multiple records
             addGift(gift.gift_type, 1, senderName, senderAvatar, gift.id);
           }
         }
@@ -297,12 +299,14 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
               )}
             </div>
             
-            {/* Sender name + "sent" text */}
+            {/* Sender name + "sent" text with quantity */}
             <div className="flex flex-col min-w-0">
               <span className="text-white text-xs font-bold truncate max-w-[90px]">
                 {gift.senderName}
               </span>
-              <span className="text-white/50 text-[9px]">sent a gift</span>
+              <span className="text-white/50 text-[9px]">
+                sent {gift.count > 1 ? `${gift.count}x ` : ''}{gift.giftType}
+              </span>
             </div>
             
             {/* Gift image/video */}
@@ -325,15 +329,13 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
               )}
             </div>
             
-            {/* Count badge */}
-            {gift.count > 1 && (
-              <div className="flex items-center bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full px-2 py-0.5">
-                <span className="text-black text-[9px] font-bold">x</span>
-                <span className="text-black font-black text-sm animate-count-pop">
-                  {gift.count}
-                </span>
-              </div>
-            )}
+            {/* Count badge - ALWAYS show for quantity display */}
+            <div className={`flex items-center rounded-full px-2 py-0.5 ${gift.count > 1 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' : 'bg-white/20'}`}>
+              <span className={`text-[9px] font-bold ${gift.count > 1 ? 'text-black' : 'text-white/70'}`}>x</span>
+              <span className={`font-black text-sm ${gift.count > 1 ? 'text-black animate-count-pop' : 'text-white/70'}`}>
+                {gift.count}
+              </span>
+            </div>
           </div>
         );
       })}
