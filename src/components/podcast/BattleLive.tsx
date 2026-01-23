@@ -198,12 +198,27 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
   }, [battleStatus, currentRound, showRoundWinner, hostScore, opponentScore, battle.host_name, battle.opponent_name]);
 
   // Determine winner function - saves episode and ends battle
+  // FIXED: Fetch fresh scores from database to ensure accuracy
   const determineWinner = async () => {
     if (!isParticipant) return;
     
-    const winner = hostScore > opponentScore 
+    // Fetch the ACTUAL final scores from database to ensure accuracy
+    const { data: freshBattle } = await supabase
+      .from('podcast_battles')
+      .select('host_score, opponent_score')
+      .eq('id', battle.id)
+      .single();
+    
+    const finalHostScore = freshBattle?.host_score ?? hostScore;
+    const finalOpponentScore = freshBattle?.opponent_score ?? opponentScore;
+    
+    // Update local state with fresh scores
+    setHostScore(finalHostScore);
+    setOpponentScore(finalOpponentScore);
+    
+    const winner = finalHostScore > finalOpponentScore 
       ? battle.host_id 
-      : opponentScore > hostScore 
+      : finalOpponentScore > finalHostScore 
         ? battle.opponent_id 
         : null;
     
@@ -216,7 +231,7 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
       try {
         await saveEpisode(
           `Battle: ${battle.host_name} vs ${battle.opponent_name}`,
-          `Live battle recording. Winner: ${winner === battle.host_id ? battle.host_name : winner === battle.opponent_id ? battle.opponent_name : 'Tie'}. Final score: ${hostScore} - ${opponentScore}`
+          `Live battle recording. Winner: ${winner === battle.host_id ? battle.host_name : winner === battle.opponent_id ? battle.opponent_name : 'Tie'}. Final score: ${finalHostScore} - ${finalOpponentScore}`
         );
       } catch (err) {
         console.error('Failed to save battle episode:', err);
@@ -318,10 +333,11 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
         (payload: any) => {
           console.log('🔴 Battle status update:', payload.new.status, 'scores:', payload.new.host_score, payload.new.opponent_score);
           
-          // Skip score updates if we just did an optimistic update (within 500ms)
+          // Skip score updates if we just did an optimistic update (within 800ms)
           // This prevents the database response from overwriting the local tap
+          // Increased window from 500ms to 800ms for high-latency connections
           const timeSinceOptimistic = Date.now() - lastOptimisticUpdateRef.current;
-          if (timeSinceOptimistic < 500) {
+          if (timeSinceOptimistic < 800) {
             console.log('⏳ Skipping realtime score update - recent optimistic update:', timeSinceOptimistic, 'ms ago');
           } else {
             setHostScore(payload.new.host_score);
@@ -505,12 +521,19 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
           } else {
             setOpponentScore(prev => prev - boostPoints);
           }
-          toast.error('Boost failed - please try again');
           return;
         }
         
         console.log('✅ Score increment success:', data);
-        // Real-time subscription will sync the final correct score for all viewers
+        
+        // USE RPC RESPONSE AS SOURCE OF TRUTH - sync both scores for all viewers
+        if (data) {
+          const { host_score, opponent_score } = data as { host_score: number; opponent_score: number };
+          setHostScore(host_score);
+          setOpponentScore(opponent_score);
+          // Update timestamp to prevent realtime from overwriting
+          lastOptimisticUpdateRef.current = Date.now();
+        }
       } catch (error) {
         console.error('❌ Double-tap update error:', error);
         // Rollback optimistic update on error
@@ -519,7 +542,6 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
         } else {
           setOpponentScore(prev => prev - boostPoints);
         }
-        toast.error('Boost failed');
       }
     }
   }, [user, battle.id]);

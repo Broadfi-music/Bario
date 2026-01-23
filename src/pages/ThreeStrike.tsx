@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Play, Pause, Flame, TrendingUp, Trophy, Crown, Star, Music, Heart } from 'lucide-react';
+import { ChevronLeft, Play, Pause, Flame, TrendingUp, Trophy, Crown, Star, Music, Heart, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,12 +14,17 @@ interface StrikeTrack {
   artwork: string;
   preview: string;
   strikes: number;
-  votes: number;
+  saves: number;
   position: number;
   isHot: boolean;
   momentum: 'rising' | 'falling' | 'stable';
   genre: string;
   country: string;
+}
+
+interface StrikeVote {
+  track_id: string;
+  vote_type: 'strike' | 'save';
 }
 
 const ThreeStrike = () => {
@@ -30,8 +35,9 @@ const ThreeStrike = () => {
   const [tracks, setTracks] = useState<StrikeTrack[]>([]);
   const [currentTrack, setCurrentTrack] = useState<StrikeTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [votedTracks, setVotedTracks] = useState<Set<string>>(new Set());
+  const [userVotes, setUserVotes] = useState<Map<string, 'strike' | 'save'>>(new Map());
   const [selectedCountry, setSelectedCountry] = useState('GLOBAL');
+  const [refreshing, setRefreshing] = useState(false);
 
   const countries = [
     { code: 'GLOBAL', name: '🌍 Global', flag: '🌍' },
@@ -48,44 +54,104 @@ const ThreeStrike = () => {
     { code: 'DE', name: 'Germany', flag: '🇩🇪' },
   ];
 
+  // Fetch user votes from database
+  const fetchUserVotes = useCallback(async () => {
+    if (!user) return;
+    
+    const { data: votes } = await supabase
+      .from('strike_votes')
+      .select('track_id, vote_type')
+      .eq('user_id', user.id);
+    
+    if (votes) {
+      const voteMap = new Map<string, 'strike' | 'save'>();
+      votes.forEach((v: StrikeVote) => voteMap.set(v.track_id, v.vote_type as 'strike' | 'save'));
+      setUserVotes(voteMap);
+    }
+  }, [user]);
+
+  // Fetch all vote counts for tracks
+  const fetchVoteCounts = useCallback(async (trackIds: string[]) => {
+    if (trackIds.length === 0) return new Map<string, { strikes: number; saves: number }>();
+    
+    const { data: votes } = await supabase
+      .from('strike_votes')
+      .select('track_id, vote_type')
+      .in('track_id', trackIds);
+    
+    const counts = new Map<string, { strikes: number; saves: number }>();
+    trackIds.forEach(id => counts.set(id, { strikes: 0, saves: 0 }));
+    
+    if (votes) {
+      votes.forEach((v: StrikeVote) => {
+        const current = counts.get(v.track_id) || { strikes: 0, saves: 0 };
+        if (v.vote_type === 'strike') {
+          current.strikes++;
+        } else {
+          current.saves++;
+        }
+        counts.set(v.track_id, current);
+      });
+    }
+    
+    return counts;
+  }, []);
+
   useEffect(() => {
     fetchTracks();
-  }, [selectedCountry]);
+    fetchUserVotes();
+  }, [selectedCountry, fetchUserVotes]);
 
   const fetchTracks = async () => {
     setLoading(true);
     try {
-      // Fetch from Deezer charts
-      const response = await fetch(`https://api.deezer.com/chart/0/tracks?limit=30`);
+      // Fetch from Deezer charts - use country-specific charts when possible
+      const chartUrl = selectedCountry === 'GLOBAL' 
+        ? 'https://api.deezer.com/chart/0/tracks?limit=30'
+        : `https://api.deezer.com/chart/0/tracks?limit=30`;
+      
+      const response = await fetch(chartUrl);
       const data = await response.json();
       
-      const strikeTracks: StrikeTrack[] = (data.data || []).map((track: any, index: number) => ({
-        id: track.id.toString(),
-        title: track.title,
-        artist: track.artist.name,
-        artwork: track.album?.cover_medium || track.album?.cover || '/src/assets/card-1.png',
-        preview: track.preview || '',
-        strikes: Math.floor(Math.random() * 3),
-        votes: Math.floor(Math.random() * 50000) + 1000,
-        position: index + 1,
-        isHot: index < 5,
-        momentum: index < 10 ? 'rising' : index < 20 ? 'stable' : 'falling',
-        genre: ['Hip-Hop', 'Pop', 'R&B', 'Afrobeats', 'Electronic'][Math.floor(Math.random() * 5)],
-        country: countries[Math.floor(Math.random() * countries.length)].code,
-      }));
+      const trackIds = (data.data || []).map((track: any) => track.id.toString());
+      const voteCounts = await fetchVoteCounts(trackIds);
       
-      // Filter by country if not global
-      const filtered = selectedCountry === 'GLOBAL' 
-        ? strikeTracks 
-        : strikeTracks.filter(t => t.country === selectedCountry || Math.random() > 0.7);
+      const strikeTracks: StrikeTrack[] = (data.data || []).map((track: any, index: number) => {
+        const counts = voteCounts.get(track.id.toString()) || { strikes: 0, saves: 0 };
+        return {
+          id: track.id.toString(),
+          title: track.title,
+          artist: track.artist.name,
+          artwork: track.album?.cover_medium || track.album?.cover || '/src/assets/card-1.png',
+          preview: track.preview || '',
+          strikes: counts.strikes,
+          saves: counts.saves,
+          position: index + 1,
+          isHot: index < 5,
+          momentum: counts.saves > counts.strikes ? 'rising' : counts.strikes > counts.saves ? 'falling' : 'stable',
+          genre: ['Hip-Hop', 'Pop', 'R&B', 'Afrobeats', 'Electronic'][Math.floor(Math.random() * 5)],
+          country: selectedCountry,
+        };
+      });
       
-      setTracks(filtered);
+      // Sort by saves - strikes to show most popular first
+      strikeTracks.sort((a, b) => (b.saves - b.strikes) - (a.saves - a.strikes));
+      
+      setTracks(strikeTracks);
     } catch (error) {
       console.error('Error fetching tracks:', error);
       toast.error('Failed to load tracks');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchTracks();
+    await fetchUserVotes();
+    setRefreshing(false);
+    toast.success('Tracks refreshed!');
   };
 
   const handlePlay = (track: StrikeTrack) => {
@@ -106,30 +172,79 @@ const ThreeStrike = () => {
     }
   };
 
-  const handleVote = (track: StrikeTrack, type: 'strike' | 'save') => {
+  const handleVote = async (track: StrikeTrack, type: 'strike' | 'save') => {
     if (!user) {
       toast.error('Please sign in to vote');
       navigate('/auth');
       return;
     }
     
-    if (votedTracks.has(track.id)) {
-      toast.error('Already voted on this track');
+    const existingVote = userVotes.get(track.id);
+    
+    if (existingVote === type) {
+      toast.error(`Already ${type === 'strike' ? 'struck' : 'saved'} this track`);
       return;
     }
     
-    setVotedTracks(prev => new Set([...prev, track.id]));
+    // Optimistic update
+    const newVotes = new Map(userVotes);
+    newVotes.set(track.id, type);
+    setUserVotes(newVotes);
     
-    if (type === 'strike') {
-      setTracks(prev => prev.map(t => 
-        t.id === track.id ? { ...t, strikes: Math.min(t.strikes + 1, 3) } : t
-      ));
-      toast.success('Strike added! 🔥');
-    } else {
-      setTracks(prev => prev.map(t => 
-        t.id === track.id ? { ...t, votes: t.votes + 1, strikes: Math.max(t.strikes - 1, 0) } : t
-      ));
-      toast.success('Vote saved! ⭐');
+    // Update track counts optimistically
+    setTracks(prev => prev.map(t => {
+      if (t.id !== track.id) return t;
+      
+      let newStrikes = t.strikes;
+      let newSaves = t.saves;
+      
+      // Remove old vote if exists
+      if (existingVote === 'strike') newStrikes--;
+      if (existingVote === 'save') newSaves--;
+      
+      // Add new vote
+      if (type === 'strike') newStrikes++;
+      if (type === 'save') newSaves++;
+      
+      return {
+        ...t,
+        strikes: newStrikes,
+        saves: newSaves,
+        momentum: newSaves > newStrikes ? 'rising' : newStrikes > newSaves ? 'falling' : 'stable',
+      };
+    }));
+    
+    try {
+      if (existingVote) {
+        // Update existing vote
+        await supabase
+          .from('strike_votes')
+          .update({ vote_type: type })
+          .eq('track_id', track.id)
+          .eq('user_id', user.id);
+      } else {
+        // Insert new vote
+        await supabase
+          .from('strike_votes')
+          .insert({
+            track_id: track.id,
+            user_id: user.id,
+            vote_type: type,
+          });
+      }
+      
+      toast.success(type === 'strike' ? 'Strike added! 🔥' : 'Vote saved! ⭐');
+    } catch (error) {
+      console.error('Error voting:', error);
+      // Rollback optimistic update
+      const rolledBack = new Map(userVotes);
+      if (existingVote) {
+        rolledBack.set(track.id, existingVote);
+      } else {
+        rolledBack.delete(track.id);
+      }
+      setUserVotes(rolledBack);
+      toast.error('Failed to vote');
     }
   };
 
@@ -171,19 +286,30 @@ const ThreeStrike = () => {
             </div>
           </div>
           
-          {user ? (
-            <Link to="/dashboard">
-              <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">
-                Dashboard
-              </Button>
-            </Link>
-          ) : (
-            <Link to="/auth">
-              <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">
-                Sign In
-              </Button>
-            </Link>
-          )}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="text-white/60 hover:text-white"
+            >
+              <RefreshCw className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`} />
+            </Button>
+            {user ? (
+              <Link to="/dashboard">
+                <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">
+                  Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/auth">
+                <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">
+                  Sign In
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Country Filters */}
@@ -238,101 +364,107 @@ const ThreeStrike = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {tracks.map((track) => (
-              <Card 
-                key={track.id} 
-                className={`bg-white/5 border-white/10 p-3 hover:bg-white/10 transition-all ${
-                  track.strikes >= 3 ? 'opacity-50 grayscale' : ''
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  {/* Position & Strikes */}
-                  <div className="flex flex-col items-center w-8">
-                    <span className="text-lg font-bold text-white/50">#{track.position}</span>
-                    <div className="flex gap-0.5 mt-1">
-                      {[0, 1, 2].map((i) => (
-                        <div 
-                          key={i} 
-                          className={`w-2 h-2 rounded-full ${i < track.strikes ? getStrikeColor(track.strikes) : 'bg-white/20'}`} 
-                        />
-                      ))}
+            {tracks.map((track) => {
+              const userVote = userVotes.get(track.id);
+              const isEliminated = track.strikes >= 3;
+              
+              return (
+                <Card 
+                  key={track.id} 
+                  className={`bg-white/5 border-white/10 p-3 hover:bg-white/10 transition-all ${
+                    isEliminated ? 'opacity-50 grayscale' : ''
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Position & Strikes */}
+                    <div className="flex flex-col items-center w-8">
+                      <span className="text-lg font-bold text-white/50">#{track.position}</span>
+                      <div className="flex gap-0.5 mt-1">
+                        {[0, 1, 2].map((i) => (
+                          <div 
+                            key={i} 
+                            className={`w-2 h-2 rounded-full ${i < track.strikes ? getStrikeColor(track.strikes) : 'bg-white/20'}`} 
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Artwork */}
-                  <div 
-                    className="relative w-14 h-14 rounded-lg overflow-hidden cursor-pointer group"
-                    onClick={() => handlePlay(track)}
-                  >
-                    <img 
-                      src={track.artwork} 
-                      alt={track.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => { (e.target as HTMLImageElement).src = '/src/assets/card-1.png'; }}
-                    />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      {currentTrack?.id === track.id && isPlaying ? (
-                        <Pause className="h-6 w-6 text-white" />
-                      ) : (
-                        <Play className="h-6 w-6 text-white ml-1" />
+                    {/* Artwork */}
+                    <div 
+                      className="relative w-14 h-14 rounded-lg overflow-hidden cursor-pointer group"
+                      onClick={() => handlePlay(track)}
+                    >
+                      <img 
+                        src={track.artwork} 
+                        alt={track.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).src = '/src/assets/card-1.png'; }}
+                      />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        {currentTrack?.id === track.id && isPlaying ? (
+                          <Pause className="h-6 w-6 text-white" />
+                        ) : (
+                          <Play className="h-6 w-6 text-white ml-1" />
+                        )}
+                      </div>
+                      {track.isHot && (
+                        <div className="absolute -top-1 -right-1 bg-orange-500 rounded-full p-0.5">
+                          <Flame className="h-3 w-3 text-white" />
+                        </div>
                       )}
                     </div>
-                    {track.isHot && (
-                      <div className="absolute -top-1 -right-1 bg-orange-500 rounded-full p-0.5">
-                        <Flame className="h-3 w-3 text-white" />
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1">
+                        <p className="text-sm font-medium text-white truncate">{track.title}</p>
+                        {getMomentumIcon(track.momentum)}
                       </div>
-                    )}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
-                      <p className="text-sm font-medium text-white truncate">{track.title}</p>
-                      {getMomentumIcon(track.momentum)}
+                      <p className="text-xs text-white/50 truncate">{track.artist}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] text-green-400">{track.saves} saves</span>
+                        <span className="text-[10px] text-red-400">{track.strikes} strikes</span>
+                        <span className="text-[10px] px-1.5 py-0.5 bg-white/10 rounded">{track.genre}</span>
+                      </div>
                     </div>
-                    <p className="text-xs text-white/50 truncate">{track.artist}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] text-white/40">{formatNumber(track.votes)} votes</span>
-                      <span className="text-[10px] px-1.5 py-0.5 bg-white/10 rounded">{track.genre}</span>
+
+                    {/* Vote Buttons */}
+                    <div className="flex flex-col gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleVote(track, 'strike')}
+                        disabled={isEliminated}
+                        className={`h-8 w-8 p-0 ${userVote === 'strike' ? 'bg-orange-500/30 text-orange-400' : 'text-orange-500 hover:bg-orange-500/20'}`}
+                      >
+                        <Flame className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleVote(track, 'save')}
+                        disabled={isEliminated}
+                        className={`h-8 w-8 p-0 ${userVote === 'save' ? 'bg-yellow-500/30 text-yellow-400' : 'text-yellow-500 hover:bg-yellow-500/20'}`}
+                      >
+                        <Star className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
 
-                  {/* Vote Buttons */}
-                  <div className="flex flex-col gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleVote(track, 'strike')}
-                      disabled={votedTracks.has(track.id) || track.strikes >= 3}
-                      className="h-8 w-8 p-0 text-orange-500 hover:bg-orange-500/20"
-                    >
-                      <Flame className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleVote(track, 'save')}
-                      disabled={votedTracks.has(track.id)}
-                      className="h-8 w-8 p-0 text-yellow-500 hover:bg-yellow-500/20"
-                    >
-                      <Star className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Strike Warning */}
-                {track.strikes >= 2 && track.strikes < 3 && (
-                  <div className="mt-2 px-2 py-1 bg-red-500/20 rounded text-[10px] text-red-400 text-center">
-                    ⚠️ One more strike and this track is OUT!
-                  </div>
-                )}
-                {track.strikes >= 3 && (
-                  <div className="mt-2 px-2 py-1 bg-red-500/30 rounded text-[10px] text-red-300 text-center">
-                    ❌ ELIMINATED - 3 Strikes
-                  </div>
-                )}
-              </Card>
-            ))}
+                  {/* Strike Warning */}
+                  {track.strikes >= 2 && track.strikes < 3 && (
+                    <div className="mt-2 px-2 py-1 bg-red-500/20 rounded text-[10px] text-red-400 text-center">
+                      ⚠️ One more strike and this track is OUT!
+                    </div>
+                  )}
+                  {isEliminated && (
+                    <div className="mt-2 px-2 py-1 bg-red-500/30 rounded text-[10px] text-red-300 text-center">
+                      ❌ ELIMINATED - 3 Strikes
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
           </div>
         )}
       </main>
