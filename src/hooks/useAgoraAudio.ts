@@ -414,8 +414,9 @@ export const useAgoraAudio = ({
           setIsMuted(false);
           toast.success('Microphone is live!');
         } catch (audioErr) {
+          // Log error but don't show toast to hide Agora details from users
           console.error('Error creating audio track:', audioErr);
-          toast.error('Could not access microphone. Please check permissions.');
+          console.warn('Could not access microphone. Please check permissions.');
         }
       } else {
         console.log('📻 Joining as listener (no publish rights)');
@@ -433,20 +434,22 @@ export const useAgoraAudio = ({
       console.log('✅ Agora connection complete!');
 
     } catch (err: unknown) {
-      console.error('❌ Agora connection error:', err);
+      console.error('❌ Audio connection error:', err);
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(message);
       setIsConnecting(false);
       globalConnectionLock = false;
       
-      // Handle specific errors
+      // HIDE Agora-specific errors from users - only log to console
       if (message.includes('UID_CONFLICT')) {
-        toast.error('Audio conflict detected. Please refresh the page.');
+        console.error('Audio conflict detected - user should refresh');
+        // Don't show toast - just log
       } else if (message.includes('WS_ABORT')) {
         // Ignore WS_ABORT - it's a cleanup side effect
         console.log('WS_ABORT during connect - ignoring');
       } else {
-        toast.error('Failed to connect: ' + message);
+        // Generic error message without exposing Agora
+        console.error('Audio connection failed:', message);
       }
     }
   }, [sessionId, userId, userName, isHost, isConnected, updateParticipants, startVolumeMonitoring, onParticipantJoined, onParticipantLeft]);
@@ -529,19 +532,18 @@ export const useAgoraAudio = ({
         await clientRef.current.publish(audioTrack);
         console.log('🎤 Audio track published!');
         setIsMuted(false);
-        toast.success('Microphone enabled!');
         updateParticipants();
         return;
       } catch (err) {
         console.error('Error creating audio track:', err);
-        toast.error('Could not access microphone. Please check permissions.');
+        // Don't show error toast to hide Agora internals
         return;
       }
     }
 
     if (!localAudioTrackRef.current) {
       console.warn('No local audio track for toggle mute');
-      toast.error('You need speaker permissions to unmute');
+      // Don't show error toast to hide internal state
       return;
     }
 
