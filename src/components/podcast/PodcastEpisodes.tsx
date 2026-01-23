@@ -47,7 +47,7 @@ const PodcastEpisodes = () => {
 
   const handlePlayEpisode = async (episode: Episode) => {
     if (!episode.audio_url) {
-      toast.error('No audio available for this episode');
+      toast.error('This episode has no recorded audio');
       return;
     }
 
@@ -58,6 +58,7 @@ const PodcastEpisodes = () => {
     }
 
     // Play the episode using the global audio player
+    console.log('🎧 Playing podcast episode:', episode.title, 'URL:', episode.audio_url);
     playTrack({
       id: episode.id,
       title: episode.title,
@@ -66,6 +67,7 @@ const PodcastEpisodes = () => {
       coverUrl: episode.cover_image_url || undefined,
       type: 'podcast'
     });
+    toast.success(`Playing: ${episode.title}`);
 
     // Increment play count
     await supabase
