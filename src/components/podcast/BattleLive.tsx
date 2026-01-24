@@ -348,7 +348,18 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     }
   }, [battle.id, battle.host_id, battle.host_name, battle.opponent_id, battle.opponent_name, battleStatus]);
 
+  // Use refs for score values to avoid stale closures in realtime handler
+  const hostScoreRef = useRef(hostScore);
+  const opponentScoreRef = useRef(opponentScore);
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    hostScoreRef.current = hostScore;
+    opponentScoreRef.current = opponentScore;
+  }, [hostScore, opponentScore]);
+
   // Real-time battle status updates - AUTO CLOSE WHEN BATTLE ENDS
+  // FIXED: Use refs instead of state to avoid stale closure issues
   useEffect(() => {
     const channel = supabase
       .channel(`battle-status-${battle.id}`)
@@ -361,36 +372,39 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
           filter: `id=eq.${battle.id}`
         },
         (payload: any) => {
-          console.log('🔴 Battle status update:', payload.new.status, 'scores:', payload.new.host_score, payload.new.opponent_score);
+          const newHostScore = payload.new.host_score;
+          const newOpponentScore = payload.new.opponent_score;
           
-          // FIXED: Determine WHICH SIDE changed in this realtime update
-          // Only skip if WE just tapped THIS SAME SIDE (within 500ms)
-          // If the OTHER side changed, ALWAYS apply it - that's from the other device!
+          console.log('🔴 Battle realtime update - DB scores:', newHostScore, newOpponentScore, 
+                      '| Local refs:', hostScoreRef.current, opponentScoreRef.current);
+          
+          // FIXED: Use refs for comparison to avoid stale closure values
           const pending = pendingOptimisticRef.current;
           const timeSinceOptimistic = Date.now() - pending.timestamp;
           
-          // Detect which side(s) changed
-          const hostChanged = payload.new.host_score !== hostScore;
-          const opponentChanged = payload.new.opponent_score !== opponentScore;
-          const changedSide = hostChanged ? 'host' : opponentChanged ? 'opponent' : null;
+          // Detect which side changed by comparing with CURRENT ref values
+          const hostChanged = newHostScore !== hostScoreRef.current;
+          const opponentChanged = newOpponentScore !== opponentScoreRef.current;
           
-          // Only skip if we JUST tapped THIS EXACT SAME SIDE
-          if (timeSinceOptimistic < 500 && pending.side === changedSide && changedSide !== null) {
-            // We just tapped THIS side - the RPC already set the correct score, skip to prevent flicker
+          // Determine which side the DB update was for
+          let changedSide: 'host' | 'opponent' | null = null;
+          if (hostChanged && !opponentChanged) changedSide = 'host';
+          else if (opponentChanged && !hostChanged) changedSide = 'opponent';
+          
+          // Only skip if we JUST tapped THIS EXACT SAME SIDE within 500ms
+          const shouldSkip = timeSinceOptimistic < 500 && pending.side === changedSide && changedSide !== null;
+          
+          if (shouldSkip) {
             console.log('⏳ Skipping realtime for OUR tap:', pending.side, timeSinceOptimistic, 'ms ago');
           } else {
-            // Either: 
-            // 1. We didn't tap recently, OR
-            // 2. A DIFFERENT side changed (other person tapped), OR  
-            // 3. Both sides changed
-            // In ALL these cases, apply the realtime update!
-            console.log('✅ Applying realtime score update:', { changedSide, pendingSide: pending.side, hostChanged, opponentChanged });
-            setHostScore(payload.new.host_score);
-            setOpponentScore(payload.new.opponent_score);
+            // ALWAYS apply the update from database - this is the source of truth for OTHER users' taps
+            console.log('✅ Applying realtime score update from DB:', { newHostScore, newOpponentScore, changedSide });
+            setHostScore(newHostScore);
+            setOpponentScore(newOpponentScore);
           }
           
           // Check for 650 threshold winner
-          checkWinnerThreshold(payload.new.host_score, payload.new.opponent_score);
+          checkWinnerThreshold(newHostScore, newOpponentScore);
           
           if (payload.new.status === 'ended') {
             setBattleStatus('ended');
