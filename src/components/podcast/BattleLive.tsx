@@ -113,21 +113,24 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
   const audioConnectionRef = useRef(false);
   const connectionAttemptRef = useRef(0);
 
-  // Auto-connect audio immediately for participants + auto-start recording
+  // Auto-connect audio immediately for ALL authenticated users (participants publish, listeners subscribe)
   useEffect(() => {
-    const shouldConnect = battle.session_id && user && isParticipant;
+    // FIXED: Allow ALL authenticated users to connect - not just participants
+    // Participants will publish audio, listeners will only subscribe
+    const shouldConnect = battle.session_id && user;
     
     if (shouldConnect && !audioConnected) {
       const attemptId = ++connectionAttemptRef.current;
-      console.log('🎙️ Auto-connecting audio for battle participant... Attempt:', attemptId);
+      console.log('🎙️ Auto-connecting audio for battle viewer... Attempt:', attemptId, 'isParticipant:', isParticipant);
       audioConnectionRef.current = true;
       
       const connectTimeout = setTimeout(async () => {
         if (attemptId === connectionAttemptRef.current) {
           console.log('🎙️ Executing audio connection for attempt:', attemptId);
-          await connectAudio(battle.session_id || battle.id, true);
+          // Pass isParticipant to determine if user should publish (speak) or just listen
+          await connectAudio(battle.session_id || battle.id, isParticipant);
           
-          // Auto-start recording for battles
+          // Auto-start recording for battles (only host)
           if (isHost) {
             console.log('🎙️ Auto-starting recording for battle host...');
             setTimeout(() => {
@@ -151,6 +154,33 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
       }
     };
   }, [disconnectAudio]);
+
+  // FIXED: Fetch fresh battle data on mount to prevent stale scores (like 1025 from old battles)
+  useEffect(() => {
+    const fetchFreshBattleData = async () => {
+      console.log('🔄 Fetching fresh battle data for:', battle.id);
+      const { data, error } = await supabase
+        .from('podcast_battles')
+        .select('host_score, opponent_score, status, winner_id')
+        .eq('id', battle.id)
+        .single();
+      
+      if (error) {
+        console.error('❌ Failed to fetch fresh battle data:', error);
+        return;
+      }
+      
+      if (data) {
+        console.log('✅ Fresh battle data:', data);
+        setHostScore(data.host_score);
+        setOpponentScore(data.opponent_score);
+        setBattleStatus(data.status as 'pending' | 'active' | 'ended');
+        if (data.winner_id) setWinnerId(data.winner_id);
+      }
+    };
+    
+    fetchFreshBattleData();
+  }, [battle.id]);
 
   // Calculate progress bar percentages
   const totalScore = hostScore + opponentScore || 1;
@@ -333,19 +363,28 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
         (payload: any) => {
           console.log('🔴 Battle status update:', payload.new.status, 'scores:', payload.new.host_score, payload.new.opponent_score);
           
-          // FIXED: ALWAYS update scores from realtime - this ensures BOTH devices see the same values
-          // The RPC response already set the definitive scores for the tapper
-          // For the OTHER device, this realtime update is the PRIMARY source of truth
-          // Only skip if we JUST made an optimistic update (within 500ms) to prevent flicker
+          // FIXED: Determine WHICH SIDE changed in this realtime update
+          // Only skip if WE just tapped THIS SAME SIDE (within 500ms)
+          // If the OTHER side changed, ALWAYS apply it - that's from the other device!
           const pending = pendingOptimisticRef.current;
           const timeSinceOptimistic = Date.now() - pending.timestamp;
           
-          if (timeSinceOptimistic < 500 && pending.side !== null) {
-            // We just tapped - the RPC already set the correct score, skip realtime to prevent flicker
-            console.log('⏳ Skipping realtime (we just tapped):', pending.side, timeSinceOptimistic, 'ms ago');
+          // Detect which side(s) changed
+          const hostChanged = payload.new.host_score !== hostScore;
+          const opponentChanged = payload.new.opponent_score !== opponentScore;
+          const changedSide = hostChanged ? 'host' : opponentChanged ? 'opponent' : null;
+          
+          // Only skip if we JUST tapped THIS EXACT SAME SIDE
+          if (timeSinceOptimistic < 500 && pending.side === changedSide && changedSide !== null) {
+            // We just tapped THIS side - the RPC already set the correct score, skip to prevent flicker
+            console.log('⏳ Skipping realtime for OUR tap:', pending.side, timeSinceOptimistic, 'ms ago');
           } else {
-            // We didn't tap recently - this realtime update is from the OTHER person, so APPLY it!
-            console.log('✅ Applying realtime score update from other device');
+            // Either: 
+            // 1. We didn't tap recently, OR
+            // 2. A DIFFERENT side changed (other person tapped), OR  
+            // 3. Both sides changed
+            // In ALL these cases, apply the realtime update!
+            console.log('✅ Applying realtime score update:', { changedSide, pendingSide: pending.side, hostChanged, opponentChanged });
             setHostScore(payload.new.host_score);
             setOpponentScore(payload.new.opponent_score);
           }
