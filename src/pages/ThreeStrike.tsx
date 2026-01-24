@@ -54,6 +54,22 @@ const ThreeStrike = () => {
     { code: 'DE', name: 'Germany', flag: '🇩🇪' },
   ];
 
+  // Country-specific artists for regional trending music
+  const countryArtists: Record<string, string[]> = {
+    'GLOBAL': ['Drake', 'Taylor Swift', 'The Weeknd', 'Bad Bunny', 'BTS', 'Dua Lipa'],
+    'US': ['Drake', 'Kendrick Lamar', 'Taylor Swift', 'The Weeknd', 'SZA', 'Post Malone', 'Travis Scott', 'Morgan Wallen', 'Billie Eilish', 'Doja Cat'],
+    'UK': ['Central Cee', 'Ed Sheeran', 'Dua Lipa', 'Dave', 'Stormzy', 'Little Simz', 'Tion Wayne', 'Headie One', 'Digga D', 'Aitch'],
+    'NG': ['Wizkid', 'Burna Boy', 'Davido', 'Rema', 'Asake', 'Ayra Starr', 'Tems', 'Omah Lay', 'Ckay', 'Fireboy DML', 'Shallipopi', 'Seyi Vibez'],
+    'GH': ['Sarkodie', 'Shatta Wale', 'Stonebwoy', 'Black Sherif', 'King Promise', 'Gyakie', 'Camidoh', 'Kidi', 'Kuami Eugene'],
+    'ZA': ['Tyla', 'Kabza De Small', 'DJ Maphorisa', 'Nasty C', 'Cassper Nyovest', 'Master KG', 'Focalistic', 'Young Stunna'],
+    'KE': ['Sauti Sol', 'Nyashinski', 'Khaligraph Jones', 'Otile Brown', 'Nviiri the Storyteller', 'Bien'],
+    'BR': ['Anitta', 'Ludmilla', 'MC Livinho', 'Luisa Sonza', 'Pedro Sampaio', 'Mc Cabelinho'],
+    'JP': ['YOASOBI', 'Ado', 'King Gnu', 'Fujii Kaze', 'Mrs. GREEN APPLE', 'Kenshi Yonezu', 'Official HIGE DANdism'],
+    'KR': ['BTS', 'BLACKPINK', 'Stray Kids', 'NewJeans', 'aespa', 'IVE', 'LE SSERAFIM', 'SEVENTEEN', 'NCT'],
+    'FR': ['Aya Nakamura', 'Jul', 'Ninho', 'Damso', 'Gazo', 'Tiakola', 'SDM', 'Niska'],
+    'DE': ['Apache 207', 'Luciano', 'RAF Camora', 'Capital Bra', 'Bonez MC', 'Kontra K', 'Bushido'],
+  };
+
   // Fetch user votes from database
   const fetchUserVotes = useCallback(async () => {
     if (!user) return;
@@ -107,50 +123,61 @@ const ThreeStrike = () => {
     try {
       let allTracks: any[] = [];
       
-      // 1. Fetch from Deezer charts first (primary source)
+      // Get country-specific artists
+      const artists = countryArtists[selectedCountry] || countryArtists['GLOBAL'];
+      
+      // 1. Fetch from Deezer using country-specific artist search
       try {
-        const chartUrl = selectedCountry === 'GLOBAL' 
-          ? 'https://api.deezer.com/chart/0/tracks?limit=20'
-          : `https://api.deezer.com/chart/0/tracks?limit=20`;
+        // Search for tracks by country-specific artists
+        const searchPromises = artists.slice(0, 8).map(artist =>
+          fetch(`https://api.deezer.com/search?q=${encodeURIComponent(artist)}&limit=5`)
+            .then(r => r.json())
+            .then(d => d.data || [])
+            .catch(() => [])
+        );
         
-        const deezerResponse = await fetch(chartUrl);
-        const deezerData = await deezerResponse.json();
+        const results = await Promise.all(searchPromises);
+        const deezerTracks = results.flat();
         
-        if (deezerData.data && deezerData.data.length > 0) {
-          allTracks = deezerData.data.map((track: any) => ({
-            id: `deezer-${track.id}`,
-            title: track.title,
-            artist: track.artist.name,
-            artwork: track.album?.cover_medium || track.album?.cover || '/src/assets/card-1.png',
-            preview: track.preview || '',
-            source: 'deezer'
-          }));
+        if (deezerTracks.length > 0) {
+          allTracks = deezerTracks
+            .filter((track: any) => track.preview) // Only tracks with playable preview
+            .map((track: any) => ({
+              id: `deezer-${track.id}`,
+              title: track.title,
+              artist: track.artist.name,
+              artwork: track.album?.cover_medium || track.album?.cover || '/src/assets/card-1.png',
+              preview: track.preview,
+              source: 'deezer'
+            }));
         }
       } catch (deezerError) {
         console.warn('Deezer API error:', deezerError);
       }
       
-      // 2. Fetch from Audius as supplemental source (trending tracks)
-      try {
-        const audiusResponse = await fetch('https://discoveryprovider.audius.co/v1/tracks/trending?limit=15&app_name=Bario');
-        const audiusData = await audiusResponse.json();
-        
-        if (audiusData.data && audiusData.data.length > 0) {
-          const audiusTracks = audiusData.data
-            .filter((track: any) => track.artwork?.['480x480'] || track.artwork?.['150x150'])
-            .map((track: any) => ({
-              id: `audius-${track.id}`,
-              title: track.title,
-              artist: track.user?.name || 'Unknown Artist',
-              artwork: track.artwork?.['480x480'] || track.artwork?.['150x150'] || '/src/assets/card-1.png',
-              preview: track.stream_url || `https://discoveryprovider.audius.co/v1/tracks/${track.id}/stream?app_name=Bario`,
-              source: 'audius'
-            }));
+      // 2. Add Audius tracks for GLOBAL filter only (indie/unsigned artists)
+      if (selectedCountry === 'GLOBAL') {
+        try {
+          const audiusResponse = await fetch('https://discoveryprovider.audius.co/v1/tracks/trending?limit=10&app_name=Bario');
+          const audiusData = await audiusResponse.json();
           
-          allTracks = [...allTracks, ...audiusTracks];
+          if (audiusData.data && audiusData.data.length > 0) {
+            const audiusTracks = audiusData.data
+              .filter((track: any) => track.artwork?.['480x480'] || track.artwork?.['150x150'])
+              .map((track: any) => ({
+                id: `audius-${track.id}`,
+                title: track.title,
+                artist: track.user?.name || 'Unknown Artist',
+                artwork: track.artwork?.['480x480'] || track.artwork?.['150x150'] || '/src/assets/card-1.png',
+                preview: `https://discoveryprovider.audius.co/v1/tracks/${track.id}/stream?app_name=Bario`,
+                source: 'audius'
+              }));
+            
+            allTracks = [...allTracks, ...audiusTracks];
+          }
+        } catch (audiusError) {
+          console.warn('Audius API error:', audiusError);
         }
-      } catch (audiusError) {
-        console.warn('Audius API error:', audiusError);
       }
       
       // Ensure we have tracks
