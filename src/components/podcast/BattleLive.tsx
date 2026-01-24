@@ -360,6 +360,7 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
 
   // Real-time battle status updates - AUTO CLOSE WHEN BATTLE ENDS
   // FIXED: Use refs instead of state to avoid stale closure issues
+  // Real-time battle status updates - SIMPLIFIED for reliable sync across ALL users
   useEffect(() => {
     const channel = supabase
       .channel(`battle-status-${battle.id}`)
@@ -375,46 +376,36 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
           const newHostScore = payload.new.host_score;
           const newOpponentScore = payload.new.opponent_score;
           
-          console.log('🔴 Battle realtime update - DB scores:', newHostScore, newOpponentScore, 
-                      '| Local refs:', hostScoreRef.current, opponentScoreRef.current);
+          console.log('🔴 Battle realtime update - DB:', newHostScore, newOpponentScore);
           
-          // FIXED: Use refs for comparison to avoid stale closure values
+          // Check if we recently made an optimistic update
           const pending = pendingOptimisticRef.current;
           const timeSinceOptimistic = Date.now() - pending.timestamp;
           
-          // Detect which side changed by comparing with CURRENT ref values
-          const hostChanged = newHostScore !== hostScoreRef.current;
-          const opponentChanged = newOpponentScore !== opponentScoreRef.current;
-          
-          // Determine which side the DB update was for
-          let changedSide: 'host' | 'opponent' | null = null;
-          if (hostChanged && !opponentChanged) changedSide = 'host';
-          else if (opponentChanged && !hostChanged) changedSide = 'opponent';
-          
-          // Only skip if we JUST tapped THIS EXACT SAME SIDE within 500ms
-          const shouldSkip = timeSinceOptimistic < 500 && pending.side === changedSide && changedSide !== null;
-          
-          if (shouldSkip) {
-            console.log('⏳ Skipping realtime for OUR tap:', pending.side, timeSinceOptimistic, 'ms ago');
-          } else {
-            // ALWAYS apply the update from database - this is the source of truth for OTHER users' taps
-            console.log('✅ Applying realtime score update from DB:', { newHostScore, newOpponentScore, changedSide });
-            setHostScore(newHostScore);
-            setOpponentScore(newOpponentScore);
+          // Only skip if WE just tapped within the last 500ms
+          // This prevents our own UI from flickering, while ensuring ALL OTHER viewers see the update
+          if (pending.side !== null && timeSinceOptimistic < 500) {
+            console.log('⏳ Skipping realtime - we just tapped:', pending.side, timeSinceOptimistic, 'ms ago');
+            // Still check for winner threshold
+            checkWinnerThreshold(newHostScore, newOpponentScore);
+            return;
           }
+          
+          // ALWAYS apply database values for everyone else
+          console.log('✅ Applying realtime scores:', newHostScore, newOpponentScore);
+          setHostScore(newHostScore);
+          setOpponentScore(newOpponentScore);
           
           // Check for 650 threshold winner
           checkWinnerThreshold(newHostScore, newOpponentScore);
           
+          // Handle status changes
           if (payload.new.status === 'ended') {
             setBattleStatus('ended');
             setWinnerId(payload.new.winner_id);
-            
-            // Disconnect audio and navigate away after showing winner
             disconnectAudio();
             
             if (!payload.new.winner_id) {
-              // No winner means someone left - close immediately
               toast.info('Battle ended');
               setTimeout(() => {
                 onClose();
@@ -430,7 +421,9 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Battle realtime subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
