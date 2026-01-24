@@ -105,31 +105,81 @@ const ThreeStrike = () => {
   const fetchTracks = async () => {
     setLoading(true);
     try {
-      // Fetch from Deezer charts - use country-specific charts when possible
-      const chartUrl = selectedCountry === 'GLOBAL' 
-        ? 'https://api.deezer.com/chart/0/tracks?limit=30'
-        : `https://api.deezer.com/chart/0/tracks?limit=30`;
+      let allTracks: any[] = [];
       
-      const response = await fetch(chartUrl);
-      const data = await response.json();
+      // 1. Fetch from Deezer charts first (primary source)
+      try {
+        const chartUrl = selectedCountry === 'GLOBAL' 
+          ? 'https://api.deezer.com/chart/0/tracks?limit=20'
+          : `https://api.deezer.com/chart/0/tracks?limit=20`;
+        
+        const deezerResponse = await fetch(chartUrl);
+        const deezerData = await deezerResponse.json();
+        
+        if (deezerData.data && deezerData.data.length > 0) {
+          allTracks = deezerData.data.map((track: any) => ({
+            id: `deezer-${track.id}`,
+            title: track.title,
+            artist: track.artist.name,
+            artwork: track.album?.cover_medium || track.album?.cover || '/src/assets/card-1.png',
+            preview: track.preview || '',
+            source: 'deezer'
+          }));
+        }
+      } catch (deezerError) {
+        console.warn('Deezer API error:', deezerError);
+      }
       
-      const trackIds = (data.data || []).map((track: any) => track.id.toString());
+      // 2. Fetch from Audius as supplemental source (trending tracks)
+      try {
+        const audiusResponse = await fetch('https://discoveryprovider.audius.co/v1/tracks/trending?limit=15&app_name=Bario');
+        const audiusData = await audiusResponse.json();
+        
+        if (audiusData.data && audiusData.data.length > 0) {
+          const audiusTracks = audiusData.data
+            .filter((track: any) => track.artwork?.['480x480'] || track.artwork?.['150x150'])
+            .map((track: any) => ({
+              id: `audius-${track.id}`,
+              title: track.title,
+              artist: track.user?.name || 'Unknown Artist',
+              artwork: track.artwork?.['480x480'] || track.artwork?.['150x150'] || '/src/assets/card-1.png',
+              preview: track.stream_url || `https://discoveryprovider.audius.co/v1/tracks/${track.id}/stream?app_name=Bario`,
+              source: 'audius'
+            }));
+          
+          allTracks = [...allTracks, ...audiusTracks];
+        }
+      } catch (audiusError) {
+        console.warn('Audius API error:', audiusError);
+      }
+      
+      // Ensure we have tracks
+      if (allTracks.length === 0) {
+        toast.error('No tracks available');
+        setLoading(false);
+        return;
+      }
+      
+      // Shuffle to mix Deezer and Audius tracks
+      allTracks = allTracks.sort(() => Math.random() - 0.5).slice(0, 30);
+      
+      const trackIds = allTracks.map((track: any) => track.id);
       const voteCounts = await fetchVoteCounts(trackIds);
       
-      const strikeTracks: StrikeTrack[] = (data.data || []).map((track: any, index: number) => {
-        const counts = voteCounts.get(track.id.toString()) || { strikes: 0, saves: 0 };
+      const strikeTracks: StrikeTrack[] = allTracks.map((track: any, index: number) => {
+        const counts = voteCounts.get(track.id) || { strikes: 0, saves: 0 };
         return {
-          id: track.id.toString(),
+          id: track.id,
           title: track.title,
-          artist: track.artist.name,
-          artwork: track.album?.cover_medium || track.album?.cover || '/src/assets/card-1.png',
-          preview: track.preview || '',
+          artist: track.artist,
+          artwork: track.artwork,
+          preview: track.preview,
           strikes: counts.strikes,
           saves: counts.saves,
           position: index + 1,
           isHot: index < 5,
           momentum: counts.saves > counts.strikes ? 'rising' : counts.strikes > counts.saves ? 'falling' : 'stable',
-          genre: ['Hip-Hop', 'Pop', 'R&B', 'Afrobeats', 'Electronic'][Math.floor(Math.random() * 5)],
+          genre: track.source === 'audius' ? 'Indie' : ['Hip-Hop', 'Pop', 'R&B', 'Afrobeats', 'Electronic'][Math.floor(Math.random() * 5)],
           country: selectedCountry,
         };
       });
