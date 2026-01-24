@@ -1,151 +1,191 @@
 
 
-# Fix Plan: Battle Livestreaming Critical Issues
+# Fix Plan: End Stale Battle Session and Use Real Usernames in Comments
 
-## Issues Identified
+## Summary
 
-Based on my investigation, I've found the following problems:
+Two issues need to be fixed:
+1. **Stale Battle Session**: The battle between richieart51 (Richard) and Miracle Yakubu is still showing as "live" on the landing page even though it's no longer active
+2. **Dummy Usernames in Comments**: Comments in battle/podcast sessions show fake names like "CryptoKing", "BeatDrop" instead of real usernames from the profiles table
 
-### Issue 1: Wrong Battle Data Showing (Richard seeing Drayze's Battle)
-**Root Cause**: The BattleReelScroller fetches ALL active battles from the database and displays them in a TikTok-style scroller. When a user opens the battle page, they might see a different battle than expected because:
-- The current battle `80aa06ba` (Miracle vs another user with scores 0-0) exists alongside an old battle `a8996972` (still marked 'active' with opponent_score=1025)
-- The scroller shows ALL active battles, so users may be seeing data from different battles mixed together
+---
 
-**Fix**: 
-1. Add proper battle isolation - each viewer should only see the specific battle they clicked on
-2. End stale battles automatically (battles with scores >650 or stuck in 'active' for >24 hours)
-3. Reset battle scores when initializing state if they come from a different/stale battle
+## Issue 1: End the Stale Battle/Session
 
-### Issue 2: Listeners Cannot Hear Audio in Battle Sessions
-**Root Cause**: The audio connection in BattleLive.tsx only triggers for **participants** (`isParticipant`):
+The database shows:
+- **Session**: `aec38d76` - "Battle: richieart51 vs Miracle Yakubu" (status: live, created 7 hours ago)
+- **Battle**: `80aa06ba` - host_score: 0, opponent_score: 0 (status: active)
+
+This session is showing on the landing page's "Trending Now" section because the status is still 'live'. 
+
+**Database Fix Required**:
+- Mark the podcast session as 'ended'
+- Mark the battle as 'ended'
+
+---
+
+## Issue 2: Use Real Usernames in Comments
+
+**Current Problem**:
+In `src/components/podcast/TwitchComments.tsx` at line 58-61:
 ```typescript
-const shouldConnect = battle.session_id && user && isParticipant; // Line 118
+const getRandomUsername = (userId: string) => {
+  const names = ['CryptoKing', 'MusicLover', 'BeatDrop', 'VibeCheck', 'NightOwl', 'StarGazer', 'WaveRider', 'SoundWave'];
+  const index = userId.charCodeAt(0) % names.length;
+  return names[index] + userId.slice(0, 3);
+};
 ```
 
-Listeners (non-participants) are NOT connecting to audio at all!
+This generates random dummy names based on the user ID instead of fetching real names.
 
-**Fix**: Allow ALL authenticated users to connect to audio as subscribers:
-```typescript
-const shouldConnect = battle.session_id && user; // Remove isParticipant requirement
-```
-
-### Issue 3: Score Counter Not Syncing for Both Creators (One-Sided Updates)
-**Root Cause**: The current realtime subscription logic has a flaw in the conflict resolution:
-- When Miracle taps, she sets `pendingOptimisticRef` and sees her score update
-- The realtime subscription skips applying the update for 500ms (correctly)
-- BUT when Drayze taps on HIS device, Miracle's device has `pendingOptimisticRef` from HER last tap
-- If Drayze's realtime update arrives within 500ms of Miracle's last tap, it gets incorrectly skipped!
-
-**Fix**: Track the `side` being updated in pendingOptimisticRef:
-- When Miracle taps 'host', set `pendingOptimisticRef = { side: 'host', timestamp }`
-- When realtime update arrives, only skip if the update is for the SAME SIDE within 500ms
-- If Drayze taps 'opponent' and that update arrives, apply it because it's a different side
-
-Current code at line 343-346 checks `pending.side !== null` but doesn't verify if the incoming update side matches. Need to compare incoming update delta to determine which side changed.
-
-### Issue 4: Battle Showing 1000, 1025 Scores (Stale Battle Data)
-**Root Cause**: Database shows battle `a8996972` still has `status: 'active'` with `opponent_score: 1025`. This stale battle is being displayed instead of the current one because:
-1. The battle ended but status was never updated to 'ended'
-2. BattleReelScroller picks up ALL active battles
-
-**Fix**: 
-1. When a winner is determined (score >= 650), ensure status is immediately set to 'ended'
-2. Add cleanup logic to mark old battles as 'ended' if they have high scores
+**Solution**:
+1. Create a username cache (Map) to store user profiles
+2. When fetching comments, also fetch the profiles for those users
+3. When receiving realtime comments, fetch the profile for new users
+4. Display `full_name` or `username` from the profiles table
 
 ---
 
 ## Technical Implementation
 
-### File: `src/components/podcast/BattleLive.tsx`
+### File: `src/components/podcast/TwitchComments.tsx`
 
-#### Fix 1: Allow Listeners to Connect to Audio (Line 118)
+#### Changes:
+
+1. **Add a username cache state** to store profile data:
 ```typescript
-// BEFORE:
-const shouldConnect = battle.session_id && user && isParticipant;
-
-// AFTER - Allow ALL users to connect as audio listeners:
-const shouldConnect = battle.session_id && user; // Anyone can listen
+const [userProfiles, setUserProfiles] = useState<Map<string, { name: string; avatar?: string }>>(new Map());
 ```
 
-#### Fix 2: Improve Realtime Score Sync (Lines 336-351)
-The current logic needs to be smarter about which side was updated:
+2. **Update Comment interface** to include the fetched name:
 ```typescript
-// Determine which side changed in this update
-const hostChanged = payload.new.host_score !== hostScore;
-const opponentChanged = payload.new.opponent_score !== opponentScore;
-const changedSide = hostChanged ? 'host' : opponentChanged ? 'opponent' : null;
-
-// Only skip if WE just updated THIS SAME SIDE
-if (timeSinceOptimistic < 500 && pending.side === changedSide) {
-  console.log('⏳ Skipping realtime (we just tapped this side)');
-} else {
-  // Apply update - either from other device OR different side
-  setHostScore(payload.new.host_score);
-  setOpponentScore(payload.new.opponent_score);
+interface Comment {
+  id: string;
+  user_id: string;
+  content: string;
+  is_emoji: boolean;
+  created_at: string;
+  user_name?: string; // Already exists but not used
+  fadeOut?: boolean;
 }
 ```
 
-#### Fix 3: Sync Initial State from Database on Mount
-Add an effect to fetch fresh battle data when component mounts to prevent stale data:
+3. **Modify `fetchRecentComments`** to fetch profiles for comment authors:
 ```typescript
-useEffect(() => {
-  const fetchFreshBattleData = async () => {
-    const { data } = await supabase
-      .from('podcast_battles')
-      .select('host_score, opponent_score, status, winner_id')
-      .eq('id', battle.id)
+const fetchRecentComments = async () => {
+  const { data } = await supabase
+    .from('podcast_comments')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  
+  if (data) {
+    // Fetch profiles for comment authors
+    const userIds = [...new Set(data.map(c => c.user_id))];
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('user_id, full_name, username, avatar_url')
+      .in('user_id', userIds);
+    
+    // Build profile map
+    const profileMap = new Map();
+    profiles?.forEach(p => {
+      profileMap.set(p.user_id, {
+        name: p.full_name || p.username || 'Listener',
+        avatar: p.avatar_url
+      });
+    });
+    setUserProfiles(prev => new Map([...prev, ...profileMap]));
+    
+    // Enrich comments with user names
+    const enrichedComments = data.map(c => ({
+      ...c,
+      user_name: profileMap.get(c.user_id)?.name
+    }));
+    
+    setComments(enrichedComments.reverse());
+  }
+};
+```
+
+4. **Update realtime handler** to fetch profile for new commenters:
+```typescript
+if (payload.eventType === 'INSERT') {
+  const newComment = payload.new as Comment;
+  
+  // Fetch profile if not cached
+  if (!userProfiles.has(newComment.user_id)) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('user_id, full_name, username, avatar_url')
+      .eq('user_id', newComment.user_id)
       .single();
     
-    if (data) {
-      setHostScore(data.host_score);
-      setOpponentScore(data.opponent_score);
-      setBattleStatus(data.status);
-      if (data.winner_id) setWinnerId(data.winner_id);
+    if (profile) {
+      setUserProfiles(prev => new Map([...prev, 
+        [profile.user_id, { name: profile.full_name || profile.username || 'Listener', avatar: profile.avatar_url }]
+      ]));
+      newComment.user_name = profile.full_name || profile.username || 'Listener';
     }
-  };
+  } else {
+    newComment.user_name = userProfiles.get(newComment.user_id)?.name;
+  }
   
-  fetchFreshBattleData();
-}, [battle.id]);
+  setComments(prev => [...prev.slice(-99), newComment]);
+}
 ```
 
-### File: Database Cleanup
+5. **Update the username display** to use real names (line 314):
+```typescript
+// BEFORE:
+{getRandomUsername(comment.user_id)}
 
-Mark stale battles as ended:
+// AFTER:
+{comment.user_name || userProfiles.get(comment.user_id)?.name || 'Listener'}
+```
+
+6. **Update `handleReply`** function to use real names:
+```typescript
+const handleReply = (userId: string) => {
+  const profile = userProfiles.get(userId);
+  const username = profile?.name || 'User';
+  setNewComment(`@${username} `);
+};
+```
+
+---
+
+## Database Cleanup
+
+Mark the stale session and battle as ended:
+
 ```sql
+-- End the stale podcast session
+UPDATE podcast_sessions 
+SET status = 'ended', ended_at = now() 
+WHERE id = 'aec38d76-3fae-4357-9572-c8839ca99a29';
+
+-- End the stale battle
 UPDATE podcast_battles 
 SET status = 'ended', ended_at = now() 
-WHERE status = 'active' 
-  AND (host_score >= 650 OR opponent_score >= 650 OR created_at < now() - interval '24 hours');
+WHERE id = '80aa06ba-63e6-440d-b4de-b673cd888a18';
 ```
 
 ---
 
-## Summary of Changes
+## Files to Modify
 
-| File | Change | Purpose |
-|------|--------|---------|
-| `src/components/podcast/BattleLive.tsx` | Allow non-participant audio connection | Listeners can hear battle audio |
-| `src/components/podcast/BattleLive.tsx` | Improve realtime sync logic | Both creators see score updates |
-| `src/components/podcast/BattleLive.tsx` | Add fresh data fetch on mount | Prevent stale battle data display |
-| Database | Cleanup stale active battles | Remove old battles showing wrong scores |
+| File | Change |
+|------|--------|
+| `src/components/podcast/TwitchComments.tsx` | Fetch real usernames from profiles table instead of using dummy names |
+| Database | End stale battle and session |
 
 ---
 
-## Testing After Implementation
+## Expected Results
 
-1. **Listener Audio Test**: 
-   - Have 2 creators start a battle
-   - Have a 3rd user (listener) open the battle
-   - Verify listener can hear both creators' audio
-
-2. **Score Sync Test**:
-   - Have Miracle double-tap on host side
-   - Verify Drayze sees Miracle's score update
-   - Have Drayze double-tap on opponent side
-   - Verify Miracle sees Drayze's score update
-
-3. **Correct Battle Display**:
-   - Open a new battle between two users
-   - Verify scores start at 0-0, not 1025 from old battles
-   - Verify correct creator names are displayed
+After implementation:
+1. The landing page will no longer show the old Miracle vs Richard battle in "Trending Now"
+2. Comments in battle/podcast sessions will display real usernames like "Miracle Yakubu", "Holar Tech", "richieart51" instead of "CryptoKing5a2", "BeatDrop69f"
 
