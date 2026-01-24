@@ -55,12 +55,6 @@ const GIFS = [
   '🤖', '👻', '💅', '🦾', '🧠', '👁️', '🫀', '🫁',
 ];
 
-const getRandomUsername = (userId: string) => {
-  const names = ['CryptoKing', 'MusicLover', 'BeatDrop', 'VibeCheck', 'NightOwl', 'StarGazer', 'WaveRider', 'SoundWave'];
-  const index = userId.charCodeAt(0) % names.length;
-  return names[index] + userId.slice(0, 3);
-};
-
 const getUserColor = (userId: string) => {
   const colors = ['text-emerald-400', 'text-pink-400', 'text-blue-400', 'text-yellow-400', 'text-cyan-400', 'text-orange-400'];
   const index = userId.charCodeAt(0) % colors.length;
@@ -82,6 +76,7 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
   const navigate = useNavigate();
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [userProfiles, setUserProfiles] = useState<Map<string, { name: string; avatar?: string }>>(new Map());
   const [showEmojis, setShowEmojis] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showParticipantModal, setShowParticipantModal] = useState(false);
@@ -105,9 +100,32 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
         .order('created_at', { ascending: false })
         .limit(50);
       
-      if (data) {
-        // Reverse to show oldest first, keep all messages visible
-        setComments(data.reverse() as Comment[]);
+      if (data && data.length > 0) {
+        // Fetch profiles for comment authors
+        const userIds = [...new Set(data.map(c => c.user_id))];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, username, avatar_url')
+          .in('user_id', userIds);
+        
+        // Build profile map
+        const profileMap = new Map<string, { name: string; avatar?: string }>();
+        profiles?.forEach(p => {
+          profileMap.set(p.user_id, {
+            name: p.full_name || p.username || 'Listener',
+            avatar: p.avatar_url || undefined
+          });
+        });
+        setUserProfiles(prev => new Map([...prev, ...profileMap]));
+        
+        // Enrich comments with user names
+        const enrichedComments = data.map(c => ({
+          ...c,
+          user_name: profileMap.get(c.user_id)?.name || 'Listener'
+        }));
+        
+        // Reverse to show oldest first
+        setComments(enrichedComments.reverse() as Comment[]);
       }
     };
     
@@ -135,24 +153,57 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
             const newComment = payload.new as Comment;
             console.log('💬 New comment received by all users:', newComment.content, 'from:', newComment.user_id);
             
-            // Add to comments - remove local duplicate if exists
-            setComments(prev => {
-              // Check if this comment already exists by ID
-              if (prev.some(c => c.id === newComment.id)) {
-                console.log('💬 Duplicate comment, skipping');
-                return prev;
+            // Fetch profile for new commenter if not cached
+            const fetchAndAddComment = async () => {
+              let userName = 'Listener';
+              
+              // Check if profile is cached
+              setUserProfiles(currentProfiles => {
+                if (currentProfiles.has(newComment.user_id)) {
+                  userName = currentProfiles.get(newComment.user_id)?.name || 'Listener';
+                }
+                return currentProfiles;
+              });
+              
+              // If not cached, fetch from database
+              if (userName === 'Listener') {
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('user_id, full_name, username, avatar_url')
+                  .eq('user_id', newComment.user_id)
+                  .single();
+                
+                if (profile) {
+                  userName = profile.full_name || profile.username || 'Listener';
+                  setUserProfiles(prev => new Map([...prev, 
+                    [profile.user_id, { name: userName, avatar: profile.avatar_url || undefined }]
+                  ]));
+                }
               }
-              // Remove any local version of this comment (matching user and content)
-              const filtered = prev.filter(c => 
-                !(c.id.startsWith('local-') && 
-                  c.user_id === newComment.user_id && 
-                  c.content === newComment.content)
-              );
-              // Keep last 100 messages
-              const updated = [...filtered.slice(-99), newComment];
-              console.log('💬 Comments updated, total:', updated.length);
-              return updated;
-            });
+              
+              // Add comment with user name
+              const enrichedComment = { ...newComment, user_name: userName };
+              
+              setComments(prev => {
+                // Check if this comment already exists by ID
+                if (prev.some(c => c.id === enrichedComment.id)) {
+                  console.log('💬 Duplicate comment, skipping');
+                  return prev;
+                }
+                // Remove any local version of this comment (matching user and content)
+                const filtered = prev.filter(c => 
+                  !(c.id.startsWith('local-') && 
+                    c.user_id === enrichedComment.user_id && 
+                    c.content === enrichedComment.content)
+                );
+                // Keep last 100 messages
+                const updated = [...filtered.slice(-99), enrichedComment];
+                console.log('💬 Comments updated, total:', updated.length);
+                return updated;
+              });
+            };
+            
+            fetchAndAddComment();
           }
         }
       )
@@ -284,8 +335,9 @@ const sendComment = async (content: string, isEmoji = false) => {
     sendComment(newComment);
   };
 
-  const handleReply = (userId: string) => {
-    const username = getRandomUsername(userId);
+  const handleReply = (userId: string, userName?: string) => {
+    const profile = userProfiles.get(userId);
+    const username = userName || profile?.name || 'User';
     setNewComment(`@${username} `);
   };
 
@@ -311,14 +363,14 @@ return (
                     className={`text-xs font-bold ${getUserColor(comment.user_id)} cursor-pointer hover:underline`}
                     onClick={() => handleUserClick(comment.user_id)}
                   >
-                    {getRandomUsername(comment.user_id)}:
+                    {comment.user_name || userProfiles.get(comment.user_id)?.name || 'Listener'}:
                   </span>
                   <span className="text-xs text-white ml-1.5 break-words">
                     {comment.content}
                   </span>
                 </div>
                 <button
-                  onClick={() => handleReply(comment.user_id)}
+                  onClick={() => handleReply(comment.user_id, comment.user_name)}
                   className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
                   title="Reply"
                 >
