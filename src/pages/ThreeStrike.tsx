@@ -233,16 +233,38 @@ const ThreeStrike = () => {
 
   const handlePlay = (track: StrikeTrack) => {
     if (!track.preview) {
-      toast.error('No preview available');
+      toast.error('No preview available for this track');
       return;
     }
+    
     if (currentTrack?.id === track.id && isPlaying) {
       audioRef.current?.pause();
       setIsPlaying(false);
     } else {
       if (audioRef.current) {
+        // Set up error handler before playing
+        audioRef.current.onerror = () => {
+          console.error('Audio playback error for:', track.title);
+          toast.error('Unable to play this track. Try another one.');
+          setIsPlaying(false);
+          setCurrentTrack(null);
+        };
+        
+        audioRef.current.oncanplay = () => {
+          console.log('Audio ready to play:', track.title);
+        };
+        
         audioRef.current.src = track.preview;
-        audioRef.current.play().catch(() => toast.error('Unable to play'));
+        audioRef.current.play()
+          .then(() => {
+            console.log('Playing:', track.title);
+          })
+          .catch((err) => {
+            console.error('Playback error:', err);
+            toast.error('Unable to play. Try another track.');
+            setIsPlaying(false);
+            setCurrentTrack(null);
+          });
       }
       setCurrentTrack(track);
       setIsPlaying(true);
