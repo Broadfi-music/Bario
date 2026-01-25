@@ -430,6 +430,51 @@ const BattleLive = ({ battle, onClose }: BattleLiveProps) => {
     };
   }, [battle.id, disconnectAudio, navigate, onClose, checkWinnerThreshold]);
 
+  // POLLING FALLBACK: Fetch scores every 2 seconds to ensure sync across ALL devices
+  // This guarantees opponents see each other's scores even if realtime has issues
+  useEffect(() => {
+    if (battleStatus === 'ended') return;
+    
+    const pollScores = async () => {
+      const { data, error } = await supabase
+        .from('podcast_battles')
+        .select('host_score, opponent_score, status, winner_id')
+        .eq('id', battle.id)
+        .single();
+      
+      if (error) {
+        console.warn('Polling error:', error);
+        return;
+      }
+      
+      if (data) {
+        // Only update if we haven't recently made an optimistic update (within 1 second)
+        const pending = pendingOptimisticRef.current;
+        const timeSinceOptimistic = Date.now() - pending.timestamp;
+        
+        if (pending.side === null || timeSinceOptimistic > 1000) {
+          console.log('📊 Polling sync:', data.host_score, data.opponent_score);
+          setHostScore(data.host_score);
+          setOpponentScore(data.opponent_score);
+        }
+        
+        // Check for winner threshold
+        checkWinnerThreshold(data.host_score, data.opponent_score);
+        
+        // Handle ended battle
+        if (data.status === 'ended') {
+          setBattleStatus('ended');
+          setWinnerId(data.winner_id);
+        }
+      }
+    };
+    
+    // Poll every 2 seconds as fallback for realtime
+    const pollInterval = setInterval(pollScores, 2000);
+    
+    return () => clearInterval(pollInterval);
+  }, [battle.id, battleStatus, checkWinnerThreshold]);
+
   // Fetch top gifters
   const fetchTopGifters = useCallback(async () => {
     if (!battle.session_id) return;

@@ -34,6 +34,9 @@ All API endpoints are deployed as serverless edge functions. Base URL: `https://
 | `/spotify-auth` | POST | Spotify OAuth authentication flow | No |
 | `/spotify-search` | POST | Search Spotify catalog | No |
 | `/get-track` | GET | Get single track details | No |
+| `/gift-transaction` | POST | Process virtual gifts and credit creator earnings | Yes |
+| `/paystack-payment` | POST | Handle coin purchases via Paystack | Yes |
+| `/process-withdrawal` | POST | Process creator withdrawal requests | Yes |
 
 ### Authentication
 
@@ -55,18 +58,23 @@ curl -X POST 'https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/agora-token'
   -H 'Authorization: Bearer YOUR_JWT_TOKEN' \
   -H 'Content-Type: application/json' \
   -d '{
-    "channelName": "battle-session-123",
+    "sessionId": "session-uuid",
     "userId": "user-uuid",
-    "role": "publisher"
+    "userName": "John",
+    "isHost": true
   }'
 ```
 
 **Response:**
 ```json
 {
-  "token": "006xxxx...",
+  "appId": "xxx...",
+  "channelName": "podcast-session-uuid",
+  "token": "007xxx...",
   "uid": 12345,
-  "channel": "battle-session-123"
+  "canPublish": true,
+  "speakerSlotsFull": false,
+  "maxSpeakers": 100
 }
 ```
 
@@ -171,6 +179,33 @@ curl -X POST 'https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/podcast-epis
   }'
 ```
 
+### 7. Gift Transaction
+
+Process virtual gifts during streams.
+
+```bash
+curl -X POST 'https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/gift-transaction' \
+  -H 'Authorization: Bearer YOUR_JWT_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "sessionId": "session-uuid",
+    "recipientId": "creator-uuid",
+    "giftType": "rose",
+    "giftCount": 10,
+    "battleId": "battle-uuid"
+  }'
+```
+
+**Gift Types & Values:**
+| Gift Type | Cost (Coins) | Creator Earning (USD) |
+|-----------|--------------|----------------------|
+| Rose | 10 | $0.0128 |
+| Heart | 50 | $0.064 |
+| Star | 100 | $0.128 |
+| Fire | 200 | $0.256 |
+| Diamond | 500 | $0.64 |
+| Crown | 5000 | $6.40 |
+
 ---
 
 ## Database Schema
@@ -189,6 +224,11 @@ curl -X POST 'https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/podcast-epis
 | `user_uploads` | User-uploaded music tracks |
 | `heatmap_tracks` | Global trending music data |
 | `follows` | User follow relationships |
+| `user_coins` | User coin balances |
+| `coin_transactions` | Coin purchase/spend history |
+| `creator_earnings` | Creator earnings from gifts |
+| `withdrawal_requests` | Creator withdrawal requests |
+| `strike_votes` | Three Strike voting data |
 
 ---
 
@@ -197,9 +237,17 @@ curl -X POST 'https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/podcast-epis
 The platform uses Supabase Realtime for:
 
 - **Live Chat**: Messages broadcast to all viewers instantly
-- **Battle Scores**: Real-time score updates during battles
+- **Battle Scores**: Real-time score updates during battles (with 500ms conflict resolution)
 - **Session Updates**: Live/ended status changes
 - **Gift Animations**: Instant gift notifications
+
+### Battle Score Sync
+
+Battle scores use a combination of:
+1. **Realtime Subscriptions**: Immediate updates via WebSocket
+2. **Polling Fallback**: 2-second interval sync to ensure all devices stay in sync
+3. **Optimistic Updates**: Tapper sees score immediately with 500ms protection window
+4. **Winner Threshold**: Automatic win celebration at 650 points
 
 ### Subscribing to Real-time Updates
 
@@ -220,13 +268,48 @@ const channel = supabase
     (payload) => console.log('New message:', payload)
   )
   .subscribe();
+
+// Subscribe to battle score updates
+const battleChannel = supabase
+  .channel('battle-scores')
+  .on(
+    'postgres_changes',
+    {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'podcast_battles',
+      filter: 'id=eq.battle-uuid'
+    },
+    (payload) => {
+      console.log('Score update:', payload.new.host_score, payload.new.opponent_score);
+    }
+  )
+  .subscribe();
 ```
 
 ---
 
-## 
+## Three Strike Voting
 
+A music discovery game where users vote to "strike" or "save" tracks:
 
+- **Strike**: Mark a track you don't like
+- **Save**: Mark a track you love
+- **3 Strikes = Eliminated**: Tracks with 3+ strikes are eliminated
+- **Country Filter**: View trending music by country (Nigeria, USA, UK, etc.)
+
+### Country-Specific Music
+
+Each country filter shows music from regional artists:
+- **Nigeria**: Wizkid, Burna Boy, Davido, Rema, Asake
+- **USA**: Drake, Taylor Swift, Kendrick Lamar, The Weeknd
+- **UK**: Central Cee, Ed Sheeran, Dave, Stormzy
+- **South Korea**: BTS, BLACKPINK, NewJeans, Stray Kids
+- And more...
+
+---
+
+## Development Setup
 
 **Use your preferred IDE**
 
@@ -264,7 +347,7 @@ npm run dev
 - Click on "New codespace" to launch a new Codespace environment.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
 
-## What technologies are used for this project?
+## Technologies
 
 This project is built with:
 
@@ -276,3 +359,14 @@ This project is built with:
 - Supabase (Database, Auth, Edge Functions, Realtime)
 - Agora (Real-time audio)
 
+## Environment Variables
+
+The following environment variables are required:
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon key |
+| `AGORA_APP_ID` | Agora App ID (edge function secret) |
+| `AGORA_APP_CERTIFICATE` | Agora App Certificate (edge function secret) |
+| `PAYSTACK_SECRET_KEY` | Paystack secret key for payments (edge function secret) |

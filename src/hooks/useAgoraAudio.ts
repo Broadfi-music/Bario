@@ -419,8 +419,13 @@ export const useAgoraAudio = ({
           console.warn('Could not access microphone. Please check permissions.');
         }
       } else {
-        console.log('📻 Joining as listener (no publish rights)');
-        setIsMuted(true);
+        // SUBSCRIBER MODE - no microphone needed
+        // Listeners just hear published audio without needing mic permission
+        console.log('📻 Joining as listener (subscriber mode - no mic needed)');
+        setIsMuted(true); // Permanently muted since can't publish
+        // Don't create or publish any audio track
+        // Just listen to remote users' audio
+        toast.info('Listening to stream...');
       }
 
       setIsConnected(true);

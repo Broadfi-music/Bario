@@ -314,10 +314,10 @@ serve(async (req) => {
     console.log("App ID:", AGORA_APP_ID.substring(0, 8) + "...");
     console.log("Certificate length:", AGORA_APP_CERTIFICATE.length);
 
-    // CRITICAL FIX: Give ALL authenticated users PUBLISHER rights
-    // Everyone can speak - they control their own mic (mute/unmute)
-    // No promotion needed - everyone joins with mic capability
-    const canPublish = true; // ALL users get publisher rights
+    // FIXED: Only give publisher rights to hosts/participants (speakers)
+    // Listeners should be subscribers only - no microphone needed
+    // This prevents listeners from being asked for microphone permission
+    const canPublish = isHost; // Only hosts/participants (isHost=true) can publish
     const speakerSlotsFull = false;
     const MAX_SPEAKERS = 100; // No practical limit now
 
