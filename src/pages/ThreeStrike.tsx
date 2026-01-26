@@ -121,42 +121,41 @@ const ThreeStrike = () => {
   const fetchTracks = async () => {
     setLoading(true);
     try {
-      let allTracks: any[] = [];
-      
-      // Get country-specific artists
-      const artists = countryArtists[selectedCountry] || countryArtists['GLOBAL'];
-      
-      // 1. Fetch from Deezer using country-specific artist search
-      try {
-        // Search for tracks by country-specific artists
-        const searchPromises = artists.slice(0, 8).map(artist =>
-          fetch(`https://api.deezer.com/search?q=${encodeURIComponent(artist)}&limit=5`)
-            .then(r => r.json())
-            .then(d => d.data || [])
-            .catch(() => [])
-        );
-        
-        const results = await Promise.all(searchPromises);
-        const deezerTracks = results.flat();
-        
-        if (deezerTracks.length > 0) {
-          allTracks = deezerTracks
-            .filter((track: any) => track.preview) // Only tracks with playable preview
-            .map((track: any) => ({
-              id: `deezer-${track.id}`,
-              title: track.title,
-              artist: track.artist.name,
-              artwork: track.album?.cover_medium || track.album?.cover || '/src/assets/card-1.png',
-              preview: track.preview,
-              source: 'deezer'
-            }));
+      // Use the heatmap-tracks edge function for reliable, CORS-free API calls
+      const { data, error } = await supabase.functions.invoke('heatmap-tracks', {
+        body: { 
+          country: selectedCountry,
+          limit: 40,
+          includeUserUploads: true
         }
-      } catch (deezerError) {
-        console.warn('Deezer API error:', deezerError);
+      });
+      
+      if (error) {
+        console.error('Edge function error:', error);
+        toast.error('Failed to load tracks from server');
+        setLoading(false);
+        return;
       }
       
-      // 2. Add Audius tracks for GLOBAL filter only (indie/unsigned artists)
-      if (selectedCountry === 'GLOBAL') {
+      let allTracks: any[] = [];
+      
+      // Map tracks from edge function response
+      if (data?.tracks && data.tracks.length > 0) {
+        allTracks = data.tracks
+          .filter((track: any) => track.previewUrl || track.preview_url)
+          .map((track: any) => ({
+            id: track.id || `track-${Math.random().toString(36).substr(2, 9)}`,
+            title: track.title,
+            artist: track.artist || track.artist_name,
+            artwork: track.artwork || track.cover_image_url || '/src/assets/card-1.png',
+            preview: track.previewUrl || track.preview_url,
+            source: track.source || 'deezer',
+            genre: track.genre || 'Pop'
+          }));
+      }
+      
+      // Fallback: Add Audius tracks for GLOBAL filter if edge function returns few tracks
+      if (selectedCountry === 'GLOBAL' && allTracks.length < 10) {
         try {
           const audiusResponse = await fetch('https://discoveryprovider.audius.co/v1/tracks/trending?limit=10&app_name=Bario');
           const audiusData = await audiusResponse.json();
@@ -170,24 +169,25 @@ const ThreeStrike = () => {
                 artist: track.user?.name || 'Unknown Artist',
                 artwork: track.artwork?.['480x480'] || track.artwork?.['150x150'] || '/src/assets/card-1.png',
                 preview: `https://discoveryprovider.audius.co/v1/tracks/${track.id}/stream?app_name=Bario`,
-                source: 'audius'
+                source: 'audius',
+                genre: 'Indie'
               }));
             
             allTracks = [...allTracks, ...audiusTracks];
           }
         } catch (audiusError) {
-          console.warn('Audius API error:', audiusError);
+          console.warn('Audius API fallback error:', audiusError);
         }
       }
       
       // Ensure we have tracks
       if (allTracks.length === 0) {
-        toast.error('No tracks available');
+        toast.error('No playable tracks available');
         setLoading(false);
         return;
       }
       
-      // Shuffle to mix Deezer and Audius tracks
+      // Shuffle and limit
       allTracks = allTracks.sort(() => Math.random() - 0.5).slice(0, 30);
       
       const trackIds = allTracks.map((track: any) => track.id);
@@ -206,12 +206,12 @@ const ThreeStrike = () => {
           position: index + 1,
           isHot: index < 5,
           momentum: counts.saves > counts.strikes ? 'rising' : counts.strikes > counts.saves ? 'falling' : 'stable',
-          genre: track.source === 'audius' ? 'Indie' : ['Hip-Hop', 'Pop', 'R&B', 'Afrobeats', 'Electronic'][Math.floor(Math.random() * 5)],
+          genre: track.genre || 'Pop',
           country: selectedCountry,
         };
       });
       
-      // Sort by saves - strikes to show most popular first
+      // Sort by popularity (saves - strikes)
       strikeTracks.sort((a, b) => (b.saves - b.strikes) - (a.saves - a.strikes));
       
       setTracks(strikeTracks);
@@ -397,13 +397,13 @@ const ThreeStrike = () => {
             </Button>
             {user ? (
               <Link to="/dashboard">
-                <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">
+                <Button size="sm" className="bg-black text-white hover:bg-black/90 text-xs">
                   Dashboard
                 </Button>
               </Link>
             ) : (
               <Link to="/auth">
-                <Button size="sm" className="bg-orange-500 hover:bg-orange-600 text-white text-xs">
+                <Button size="sm" className="bg-black text-white hover:bg-black/90 text-xs">
                   Sign In
                 </Button>
               </Link>
