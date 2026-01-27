@@ -197,38 +197,51 @@ export function useHeatmapTracks(limit = 99) {
     };
   }, [fetchTracks]);
 
-  // Realtime simulation for UI updates
+  // Realtime simulation for UI updates - faster listener updates
   useEffect(() => {
     if (tracks.length === 0) return;
 
     const interval = setInterval(() => {
       setTracks(prev => {
         const updated = prev.map(track => {
-          const change = (Math.random() - 0.5) * 3;
-          const newChange24h = parseFloat((track.metrics.change24h + change * 0.05).toFixed(1));
-          const newListeners = track.metrics.lastfmListeners + Math.floor((Math.random() - 0.4) * 1000);
+          const change = (Math.random() - 0.5) * 4;
+          const newChange24h = parseFloat((track.metrics.change24h + change * 0.08).toFixed(1));
+          // More dramatic listener changes for visible activity
+          const listenerChange = Math.floor((Math.random() - 0.3) * 2000);
+          const newListeners = track.metrics.lastfmListeners + listenerChange;
           return {
             ...track,
             metrics: {
               ...track.metrics,
               change24h: newChange24h,
               lastfmListeners: Math.max(0, newListeners),
-              attentionScore: Math.floor(track.metrics.attentionScore + (Math.random() - 0.5) * 500)
+              attentionScore: Math.floor(track.metrics.attentionScore + (Math.random() - 0.5) * 800)
             },
             trend: newChange24h > 0 ? 'up' as const : newChange24h < 0 ? 'down' as const : 'stable' as const,
             momentum: newChange24h > 10 ? 'surging' as const : newChange24h < -5 ? 'cooling' as const : 'stable' as const
           };
         });
         
+        // Re-sort by attention score for dynamic ranking
         updated.sort((a, b) => b.metrics.attentionScore - a.metrics.attentionScore);
         updated.forEach((track, i) => track.rank = i + 1);
         
         return updated;
       });
-    }, 3000);
+    }, 2000); // Update every 2 seconds for more activity
 
     return () => clearInterval(interval);
   }, [tracks.length]);
+
+  // Auto-refresh tracks every 60 seconds for fresh music
+  useEffect(() => {
+    const refreshInterval = setInterval(() => {
+      console.log('Auto-refreshing heatmap tracks for fresh content...');
+      fetchTracks(undefined, undefined, currentCountry);
+    }, 60000); // Refresh every minute
+
+    return () => clearInterval(refreshInterval);
+  }, [fetchTracks, currentCountry]);
 
   return { tracks, genres, summary, loading, error, refetch, searchTracks, filterByGenre, filterByCountry };
 }

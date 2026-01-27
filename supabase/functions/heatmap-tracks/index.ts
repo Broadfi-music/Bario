@@ -135,9 +135,13 @@ async function getDeezerCountryChart(countryCode: string, limit: number = 50): P
   
   if (artists && artists.length > 0) {
     try {
-      // Search for multiple artists in parallel
-      const searches = artists.slice(0, 8).map(artist => 
-        fetch(`https://api.deezer.com/search?q=${encodeURIComponent(artist)}&limit=6`)
+      // Randomly select different artists each time for variety
+      const shuffledArtists = [...artists].sort(() => Math.random() - 0.5);
+      const selectedArtists = shuffledArtists.slice(0, 10);
+      
+      // Search for multiple artists in parallel with varied limits
+      const searches = selectedArtists.map(artist => 
+        fetch(`https://api.deezer.com/search?q=${encodeURIComponent(artist)}&limit=${Math.floor(Math.random() * 5) + 4}`)
           .then(r => r.json())
           .then(d => d.data || [])
           .catch(() => [])
@@ -146,26 +150,35 @@ async function getDeezerCountryChart(countryCode: string, limit: number = 50): P
       const results = await Promise.all(searches);
       const allTracks = results.flat();
       
-      console.log(`Deezer country ${countryCode}: Found ${allTracks.length} tracks from ${artists.slice(0, 8).join(', ')}`);
+      console.log(`Deezer country ${countryCode}: Found ${allTracks.length} tracks from ${selectedArtists.join(', ')}`);
       
       if (allTracks.length > 0) {
-        // Shuffle and return to get variety
-        return allTracks.sort(() => Math.random() - 0.5).slice(0, limit);
+        // Heavy shuffle for maximum variety on each refresh
+        const shuffled = allTracks
+          .sort(() => Math.random() - 0.5)
+          .sort(() => Math.random() - 0.5)
+          .slice(0, limit);
+        return shuffled;
       }
     } catch (e) {
       console.error(`Deezer country search error for ${countryCode}:`, e);
     }
   }
   
-  // Fallback to global chart
-  return getDeezerGlobalChart(limit);
+  // Fallback to global chart with shuffle
+  const globalTracks = await getDeezerGlobalChart(limit * 2);
+  return globalTracks.sort(() => Math.random() - 0.5).slice(0, limit);
 }
 
 async function getDeezerGlobalChart(limit: number = 50): Promise<any[]> {
   try {
-    const response = await fetch(`https://api.deezer.com/chart/0/tracks?limit=${limit}`);
+    // Fetch more tracks and shuffle for variety
+    const fetchLimit = Math.min(100, limit * 2);
+    const response = await fetch(`https://api.deezer.com/chart/0/tracks?limit=${fetchLimit}`);
     const data = await response.json();
-    return data.data || [];
+    const tracks = data.data || [];
+    // Return shuffled for fresh experience each time
+    return tracks.sort(() => Math.random() - 0.5).slice(0, limit);
   } catch (e) {
     console.error('Deezer chart error:', e);
     return [];

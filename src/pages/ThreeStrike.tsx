@@ -121,38 +121,52 @@ const ThreeStrike = () => {
   const fetchTracks = async () => {
     setLoading(true);
     try {
-      // Use the heatmap-tracks edge function for reliable, CORS-free API calls
-      const { data, error } = await supabase.functions.invoke('heatmap-tracks', {
-        body: { 
-          country: selectedCountry,
-          limit: 40,
-          includeUserUploads: true
-        }
+      // Build URL with query parameters - the edge function uses GET params not body
+      const params = new URLSearchParams({
+        country: selectedCountry,
+        limit: '50'
       });
       
-      if (error) {
-        console.error('Edge function error:', error);
-        toast.error('Failed to load tracks from server');
+      // Add timestamp to bust cache and get fresh data
+      params.append('_t', Date.now().toString());
+      
+      const response = await fetch(
+        `https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/heatmap-tracks?${params}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmJvaGhzeGxyZWZrb3VibWVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODY3NjAsImV4cCI6MjA4MDQ2Mjc2MH0.1Ms3xhguJjQ-bbPronddzgO-XCYcTZTkcWS-uUMg1q4'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(`ThreeStrike: Fetched ${data?.tracks?.length || 0} tracks for ${selectedCountry}`);
+      
+      if (!data?.tracks || data.tracks.length === 0) {
+        toast.error('No tracks available for this region');
         setLoading(false);
         return;
       }
       
-      let allTracks: any[] = [];
-      
-      // Map tracks from edge function response
-      if (data?.tracks && data.tracks.length > 0) {
-        allTracks = data.tracks
-          .filter((track: any) => track.previewUrl || track.preview_url)
-          .map((track: any) => ({
-            id: track.id || `track-${Math.random().toString(36).substr(2, 9)}`,
-            title: track.title,
-            artist: track.artist || track.artist_name,
-            artwork: track.artwork || track.cover_image_url || '/src/assets/card-1.png',
-            preview: track.previewUrl || track.preview_url,
-            source: track.source || 'deezer',
-            genre: track.genre || 'Pop'
-          }));
-      }
+      // Filter tracks with playable previews and shuffle for variety
+      let allTracks = data.tracks
+        .filter((track: any) => track.previewUrl || track.preview_url)
+        .sort(() => Math.random() - 0.5) // Shuffle for variety each time
+        .map((track: any) => ({
+          id: track.id || `track-${Math.random().toString(36).substr(2, 9)}`,
+          title: track.title,
+          artist: track.artist || track.artist_name,
+          artwork: track.artwork || track.cover_image_url || '/src/assets/card-1.png',
+          preview: track.previewUrl || track.preview_url,
+          source: track.source || 'deezer',
+          genre: track.genre || 'Pop'
+        }));
       
       // Fallback: Add Audius tracks for GLOBAL filter if edge function returns few tracks
       if (selectedCountry === 'GLOBAL' && allTracks.length < 10) {
