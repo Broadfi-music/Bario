@@ -123,6 +123,8 @@ export function useHeatmapTracks(limit = 99) {
         params.append('country', country);
         setCurrentCountry(country);
       }
+      // Add cache-busting timestamp to force fresh data every request
+      params.append('_t', Date.now().toString());
       
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/heatmap-tracks?${params}`,
@@ -130,7 +132,8 @@ export function useHeatmapTracks(limit = 99) {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'apikey': API_KEY
+            'apikey': API_KEY,
+            'Cache-Control': 'no-cache, no-store'
           }
         }
       );
@@ -141,12 +144,16 @@ export function useHeatmapTracks(limit = 99) {
 
       const data = await response.json();
       if (data?.tracks) {
-        setTracks(data.tracks);
+        // Shuffle tracks on the frontend too for extra variety
+        const shuffledTracks = data.tracks.sort(() => Math.random() - 0.5);
+        setTracks(shuffledTracks);
         setSummary(data.summary || summary);
         
         // Extract unique genres
-        const uniqueGenres = [...new Set(data.tracks.map((t: HeatmapTrack) => t.genre).filter(Boolean))];
+        const uniqueGenres = [...new Set(shuffledTracks.map((t: HeatmapTrack) => t.genre).filter(Boolean))];
         setGenres(uniqueGenres as string[]);
+        
+        console.log(`Heatmap refreshed: ${shuffledTracks.length} tracks at ${new Date().toLocaleTimeString()}`);
       }
     } catch (err) {
       console.error('Error fetching heatmap tracks:', err);
@@ -233,12 +240,14 @@ export function useHeatmapTracks(limit = 99) {
     return () => clearInterval(interval);
   }, [tracks.length]);
 
-  // Auto-refresh tracks every 60 seconds for fresh music
+  // Auto-refresh tracks every 45 seconds for fresh music
   useEffect(() => {
     const refreshInterval = setInterval(() => {
       console.log('Auto-refreshing heatmap tracks for fresh content...');
+      // Force a complete refresh with no caching
+      setTracks([]); // Clear first to show loading
       fetchTracks(undefined, undefined, currentCountry);
-    }, 60000); // Refresh every minute
+    }, 45000); // Refresh every 45 seconds for more frequent updates
 
     return () => clearInterval(refreshInterval);
   }, [fetchTracks, currentCountry]);
