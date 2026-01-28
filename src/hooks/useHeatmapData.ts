@@ -116,35 +116,57 @@ export function useHeatmapTracks(limit = 99) {
   const fetchTracks = useCallback(async (search?: string, genre?: string, country?: string) => {
     try {
       setLoading(true);
-      const params = new URLSearchParams({ limit: limit.toString() });
+      setError(null);
+      
+      // Build query parameters
+      const params = new URLSearchParams({ 
+        limit: limit.toString(),
+        _t: Date.now().toString() // Cache buster
+      });
       if (search) params.append('search', search);
       if (genre) params.append('genre', genre);
       if (country) {
         params.append('country', country);
         setCurrentCountry(country);
       }
-      // Add cache-busting timestamp to force fresh data every request
-      params.append('_t', Date.now().toString());
       
-      const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/heatmap-tracks?${params}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': API_KEY,
-            'Cache-Control': 'no-cache, no-store'
-          }
-        }
-      );
+      // Use supabase.functions.invoke which handles auth properly
+      const { data, error: invokeError } = await supabase.functions.invoke('heatmap-tracks', {
+        method: 'GET',
+      });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (invokeError) {
+        // If invoke fails, try direct fetch as fallback
+        console.log('Invoke failed, trying direct fetch...');
+        const directResponse = await fetch(
+          `${SUPABASE_URL}/functions/v1/heatmap-tracks?${params}`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': API_KEY,
+            }
+          }
+        );
+        
+        if (!directResponse.ok) {
+          throw new Error(`HTTP error! status: ${directResponse.status}`);
+        }
+        
+        const directData = await directResponse.json();
+        if (directData?.tracks) {
+          const shuffledTracks = directData.tracks.sort(() => Math.random() - 0.5);
+          setTracks(shuffledTracks);
+          setSummary(directData.summary || summary);
+          const uniqueGenres = [...new Set(shuffledTracks.map((t: HeatmapTrack) => t.genre).filter(Boolean))];
+          setGenres(uniqueGenres as string[]);
+          console.log(`Heatmap refreshed (fallback): ${shuffledTracks.length} tracks`);
+        }
+        return;
       }
 
-      const data = await response.json();
       if (data?.tracks) {
-        // Shuffle tracks on the frontend too for extra variety
+        // Shuffle tracks on the frontend for extra variety
         const shuffledTracks = data.tracks.sort(() => Math.random() - 0.5);
         setTracks(shuffledTracks);
         setSummary(data.summary || summary);
