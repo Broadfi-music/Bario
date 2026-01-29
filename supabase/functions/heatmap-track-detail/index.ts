@@ -395,9 +395,19 @@ serve(async (req) => {
             const trackTitle = audiusTrack.title;
             const artistName = audiusTrack.user?.name || 'Unknown Artist';
             
-            // Search Deezer to get additional data
-            const deezerResults = await searchDeezer(`${trackTitle} ${artistName}`, 1);
-            let deezerTrack = deezerResults.length > 0 ? await getDeezerTrack(String(deezerResults[0].id)) : null;
+            // Search Deezer to get preview URL as fallback
+            const deezerResults = await searchDeezer(`${trackTitle} ${artistName}`, 5);
+            
+            // Find best Deezer match with preview
+            let deezerTrack = null;
+            let deezerPreviewUrl = null;
+            for (const result of deezerResults) {
+              if (result.preview) {
+                deezerTrack = await getDeezerTrack(String(result.id));
+                deezerPreviewUrl = result.preview;
+                break;
+              }
+            }
             
             // Get Last.fm info
             const [lastfmTrackInfo, lastfmArtistInfo] = await Promise.all([
@@ -414,12 +424,19 @@ serve(async (req) => {
             const change24h = Math.random() * 25 - 5;
             const mindshare = popularity / 2 + Math.random() * 15;
             
+            // Build Audius stream URL - this is the direct stream endpoint
+            const audiusStreamUrl = `https://discoveryprovider.audius.co/v1/tracks/${audiusId}/stream`;
+            
+            // Use Deezer preview as primary (more reliable), Audius stream as fallback
+            const previewUrl = deezerPreviewUrl || audiusStreamUrl;
+            console.log(`Audius track preview URL: ${previewUrl} (Deezer: ${deezerPreviewUrl ? 'yes' : 'no'})`);
+            
             const responseData = {
               id: audiusTrack.id,
               title: trackTitle,
               album: audiusTrack.album?.playlist_name || 'Single',
               artwork: audiusTrack.artwork?.['480x480'] || audiusTrack.artwork?.['1000x1000'] || deezerTrack?.album?.cover_big,
-              previewUrl: null,
+              previewUrl: previewUrl,
               duration: (audiusTrack.duration || 200) * 1000,
               isExplicit: false,
               description: lastfmTrackInfo.wiki || `${trackTitle} by ${artistName} on Audius. ${plays.toLocaleString()} plays, ${favorites.toLocaleString()} favorites.`,
