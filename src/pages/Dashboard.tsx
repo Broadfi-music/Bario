@@ -199,7 +199,7 @@ const Dashboard = () => {
 
   const topNavItems = [
     { label: 'Heatmap', path: '/global-heatmap' },
-    { label: 'Podcast', path: '/podcasts' },
+    { label: 'Space', path: '/podcasts' },
   ];
 
   const sections = [

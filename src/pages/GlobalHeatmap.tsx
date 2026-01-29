@@ -451,7 +451,7 @@ const GlobalHeatmap = () => {
                 AI Remix
               </Link>
               <Link to="/podcasts" className="text-white/70 hover:text-purple-400 transition-colors">
-                Podcast
+                Space
               </Link>
               <Link to="/three-strike" className="text-white/70 hover:text-orange-400 transition-colors">
                 Three Strike
@@ -494,7 +494,7 @@ const GlobalHeatmap = () => {
             Bario Music
           </Link>
           <Link to="/podcasts" className="text-[9px] text-white/70 hover:text-purple-400 whitespace-nowrap">
-            Podcast
+            Space
           </Link>
           <Link to="/three-strike" className="text-[9px] text-white/70 hover:text-orange-400 whitespace-nowrap">
             Three Strike
@@ -518,19 +518,24 @@ const GlobalHeatmap = () => {
         </div>
 
         {/* Global Stats Bar */}
-        <div className="border-t border-white/5 px-3 sm:px-6 py-2 flex items-center gap-4 sm:gap-6 text-[9px] sm:text-[10px] overflow-x-auto">
-          <div className="flex items-center gap-1">
-            <span className="text-white/50">Listeners:</span>
-            <span className="font-semibold text-white animate-pulse">
-              {summary?.totalListeners ? formatListeners(summary.totalListeners) : '73M'}
-            </span>
-            <span className="text-[#4ade80]">▲{summary?.avgChange24h || '8.2'}%</span>
+        <div className="border-t border-white/5 px-3 sm:px-6 py-2">
+          <div className="flex items-center gap-4 sm:gap-6 text-[9px] sm:text-[10px] overflow-x-auto">
+            <div className="flex items-center gap-1">
+              <span className="text-white/50">Listeners:</span>
+              <span className="font-semibold text-white animate-pulse">
+                {summary?.totalListeners ? formatListeners(summary.totalListeners) : '73M'}
+              </span>
+              <span className="text-[#4ade80]">▲{summary?.avgChange24h || '8.2'}%</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-white/50">Tracks:</span>
+              <span className="font-semibold text-white">{summary?.totalTracks || tracks.length}</span>
+            </div>
+            <span className="text-[8px] text-green-400 animate-pulse">● LIVE</span>
           </div>
-          <div className="flex items-center gap-1">
-            <span className="text-white/50">Tracks:</span>
-            <span className="font-semibold text-white">{summary?.totalTracks || tracks.length}</span>
-          </div>
-          <span className="text-[8px] text-green-400 animate-pulse">● LIVE</span>
+          <p className="text-[8px] sm:text-[9px] text-white/50 mt-1 text-center">
+            The world's first music attention exchange — discover what's trending before anyone else
+          </p>
         </div>
       </header>
       

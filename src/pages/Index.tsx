@@ -250,7 +250,7 @@ const Index = () => {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1">🎙️ Live Podcasts</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1">🎙️ Live Spaces</h2>
               <p className="text-sm text-white/60">Tune into live music discussions and shows</p>
             </div>
             <Link to="/podcasts" className="flex items-center gap-1 text-sm text-[#53fc18] hover:underline">

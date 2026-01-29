@@ -25,7 +25,7 @@ export const Navbar = () => {
             </Link>
             <Link to="/podcasts">
               <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 text-[10px] sm:text-xs px-2 sm:px-3 h-7 sm:h-8">
-                Podcast
+                Space
               </Button>
             </Link>
             {user ? (
