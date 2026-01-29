@@ -13,7 +13,7 @@ interface ShareModalProps {
 
 const ShareModal = ({ isOpen, onClose, sessionId, title }: ShareModalProps) => {
   const shareUrl = `${window.location.origin}/podcasts?session=${sessionId}`;
-  const shareText = `Check out this live podcast: "${title}" on Bario!`;
+  const shareText = `Check out this live space: "${title}" on Bario!`;
 
   const copyLink = () => {
     navigator.clipboard.writeText(shareUrl);
