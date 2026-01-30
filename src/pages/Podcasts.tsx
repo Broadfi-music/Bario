@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, Mic, Radio, Home, Flame, Swords } from 'lucide-react';
+import { ChevronLeft, Mic, Radio, Home, Flame, Swords, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
@@ -395,18 +395,22 @@ const Podcasts = () => {
             </Link>
           </div>
 
-          {/* Center: Tabs - Add Battle tab */}
+          {/* Center: Tabs - Add Battle and Leaderboard tabs */}
           <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === 'feed') setSelectedSession(null); }} className="w-auto">
             <TabsList className="bg-white/5 h-8">
-              <TabsTrigger value="feed" className="text-xs px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7">
+              <TabsTrigger value="feed" className="text-xs px-2 sm:px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7">
                 Feed
               </TabsTrigger>
-              <TabsTrigger value="live" className="text-xs px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7">
+              <TabsTrigger value="live" className="text-xs px-2 sm:px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7">
                 Live
               </TabsTrigger>
-              <TabsTrigger value="battles" className="text-xs px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7 flex items-center gap-1">
+              <TabsTrigger value="battles" className="text-xs px-2 sm:px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7 flex items-center gap-1">
                 <Swords className="h-3 w-3" />
-                Battles
+                <span className="hidden sm:inline">Battles</span>
+              </TabsTrigger>
+              <TabsTrigger value="leaderboard" className="text-xs px-2 sm:px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7 flex items-center gap-1">
+                <Trophy className="h-3 w-3" />
+                <span className="hidden sm:inline">Leaderboard</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -459,6 +463,22 @@ const Podcasts = () => {
       ) : activeTab === 'battles' ? (
         <div className="pt-16">
           <BattleReelScroller onClose={() => setActiveTab('feed')} />
+        </div>
+      ) : activeTab === 'leaderboard' ? (
+        <div className="pt-20 pb-24 px-4 flex items-center justify-center min-h-screen">
+          <div className="text-center space-y-4">
+            <div className="w-20 h-20 mx-auto bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center">
+              <Trophy className="h-10 w-10 text-white" />
+            </div>
+            <h2 className="text-2xl font-bold text-white">Leaderboard</h2>
+            <p className="text-white/60 text-sm max-w-xs mx-auto">
+              We're building something exciting! The leaderboard will showcase top creators, battle winners, and rising stars.
+            </p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500/20 border border-yellow-500/30 rounded-full">
+              <span className="animate-pulse w-2 h-2 bg-yellow-500 rounded-full"></span>
+              <span className="text-yellow-400 text-sm font-medium">In Development</span>
+            </div>
+          </div>
         </div>
       ) : (
         <PodcastFeed />
