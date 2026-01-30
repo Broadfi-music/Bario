@@ -102,8 +102,11 @@ No edge function changes required.
 ### Verification Checklist
 
 After implementation:
-- [ ] Heatmap description appears below stats on desktop and mobile
-- [ ] All navigation links show "Space" instead of "Podcast"
-- [ ] Clicking "Space" still routes to `/podcasts` page correctly
-- [ ] Share modal text reflects the new naming
+- [x] Heatmap description appears below stats on desktop and mobile
+- [x] All navigation links show "Space" instead of "Podcast"
+- [x] Clicking "Space" still routes to `/podcasts` page correctly
+- [x] Share modal text reflects the new naming
+- [x] Leaderboard tab added to Space navigation (shows "In Development")
+- [x] Music playback fixed - tracks without previews are filtered out
+- [x] Audius tracks now have Deezer preview fallback
 

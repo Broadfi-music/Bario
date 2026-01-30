@@ -479,7 +479,8 @@ function formatDeezerTrack(track: any, index: number, countryCode: string) {
   };
 }
 
-function formatAudiusTrack(track: any, index: number) {
+// Format Audius track with Deezer preview lookup
+async function formatAudiusTrackWithPreview(track: any, index: number): Promise<any> {
   const plays = track.play_count || 0;
   const reposts = track.repost_count || 0;
   const favorites = track.favorite_count || 0;
@@ -487,21 +488,48 @@ function formatAudiusTrack(track: any, index: number) {
   const change24h = (Math.random() * 30 - 5);
   const attentionScore = Math.round((plays / 100) + (reposts * 50) + (favorites * 30));
   
+  // Try to get Deezer preview for Audius tracks
+  const trackTitle = track.title || '';
+  const artistName = track.user?.name || '';
+  let previewUrl = null;
+  let deezerUrl = null;
+  
+  if (trackTitle && artistName) {
+    try {
+      const deezerResults = await searchDeezer(`${trackTitle} ${artistName}`, 3);
+      for (const result of deezerResults) {
+        if (result.preview) {
+          previewUrl = result.preview;
+          deezerUrl = result.link || `https://www.deezer.com/track/${result.id}`;
+          console.log(`Found Deezer preview for Audius track: ${trackTitle}`);
+          break;
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching Deezer preview for Audius track:', e);
+    }
+  }
+  
+  // Fallback to Audius stream URL if no Deezer preview
+  if (!previewUrl) {
+    previewUrl = `https://discoveryprovider.audius.co/v1/tracks/${track.id}/stream`;
+  }
+  
   return {
     id: `audius_${track.id}`,
     rank: index + 1,
     title: track.title,
-    artist: track.user?.name || 'Unknown Artist',
+    artist: artistName || 'Unknown Artist',
     artistId: track.user?.id,
     album: track.album?.playlist_name || 'Single',
     artwork: track.artwork?.['480x480'] || track.artwork?.['1000x1000'] || '/placeholder.svg',
-    previewUrl: null,
+    previewUrl,
     genre: track.genre || 'Electronic',
     duration: (track.duration || 200) * 1000,
     country: 'GLOBAL',
     deezerRank: 0,
     spotifyUrl: null,
-    deezerUrl: null,
+    deezerUrl,
     appleUrl: null,
     audiusUrl: `https://audius.co/${track.user?.handle}/${track.permalink}`,
     deezerId: null,
@@ -584,11 +612,13 @@ serve(async (req) => {
         })
       );
       
-      const audiusTracks = audiusResults.map((t: any, i: number) => formatAudiusTrack(t, i + deezerTracks.length + spotifyTracksWithPreview.length));
+      const audiusTracks = await Promise.all(audiusResults.map((t: any, i: number) => formatAudiusTrackWithPreview(t, i + deezerTracks.length + spotifyTracksWithPreview.length)));
       
-      // Put Deezer first (guaranteed previews), then Spotify (with fallback previews)
-      tracks = [...formattedUserUploads, ...deezerTracks, ...spotifyTracksWithPreview, ...audiusTracks];
-      console.log(`Search results: User=${formattedUserUploads.length}, Deezer=${deezerTracks.length}, Spotify=${spotifyTracksWithPreview.length}, Audius=${audiusTracks.length}`);
+      // Put Deezer first (guaranteed previews), then Spotify (with fallback previews), then Audius
+      // Filter out any tracks without preview URLs
+      const allTracks = [...formattedUserUploads, ...deezerTracks, ...spotifyTracksWithPreview, ...audiusTracks];
+      tracks = allTracks.filter(t => t.previewUrl);
+      console.log(`Search results: User=${formattedUserUploads.length}, Deezer=${deezerTracks.length}, Spotify=${spotifyTracksWithPreview.length}, Audius=${audiusTracks.length}, WithPreview=${tracks.length}`);
       
     } else if (country && country !== 'GLOBAL') {
       // Get country-specific charts from Spotify and Deezer
@@ -623,18 +653,19 @@ serve(async (req) => {
       const [spotifyGlobal, deezerGlobal, deezerGenre, audiusTrending] = await Promise.all([
         getSpotifyCountryTop50('GLOBAL', 50),
         getDeezerGlobalChart(60),
-        searchDeezer(`${randomGenre} new 2024 2025`, 30),
+        searchDeezer(`${randomGenre} new 2025 2026 hits`, 30),
         getAudiusTrending(20)
       ]);
       
       const spotifyTracks = spotifyGlobal.map((t: any, i: number) => formatSpotifyTrack(t, i, 'GLOBAL'));
       const deezerTracks = deezerGlobal.map((t: any, i: number) => formatDeezerTrack(t, i + spotifyTracks.length, 'GLOBAL'));
       const deezerGenreTracks = deezerGenre.map((t: any, i: number) => formatDeezerTrack(t, i + spotifyTracks.length + deezerTracks.length, 'GLOBAL'));
-      const audiusTracks = audiusTrending.map((t: any, i: number) => formatAudiusTrack(t, i + spotifyTracks.length + deezerTracks.length + deezerGenreTracks.length));
+      const audiusTracks = await Promise.all(audiusTrending.map((t: any, i: number) => formatAudiusTrackWithPreview(t, i + spotifyTracks.length + deezerTracks.length + deezerGenreTracks.length)));
       
-      // Mix all sources and heavily shuffle
+      // Mix all sources and heavily shuffle - FILTER out tracks without preview URLs
       const allTracks = [...formattedUserUploads, ...spotifyTracks, ...deezerTracks, ...deezerGenreTracks, ...audiusTracks];
-      tracks = allTracks.sort(() => Math.random() - 0.5).sort(() => Math.random() - 0.5);
+      const tracksWithPreviews = allTracks.filter(t => t.previewUrl);
+      tracks = tracksWithPreviews.sort(() => Math.random() - 0.5).sort(() => Math.random() - 0.5);
       
       console.log(`Global results: User=${formattedUserUploads.length}, Spotify=${spotifyTracks.length}, Deezer=${deezerTracks.length}, DeezerGenre=${deezerGenreTracks.length}, Audius=${audiusTracks.length}`);
     }
