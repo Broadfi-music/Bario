@@ -34,15 +34,19 @@ const BattleReelScroller = ({ initialBattle, onClose }: BattleReelScrollerProps)
   const touchStartY = useRef(0);
   const touchEndY = useRef(0);
 
-  // Fetch active battles (include both 'active' and 'pending' status)
+  // Fetch only truly active battles (no ended_at, started within last hour)
   const fetchBattles = useCallback(async () => {
     console.log('🔍 Fetching active battles...');
+    
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     
     const { data, error } = await supabase
       .from('podcast_battles')
       .select('*')
-      .in('status', ['active', 'pending']) // Include both pending and active
-      .order('started_at', { ascending: false, nullsFirst: false });
+      .eq('status', 'active')
+      .is('ended_at', null)
+      .gte('started_at', oneHourAgo)
+      .order('started_at', { ascending: false });
 
     if (error) {
       console.error('❌ Error fetching battles:', error);
