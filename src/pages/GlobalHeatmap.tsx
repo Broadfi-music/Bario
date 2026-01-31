@@ -369,8 +369,15 @@ const GlobalHeatmap = () => {
     return count.toString();
   };
 
-  // Top performing music (positive change)
-  const topPerforming = tracks.filter(s => s.metrics.change24h > 0).slice(0, 20);
+  // Top performing music (positive change) - use stable sorting by attention score
+  // Sort by attention score descending, then filter for positive change to get consistent order
+  const topPerforming = [...tracks]
+    .sort((a, b) => b.metrics.attentionScore - a.metrics.attentionScore)
+    .filter(s => s.metrics.change24h > 0)
+    .slice(0, 20);
+  
+  // Leaderboard tracks - stable sorted by rank from API
+  const leaderboardTracks = [...tracks].sort((a, b) => a.rank - b.rank);
 
   // No loading screen - show content immediately
 
@@ -923,7 +930,7 @@ const GlobalHeatmap = () => {
             </div>
             
             <div className="divide-y divide-white/5">
-              {tracks.slice(0, showAllLeaderboard ? 99 : 20).map((track) => (
+              {leaderboardTracks.slice(0, showAllLeaderboard ? 99 : 20).map((track) => (
                 <div
                   key={track.id}
                   onClick={() => navigate(`/global-heatmap/${track.id}`)}
