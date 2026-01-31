@@ -621,17 +621,37 @@ serve(async (req) => {
       console.log(`Search results: User=${formattedUserUploads.length}, Deezer=${deezerTracks.length}, Spotify=${spotifyTracksWithPreview.length}, Audius=${audiusTracks.length}, WithPreview=${tracks.length}`);
       
     } else if (country && country !== 'GLOBAL') {
+      console.log(`Fetching country-specific charts for: ${country}`);
+      
       // Get country-specific charts from Spotify and Deezer
       const [spotifyTracks, deezerTracks] = await Promise.all([
         getSpotifyCountryTop50(country, 50),
-        getDeezerCountryChart(country, 50)
+        getDeezerCountryChart(country, 60)
       ]);
       
-      const formattedSpotify = spotifyTracks.map((t: any, i: number) => formatSpotifyTrack(t, i, country));
+      // Format tracks with country code
+      const formattedSpotify = await Promise.all(
+        spotifyTracks.map(async (t: any, i: number) => {
+          const formatted = formatSpotifyTrack(t, i, country);
+          // If no Spotify preview, try Deezer fallback
+          if (!formatted.previewUrl && t.name && t.artists?.[0]?.name) {
+            const deezerSearch = await searchDeezer(`${t.name} ${t.artists[0].name}`, 1);
+            if (deezerSearch.length > 0 && deezerSearch[0].preview) {
+              formatted.previewUrl = deezerSearch[0].preview;
+              console.log(`Found Deezer preview for ${country} track: ${t.name}`);
+            }
+          }
+          return formatted;
+        })
+      );
+      
       const formattedDeezer = deezerTracks.map((t: any, i: number) => formatDeezerTrack(t, i + formattedSpotify.length, country));
       
-      tracks = [...formattedUserUploads, ...formattedSpotify, ...formattedDeezer];
-      console.log(`Country ${country} results: User=${formattedUserUploads.length}, Spotify=${formattedSpotify.length}, Deezer=${formattedDeezer.length}`);
+      // Combine and filter out tracks without preview URLs
+      const allTracks = [...formattedUserUploads, ...formattedSpotify, ...formattedDeezer];
+      tracks = allTracks.filter(t => t.previewUrl);
+      
+      console.log(`Country ${country} results: User=${formattedUserUploads.length}, Spotify=${formattedSpotify.length}, Deezer=${formattedDeezer.length}, WithPreview=${tracks.length}`);
       
     } else if (genre && genre !== 'All') {
       // Genre-specific search

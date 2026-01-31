@@ -118,64 +118,54 @@ export function useHeatmapTracks(limit = 99) {
       setLoading(true);
       setError(null);
       
-      // Build query parameters
+      // Build query parameters - CRITICAL: pass country to the edge function
       const params = new URLSearchParams({ 
         limit: limit.toString(),
         _t: Date.now().toString() // Cache buster
       });
       if (search) params.append('search', search);
       if (genre) params.append('genre', genre);
+      
+      // Use country from parameter or current state
+      const countryToUse = country || currentCountry;
+      params.append('country', countryToUse);
+      
       if (country) {
-        params.append('country', country);
         setCurrentCountry(country);
       }
       
-      // Use supabase.functions.invoke which handles auth properly
-      const { data, error: invokeError } = await supabase.functions.invoke('heatmap-tracks', {
-        method: 'GET',
-      });
-
-      if (invokeError) {
-        // If invoke fails, try direct fetch as fallback
-        console.log('Invoke failed, trying direct fetch...');
-        const directResponse = await fetch(
-          `${SUPABASE_URL}/functions/v1/heatmap-tracks?${params}`,
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': API_KEY,
-            }
+      console.log(`Fetching heatmap tracks for country: ${countryToUse}`);
+      
+      // Direct fetch to edge function with query params - more reliable
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/heatmap-tracks?${params}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': API_KEY,
           }
-        );
-        
-        if (!directResponse.ok) {
-          throw new Error(`HTTP error! status: ${directResponse.status}`);
         }
-        
-        const directData = await directResponse.json();
-        if (directData?.tracks) {
-          const shuffledTracks = directData.tracks.sort(() => Math.random() - 0.5);
-          setTracks(shuffledTracks);
-          setSummary(directData.summary || summary);
-          const uniqueGenres = [...new Set(shuffledTracks.map((t: HeatmapTrack) => t.genre).filter(Boolean))];
-          setGenres(uniqueGenres as string[]);
-          console.log(`Heatmap refreshed (fallback): ${shuffledTracks.length} tracks`);
-        }
-        return;
+      );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
+      
+      const data = await response.json();
+      
       if (data?.tracks) {
-        // Shuffle tracks on the frontend for extra variety
-        const shuffledTracks = data.tracks.sort(() => Math.random() - 0.5);
-        setTracks(shuffledTracks);
+        // Don't shuffle on initial load - keep the ranked order
+        // Only add slight variety on subsequent fetches
+        const processedTracks = data.tracks;
+        setTracks(processedTracks);
         setSummary(data.summary || summary);
         
         // Extract unique genres
-        const uniqueGenres = [...new Set(shuffledTracks.map((t: HeatmapTrack) => t.genre).filter(Boolean))];
+        const uniqueGenres = [...new Set(processedTracks.map((t: HeatmapTrack) => t.genre).filter(Boolean))];
         setGenres(uniqueGenres as string[]);
         
-        console.log(`Heatmap refreshed: ${shuffledTracks.length} tracks at ${new Date().toLocaleTimeString()}`);
+        console.log(`Heatmap loaded: ${processedTracks.length} tracks for ${countryToUse}`);
       }
     } catch (err) {
       console.error('Error fetching heatmap tracks:', err);
@@ -183,7 +173,7 @@ export function useHeatmapTracks(limit = 99) {
     } finally {
       setLoading(false);
     }
-  }, [limit]);
+  }, [limit, currentCountry]);
 
   const searchTracks = useCallback((query: string) => {
     fetchTracks(query, undefined, currentCountry);
@@ -206,7 +196,7 @@ export function useHeatmapTracks(limit = 99) {
 
   // Subscribe to realtime updates
   useEffect(() => {
-    fetchTracks();
+    fetchTracks(undefined, undefined, currentCountry);
 
     const channel = supabase
       .channel('heatmap-metrics')
@@ -217,62 +207,60 @@ export function useHeatmapTracks(limit = 99) {
           schema: 'public',
           table: 'heatmap_track_metrics'
         },
-        () => fetchTracks()
+        () => fetchTracks(undefined, undefined, currentCountry)
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchTracks]);
+  }, []);
 
-  // Realtime simulation for UI updates - faster listener updates
+  // Realtime simulation for UI updates - smoother listener updates
   useEffect(() => {
     if (tracks.length === 0) return;
 
     const interval = setInterval(() => {
       setTracks(prev => {
-        const updated = prev.map(track => {
-          const change = (Math.random() - 0.5) * 4;
-          const newChange24h = parseFloat((track.metrics.change24h + change * 0.08).toFixed(1));
-          // More dramatic listener changes for visible activity
-          const listenerChange = Math.floor((Math.random() - 0.3) * 2000);
-          const newListeners = track.metrics.lastfmListeners + listenerChange;
-          return {
-            ...track,
-            metrics: {
-              ...track.metrics,
-              change24h: newChange24h,
-              lastfmListeners: Math.max(0, newListeners),
-              attentionScore: Math.floor(track.metrics.attentionScore + (Math.random() - 0.5) * 800)
-            },
-            trend: newChange24h > 0 ? 'up' as const : newChange24h < 0 ? 'down' as const : 'stable' as const,
-            momentum: newChange24h > 10 ? 'surging' as const : newChange24h < -5 ? 'cooling' as const : 'stable' as const
-          };
-        });
+        // Avoid heavy recalculations - just update a few random tracks
+        const updated = [...prev];
+        const indicesToUpdate = Array.from({ length: 5 }, () => Math.floor(Math.random() * updated.length));
         
-        // Re-sort by attention score for dynamic ranking
-        updated.sort((a, b) => b.metrics.attentionScore - a.metrics.attentionScore);
-        updated.forEach((track, i) => track.rank = i + 1);
+        indicesToUpdate.forEach(i => {
+          if (updated[i]) {
+            const change = (Math.random() - 0.5) * 2;
+            const newChange24h = parseFloat((updated[i].metrics.change24h + change * 0.05).toFixed(1));
+            const listenerChange = Math.floor((Math.random() - 0.3) * 500);
+            
+            updated[i] = {
+              ...updated[i],
+              metrics: {
+                ...updated[i].metrics,
+                change24h: newChange24h,
+                lastfmListeners: Math.max(0, updated[i].metrics.lastfmListeners + listenerChange),
+              },
+              trend: newChange24h > 0 ? 'up' as const : newChange24h < 0 ? 'down' as const : 'stable' as const,
+            };
+          }
+        });
         
         return updated;
       });
-    }, 2000); // Update every 2 seconds for more activity
+    }, 5000); // Update every 5 seconds for smoother experience
 
     return () => clearInterval(interval);
   }, [tracks.length]);
 
-  // Auto-refresh tracks every 45 seconds for fresh music
+  // Auto-refresh tracks every 90 seconds for fresh music - smoother transitions
   useEffect(() => {
     const refreshInterval = setInterval(() => {
-      console.log('Auto-refreshing heatmap tracks for fresh content...');
-      // Force a complete refresh with no caching
-      setTracks([]); // Clear first to show loading
+      console.log('Auto-refreshing heatmap tracks...');
+      // Don't clear tracks - just fetch new ones to avoid flashing
       fetchTracks(undefined, undefined, currentCountry);
-    }, 45000); // Refresh every 45 seconds for more frequent updates
+    }, 90000); // Refresh every 90 seconds for smoother experience
 
     return () => clearInterval(refreshInterval);
-  }, [fetchTracks, currentCountry]);
+  }, [currentCountry]);
 
   return { tracks, genres, summary, loading, error, refetch, searchTracks, filterByGenre, filterByCountry };
 }
