@@ -216,48 +216,17 @@ export function useHeatmapTracks(limit = 99) {
     };
   }, []);
 
-  // Realtime simulation for UI updates - smoother listener updates
-  useEffect(() => {
-    if (tracks.length === 0) return;
+  // Realtime simulation for UI updates - DISABLED to prevent glitches
+  // The tracks are already sorted by rank from the API, no need to re-order them
+  // Previous implementation was causing visual glitches by randomly updating track metrics
 
-    const interval = setInterval(() => {
-      setTracks(prev => {
-        // Avoid heavy recalculations - just update a few random tracks
-        const updated = [...prev];
-        const indicesToUpdate = Array.from({ length: 5 }, () => Math.floor(Math.random() * updated.length));
-        
-        indicesToUpdate.forEach(i => {
-          if (updated[i]) {
-            const change = (Math.random() - 0.5) * 2;
-            const newChange24h = parseFloat((updated[i].metrics.change24h + change * 0.05).toFixed(1));
-            const listenerChange = Math.floor((Math.random() - 0.3) * 500);
-            
-            updated[i] = {
-              ...updated[i],
-              metrics: {
-                ...updated[i].metrics,
-                change24h: newChange24h,
-                lastfmListeners: Math.max(0, updated[i].metrics.lastfmListeners + listenerChange),
-              },
-              trend: newChange24h > 0 ? 'up' as const : newChange24h < 0 ? 'down' as const : 'stable' as const,
-            };
-          }
-        });
-        
-        return updated;
-      });
-    }, 5000); // Update every 5 seconds for smoother experience
-
-    return () => clearInterval(interval);
-  }, [tracks.length]);
-
-  // Auto-refresh tracks every 90 seconds for fresh music - smoother transitions
+  // Auto-refresh tracks every 2 minutes for fresh music - very gentle refresh
   useEffect(() => {
     const refreshInterval = setInterval(() => {
       console.log('Auto-refreshing heatmap tracks...');
-      // Don't clear tracks - just fetch new ones to avoid flashing
+      // Silent refresh - don't clear tracks to avoid flashing
       fetchTracks(undefined, undefined, currentCountry);
-    }, 90000); // Refresh every 90 seconds for smoother experience
+    }, 120000); // Refresh every 2 minutes for stable experience
 
     return () => clearInterval(refreshInterval);
   }, [currentCountry]);
