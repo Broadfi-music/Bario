@@ -23,6 +23,7 @@ interface LiveSession {
   host_id: string;
   host_name: string;
   host_avatar: string | null;
+  cover_image_url?: string;
   listener_count: number;
   status: string;
   is_battle: boolean;
@@ -621,7 +622,7 @@ const GlobalHeatmap = () => {
               </Link>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2">
               {liveSessions.slice(0, 4).map((session) => (
                 <div
                   key={session.id}
@@ -633,50 +634,50 @@ const GlobalHeatmap = () => {
                       navigate(`/podcasts?session=${session.id}`);
                     }
                   }}
-                  className="relative bg-gradient-to-br from-red-500/10 to-purple-500/10 hover:from-red-500/20 hover:to-purple-500/20 border border-red-500/20 rounded-xl p-3 cursor-pointer transition-all group"
+                  className="relative bg-gradient-to-br from-red-500/10 to-purple-500/10 hover:from-red-500/20 hover:to-purple-500/20 border border-red-500/20 rounded-lg p-2 cursor-pointer transition-all group"
                 >
                   {/* Battle badge */}
                   {session.is_battle && (
-                    <div className="absolute top-2 right-2 flex items-center gap-1 bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">
-                      <Swords className="h-2.5 w-2.5" />
-                      <span className="text-[8px] font-medium">Battle</span>
+                    <div className="absolute top-1 right-1 flex items-center gap-0.5 bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded-full">
+                      <Swords className="h-2 w-2" />
+                      <span className="text-[7px] font-medium">Battle</span>
                     </div>
                   )}
                   
-                  <div className="flex items-center gap-3">
-                    {/* Host avatar */}
-                    <div className="relative">
-                      {session.host_avatar ? (
+                  <div className="flex items-center gap-2">
+                    {/* Cover image / avatar */}
+                    <div className="relative flex-shrink-0">
+                      {session.cover_image_url || session.host_avatar ? (
                         <img 
-                          src={session.host_avatar} 
+                          src={session.cover_image_url || session.host_avatar || ''} 
                           alt={session.host_name}
-                          className="w-12 h-12 rounded-full object-cover ring-2 ring-red-500/50"
+                          className="w-10 h-10 rounded-lg object-cover ring-1 ring-red-500/50"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-purple-500 flex items-center justify-center">
-                          <Mic className="h-5 w-5 text-white" />
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-purple-500 flex items-center justify-center">
+                          <Mic className="h-4 w-4 text-white" />
                         </div>
                       )}
                       {/* Live indicator */}
-                      <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-red-500 rounded-full border-2 border-black flex items-center justify-center">
-                        <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full border border-black flex items-center justify-center">
+                        <div className="w-1 h-1 bg-white rounded-full animate-ping" />
                       </div>
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] sm:text-xs font-medium text-white truncate">
+                      <p className="text-[9px] sm:text-[10px] font-medium text-white truncate leading-tight">
                         {session.is_battle 
                           ? `${session.host_name} vs ${session.opponent_name}` 
                           : session.title}
                       </p>
-                      <p className="text-[9px] text-white/60 truncate">{session.host_name}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="flex items-center gap-1 text-[8px] text-red-400">
-                          <Users className="h-2.5 w-2.5" />
+                      <p className="text-[8px] text-white/60 truncate">{session.host_name}</p>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="flex items-center gap-0.5 text-[7px] text-red-400">
+                          <Users className="h-2 w-2" />
                           {session.listener_count}
                         </span>
                         {session.is_battle && (
-                          <span className="text-[8px] text-yellow-400">⚔️ Battle</span>
+                          <span className="text-[7px] text-yellow-400">⚔️</span>
                         )}
                       </div>
                     </div>

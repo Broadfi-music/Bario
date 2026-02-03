@@ -96,7 +96,7 @@ export const getDemoLiveHost = () => ({
   description: demoSession.description,
   listener_count: demoSession.baseListenerCount + Math.floor(Math.random() * 50),
   host_name: demoSession.hostName,
-  host_avatar: demoSession.hostAvatar,
+  host_avatar: demoSession.coverImageUrl, // Use cover image as avatar for display
   category: demoSession.category,
   cover_image_url: demoSession.coverImageUrl,
 });
@@ -107,7 +107,8 @@ export const getDemoLiveSession = () => ({
   title: demoSession.title,
   host_id: demoSession.hostId,
   host_name: demoSession.hostName,
-  host_avatar: demoSession.hostAvatar,
+  host_avatar: demoSession.coverImageUrl, // Use cover image as avatar
+  cover_image_url: demoSession.coverImageUrl,
   listener_count: demoSession.baseListenerCount + Math.floor(Math.random() * 50),
   status: 'live' as const,
   is_battle: false,
