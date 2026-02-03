@@ -9,7 +9,8 @@ import HostStudio from '@/components/podcast/HostStudio';
 import PodcastFeed from '@/components/podcast/PodcastFeed';
 import KickStyleLive from '@/components/podcast/KickStyleLive';
 import BattleReelScroller from '@/components/podcast/BattleReelScroller';
-import { isValidUUID } from '@/lib/authUtils';
+import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
+import { getDemoPodcastSession, DEMO_SESSION_ID } from '@/config/demoSpace';
 
 interface PodcastSession {
   id: string;
@@ -144,6 +145,14 @@ const Podcasts = () => {
   useEffect(() => {
     const sessionId = searchParams.get('session');
     if (sessionId) {
+      // Handle demo session specially
+      if (isDemoLiveSession(sessionId)) {
+        const demoSession = getDemoPodcastSession();
+        setSelectedSession(demoSession);
+        setActiveTab('live');
+        return;
+      }
+      
       const foundSession = liveSessions.find(p => p.id === sessionId);
       if (foundSession) {
         setSelectedSession(foundSession);
