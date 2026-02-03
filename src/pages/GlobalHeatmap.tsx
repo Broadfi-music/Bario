@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { useHeatmapTracks, useSyncHeatmap, HeatmapTrack } from '@/hooks/useHeatmapData';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { getDemoLiveSession, DEMO_SESSION_ID } from '@/config/demoSpace';
 
 // Live session interface
 interface LiveSession {
@@ -107,8 +108,12 @@ const GlobalHeatmap = () => {
         .order('listener_count', { ascending: false })
         .limit(4);
 
+      // Start with demo session
+      const demoSession = getDemoLiveSession();
+      const formattedSessions: LiveSession[] = [demoSession];
+
       if (!sessions || sessions.length === 0) {
-        setLiveSessions([]);
+        setLiveSessions(formattedSessions);
         setLoadingLive(false);
         return;
       }
@@ -142,12 +147,15 @@ const GlobalHeatmap = () => {
         opponentMap = new Map(opponentProfiles?.map(p => [p.user_id, p]) || []);
       }
 
-      const formattedSessions: LiveSession[] = sessions.map(session => {
+      sessions.forEach(session => {
+        // Skip if this is the demo session ID (shouldn't happen but just in case)
+        if (session.id === DEMO_SESSION_ID) return;
+        
         const host = profileMap.get(session.host_id);
         const battle = battleMap.get(session.id);
         const opponent = battle ? opponentMap.get(battle.opponent_id) : null;
 
-        return {
+        formattedSessions.push({
           id: session.id,
           title: session.title,
           host_id: session.host_id,
@@ -158,12 +166,14 @@ const GlobalHeatmap = () => {
           is_battle: !!battle,
           battle_id: battle?.id,
           opponent_name: opponent?.full_name || opponent?.username
-        };
+        });
       });
 
       setLiveSessions(formattedSessions);
     } catch (error) {
       console.error('Error fetching live sessions:', error);
+      // Still show demo on error
+      setLiveSessions([getDemoLiveSession()]);
     } finally {
       setLoadingLive(false);
     }
@@ -598,9 +608,8 @@ const GlobalHeatmap = () => {
           </div>
         </section>
 
-        {/* 🔴 LIVE NOW - Live Sessions & Battles */}
-        {liveSessions.length > 0 && (
-          <section className="mb-6 animate-fade-in">
+        {/* 🔴 LIVE NOW - Live Sessions & Battles - Always show with at least demo */}
+        <section className="mb-6 animate-fade-in">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Radio className="h-4 w-4 text-red-500 animate-pulse" />
@@ -676,7 +685,6 @@ const GlobalHeatmap = () => {
               ))}
             </div>
           </section>
-        )}
 
         {/* 📅 Upcoming Shows */}
         {upcomingSchedules.length > 0 && (

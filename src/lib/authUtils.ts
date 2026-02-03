@@ -133,10 +133,17 @@ export const isDemoSession = (sessionId: string): boolean => {
 };
 
 /**
+ * Check if a session ID is the demo live session specifically
+ */
+export const isDemoLiveSession = (sessionId: string): boolean => {
+  return sessionId === 'demo-live-session';
+};
+
+/**
  * Check if a user ID is a demo user (not a real UUID)
  */
 export const isDemoUser = (userId: string): boolean => {
-  return userId.startsWith('host-');
+  return userId.startsWith('host-') || userId.startsWith('demo-');
 };
 
 /**

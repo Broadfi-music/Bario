@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import BattleInviteModal from './BattleInviteModal';
 import BattleNotification from './BattleNotification';
 import BattleReelScroller from './BattleReelScroller';
+import { getDemoLiveHost, DEMO_SESSION_ID } from '@/config/demoSpace';
 
 interface LiveHost {
   id: string;
@@ -415,10 +416,28 @@ const PodcastFeed = () => {
           };
         });
       
-      setLiveHosts(realSessions);
+      // Always inject demo session if there are no real sessions or very few
+      const demoHost = getDemoLiveHost();
+      const hasDemo = realSessions.some(s => s.id === DEMO_SESSION_ID);
+      
+      if (!hasDemo) {
+        // Add demo session at the beginning when few real sessions exist
+        if (realSessions.length < 3) {
+          setLiveHosts([demoHost, ...realSessions]);
+        } else {
+          // Add at position 2-3 when many sessions exist
+          const insertIndex = Math.min(2, realSessions.length);
+          const withDemo = [...realSessions];
+          withDemo.splice(insertIndex, 0, demoHost);
+          setLiveHosts(withDemo);
+        }
+      } else {
+        setLiveHosts(realSessions);
+      }
     } catch (err) {
       console.error('Unexpected error fetching live sessions:', err);
-      setLiveHosts([]); // Clear state on error
+      // Even on error, show the demo session
+      setLiveHosts([getDemoLiveHost()]);
     }
   };
 
