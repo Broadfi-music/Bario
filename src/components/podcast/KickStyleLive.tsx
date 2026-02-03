@@ -594,36 +594,40 @@ const KickStyleLive = ({
               </div>
             </div>
 
-            {/* Mobile Chat - Collapsible */}
-            <div className="lg:hidden shrink-0 h-[200px] border-t border-white/5">
-              <TwitchComments 
-                sessionId={currentSession.id}
-                hostId={currentSession.host_id}
-                onSendGift={() => setShowGiftModal(true)}
-                sessionTitle={currentSession.title}
-                isHost={user?.id === currentSession.host_id}
-              />
-            </div>
+            {/* Mobile Chat - Collapsible - Hide for demo sessions (they have built-in chat) */}
+            {!isDemoLiveSession(currentSession.id) && (
+              <div className="lg:hidden shrink-0 h-[200px] border-t border-white/5">
+                <TwitchComments 
+                  sessionId={currentSession.id}
+                  hostId={currentSession.host_id}
+                  onSendGift={() => setShowGiftModal(true)}
+                  sessionTitle={currentSession.title}
+                  isHost={user?.id === currentSession.host_id}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Right Sidebar - Chat (Desktop) */}
-          <aside className="hidden lg:flex flex-col w-80 xl:w-96 border-l border-white/5 bg-[#18181b]">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-              <h3 className="font-semibold text-white text-sm flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
-                Stream Chat
-              </h3>
-            </div>
-            <div className="flex-1 min-h-0 overflow-hidden">
-              <TwitchComments 
-                sessionId={currentSession.id}
-                hostId={currentSession.host_id}
-                onSendGift={() => setShowGiftModal(true)}
-                sessionTitle={currentSession.title}
-                isHost={user?.id === currentSession.host_id}
-              />
-            </div>
-          </aside>
+          {/* Right Sidebar - Chat (Desktop) - Hide for demo sessions (they have built-in chat) */}
+          {!isDemoLiveSession(currentSession.id) && (
+            <aside className="hidden lg:flex flex-col w-80 xl:w-96 border-l border-white/5 bg-[#18181b]">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+                <h3 className="font-semibold text-white text-sm flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Stream Chat
+                </h3>
+              </div>
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <TwitchComments 
+                  sessionId={currentSession.id}
+                  hostId={currentSession.host_id}
+                  onSendGift={() => setShowGiftModal(true)}
+                  sessionTitle={currentSession.title}
+                  isHost={user?.id === currentSession.host_id}
+                />
+              </div>
+            </aside>
+          )}
         </div>
       </div>
 
