@@ -13,8 +13,9 @@ import TikTokGiftModal from './TikTokGiftModal';
 import GiftAnimation from './GiftAnimation';
 import ShareModal from './ShareModal';
 import TikTokGiftDisplay from './TikTokGiftDisplay';
+import DemoLiveSpace from './DemoLiveSpace';
 import { toast } from 'sonner';
-import { isValidUUID } from '@/lib/authUtils';
+import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
 
 interface PodcastSession {
   id: string;
@@ -485,16 +486,20 @@ const KickStyleLive = ({
         <div className="flex-1 flex flex-col lg:flex-row min-w-0">
           {/* Video/Audio Space Area */}
           <div className="flex-1 flex flex-col min-h-0 lg:min-w-0">
-            {/* Participants (Audio Room) */}
+            {/* Participants (Audio Room) or Demo Space */}
             <div className="flex-1 min-h-0 overflow-hidden bg-gradient-to-b from-[#1a1a1d] to-[#0e0e10]">
-              <SpaceParticipants 
-                sessionId={currentSession.id}
-                hostId={currentSession.host_id}
-                isHost={user?.id === currentSession.host_id}
-                title={currentSession.title}
-                hostName={currentSession.host_name}
-                hostAvatar={currentSession.host_avatar}
-              />
+              {isDemoLiveSession(currentSession.id) ? (
+                <DemoLiveSpace onLeave={() => onSessionSelect(null)} />
+              ) : (
+                <SpaceParticipants 
+                  sessionId={currentSession.id}
+                  hostId={currentSession.host_id}
+                  isHost={user?.id === currentSession.host_id}
+                  title={currentSession.title}
+                  hostName={currentSession.host_name}
+                  hostAvatar={currentSession.host_avatar}
+                />
+              )}
             </div>
 
             {/* Action Bar - Below Video */}
