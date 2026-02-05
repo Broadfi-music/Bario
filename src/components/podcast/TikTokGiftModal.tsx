@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { toast } from 'sonner';
 import { Coins, X, Flame, Star, Diamond, Crown } from 'lucide-react';
 import { getFreshSession, isDemoSession, isDemoUser } from '@/lib/authUtils';
+import { isDemoLiveSession } from '@/lib/authUtils';
 
 interface Creator {
   id: string;
@@ -37,6 +38,9 @@ const GIFTS = [
   { type: 'crown', icon: Crown, label: 'Crown', coins: 500, earnings: 6.40, color: 'from-purple-500/30 to-pink-500/30', isVideo: true },
 ];
 
+// Image-only gifts for demo sessions (rose, tofu, flame heart)
+const DEMO_GIFTS = GIFTS.filter(g => ['rose', 'tofu', 'flame'].includes(g.type));
+
 const TikTokGiftModal = ({ 
   isOpen, 
   onClose, 
@@ -52,6 +56,10 @@ const TikTokGiftModal = ({
   const [userCoins, setUserCoins] = useState<number>(0);
   const [userProfile, setUserProfile] = useState<{ full_name?: string; username?: string } | null>(null);
   const [selectedCreatorId, setSelectedCreatorId] = useState<string>(hostId);
+  
+  // Use limited gifts for demo sessions
+  const isDemo = isDemoLiveSession(sessionId);
+  const availableGifts = isDemo ? DEMO_GIFTS : GIFTS;
 
   useEffect(() => {
     if (user && isOpen) {
@@ -253,8 +261,8 @@ const TikTokGiftModal = ({
           </div>
 
           {/* Gift Grid */}
-          <div className="grid grid-cols-4 gap-2 mb-4">
-            {GIFTS.map((gift) => {
+          <div className={`grid ${isDemo ? 'grid-cols-3' : 'grid-cols-4'} gap-2 mb-4`}>
+            {availableGifts.map((gift) => {
               const count = giftCount[gift.type] || 1;
               const totalCost = gift.coins * count;
               const canAfford = userCoins >= totalCost;

@@ -16,6 +16,7 @@ import TikTokGiftDisplay from './TikTokGiftDisplay';
 import DemoLiveSpace from './DemoLiveSpace';
 import { toast } from 'sonner';
 import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
+import { getDemoPodcastSession } from '@/config/demoSpace';
 
 interface PodcastSession {
   id: string;
@@ -390,6 +391,24 @@ const KickStyleLive = ({
   }, [sessions.length, selectedSession, onSessionSelect]);
 
   if (!currentSession) {
+    // If no session, try to show demo session as fallback
+    const demoSession = getDemoPodcastSession();
+    if (demoSession) {
+      // Render with demo session instead of showing empty state
+      return (
+        <div 
+          className="h-[100dvh] overflow-hidden bg-[#0e0e10] scrollbar-hide"
+        >
+          <div className="h-full flex pt-12">
+            {/* Main Content Area with Demo */}
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+              <DemoLiveSpace onLeave={() => {}} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
     return (
       <div className="h-full flex flex-col items-center justify-center text-white/60 gap-4 pt-20">
         <div className="animate-pulse w-16 h-16 rounded-full bg-white/10" />

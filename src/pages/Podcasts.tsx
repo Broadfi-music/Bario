@@ -153,15 +153,22 @@ const Podcasts = () => {
         return;
       }
       
+      // Set tab immediately, then find/fetch the session
+      setActiveTab('live');
+      
+      // Try to find in existing sessions first
       const foundSession = liveSessions.find(p => p.id === sessionId);
       if (foundSession) {
         setSelectedSession(foundSession);
-        setActiveTab('live');
       } else {
         fetchSessionById(sessionId);
       }
+    } else if (!searchParams.get('battle') && !selectedSession && activeTab === 'live') {
+      // If on live tab with no session selected and no battle, try to show demo
+      const demoSession = getDemoPodcastSession();
+      setSelectedSession(demoSession);
     }
-  }, [searchParams, liveSessions]);
+  }, [searchParams, liveSessions, selectedSession, activeTab]);
 
   // Handle battle URL parameter - open battle view directly
   useEffect(() => {
