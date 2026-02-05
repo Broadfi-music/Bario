@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Flame, Heart, Star, Diamond, Crown, Coins } from 'lucide-react';
-import { isValidUUID, isDemoSession } from '@/lib/authUtils';
+ import { isValidUUID, isDemoSession, isDemoLiveSession } from '@/lib/authUtils';
 
 interface GiftAnimationProps {
   sessionId: string;
@@ -144,6 +144,11 @@ const generateDemoGift = (): GiftEvent => {
 };
 
 const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
+   // Early return for demo live sessions - no video animations allowed
+   if (isDemoLiveSession(sessionId)) {
+     return null;
+   }
+ 
   const [giftEvents, setGiftEvents] = useState<GiftEvent[]>([]);
   const [comboCount, setComboCount] = useState<Record<string, number>>({});
   const [bigGift, setBigGift] = useState<GiftEvent | null>(null);
