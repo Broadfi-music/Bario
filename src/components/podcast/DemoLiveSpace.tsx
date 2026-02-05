@@ -128,38 +128,43 @@ const DemoLiveSpace = ({ onLeave }: DemoLiveSpaceProps) => {
     navigate('/podcasts');
   };
 
-  const renderSpeaker = (speaker: DemoSpeaker, size: 'large' | 'medium') => {
+   const renderSpeaker = (speaker: DemoSpeaker) => {
     const isActive = speaker.id === activeSpeaker && isPlaying;
-    const sizeClasses = size === 'large' ? 'w-20 h-20 sm:w-24 sm:h-24' : 'w-16 h-16 sm:w-20 sm:h-20';
     
     return (
-      <div key={speaker.id} className="flex flex-col items-center gap-2">
+       <div key={speaker.id} className="flex items-center gap-2 py-1.5 px-2">
+         {/* Small circular avatar */}
         <div className="relative">
           <div 
-            className={`${sizeClasses} rounded-full bg-gradient-to-br ${speaker.avatarGradient} flex items-center justify-center ${isActive ? 'ring-4 ring-green-500/50 animate-pulse' : ''}`}
+             className={`w-8 h-8 rounded-full bg-gradient-to-br ${speaker.avatarGradient} flex items-center justify-center ${isActive ? 'ring-2 ring-green-500/50' : ''}`}
           >
-            <span className="text-white font-bold text-lg sm:text-xl">
+             <span className="text-white font-bold text-xs">
               {speaker.name.charAt(0)}
             </span>
           </div>
           {isActive && (
-            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
+             <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2">
               <AudioWaveform isActive={true} />
             </div>
           )}
-          {speaker.role === 'host' && (
-            <div className="absolute -top-1 -right-1 bg-yellow-500 text-black text-[8px] font-bold px-1.5 py-0.5 rounded-full">
-              HOST
-            </div>
-          )}
         </div>
-        <div className="text-center">
-          <p className="text-white text-xs sm:text-sm font-medium truncate max-w-[80px]">
+         
+         {/* Name and role inline */}
+         <div className="flex items-center gap-2">
+           <span className="text-white text-xs font-medium">
             {speaker.name}
-          </p>
-          <p className="text-white/40 text-[10px] capitalize">
-            {speaker.role === 'co_host' ? 'Co-host' : speaker.role}
-          </p>
+           </span>
+           {speaker.role === 'host' && (
+             <span className="bg-yellow-500 text-black text-[8px] font-bold px-1.5 py-0.5 rounded-full">
+               HOST
+             </span>
+           )}
+           {speaker.role === 'co_host' && (
+             <span className="text-white/40 text-[10px]">Co-host</span>
+           )}
+           {speaker.role === 'speaker' && (
+             <span className="text-white/40 text-[10px]">Speaker</span>
+           )}
         </div>
       </div>
     );
@@ -191,20 +196,14 @@ const DemoLiveSpace = ({ onLeave }: DemoLiveSpaceProps) => {
         </div>
       </div>
 
-      {/* Speakers Area */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-6 min-h-0">
-        {/* Host (largest) */}
-        <div className="mb-6">
-          {renderSpeaker(demoSession.speakers[0], 'large')}
-        </div>
-        
-        {/* Co-hosts and Speakers */}
-        <div className="flex items-center justify-center gap-6 sm:gap-8">
-          {demoSession.speakers.slice(1).map(speaker => renderSpeaker(speaker, 'medium'))}
+       {/* Speakers Area - Rectangular List Style */}
+       <div className="flex-1 flex flex-col items-center justify-center px-4 py-4 min-h-0">
+         <div className="bg-white/5 rounded-lg border border-white/10 w-full max-w-xs">
+           {demoSession.speakers.map(speaker => renderSpeaker(speaker))}
         </div>
 
-        {/* Audio Controls */}
-        <div className="flex items-center gap-3 mt-8">
+         {/* Audio Controls - smaller */}
+         <div className="flex items-center gap-2 mt-4">
           <Button
             variant="outline"
             size="sm"
