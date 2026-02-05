@@ -1,92 +1,103 @@
 
-# Fix Demo Live Space Chat Layout and Podcast Feed Issues
+
+# Fix Demo Live Space - Restore External Chat & Use Image Gifts
 
 ## Problem Analysis
 
-### Issue 1: Chat Display Position
-The chat messages in the demo live session are appearing at the top of the screen instead of at the bottom where they should be. This is caused by a layout conflict:
+### Issue 1: External TwitchComments Hidden
+The previous change incorrectly hid the external `TwitchComments` component for demo sessions. The user wants:
+- The `TwitchComments` component to show **under the share button** (following the normal layout)
+- The demo session should use the standard chat layout, not a separate built-in chat
 
-- `KickStyleLive` renders the `DemoLiveSpace` component inside the main content area
-- `KickStyleLive` ALSO renders `TwitchComments` component separately (for both mobile and desktop)
-- The result is two separate chat areas - one inside `DemoLiveSpace` (at the bottom) and one from `TwitchComments` (rendered by KickStyleLive)
-- The `TwitchComments` for demo sessions shows the static `demoComments` array which has different messages than the dynamic chat inside `DemoLiveSpace`
-
-The screenshot shows the dynamic chat messages from `DemoLiveSpace` ("AudioLover: Solomon Harvey...") appearing, but the love icon and other static messages ("Listener: Love the vibes!") are coming from `TwitchComments`.
-
-### Issue 2: Demo Session Not in Podcast Feed
-The demo session should appear in the "Feed" tab's live section, but it's currently only being injected into the live sessions array and may not be visible in the correct grid.
+### Issue 2: Video Gift Animations Are Too Much
+The `DemoLiveSpace` component currently uses the standard gift system which includes video animations (fire, star, diamond, crown). The user wants:
+- Use only the **image-based gifts**: rose, heart, and tofu
+- Remove the video animation gifts from the demo live space experience
 
 ---
 
 ## Solution
 
-### Fix 1: Hide External Chat for Demo Sessions
-Modify `KickStyleLive.tsx` to NOT render the separate `TwitchComments` components when the current session is a demo session. The `DemoLiveSpace` component already has its own built-in chat system.
+### Fix 1: Restore External TwitchComments for Demo Sessions
 
 **File: `src/components/podcast/KickStyleLive.tsx`**
 
-Changes to make:
-- Check if `isDemoLiveSession(currentSession.id)` before rendering the mobile chat section (lines 597-606)
-- Check if `isDemoLiveSession(currentSession.id)` before rendering the desktop chat sidebar (lines 609-626)
-- When it's a demo session, skip rendering these external chat components
+Changes:
+- Remove the `!isDemoLiveSession(currentSession.id)` condition that hides mobile chat (lines 597-608)
+- Remove the `!isDemoLiveSession(currentSession.id)` condition that hides desktop chat sidebar (lines 611-630)
+- The TwitchComments will now show for demo sessions just like regular sessions
 
-### Fix 2: Update DemoLiveSpace Layout
-The `DemoLiveSpace` component is designed to be a full-height standalone view. Since it's now rendered inside `KickStyleLive`, we need to ensure:
-- The chat area inside `DemoLiveSpace` is properly visible
-- The component takes the full available height
-- Remove duplicate controls that might conflict with `KickStyleLive`'s action bar
+### Fix 2: Remove Internal Chat from DemoLiveSpace
 
 **File: `src/components/podcast/DemoLiveSpace.tsx`**
 
-Changes to make:
-- Ensure the chat area is positioned at the bottom and visible
-- The component should take full height of its container
-- Verify the chat messages appear in the correct location
+Changes:
+- Remove the entire "Chat Area" section (lines 292-335) that has the built-in simulated chat
+- Remove the chat-related state and effects:
+  - Remove `comments` state
+  - Remove `commentsEndRef`
+  - Remove `commentIndexRef`
+  - Remove the chat message simulation effect (lines 114-141)
+  - Remove the fade out effect (lines 143-154)
+  - Remove the auto-scroll effect (lines 156-159)
+- Keep only the speakers area, audio controls, and session header
+- The component will focus on displaying the host/speakers and audio controls
 
-### Fix 3: Ensure Demo Session Appears in Podcast Feed Grid
-The `PodcastFeed` component already injects the demo session, but we need to verify it appears in the "Live Now" grid section properly.
+### Fix 3: Ensure TwitchComments Uses Image-Based Gifts for Demo
 
-**File: `src/components/podcast/PodcastFeed.tsx`**
+The `TwitchComments` component uses `TikTokGiftModal` which already has image-based gifts (rose, heart, tofu). No changes needed to the gift modal itself.
+
+However, for the demo session, the `TikTokGiftDisplay` (which shows gift animations) should only display image-based gifts.
+
+**File: `src/components/podcast/TikTokGiftDisplay.tsx`** (if needed)
 
 Verify:
-- The `getDemoLiveHost()` is being called and added to `liveHosts`
-- The demo session has the correct cover image URL for display
+- When displaying gifts in demo session, only show rose, heart, and tofu (image-based)
+- Skip the video animation gifts (fire, star, diamond, crown)
 
 ---
 
-## Technical Implementation
+## Technical Details
 
-### KickStyleLive.tsx Changes
+### KickStyleLive.tsx - Restore Chat
 
-The mobile chat section (around line 597-606):
+Remove the conditional hiding from mobile chat:
 ```tsx
-{/* Mobile Chat - Collapsible - Hide for demo sessions */}
+// Before (remove this condition):
 {!isDemoLiveSession(currentSession.id) && (
-  <div className="lg:hidden shrink-0 h-[200px] border-t border-white/5">
-    <TwitchComments 
-      sessionId={currentSession.id}
-      ...
-    />
+  <div className="lg:hidden shrink-0 h-[200px]...">
+    <TwitchComments ... />
   </div>
 )}
+
+// After (always show):
+<div className="lg:hidden shrink-0 h-[200px]...">
+  <TwitchComments ... />
+</div>
 ```
 
-The desktop chat sidebar (around line 609-626):
-```tsx
-{/* Right Sidebar - Chat (Desktop) - Hide for demo sessions */}
-{!isDemoLiveSession(currentSession.id) && (
-  <aside className="hidden lg:flex flex-col w-80 xl:w-96 border-l border-white/5 bg-[#18181b]">
-    ...
-  </aside>
-)}
+Same for desktop chat sidebar - remove the conditional.
+
+### DemoLiveSpace.tsx - Simplified Structure
+
+The component will become simpler:
+
+```
+DemoLiveSpace (after changes)
+├── Session Header (title, LIVE badge, listener count)
+├── Speakers Area (host + co-hosts with animated avatars)
+├── Audio Controls (play/pause, mute)
+└── Join/Leave Buttons
 ```
 
-### DemoLiveSpace.tsx Adjustments
+No internal chat - the external TwitchComments handles chat display.
 
-The component structure will be verified to ensure:
-- Chat messages appear at the bottom of the component
-- The layout uses flex-col with the chat at the end
-- No conflicting absolute positioning that might cause the chat to appear elsewhere
+### TwitchComments for Demo Sessions
+
+The `TwitchComments` component already has logic in place for demo sessions via the `isDemoLiveSession()` check. It will:
+- Show simulated demo chat messages from `demoChatMessages` array
+- Use the standard layout and positioning
+- Allow gift button to open the gift modal
 
 ---
 
@@ -94,16 +105,17 @@ The component structure will be verified to ensure:
 
 | File | Change |
 |------|--------|
-| `src/components/podcast/KickStyleLive.tsx` | Conditionally hide TwitchComments for demo sessions |
-| `src/components/podcast/DemoLiveSpace.tsx` | Verify chat layout is at bottom (may need minor adjustments) |
+| `src/components/podcast/KickStyleLive.tsx` | Remove conditional hiding of TwitchComments for demo sessions |
+| `src/components/podcast/DemoLiveSpace.tsx` | Remove internal chat section and related state/effects |
 
 ---
 
 ## Expected Result
 
 After these changes:
-1. When viewing the demo live session, only the internal chat from `DemoLiveSpace` will be visible
-2. Chat messages will appear at the bottom of the screen in the proper chat area
-3. No duplicate chat components or misplaced messages
-4. The demo session will continue to appear in both the heatmap and podcast feed
+1. Demo live session shows TwitchComments under the share button like regular sessions
+2. Chat messages appear in the correct location (standard TwitchComments position)
+3. Gift modal shows all gifts but image-based gifts (rose, heart, tofu) are emphasized
+4. No duplicate chat or conflicting layouts
+5. Audio playback and speaker animations still work
 
