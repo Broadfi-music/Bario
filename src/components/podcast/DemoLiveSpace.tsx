@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mic, MicOff, Volume2, VolumeX, Users, Pause, Play } from 'lucide-react';
+import { Mic, Volume2, VolumeX, Users, Pause, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { demoSession, demoChatMessages, DemoSpeaker } from '@/config/demoSpace';
+import { demoSession, DemoSpeaker } from '@/config/demoSpace';
 import AuthPromptModal from './AuthPromptModal';
 
 // Audio waveform animation component
@@ -28,20 +28,6 @@ const AudioWaveform = ({ isActive }: { isActive: boolean }) => {
   );
 };
 
-interface DemoComment {
-  id: string;
-  content: string;
-  userName: string;
-  color: string;
-  fadeOut?: boolean;
-}
-
-const getUserColor = (name: string) => {
-  const colors = ['text-emerald-400', 'text-pink-400', 'text-blue-400', 'text-yellow-400', 'text-cyan-400', 'text-orange-400', 'text-purple-400', 'text-rose-400'];
-  const index = name.charCodeAt(0) % colors.length;
-  return colors[index];
-};
-
 interface DemoLiveSpaceProps {
   onLeave?: () => void;
 }
@@ -54,12 +40,8 @@ const DemoLiveSpace = ({ onLeave }: DemoLiveSpaceProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [listenerCount, setListenerCount] = useState(demoSession.baseListenerCount);
-  const [comments, setComments] = useState<DemoComment[]>([]);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [activeSpeaker, setActiveSpeaker] = useState<string>(demoSession.speakers[0].id);
-  
-  const commentsEndRef = useRef<HTMLDivElement>(null);
-  const commentIndexRef = useRef(0);
 
   // Initialize and auto-play audio
   useEffect(() => {
@@ -110,53 +92,6 @@ const DemoLiveSpace = ({ onLeave }: DemoLiveSpaceProps) => {
 
     return () => clearInterval(interval);
   }, [activeSpeaker]);
-
-  // Simulate chat messages appearing
-  useEffect(() => {
-    const addMessage = () => {
-      const messageData = demoChatMessages[commentIndexRef.current % demoChatMessages.length];
-      commentIndexRef.current++;
-      
-      const newComment: DemoComment = {
-        id: `demo-${Date.now()}-${Math.random()}`,
-        content: messageData.content,
-        userName: messageData.userName,
-        color: getUserColor(messageData.userName),
-      };
-      
-      setComments(prev => [...prev.slice(-19), newComment]); // Keep last 20
-    };
-
-    // Add initial messages
-    for (let i = 0; i < 3; i++) {
-      setTimeout(() => addMessage(), i * 500);
-    }
-
-    // Add new messages periodically
-    const interval = setInterval(() => {
-      addMessage();
-    }, 3000 + Math.random() * 5000); // 3-8 seconds
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Fade out old messages
-  useEffect(() => {
-    const cleanup = setInterval(() => {
-      setComments(prev => 
-        prev.map((c, i) => 
-          i < prev.length - 8 ? { ...c, fadeOut: true } : c
-        ).filter((_, i) => i >= prev.length - 15)
-      );
-    }, 2000);
-
-    return () => clearInterval(cleanup);
-  }, []);
-
-  // Auto-scroll chat
-  useEffect(() => {
-    commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [comments]);
 
   const togglePlay = () => {
     if (!audioRef.current) return;
@@ -289,49 +224,24 @@ const DemoLiveSpace = ({ onLeave }: DemoLiveSpaceProps) => {
         </div>
       </div>
 
-      {/* Chat Area */}
-      <div className="h-48 sm:h-56 flex flex-col bg-black/50 border-t border-white/5">
-        {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 scrollbar-hide">
-          {comments.map((comment) => (
-            <div 
-              key={comment.id} 
-              className={`py-0.5 transition-all duration-300 ${comment.fadeOut ? 'opacity-0 translate-x-4' : 'opacity-100'}`}
-            >
-              <div className="flex items-start gap-2 bg-black/40 rounded px-2 py-1.5 backdrop-blur-sm animate-in slide-in-from-right-4 duration-150">
-                <div className="flex-1 min-w-0">
-                  <span className={`text-xs font-bold ${comment.color}`}>
-                    {comment.userName}:
-                  </span>
-                  <span className="text-xs text-white ml-1.5 break-words">
-                    {comment.content}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-          <div ref={commentsEndRef} />
-        </div>
-
-        {/* Join/Leave Controls */}
-        <div className="flex items-center gap-2 px-3 py-2 border-t border-white/5">
-          <Button
-            onClick={handleJoinSession}
-            size="sm"
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs"
-          >
-            <Mic className="h-3 w-3 mr-1.5" />
-            Join Session
-          </Button>
-          <Button
-            onClick={handleLeave}
-            variant="outline"
-            size="sm"
-            className="bg-white/10 border-white/20 hover:bg-white/20 text-white text-xs"
-          >
-            Leave
-          </Button>
-        </div>
+      {/* Join/Leave Controls */}
+      <div className="flex items-center gap-2 px-4 py-3 border-t border-white/5 bg-black/50">
+        <Button
+          onClick={handleJoinSession}
+          size="sm"
+          className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs"
+        >
+          <Mic className="h-3 w-3 mr-1.5" />
+          Join Session
+        </Button>
+        <Button
+          onClick={handleLeave}
+          variant="outline"
+          size="sm"
+          className="bg-white/10 border-white/20 hover:bg-white/20 text-white text-xs"
+        >
+          Leave
+        </Button>
       </div>
 
       {/* Auth Modal */}
