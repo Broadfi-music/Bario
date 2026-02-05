@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { isDemoSession } from '@/lib/authUtils';
+import { isDemoSession, isDemoLiveSession } from '@/lib/authUtils';
 
 interface GiftEvent {
   id: string;
@@ -27,6 +27,9 @@ const GIFT_IMAGES: { [key: string]: string } = {
   crown: '/gifts/gift-crown.mp4',
 };
 
+// Image-only gifts for demo sessions
+const DEMO_ALLOWED_GIFTS = ['rose', 'heart', 'flame_heart', 'flame', 'tofu'];
+
 const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
   const [gifts, setGifts] = useState<GiftEvent[]>([]);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
@@ -37,10 +40,17 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
   const processedGiftIdsRef = useRef<Set<string>>(new Set());
   const lastPollTimeRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
+  const isDemo = isDemoLiveSession(sessionId);
 
   // Add gift with TikTok-style display
   const addGift = useCallback((giftType: string, count: number, senderName: string, senderAvatar?: string, giftId?: string) => {
     if (!mountedRef.current) return;
+    
+    // For demo sessions, skip video animation gifts
+    if (isDemo && !DEMO_ALLOWED_GIFTS.includes(giftType)) {
+      console.log('🎁 Skipping video gift for demo:', giftType);
+      return;
+    }
     
     // Prevent duplicate gifts
     if (giftId) {
