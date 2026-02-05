@@ -1,103 +1,162 @@
 
 
-# Fix Demo Live Space - Restore External Chat & Use Image Gifts
+# Fix Demo Live Session - Speaker Layout & Video Animations
 
 ## Problem Analysis
 
-### Issue 1: External TwitchComments Hidden
-The previous change incorrectly hid the external `TwitchComments` component for demo sessions. The user wants:
-- The `TwitchComments` component to show **under the share button** (following the normal layout)
-- The demo session should use the standard chat layout, not a separate built-in chat
+### Issue 1: Video Gift Animations Still Showing
+There are **TWO separate components** handling gift animations:
 
-### Issue 2: Video Gift Animations Are Too Much
-The `DemoLiveSpace` component currently uses the standard gift system which includes video animations (fire, star, diamond, crown). The user wants:
-- Use only the **image-based gifts**: rose, heart, and tofu
-- Remove the video animation gifts from the demo live space experience
+1. **`TikTokGiftDisplay`** - Shows small gift banners on the left side (already fixed with `DEMO_ALLOWED_GIFTS` filter)
+2. **`GiftAnimation`** - Shows **FULL-SCREEN video animations** (NOT fixed!)
+
+The `GiftAnimation` component (line 216-225) runs in demo mode and generates random gifts including video gifts (`fire`, `star`, `diamond`, `crown`). This is the source of the video animations still appearing.
+
+**Root Cause**: `GiftAnimation` in demo mode generates random gifts from `['fire', 'heart', 'star', 'diamond', 'crown']` which includes 4 video gifts.
+
+### Issue 2: Host Profile Icons Too Large
+The speakers in `DemoLiveSpace` are displayed with large circular avatars:
+- Host: `w-20 h-20 sm:w-24 sm:h-24` (80-96px)
+- Co-hosts/Speakers: `w-16 h-16 sm:w-20 sm:h-20` (64-80px)
+
+User wants them **very small** in a **rectangular listing style** (horizontal row layout).
 
 ---
 
 ## Solution
 
-### Fix 1: Restore External TwitchComments for Demo Sessions
+### Fix 1: Disable Full-Screen Video Animations for Demo Sessions
 
-**File: `src/components/podcast/KickStyleLive.tsx`**
+**File: `src/components/podcast/GiftAnimation.tsx`**
 
 Changes:
-- Remove the `!isDemoLiveSession(currentSession.id)` condition that hides mobile chat (lines 597-608)
-- Remove the `!isDemoLiveSession(currentSession.id)` condition that hides desktop chat sidebar (lines 611-630)
-- The TwitchComments will now show for demo sessions just like regular sessions
+- Import `isDemoLiveSession` from `@/lib/authUtils`
+- At the start of the component, check if it's a demo session and **return null immediately**
+- This completely disables the full-screen video animation component for demo sessions
+- The image-based gift display (`TikTokGiftDisplay`) is already properly filtering gifts
 
-### Fix 2: Remove Internal Chat from DemoLiveSpace
+```tsx
+// At the top of GiftAnimation component:
+if (isDemoLiveSession(sessionId)) {
+  return null; // Don't show video animations for demo sessions
+}
+```
+
+### Fix 2: Resize Speaker Icons to Small Rectangular Listing
 
 **File: `src/components/podcast/DemoLiveSpace.tsx`**
 
-Changes:
-- Remove the entire "Chat Area" section (lines 292-335) that has the built-in simulated chat
-- Remove the chat-related state and effects:
-  - Remove `comments` state
-  - Remove `commentsEndRef`
-  - Remove `commentIndexRef`
-  - Remove the chat message simulation effect (lines 114-141)
-  - Remove the fade out effect (lines 143-154)
-  - Remove the auto-scroll effect (lines 156-159)
-- Keep only the speakers area, audio controls, and session header
-- The component will focus on displaying the host/speakers and audio controls
+Changes to `renderSpeaker` function and speaker layout:
+- Change from vertical flex columns to horizontal row layout
+- Reduce avatar sizes to very small: `w-8 h-8` (32px)
+- Remove the separate "large" host display - all speakers in one row
+- Use a compact rectangular card/list style
+- Smaller text sizes
 
-### Fix 3: Ensure TwitchComments Uses Image-Based Gifts for Demo
-
-The `TwitchComments` component uses `TikTokGiftModal` which already has image-based gifts (rose, heart, tofu). No changes needed to the gift modal itself.
-
-However, for the demo session, the `TikTokGiftDisplay` (which shows gift animations) should only display image-based gifts.
-
-**File: `src/components/podcast/TikTokGiftDisplay.tsx`** (if needed)
-
-Verify:
-- When displaying gifts in demo session, only show rose, heart, and tofu (image-based)
-- Skip the video animation gifts (fire, star, diamond, crown)
+New layout structure:
+```
+┌──────────────────────────────────────────────────┐
+│ [Session Header: Title, LIVE badge, listeners]   │
+├──────────────────────────────────────────────────┤
+│                                                  │
+│   ┌────────────────────────────────────────┐     │
+│   │ 🟣 Solomon Harvey • HOST                │     │
+│   │ 🔵 Mind Coach • Co-host                 │     │
+│   │ 🟢 Wisdom Seeker • Speaker              │     │
+│   └────────────────────────────────────────┘     │
+│                                                  │
+│             [Play] [Mute] controls               │
+│                                                  │
+├──────────────────────────────────────────────────┤
+│ [Join Session] [Leave]                          │
+└──────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Technical Details
 
-### KickStyleLive.tsx - Restore Chat
+### GiftAnimation.tsx Changes
 
-Remove the conditional hiding from mobile chat:
 ```tsx
-// Before (remove this condition):
-{!isDemoLiveSession(currentSession.id) && (
-  <div className="lg:hidden shrink-0 h-[200px]...">
-    <TwitchComments ... />
-  </div>
-)}
+import { isDemoLiveSession } from '@/lib/authUtils';
 
-// After (always show):
-<div className="lg:hidden shrink-0 h-[200px]...">
-  <TwitchComments ... />
+const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
+  // Early return for demo sessions - no video animations
+  if (isDemoLiveSession(sessionId)) {
+    return null;
+  }
+  
+  // ... rest of component unchanged
+```
+
+### DemoLiveSpace.tsx - Speaker Layout Changes
+
+The renderSpeaker function will be updated to use:
+- Small inline avatar: `w-8 h-8` 
+- Horizontal flex row with name and role inline
+- Compact styling with smaller fonts
+
+```tsx
+const renderSpeaker = (speaker: DemoSpeaker) => {
+  const isActive = speaker.id === activeSpeaker && isPlaying;
+  
+  return (
+    <div key={speaker.id} className="flex items-center gap-2 py-1.5 px-2">
+      {/* Small circular avatar */}
+      <div className="relative">
+        <div 
+          className={`w-8 h-8 rounded-full bg-gradient-to-br ${speaker.avatarGradient} 
+            flex items-center justify-center 
+            ${isActive ? 'ring-2 ring-green-500/50' : ''}`}
+        >
+          <span className="text-white font-bold text-xs">
+            {speaker.name.charAt(0)}
+          </span>
+        </div>
+        {isActive && (
+          <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2">
+            <AudioWaveform isActive={true} />
+          </div>
+        )}
+      </div>
+      
+      {/* Name and role inline */}
+      <div className="flex items-center gap-2">
+        <span className="text-white text-xs font-medium">
+          {speaker.name}
+        </span>
+        {speaker.role === 'host' && (
+          <span className="bg-yellow-500 text-black text-[8px] font-bold px-1.5 py-0.5 rounded-full">
+            HOST
+          </span>
+        )}
+        {speaker.role === 'co_host' && (
+          <span className="text-white/40 text-[10px]">Co-host</span>
+        )}
+        {speaker.role === 'speaker' && (
+          <span className="text-white/40 text-[10px]">Speaker</span>
+        )}
+      </div>
+    </div>
+  );
+};
+```
+
+The speakers area will use a rectangular listing:
+```tsx
+{/* Speakers Area - Rectangular List Style */}
+<div className="flex-1 flex flex-col items-center justify-center px-4 py-4 min-h-0">
+  <div className="bg-white/5 rounded-lg border border-white/10 w-full max-w-xs">
+    {demoSession.speakers.map(speaker => renderSpeaker(speaker))}
+  </div>
+  
+  {/* Audio Controls - smaller */}
+  <div className="flex items-center gap-2 mt-4">
+    {/* ... play/mute buttons ... */}
+  </div>
 </div>
 ```
-
-Same for desktop chat sidebar - remove the conditional.
-
-### DemoLiveSpace.tsx - Simplified Structure
-
-The component will become simpler:
-
-```
-DemoLiveSpace (after changes)
-├── Session Header (title, LIVE badge, listener count)
-├── Speakers Area (host + co-hosts with animated avatars)
-├── Audio Controls (play/pause, mute)
-└── Join/Leave Buttons
-```
-
-No internal chat - the external TwitchComments handles chat display.
-
-### TwitchComments for Demo Sessions
-
-The `TwitchComments` component already has logic in place for demo sessions via the `isDemoLiveSession()` check. It will:
-- Show simulated demo chat messages from `demoChatMessages` array
-- Use the standard layout and positioning
-- Allow gift button to open the gift modal
 
 ---
 
@@ -105,17 +164,16 @@ The `TwitchComments` component already has logic in place for demo sessions via 
 
 | File | Change |
 |------|--------|
-| `src/components/podcast/KickStyleLive.tsx` | Remove conditional hiding of TwitchComments for demo sessions |
-| `src/components/podcast/DemoLiveSpace.tsx` | Remove internal chat section and related state/effects |
+| `src/components/podcast/GiftAnimation.tsx` | Return null early for demo sessions (disable video animations) |
+| `src/components/podcast/DemoLiveSpace.tsx` | Resize speakers to small rectangular listing layout |
 
 ---
 
 ## Expected Result
 
 After these changes:
-1. Demo live session shows TwitchComments under the share button like regular sessions
-2. Chat messages appear in the correct location (standard TwitchComments position)
-3. Gift modal shows all gifts but image-based gifts (rose, heart, tofu) are emphasized
-4. No duplicate chat or conflicting layouts
-5. Audio playback and speaker animations still work
+1. **No video gift animations** in demo live session (completely disabled)
+2. Only image-based gifts (rose, tofu, flame heart) display via `TikTokGiftDisplay`
+3. Speaker icons are **very small** (32px) in a **rectangular vertical list** layout
+4. Cleaner, more compact demo session view
 
