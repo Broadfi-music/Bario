@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { getRandomAvatarUrl, getRandomCoverUrl } from '@/lib/randomAvatars';
 
 interface AuthContextType {
   user: User | null;
@@ -108,12 +109,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (data?.user && !error) {
       // Use setTimeout to defer the profile creation (avoid auth deadlock)
       setTimeout(async () => {
+        const randomAvatar = getRandomAvatarUrl(data.user!.id);
+        const randomCover = getRandomCoverUrl(data.user!.id);
         const { error: profileError } = await supabase
           .from('profiles')
           .upsert({
             user_id: data.user!.id,
             full_name: fullName,
             username: email.split('@')[0],
+            avatar_url: randomAvatar,
+            cover_image_url: randomCover,
           }, { onConflict: 'user_id' });
         
         if (profileError) {
