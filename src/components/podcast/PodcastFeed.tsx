@@ -374,7 +374,8 @@ const PodcastFeed = () => {
       console.log('Live sessions fetched:', sessions?.length || 0);
       
       if (!sessions || sessions.length === 0) {
-        setLiveHosts([]);
+        // No real sessions - show demo session only
+        setLiveHosts([getDemoLiveHost()]);
         return;
       }
 
