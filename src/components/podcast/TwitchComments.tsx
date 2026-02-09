@@ -98,32 +98,31 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
   const [showAuthModal, setShowAuthModal] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const [pickerTab, setPickerTab] = useState<PickerTab>('emotes');
-  const [currentUserName, setCurrentUserName] = useState<string>('Listener');
+  
+  // Get initial username from user metadata immediately (no async needed)
+  const getInitialUserName = () => {
+    if (!user) return 'Listener';
+    const meta = user.user_metadata;
+    return meta?.username || meta?.full_name || meta?.name || user.email?.split('@')[0] || 'Listener';
+  };
+  const [currentUserName, setCurrentUserName] = useState<string>(getInitialUserName);
 
-  // Fetch current user's profile name
+  // Then fetch the real profile username (may override metadata)
   useEffect(() => {
     if (!user) return;
     const fetchMyProfile = async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
         .select('full_name, username')
         .eq('user_id', user.id)
         .single();
       if (data) {
-        const name = data.username || data.full_name || 'Listener';
-        console.log('💬 Fetched profile for chat:', name, data);
+        const name = data.username || data.full_name || getInitialUserName();
         setCurrentUserName(name);
-      } else if (error) {
-        console.error('💬 Failed to fetch profile:', error);
-        // Fallback: try user metadata
-        const meta = user.user_metadata;
-        if (meta?.full_name || meta?.name) {
-          setCurrentUserName(meta.full_name || meta.name);
-        }
       }
     };
     fetchMyProfile();
-  }, [user]);
+  }, [user?.id]);
 
   // Demo chat cycling - messages appear and disappear with random names
   useEffect(() => {
