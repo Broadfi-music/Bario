@@ -63,12 +63,27 @@ const getUserColor = (userId: string) => {
 
 type PickerTab = 'emotes' | 'stickers' | 'gifs';
 
-const demoComments: Comment[] = [
-  { id: 'demo-1', user_id: 'user1', content: 'This is fire! 🔥', is_emoji: false, created_at: '' },
-  { id: 'demo-2', user_id: 'user2', content: 'Amazing show!', is_emoji: false, created_at: '' },
-  { id: 'demo-3', user_id: 'user3', content: '❤️', is_emoji: true, created_at: '' },
-  { id: 'demo-4', user_id: 'user4', content: 'Love the vibes!', is_emoji: false, created_at: '' },
-  { id: 'demo-5', user_id: 'user5', content: 'Keep it going!', is_emoji: false, created_at: '' },
+// Random listener names for demo chat
+const DEMO_LISTENER_NAMES = [
+  'ThoughtLeader', 'MindfulMike', 'WisdomSeeker', 'GrowthMaster', 'DeepThinker',
+  'SoulfulSara', 'ConsciousCris', 'PositivePete', 'BookWorm', 'LearnDaily',
+  'AudioLover', 'ZenMaster', 'ShareTheWisdom', 'TransformNow', 'BookReviewer',
+  'PhilosophyFan', 'ValueSeeker', 'MorningRitual', 'ClassicReader', 'MasterMind',
+  'EarlyRiser', 'WorkLifeBalance', 'PeacefulListener', 'InnerPeace', 'SaveForLater',
+];
+
+const DEMO_MESSAGES = [
+  'This chapter changed my perspective 🙏', 'The power of thoughts is incredible!',
+  'Love this discussion! 💜', 'So inspiring 🔥', 'Mind = blown 🤯',
+  'Thank you for sharing this wisdom', 'Every thought shapes our reality',
+  'This is exactly what I needed today', 'The audiobook is amazing quality!',
+  'Taking notes on everything 📝', 'Solomon Harvey narrates so well',
+  'We become what we think about', 'Sharing this with my friends',
+  'Life changing content ✨', 'This book should be required reading',
+  'The mind is everything', 'Pure gold! 💎', 'I listen to this every morning',
+  'James Allen was a genius', 'Self-mastery begins with thought mastery',
+  'Who else is listening from work? 👋', 'The narrator voice is so calming',
+  'As within, so without 🧘', 'Bookmarking this for later!',
 ];
 
 const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHost = false, hideGiftButton = false }: TwitchCommentsProps) => {
@@ -84,10 +99,57 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const [pickerTab, setPickerTab] = useState<PickerTab>('emotes');
 
+  // Demo chat cycling - messages appear and disappear with random names
+  useEffect(() => {
+    if (!isDemoSession(sessionId)) return;
+
+    let demoIndex = 0;
+    const addDemoMessage = () => {
+      const name = DEMO_LISTENER_NAMES[Math.floor(Math.random() * DEMO_LISTENER_NAMES.length)];
+      const content = DEMO_MESSAGES[demoIndex % DEMO_MESSAGES.length];
+      demoIndex++;
+      const id = `demo-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+      const newMsg: Comment = {
+        id,
+        user_id: `demo-user-${name}`,
+        content,
+        is_emoji: false,
+        created_at: new Date().toISOString(),
+        user_name: name,
+      };
+      setComments(prev => [...prev.slice(-8), newMsg]); // Keep max 9 messages
+    };
+
+    // Add initial message immediately
+    addDemoMessage();
+
+    // Add new messages every 3-6 seconds
+    const interval = setInterval(() => {
+      addDemoMessage();
+    }, 3000 + Math.random() * 3000);
+
+    return () => clearInterval(interval);
+  }, [sessionId]);
+
+  // Demo message cleanup - remove after 12 seconds
+  useEffect(() => {
+    if (!isDemoSession(sessionId)) return;
+
+    const cleanup = setInterval(() => {
+      const now = Date.now();
+      setComments(prev => prev.filter(c => {
+        if (!c.created_at) return true;
+        const age = now - new Date(c.created_at).getTime();
+        return age < 12000;
+      }));
+    }, 2000);
+
+    return () => clearInterval(cleanup);
+  }, [sessionId]);
+
   useEffect(() => {
     // Skip database calls for demo sessions
     if (isDemoSession(sessionId)) {
-      setComments(demoComments);
       return;
     }
 
