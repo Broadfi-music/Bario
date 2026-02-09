@@ -135,11 +135,15 @@ const DemoLiveSpace = ({ onLeave }: DemoLiveSpaceProps) => {
       <div key={speaker.id} className="flex flex-col items-center gap-1">
         <div className="relative">
           <div 
-            className={`w-10 h-10 rounded-full bg-gradient-to-br ${speaker.avatarGradient} flex items-center justify-center ${isActive ? 'ring-2 ring-green-500/50' : ''}`}
+            className={`w-10 h-10 rounded-full overflow-hidden flex items-center justify-center ${isActive ? 'ring-2 ring-green-500/50' : ''}`}
           >
-            <span className="text-white font-bold text-xs">
-              {speaker.name.charAt(0)}
-            </span>
+            {speaker.avatarUrl ? (
+              <img src={speaker.avatarUrl} alt={speaker.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className={`w-full h-full bg-gradient-to-br ${speaker.avatarGradient} flex items-center justify-center`}>
+                <span className="text-white font-bold text-xs">{speaker.name.charAt(0)}</span>
+              </div>
+            )}
           </div>
           {isActive && (
             <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2">

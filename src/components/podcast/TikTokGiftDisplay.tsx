@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { isDemoSession, isDemoLiveSession } from '@/lib/authUtils';
+import { getDemoAvatar } from '@/lib/randomAvatars';
 
 interface GiftEvent {
   id: string;
@@ -337,11 +338,11 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-pink-500 to-purple-600 flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">
-                    {gift.senderName.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+                <img 
+                  src={getDemoAvatar(gift.senderName)} 
+                  alt={gift.senderName}
+                  className="w-full h-full object-cover"
+                />
               )}
             </div>
             

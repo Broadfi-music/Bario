@@ -1,6 +1,7 @@
 // Demo Live Space Configuration
 // This provides a persistent demo session that plays pre-recorded audio
 // to attract first-time users when no real live sessions are running
+import { getDemoAvatar } from '@/lib/randomAvatars';
 
 export const DEMO_SESSION_ID = 'demo-live-session';
 export const DEMO_HOST_ID = 'demo-host-solomon';
@@ -10,6 +11,7 @@ export interface DemoSpeaker {
   name: string;
   role: 'host' | 'co_host' | 'speaker';
   avatarGradient: string;
+  avatarUrl?: string;
 }
 
 export interface DemoSession {
@@ -43,18 +45,21 @@ export const demoSession: DemoSession = {
       name: 'Solomon Harvey',
       role: 'host',
       avatarGradient: 'from-purple-500 to-pink-500',
+      avatarUrl: getDemoAvatar('Solomon Harvey'),
     },
     {
       id: 'demo-speaker-1',
       name: 'Mind Coach',
       role: 'co_host',
       avatarGradient: 'from-blue-500 to-cyan-500',
+      avatarUrl: getDemoAvatar('Mind Coach'),
     },
     {
       id: 'demo-speaker-2',
       name: 'Wisdom Seeker',
       role: 'speaker',
       avatarGradient: 'from-emerald-500 to-teal-500',
+      avatarUrl: getDemoAvatar('Wisdom Seeker'),
     },
   ],
 };

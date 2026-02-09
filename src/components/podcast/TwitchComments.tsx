@@ -10,6 +10,7 @@ import ShareModal from './ShareModal';
 import AddParticipantModal from './AddParticipantModal';
 import AuthPromptModal from './AuthPromptModal';
 import { getFreshSession, isDemoSession } from '@/lib/authUtils';
+import { getDemoAvatar } from '@/lib/randomAvatars';
 
 interface Comment {
   id: string;
@@ -446,6 +447,16 @@ return (
               <span className="text-2xl inline-block animate-bounce">{comment.content}</span>
             ) : (
               <div className="flex items-start gap-2 bg-black/40 rounded px-2 py-1.5 backdrop-blur-sm hover:bg-black/60 transition-colors animate-in slide-in-from-right-4 duration-150">
+                {/* Chat avatar */}
+                <div className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0 mt-0.5">
+                  {comment.user_id.startsWith('demo-user-') ? (
+                    <img src={getDemoAvatar(comment.user_name || 'User')} alt="" className="w-full h-full object-cover" />
+                  ) : userProfiles.get(comment.user_id)?.avatar ? (
+                    <img src={userProfiles.get(comment.user_id)!.avatar!} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <img src={getDemoAvatar(comment.user_name || comment.user_id)} alt="" className="w-full h-full object-cover" />
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
                   <span 
                     className={`text-xs font-bold ${getUserColor(comment.user_id)} cursor-pointer hover:underline`}
