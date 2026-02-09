@@ -412,7 +412,7 @@ const Podcasts = () => {
           </div>
 
           {/* Center: Tabs - Add Battle and Leaderboard tabs */}
-          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v === 'feed') setSelectedSession(null); }} className="w-auto">
+          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v !== 'live') { setSelectedSession(null); setSearchParams({}); } }} className="w-auto">
             <TabsList className="bg-white/5 h-8">
               <TabsTrigger value="feed" className="text-xs px-2 sm:px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7">
                 Feed
