@@ -98,6 +98,23 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
   const [showAuthModal, setShowAuthModal] = useState(false);
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const [pickerTab, setPickerTab] = useState<PickerTab>('emotes');
+  const [currentUserName, setCurrentUserName] = useState<string>('Listener');
+
+  // Fetch current user's profile name
+  useEffect(() => {
+    if (!user) return;
+    const fetchMyProfile = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name, username')
+        .eq('user_id', user.id)
+        .single();
+      if (data) {
+        setCurrentUserName(data.username || data.full_name || 'Listener');
+      }
+    };
+    fetchMyProfile();
+  }, [user]);
 
   // Demo chat cycling - messages appear and disappear with random names
   useEffect(() => {
@@ -359,6 +376,7 @@ const sendComment = async (content: string, isEmoji = false) => {
       content: content.trim(),
       is_emoji: isEmoji,
       created_at: new Date().toISOString(),
+      user_name: currentUserName,
     };
 
     // Add comment immediately - visible to sender
@@ -478,7 +496,7 @@ return (
             {pickerTab === 'emotes' && EMOTES.map((emote, i) => (
               <button
                 key={`emote-${i}`}
-                onClick={() => sendComment(emote, true)}
+                onClick={() => setNewComment(prev => prev + emote)}
                 className="text-xl hover:scale-125 transition-transform p-1.5 rounded hover:bg-white/10"
               >
                 {emote}
@@ -487,7 +505,7 @@ return (
             {pickerTab === 'stickers' && STICKERS.map((sticker, i) => (
               <button
                 key={`sticker-${i}`}
-                onClick={() => sendComment(sticker, true)}
+                onClick={() => setNewComment(prev => prev + sticker)}
                 className="text-2xl hover:scale-125 transition-transform p-1.5 rounded hover:bg-white/10"
               >
                 {sticker}
@@ -496,7 +514,7 @@ return (
             {pickerTab === 'gifs' && GIFS.map((gif, i) => (
               <button
                 key={`gif-${i}`}
-                onClick={() => sendComment(gif, true)}
+                onClick={() => setNewComment(prev => prev + gif)}
                 className="text-2xl hover:scale-125 transition-transform p-1.5 rounded hover:bg-white/10 animate-pulse"
               >
                 {gif}
