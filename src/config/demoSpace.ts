@@ -28,6 +28,9 @@ export interface DemoSession {
   speakers: DemoSpeaker[];
 }
 
+export const DEMO_SESSION_ID_2 = 'demo-live-session-2';
+export const DEMO_HOST_ID_2 = 'demo-host-teri';
+
 export const demoSession: DemoSession = {
   id: DEMO_SESSION_ID,
   hostId: DEMO_HOST_ID,
@@ -64,6 +67,35 @@ export const demoSession: DemoSession = {
   ],
 };
 
+export const demoSession2: DemoSession = {
+  id: DEMO_SESSION_ID_2,
+  hostId: DEMO_HOST_ID_2,
+  title: 'Reconciling the CEOs Capacity Dilemma',
+  description: 'How To Do Business — Long time do business and become successful with Jackson Johsep',
+  coverImageUrl: '/demo/demo-space-cover-2.jpg',
+  audioUrl: '/demo/demo-space-audio-2.mp3',
+  hostName: 'Teri Beckman',
+  hostAvatar: null,
+  category: 'Business',
+  baseListenerCount: 89,
+  speakers: [
+    {
+      id: 'demo-host-teri',
+      name: 'Teri Beckman',
+      role: 'host',
+      avatarGradient: 'from-amber-500 to-orange-500',
+      avatarUrl: getDemoAvatar('Teri Beckman'),
+    },
+    {
+      id: 'demo-speaker-3',
+      name: 'Jackson Johsep',
+      role: 'co_host',
+      avatarGradient: 'from-indigo-500 to-blue-500',
+      avatarUrl: getDemoAvatar('Jackson Johsep'),
+    },
+  ],
+};
+
 // Simulated chat messages that cycle through the demo session
 export const demoChatMessages = [
   { content: 'This chapter changed my perspective 🙏', userName: 'ThoughtLeader' },
@@ -93,6 +125,27 @@ export const demoChatMessages = [
   { content: 'Bookmarking this for later!', userName: 'SaveForLater' },
 ];
 
+export const demoChatMessages2 = [
+  { content: 'CEOs need to learn to delegate 💡', userName: 'BizGuru' },
+  { content: 'Capacity planning is everything!', userName: 'StartupSteve' },
+  { content: 'Great insights Teri! 🔥', userName: 'LeadershipPro' },
+  { content: 'This is gold for entrepreneurs', userName: 'HustleQueen' },
+  { content: 'Jackson knows his stuff 💪', userName: 'ScaleUp' },
+  { content: 'Taking notes! 📝', userName: 'BizLearner' },
+  { content: 'The capacity dilemma is so real', userName: 'CEOmindset' },
+  { content: 'Love this discussion format', userName: 'PodcastFan' },
+];
+
+// Helper to check if a session ID is any demo session
+export const isDemoSessionId = (id: string) => id === DEMO_SESSION_ID || id === DEMO_SESSION_ID_2;
+
+// Get demo session by ID
+export const getDemoSessionById = (id: string): DemoSession | null => {
+  if (id === DEMO_SESSION_ID) return demoSession;
+  if (id === DEMO_SESSION_ID_2) return demoSession2;
+  return null;
+};
+
 // Convert demo session to the format expected by PodcastFeed
 export const getDemoLiveHost = () => ({
   id: demoSession.id,
@@ -101,9 +154,21 @@ export const getDemoLiveHost = () => ({
   description: demoSession.description,
   listener_count: demoSession.baseListenerCount + Math.floor(Math.random() * 50),
   host_name: demoSession.hostName,
-  host_avatar: demoSession.coverImageUrl, // Use cover image as avatar for display
+  host_avatar: demoSession.coverImageUrl,
   category: demoSession.category,
   cover_image_url: demoSession.coverImageUrl,
+});
+
+export const getDemoLiveHost2 = () => ({
+  id: demoSession2.id,
+  host_id: demoSession2.hostId,
+  title: demoSession2.title,
+  description: demoSession2.description,
+  listener_count: demoSession2.baseListenerCount + Math.floor(Math.random() * 30),
+  host_name: demoSession2.hostName,
+  host_avatar: demoSession2.coverImageUrl,
+  category: demoSession2.category,
+  cover_image_url: demoSession2.coverImageUrl,
 });
 
 // Convert demo session to the format expected by GlobalHeatmap
@@ -112,9 +177,21 @@ export const getDemoLiveSession = () => ({
   title: demoSession.title,
   host_id: demoSession.hostId,
   host_name: demoSession.hostName,
-  host_avatar: demoSession.coverImageUrl, // Use cover image as avatar
+  host_avatar: demoSession.coverImageUrl,
   cover_image_url: demoSession.coverImageUrl,
   listener_count: demoSession.baseListenerCount + Math.floor(Math.random() * 50),
+  status: 'live' as const,
+  is_battle: false,
+});
+
+export const getDemoLiveSession2 = () => ({
+  id: demoSession2.id,
+  title: demoSession2.title,
+  host_id: demoSession2.hostId,
+  host_name: demoSession2.hostName,
+  host_avatar: demoSession2.coverImageUrl,
+  cover_image_url: demoSession2.coverImageUrl,
+  listener_count: demoSession2.baseListenerCount + Math.floor(Math.random() * 30),
   status: 'live' as const,
   is_battle: false,
 });
@@ -128,8 +205,22 @@ export const getDemoPodcastSession = () => ({
   cover_image_url: demoSession.coverImageUrl,
   status: 'live' as 'scheduled' | 'live' | 'ended',
   listener_count: demoSession.baseListenerCount + Math.floor(Math.random() * 50),
-  started_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // Started 30 mins ago
+  started_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
   host_name: demoSession.hostName,
   host_avatar: demoSession.hostAvatar,
   category: demoSession.category,
+});
+
+export const getDemoPodcastSession2 = () => ({
+  id: demoSession2.id,
+  host_id: demoSession2.hostId,
+  title: demoSession2.title,
+  description: demoSession2.description,
+  cover_image_url: demoSession2.coverImageUrl,
+  status: 'live' as 'scheduled' | 'live' | 'ended',
+  listener_count: demoSession2.baseListenerCount + Math.floor(Math.random() * 30),
+  started_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+  host_name: demoSession2.hostName,
+  host_avatar: demoSession2.hostAvatar,
+  category: demoSession2.category,
 });

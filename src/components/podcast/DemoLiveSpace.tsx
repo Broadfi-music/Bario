@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Mic, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { demoSession, DemoSpeaker } from '@/config/demoSpace';
+import { demoSession, demoSession2, DemoSpeaker, DemoSession, DEMO_SESSION_ID_2 } from '@/config/demoSpace';
 import AuthPromptModal from './AuthPromptModal';
 
 // Audio waveform animation component
@@ -30,22 +30,26 @@ const AudioWaveform = ({ isActive }: { isActive: boolean }) => {
 
 interface DemoLiveSpaceProps {
   onLeave?: () => void;
+  sessionId?: string;
 }
 
-const DemoLiveSpace = ({ onLeave }: DemoLiveSpaceProps) => {
+const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
+  // Pick the right demo session
+  const activeDemo: DemoSession = sessionId === DEMO_SESSION_ID_2 ? demoSession2 : demoSession;
+  
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [listenerCount, setListenerCount] = useState(demoSession.baseListenerCount);
+  const [listenerCount, setListenerCount] = useState(activeDemo.baseListenerCount);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [activeSpeaker, setActiveSpeaker] = useState<string>(demoSession.speakers[0].id);
+  const [activeSpeaker, setActiveSpeaker] = useState<string>(activeDemo.speakers[0].id);
 
   // Initialize and auto-play audio
   useEffect(() => {
-    audioRef.current = new Audio(demoSession.audioUrl);
+    audioRef.current = new Audio(activeDemo.audioUrl);
     audioRef.current.loop = true;
     audioRef.current.volume = 0.7;
     
@@ -84,7 +88,7 @@ const DemoLiveSpace = ({ onLeave }: DemoLiveSpaceProps) => {
   // Simulate rotating active speaker
   useEffect(() => {
     const interval = setInterval(() => {
-      const speakers = demoSession.speakers;
+      const speakers = activeDemo.speakers;
       const currentIndex = speakers.findIndex(s => s.id === activeSpeaker);
       const nextIndex = (currentIndex + 1) % speakers.length;
       setActiveSpeaker(speakers[nextIndex].id);
@@ -170,10 +174,10 @@ const DemoLiveSpace = ({ onLeave }: DemoLiveSpaceProps) => {
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
             <h1 className="text-white font-semibold text-sm sm:text-base truncate">
-              {demoSession.title}
+              {activeDemo.title}
             </h1>
             <p className="text-white/50 text-xs truncate mt-0.5">
-              {demoSession.description}
+              {activeDemo.description}
             </p>
           </div>
           <div className="flex items-center gap-2 ml-4">
@@ -192,7 +196,7 @@ const DemoLiveSpace = ({ onLeave }: DemoLiveSpaceProps) => {
       {/* Speakers Area - Horizontal Row */}
       <div className="flex-1 flex items-center justify-center px-4 py-4 min-h-0">
         <div className="flex items-start justify-center gap-6">
-          {demoSession.speakers.map(speaker => renderSpeaker(speaker))}
+          {activeDemo.speakers.map(speaker => renderSpeaker(speaker))}
         </div>
       </div>
 

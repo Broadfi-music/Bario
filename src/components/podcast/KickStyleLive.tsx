@@ -16,7 +16,7 @@ import TikTokGiftDisplay from './TikTokGiftDisplay';
 import DemoLiveSpace from './DemoLiveSpace';
 import { toast } from 'sonner';
 import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
-import { getDemoPodcastSession } from '@/config/demoSpace';
+import { getDemoPodcastSession, getDemoSessionById, DEMO_SESSION_ID, DEMO_SESSION_ID_2 } from '@/config/demoSpace';
 
 interface PodcastSession {
   id: string;
@@ -508,7 +508,7 @@ const KickStyleLive = ({
             {/* Participants (Audio Room) or Demo Space */}
             <div className="flex-1 min-h-0 overflow-hidden bg-gradient-to-b from-[#1a1a1d] to-[#0e0e10]">
               {isDemoLiveSession(currentSession.id) ? (
-                <DemoLiveSpace onLeave={() => onSessionSelect(null)} />
+                <DemoLiveSpace onLeave={() => onSessionSelect(null)} sessionId={currentSession.id} />
               ) : (
                 <SpaceParticipants 
                   sessionId={currentSession.id}

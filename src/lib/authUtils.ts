@@ -136,7 +136,7 @@ export const isDemoSession = (sessionId: string): boolean => {
  * Check if a session ID is the demo live session specifically
  */
 export const isDemoLiveSession = (sessionId: string): boolean => {
-  return sessionId === 'demo-live-session';
+  return sessionId === 'demo-live-session' || sessionId === 'demo-live-session-2';
 };
 
 /**

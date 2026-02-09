@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import BattleInviteModal from './BattleInviteModal';
 import BattleNotification from './BattleNotification';
 import BattleReelScroller from './BattleReelScroller';
-import { getDemoLiveHost, DEMO_SESSION_ID } from '@/config/demoSpace';
+import { getDemoLiveHost, getDemoLiveHost2, DEMO_SESSION_ID, DEMO_SESSION_ID_2 } from '@/config/demoSpace';
 
 interface LiveHost {
   id: string;
@@ -374,8 +374,8 @@ const PodcastFeed = () => {
       console.log('Live sessions fetched:', sessions?.length || 0);
       
       if (!sessions || sessions.length === 0) {
-        // No real sessions - show demo session only
-        setLiveHosts([getDemoLiveHost()]);
+        // No real sessions - show both demo sessions
+        setLiveHosts([getDemoLiveHost(), getDemoLiveHost2()]);
         return;
       }
 
@@ -417,19 +417,22 @@ const PodcastFeed = () => {
           };
         });
       
-      // Always inject demo session if there are no real sessions or very few
+      // Always inject demo sessions
       const demoHost = getDemoLiveHost();
+      const demoHost2 = getDemoLiveHost2();
       const hasDemo = realSessions.some(s => s.id === DEMO_SESSION_ID);
+      const hasDemo2 = realSessions.some(s => s.id === DEMO_SESSION_ID_2);
       
-      if (!hasDemo) {
-        // Add demo session at the beginning when few real sessions exist
+      const demosToAdd = [];
+      if (!hasDemo) demosToAdd.push(demoHost);
+      if (!hasDemo2) demosToAdd.push(demoHost2);
+      
+      if (demosToAdd.length > 0) {
         if (realSessions.length < 3) {
-          setLiveHosts([demoHost, ...realSessions]);
+          setLiveHosts([...demosToAdd, ...realSessions]);
         } else {
-          // Add at position 2-3 when many sessions exist
-          const insertIndex = Math.min(2, realSessions.length);
           const withDemo = [...realSessions];
-          withDemo.splice(insertIndex, 0, demoHost);
+          withDemo.splice(2, 0, ...demosToAdd);
           setLiveHosts(withDemo);
         }
       } else {
@@ -438,7 +441,7 @@ const PodcastFeed = () => {
     } catch (err) {
       console.error('Unexpected error fetching live sessions:', err);
       // Even on error, show the demo session
-      setLiveHosts([getDemoLiveHost()]);
+      setLiveHosts([getDemoLiveHost(), getDemoLiveHost2()]);
     }
   };
 
