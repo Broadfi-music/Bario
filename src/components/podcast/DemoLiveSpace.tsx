@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mic, Volume2, VolumeX, Users, Pause, Play } from 'lucide-react';
+import { Mic, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { demoSession, DemoSpeaker } from '@/config/demoSpace';
@@ -132,40 +132,29 @@ const DemoLiveSpace = ({ onLeave }: DemoLiveSpaceProps) => {
     const isActive = speaker.id === activeSpeaker && isPlaying;
     
     return (
-       <div key={speaker.id} className="flex items-center gap-2 py-1.5 px-2">
-         {/* Small circular avatar */}
+      <div key={speaker.id} className="flex flex-col items-center gap-1">
         <div className="relative">
           <div 
-             className={`w-8 h-8 rounded-full bg-gradient-to-br ${speaker.avatarGradient} flex items-center justify-center ${isActive ? 'ring-2 ring-green-500/50' : ''}`}
+            className={`w-10 h-10 rounded-full bg-gradient-to-br ${speaker.avatarGradient} flex items-center justify-center ${isActive ? 'ring-2 ring-green-500/50' : ''}`}
           >
-             <span className="text-white font-bold text-xs">
+            <span className="text-white font-bold text-xs">
               {speaker.name.charAt(0)}
             </span>
           </div>
           {isActive && (
-             <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2">
+            <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2">
               <AudioWaveform isActive={true} />
             </div>
           )}
+          {speaker.role === 'host' && (
+            <div className="absolute -top-1 -right-1 bg-yellow-500 text-black text-[8px] font-bold px-1 py-0.5 rounded-full">
+              HOST
+            </div>
+          )}
         </div>
-         
-         {/* Name and role inline */}
-         <div className="flex items-center gap-2">
-           <span className="text-white text-xs font-medium">
-            {speaker.name}
-           </span>
-           {speaker.role === 'host' && (
-             <span className="bg-yellow-500 text-black text-[8px] font-bold px-1.5 py-0.5 rounded-full">
-               HOST
-             </span>
-           )}
-           {speaker.role === 'co_host' && (
-             <span className="text-white/40 text-[10px]">Co-host</span>
-           )}
-           {speaker.role === 'speaker' && (
-             <span className="text-white/40 text-[10px]">Speaker</span>
-           )}
-        </div>
+        <span className="text-white text-[10px] font-medium text-center leading-tight max-w-[70px] truncate">
+          {speaker.name}
+        </span>
       </div>
     );
   };
@@ -196,30 +185,10 @@ const DemoLiveSpace = ({ onLeave }: DemoLiveSpaceProps) => {
         </div>
       </div>
 
-       {/* Speakers Area - Rectangular List Style */}
-       <div className="flex-1 flex flex-col items-center justify-center px-4 py-4 min-h-0">
-         <div className="bg-white/5 rounded-lg border border-white/10 w-full max-w-xs">
-           {demoSession.speakers.map(speaker => renderSpeaker(speaker))}
-        </div>
-
-         {/* Audio Controls - smaller */}
-         <div className="flex items-center gap-2 mt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={togglePlay}
-            className="bg-white/10 border-white/20 hover:bg-white/20 text-white"
-          >
-            {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleMute}
-            className="bg-white/10 border-white/20 hover:bg-white/20 text-white"
-          >
-            {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-          </Button>
+      {/* Speakers Area - Horizontal Row */}
+      <div className="flex-1 flex items-center justify-center px-4 py-4 min-h-0">
+        <div className="flex items-start justify-center gap-6">
+          {demoSession.speakers.map(speaker => renderSpeaker(speaker))}
         </div>
       </div>
 
