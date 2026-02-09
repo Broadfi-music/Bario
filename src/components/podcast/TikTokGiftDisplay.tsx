@@ -178,6 +178,42 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
     pollingIntervalRef.current = setInterval(poll, 500);
   }, [sessionId, addGift]);
 
+  // Demo gift simulation - show rose, flame_heart, tofu gifts
+  useEffect(() => {
+    if (!isDemo) return;
+    mountedRef.current = true;
+
+    const DEMO_GIFT_TYPES = ['rose', 'flame_heart', 'tofu'];
+    const DEMO_GIFTER_NAMES = [
+      'ThoughtLeader', 'MindfulMike', 'WisdomSeeker', 'GrowthMaster',
+      'DeepThinker', 'SoulfulSara', 'PositivePete', 'BookWorm',
+      'ZenMaster', 'PhilosophyFan', 'ValueSeeker', 'MasterMind',
+    ];
+
+    // Send first demo gift after 5 seconds
+    const initialTimeout = setTimeout(() => {
+      if (!mountedRef.current) return;
+      const gift = DEMO_GIFT_TYPES[Math.floor(Math.random() * DEMO_GIFT_TYPES.length)];
+      const name = DEMO_GIFTER_NAMES[Math.floor(Math.random() * DEMO_GIFTER_NAMES.length)];
+      addGift(gift, 1, name, undefined, `demo-gift-${Date.now()}`);
+    }, 5000);
+
+    // Then every 8-15 seconds
+    const interval = setInterval(() => {
+      if (!mountedRef.current) return;
+      const gift = DEMO_GIFT_TYPES[Math.floor(Math.random() * DEMO_GIFT_TYPES.length)];
+      const name = DEMO_GIFTER_NAMES[Math.floor(Math.random() * DEMO_GIFTER_NAMES.length)];
+      const count = Math.random() > 0.7 ? Math.floor(Math.random() * 3) + 2 : 1;
+      addGift(gift, count, name, undefined, `demo-gift-${Date.now()}`);
+    }, 8000 + Math.random() * 7000);
+
+    return () => {
+      mountedRef.current = false;
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
+  }, [isDemo, addGift]);
+
   // Subscribe to real-time gifts + start polling
   useEffect(() => {
     mountedRef.current = true;
