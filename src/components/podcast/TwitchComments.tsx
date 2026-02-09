@@ -104,13 +104,22 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
   useEffect(() => {
     if (!user) return;
     const fetchMyProfile = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('full_name, username')
         .eq('user_id', user.id)
         .single();
       if (data) {
-        setCurrentUserName(data.username || data.full_name || 'Listener');
+        const name = data.username || data.full_name || 'Listener';
+        console.log('💬 Fetched profile for chat:', name, data);
+        setCurrentUserName(name);
+      } else if (error) {
+        console.error('💬 Failed to fetch profile:', error);
+        // Fallback: try user metadata
+        const meta = user.user_metadata;
+        if (meta?.full_name || meta?.name) {
+          setCurrentUserName(meta.full_name || meta.name);
+        }
       }
     };
     fetchMyProfile();
