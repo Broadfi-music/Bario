@@ -279,37 +279,8 @@ export function useTrackDetail(trackId: string | undefined) {
     fetchTrack();
   }, [fetchTrack]);
 
-  // Realtime updates for metrics
-  useEffect(() => {
-    if (!track) return;
-
-    const interval = setInterval(() => {
-      setTrack(prev => {
-        if (!prev) return prev;
-        
-        const change = (Math.random() - 0.5) * 2;
-        return {
-          ...prev,
-          metrics: {
-            ...prev.metrics,
-            listeners: prev.metrics.listeners + Math.floor((Math.random() - 0.4) * 500),
-            mindshare: parseFloat((prev.metrics.mindshare + (Math.random() - 0.5) * 0.1).toFixed(2)),
-            change24h: parseFloat((prev.metrics.change24h + change * 0.1).toFixed(1))
-          },
-          chartData: [
-            ...prev.chartData.slice(1),
-            {
-              timestamp: new Date().toISOString(),
-              value: prev.chartData[prev.chartData.length - 1]?.value + (Math.random() - 0.5) * 2000 || 50000,
-              listeners: prev.metrics.listeners
-            }
-          ]
-        };
-      });
-    }, 2500);
-
-    return () => clearInterval(interval);
-  }, [track]);
+  // Realtime metric simulation disabled for stability
+  // Metrics are now deterministic from the edge function
 
   return { track, loading, error, refetch: fetchTrack };
 }
