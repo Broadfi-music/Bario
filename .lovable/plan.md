@@ -1,88 +1,71 @@
 
 
-# Fix: Stable Heatmap Data (Stop Random Track Switching)
+# Use Real Deezer Country Chart Playlists for Country Filtering
 
 ## Problem
 
-The `heatmap-tracks` edge function is designed to return **completely different tracks on every request**. It uses heavy randomization throughout:
-
-- Randomly selects which artists to search for (line 140)
-- Randomly picks between 4 different data-fetching strategies (line 180)
-- Triple-shuffles all results (lines 217-220)
-- Randomly selects Audius time ranges (line 244)
-- Shuffles search results (line 233, 251)
-- Double-shuffles final global results (line 688)
-- Generates random `change24h`, `change7d`, `change30d` metrics on every call (lines 389, 436, 472-475, 488, 551-552)
-- Searches random genres each time (line 671, 676)
-
-This means every 2-minute auto-refresh, every page navigation, and every manual refresh shows a totally different set of music.
+Currently, when a user selects a country (e.g., Nigeria), the system searches Deezer for tracks by a **hardcoded list of popular artists** from that country. This means:
+- Only pre-listed artists appear -- breakout artists are missed
+- Results are search-based, not chart-based, so they don't reflect what's actually trending
+- The data doesn't update when real charts change
 
 ## Solution
 
-Rewrite the `heatmap-tracks` edge function to return **deterministic, stable data**:
+Replace the hardcoded artist-search approach with **real Deezer country chart playlists** -- the same playlists that power Deezer's own "Top [Country]" charts. Each country has a specific playlist ID on Deezer that updates automatically with what's actually trending there.
 
-### 1. Edge Function Changes (`supabase/functions/heatmap-tracks/index.ts`)
+### Changes to `supabase/functions/heatmap-tracks/index.ts`
 
-**Remove all randomization from data fetching:**
-- `getDeezerGlobalChart`: Use a single consistent strategy (chart endpoint only), remove triple shuffle, sort by Deezer rank instead
-- `getDeezerCountryChart`: Use all artists instead of randomly selecting 10, remove shuffle, sort by Deezer rank
-- `getAudiusTrending`: Use fixed time range (`week`), remove shuffle, keep original trending order
-- `searchDeezer`: Remove shuffle from search results
-- Global fetch (line 668-691): Remove random genre selection, use fixed sources, remove double shuffle
+**1. Add Deezer country chart playlist IDs**
 
-**Make metrics deterministic:**
-- Replace `Math.random()` in `change24h`, `change7d`, `change30d` with seed-based values derived from track ID and current date (so they stay stable within the same day but change day-to-day)
-- Replace `Math.random()` in `mindshare` calculations with deterministic values based on track popularity
+A new mapping of country codes to Deezer playlist IDs (similar to the existing `spotifyCountryPlaylists`):
 
-**Keep stable sorting:**
-- Sort all results by `attentionScore` descending (already done at line 703)
-- Remove all `.sort(() => Math.random() - 0.5)` calls
+| Country | Playlist ID |
+|---------|-------------|
+| GLOBAL | 3155776842 |
+| US | 1313621735 |
+| UK | 1111141961 |
+| NG | 2094756498 |
+| GH | 4371498262 |
+| ZA | 3430408142 |
+| KE | 5765498882 |
+| BR | 1111142221 |
+| MX | 1116189381 |
+| FR | 1109890291 |
+| DE | 1111143121 |
+| JP | 1116190041 |
+| KR | 3843859162 |
+| IN | 2489283764 |
+| AU | 1362508475 |
+| CA | 1652248171 |
+| ES | 1116188681 |
+| IT | 1116187241 |
 
-### 2. Deterministic Metric Generation
+**2. Create a new `getDeezerCountryPlaylist` function**
 
-Create a simple hash function that takes a track ID + today's date and produces a stable pseudo-random number. This ensures:
-- Same tracks show the same metrics within a day
-- Metrics naturally shift day to day
-- No visual jumping or flickering
+This function will:
+- Fetch tracks from the real Deezer playlist for the given country using `https://api.deezer.com/playlist/{playlistId}/tracks?limit=50`
+- Return tracks in their original chart order (which reflects actual trending position)
+- Fall back to the global chart if the playlist fetch fails
 
-```text
-function stableRandom(seed: string): number {
-  // Simple hash -> stable number between 0 and 1
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash % 1000) / 1000;
-}
+**3. Update `getDeezerCountryChart` to use real playlists**
 
-// Usage: stableRandom(trackId + "2026-02-11") -> always same value today
-```
+Replace the current logic (searching by artist names) with a call to the new playlist function. The hardcoded `countryArtistSearches` map will be kept as a fallback only -- if the playlist API fails, the system can still search by artist names.
 
-### 3. Frontend Hook (No Changes Needed)
+**4. Keep Spotify playlists as-is**
 
-The `useHeatmapData.ts` hook already handles data correctly with 120-second refresh intervals. No frontend changes required -- the fix is entirely in the edge function.
+The existing `spotifyCountryPlaylists` and `getSpotifyCountryTop50` already use real chart playlists, so no changes needed there.
 
-## Technical Details
+### What This Means for Users
 
-### Lines to modify in `heatmap-tracks/index.ts`:
+- Country filters will show **actually trending music** in each country, updated in real-time by Deezer
+- New breakout artists will appear automatically when they chart
+- Results will match what users see on Deezer's own country charts
+- The experience stays stable (no random shuffling) while being genuinely live data
 
-| Area | Lines | Change |
-|------|-------|--------|
-| `getDeezerCountryChart` | 134-172 | Remove artist shuffle, use all artists, sort by rank |
-| `getDeezerGlobalChart` | 177-226 | Single strategy (chart), remove triple shuffle |
-| `searchDeezer` | 228-238 | Remove `.sort(() => Math.random() - 0.5)` |
-| `getAudiusTrending` | 241-256 | Fixed `week` time range, remove shuffle |
-| `formatSpotifyTrack` | 389 | Use `stableRandom` for `change24h` |
-| `formatDeezerTrack` | 436, 472-475 | Use `stableRandom` for metrics |
-| `formatAudiusTrackWithPreview` | 488, 551-552 | Use `stableRandom` for metrics |
-| Global fetch block | 668-691 | Remove random genre, remove double shuffle |
+### Technical Notes
 
-### Expected Result
-
-- Heatmap shows the **same tracks** on refresh and page navigation
-- Tracks are sorted consistently by attention score
-- Metrics (change24h, mindshare) remain stable within the same day
-- Data still refreshes every 2 minutes but returns the same ranked list
-- Country filtering still works correctly with stable results
+- Deezer playlist endpoint: `GET https://api.deezer.com/playlist/{id}/tracks?limit={n}`
+- No authentication needed for Deezer public API
+- Playlist IDs are sourced from Deezer's official chart playlists
+- The `countryArtistSearches` map is retained as fallback but no longer the primary source
 
