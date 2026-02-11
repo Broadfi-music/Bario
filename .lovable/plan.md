@@ -1,179 +1,88 @@
 
 
-# Fix Demo Live Session - Speaker Layout & Video Animations
+# Fix: Stable Heatmap Data (Stop Random Track Switching)
 
-## Problem Analysis
+## Problem
 
-### Issue 1: Video Gift Animations Still Showing
-There are **TWO separate components** handling gift animations:
+The `heatmap-tracks` edge function is designed to return **completely different tracks on every request**. It uses heavy randomization throughout:
 
-1. **`TikTokGiftDisplay`** - Shows small gift banners on the left side (already fixed with `DEMO_ALLOWED_GIFTS` filter)
-2. **`GiftAnimation`** - Shows **FULL-SCREEN video animations** (NOT fixed!)
+- Randomly selects which artists to search for (line 140)
+- Randomly picks between 4 different data-fetching strategies (line 180)
+- Triple-shuffles all results (lines 217-220)
+- Randomly selects Audius time ranges (line 244)
+- Shuffles search results (line 233, 251)
+- Double-shuffles final global results (line 688)
+- Generates random `change24h`, `change7d`, `change30d` metrics on every call (lines 389, 436, 472-475, 488, 551-552)
+- Searches random genres each time (line 671, 676)
 
-The `GiftAnimation` component (line 216-225) runs in demo mode and generates random gifts including video gifts (`fire`, `star`, `diamond`, `crown`). This is the source of the video animations still appearing.
-
-**Root Cause**: `GiftAnimation` in demo mode generates random gifts from `['fire', 'heart', 'star', 'diamond', 'crown']` which includes 4 video gifts.
-
-### Issue 2: Host Profile Icons Too Large
-The speakers in `DemoLiveSpace` are displayed with large circular avatars:
-- Host: `w-20 h-20 sm:w-24 sm:h-24` (80-96px)
-- Co-hosts/Speakers: `w-16 h-16 sm:w-20 sm:h-20` (64-80px)
-
-User wants them **very small** in a **rectangular listing style** (horizontal row layout).
-
----
+This means every 2-minute auto-refresh, every page navigation, and every manual refresh shows a totally different set of music.
 
 ## Solution
 
-### Fix 1: Disable Full-Screen Video Animations for Demo Sessions
+Rewrite the `heatmap-tracks` edge function to return **deterministic, stable data**:
 
-**File: `src/components/podcast/GiftAnimation.tsx`**
+### 1. Edge Function Changes (`supabase/functions/heatmap-tracks/index.ts`)
 
-Changes:
-- Import `isDemoLiveSession` from `@/lib/authUtils`
-- At the start of the component, check if it's a demo session and **return null immediately**
-- This completely disables the full-screen video animation component for demo sessions
-- The image-based gift display (`TikTokGiftDisplay`) is already properly filtering gifts
+**Remove all randomization from data fetching:**
+- `getDeezerGlobalChart`: Use a single consistent strategy (chart endpoint only), remove triple shuffle, sort by Deezer rank instead
+- `getDeezerCountryChart`: Use all artists instead of randomly selecting 10, remove shuffle, sort by Deezer rank
+- `getAudiusTrending`: Use fixed time range (`week`), remove shuffle, keep original trending order
+- `searchDeezer`: Remove shuffle from search results
+- Global fetch (line 668-691): Remove random genre selection, use fixed sources, remove double shuffle
 
-```tsx
-// At the top of GiftAnimation component:
-if (isDemoLiveSession(sessionId)) {
-  return null; // Don't show video animations for demo sessions
+**Make metrics deterministic:**
+- Replace `Math.random()` in `change24h`, `change7d`, `change30d` with seed-based values derived from track ID and current date (so they stay stable within the same day but change day-to-day)
+- Replace `Math.random()` in `mindshare` calculations with deterministic values based on track popularity
+
+**Keep stable sorting:**
+- Sort all results by `attentionScore` descending (already done at line 703)
+- Remove all `.sort(() => Math.random() - 0.5)` calls
+
+### 2. Deterministic Metric Generation
+
+Create a simple hash function that takes a track ID + today's date and produces a stable pseudo-random number. This ensures:
+- Same tracks show the same metrics within a day
+- Metrics naturally shift day to day
+- No visual jumping or flickering
+
+```text
+function stableRandom(seed: string): number {
+  // Simple hash -> stable number between 0 and 1
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash % 1000) / 1000;
 }
+
+// Usage: stableRandom(trackId + "2026-02-11") -> always same value today
 ```
 
-### Fix 2: Resize Speaker Icons to Small Rectangular Listing
+### 3. Frontend Hook (No Changes Needed)
 
-**File: `src/components/podcast/DemoLiveSpace.tsx`**
-
-Changes to `renderSpeaker` function and speaker layout:
-- Change from vertical flex columns to horizontal row layout
-- Reduce avatar sizes to very small: `w-8 h-8` (32px)
-- Remove the separate "large" host display - all speakers in one row
-- Use a compact rectangular card/list style
-- Smaller text sizes
-
-New layout structure:
-```
-┌──────────────────────────────────────────────────┐
-│ [Session Header: Title, LIVE badge, listeners]   │
-├──────────────────────────────────────────────────┤
-│                                                  │
-│   ┌────────────────────────────────────────┐     │
-│   │ 🟣 Solomon Harvey • HOST                │     │
-│   │ 🔵 Mind Coach • Co-host                 │     │
-│   │ 🟢 Wisdom Seeker • Speaker              │     │
-│   └────────────────────────────────────────┘     │
-│                                                  │
-│             [Play] [Mute] controls               │
-│                                                  │
-├──────────────────────────────────────────────────┤
-│ [Join Session] [Leave]                          │
-└──────────────────────────────────────────────────┘
-```
-
----
+The `useHeatmapData.ts` hook already handles data correctly with 120-second refresh intervals. No frontend changes required -- the fix is entirely in the edge function.
 
 ## Technical Details
 
-### GiftAnimation.tsx Changes
+### Lines to modify in `heatmap-tracks/index.ts`:
 
-```tsx
-import { isDemoLiveSession } from '@/lib/authUtils';
+| Area | Lines | Change |
+|------|-------|--------|
+| `getDeezerCountryChart` | 134-172 | Remove artist shuffle, use all artists, sort by rank |
+| `getDeezerGlobalChart` | 177-226 | Single strategy (chart), remove triple shuffle |
+| `searchDeezer` | 228-238 | Remove `.sort(() => Math.random() - 0.5)` |
+| `getAudiusTrending` | 241-256 | Fixed `week` time range, remove shuffle |
+| `formatSpotifyTrack` | 389 | Use `stableRandom` for `change24h` |
+| `formatDeezerTrack` | 436, 472-475 | Use `stableRandom` for metrics |
+| `formatAudiusTrackWithPreview` | 488, 551-552 | Use `stableRandom` for metrics |
+| Global fetch block | 668-691 | Remove random genre, remove double shuffle |
 
-const GiftAnimation = ({ sessionId }: GiftAnimationProps) => {
-  // Early return for demo sessions - no video animations
-  if (isDemoLiveSession(sessionId)) {
-    return null;
-  }
-  
-  // ... rest of component unchanged
-```
+### Expected Result
 
-### DemoLiveSpace.tsx - Speaker Layout Changes
-
-The renderSpeaker function will be updated to use:
-- Small inline avatar: `w-8 h-8` 
-- Horizontal flex row with name and role inline
-- Compact styling with smaller fonts
-
-```tsx
-const renderSpeaker = (speaker: DemoSpeaker) => {
-  const isActive = speaker.id === activeSpeaker && isPlaying;
-  
-  return (
-    <div key={speaker.id} className="flex items-center gap-2 py-1.5 px-2">
-      {/* Small circular avatar */}
-      <div className="relative">
-        <div 
-          className={`w-8 h-8 rounded-full bg-gradient-to-br ${speaker.avatarGradient} 
-            flex items-center justify-center 
-            ${isActive ? 'ring-2 ring-green-500/50' : ''}`}
-        >
-          <span className="text-white font-bold text-xs">
-            {speaker.name.charAt(0)}
-          </span>
-        </div>
-        {isActive && (
-          <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2">
-            <AudioWaveform isActive={true} />
-          </div>
-        )}
-      </div>
-      
-      {/* Name and role inline */}
-      <div className="flex items-center gap-2">
-        <span className="text-white text-xs font-medium">
-          {speaker.name}
-        </span>
-        {speaker.role === 'host' && (
-          <span className="bg-yellow-500 text-black text-[8px] font-bold px-1.5 py-0.5 rounded-full">
-            HOST
-          </span>
-        )}
-        {speaker.role === 'co_host' && (
-          <span className="text-white/40 text-[10px]">Co-host</span>
-        )}
-        {speaker.role === 'speaker' && (
-          <span className="text-white/40 text-[10px]">Speaker</span>
-        )}
-      </div>
-    </div>
-  );
-};
-```
-
-The speakers area will use a rectangular listing:
-```tsx
-{/* Speakers Area - Rectangular List Style */}
-<div className="flex-1 flex flex-col items-center justify-center px-4 py-4 min-h-0">
-  <div className="bg-white/5 rounded-lg border border-white/10 w-full max-w-xs">
-    {demoSession.speakers.map(speaker => renderSpeaker(speaker))}
-  </div>
-  
-  {/* Audio Controls - smaller */}
-  <div className="flex items-center gap-2 mt-4">
-    {/* ... play/mute buttons ... */}
-  </div>
-</div>
-```
-
----
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `src/components/podcast/GiftAnimation.tsx` | Return null early for demo sessions (disable video animations) |
-| `src/components/podcast/DemoLiveSpace.tsx` | Resize speakers to small rectangular listing layout |
-
----
-
-## Expected Result
-
-After these changes:
-1. **No video gift animations** in demo live session (completely disabled)
-2. Only image-based gifts (rose, tofu, flame heart) display via `TikTokGiftDisplay`
-3. Speaker icons are **very small** (32px) in a **rectangular vertical list** layout
-4. Cleaner, more compact demo session view
+- Heatmap shows the **same tracks** on refresh and page navigation
+- Tracks are sorted consistently by attention score
+- Metrics (change24h, mindshare) remain stable within the same day
+- Data still refreshes every 2 minutes but returns the same ranked list
+- Country filtering still works correctly with stable results
 
