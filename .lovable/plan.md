@@ -1,71 +1,57 @@
 
+# Fix Country Filter: Replace Invalid Playlist IDs with Verified Deezer Chart IDs
 
-# Use Real Deezer Country Chart Playlists for Country Filtering
+## Problem Found
 
-## Problem
+I tested every single Deezer playlist ID in the code by calling the Deezer API directly. The results are bad -- most IDs are **wrong, empty, or returning errors**:
 
-Currently, when a user selects a country (e.g., Nigeria), the system searches Deezer for tracks by a **hardcoded list of popular artists** from that country. This means:
-- Only pre-listed artists appear -- breakout artists are missed
-- Results are search-based, not chart-based, so they don't reflect what's actually trending
-- The data doesn't update when real charts change
+- **Nigeria (NG)**: ID `2094756498` returns a "no data" error -- completely broken
+- **UK and Brazil are swapped**: UK points to Brazil's playlist and vice versa
+- **Ghana (GH)**: ID `4371498262` returns empty (0 tracks)
+- **Kenya (KE)**: ID `5765498882` returns empty (0 tracks)
+- **South Korea (KR)**: ID `3843859162` returns empty (0 tracks)
+- **India (IN)**: ID `2489283764` returns empty (0 tracks)
+- **Japan (JP)**: ID `1116190041` is actually Spain's chart
+- **South Africa (ZA)**: ID `3430408142` is a random old playlist with Coldplay/Imagine Dragons, not a chart
+
+This means when users filter by country, they're seeing either foreign music, old random playlists, or the system falls back to hardcoded artist searches -- which is exactly the problem you're seeing.
 
 ## Solution
 
-Replace the hardcoded artist-search approach with **real Deezer country chart playlists** -- the same playlists that power Deezer's own "Top [Country]" charts. Each country has a specific playlist ID on Deezer that updates automatically with what's actually trending there.
+Replace all broken playlist IDs with the **verified official Deezer Charts playlist IDs** that I confirmed are working and returning real trending data right now.
 
-### Changes to `supabase/functions/heatmap-tracks/index.ts`
+### Verified Correct Playlist IDs
 
-**1. Add Deezer country chart playlist IDs**
+| Country | Wrong ID (current) | Correct ID (verified) |
+|---------|-------------------|----------------------|
+| GLOBAL | 3155776842 | 3155776842 (no change) |
+| US | 1313621735 | 1313621735 (no change) |
+| UK | 1111141961 | **1111142221** |
+| NG | 2094756498 | **1362516565** |
+| GH | 4371498262 | **removed** (no official Deezer chart -- will use artist fallback) |
+| ZA | 3430408142 | **1362528775** |
+| KE | 5765498882 | **1362509215** |
+| BR | 1111142221 | **1111141961** |
+| MX | 1116189381 | **1111142361** |
+| JP | 1116190041 | **1362508955** |
+| KR | 3843859162 | **1362510315** |
+| IN | 2489283764 | **removed** (no official Deezer chart -- will use artist fallback) |
+| AU | 1362508475 | **1313616925** |
+| CA | 1652248171 | 1652248171 (no change, verified working) |
+| ES | 1116188681 | **1116190041** |
+| IT | 1116187241 | 1116187241 (no change, verified working) |
+| FR | 1109890291 | 1109890291 (no change, verified working) |
 
-A new mapping of country codes to Deezer playlist IDs (similar to the existing `spotifyCountryPlaylists`):
+### File to Change
 
-| Country | Playlist ID |
-|---------|-------------|
-| GLOBAL | 3155776842 |
-| US | 1313621735 |
-| UK | 1111141961 |
-| NG | 2094756498 |
-| GH | 4371498262 |
-| ZA | 3430408142 |
-| KE | 5765498882 |
-| BR | 1111142221 |
-| MX | 1116189381 |
-| FR | 1109890291 |
-| DE | 1111143121 |
-| JP | 1116190041 |
-| KR | 3843859162 |
-| IN | 2489283764 |
-| AU | 1362508475 |
-| CA | 1652248171 |
-| ES | 1116188681 |
-| IT | 1116187241 |
+**`supabase/functions/heatmap-tracks/index.ts`** -- Update the `deezerCountryPlaylists` mapping with the corrected IDs. Remove Ghana and India from the playlist map (they don't have official Deezer Charts playlists, so they'll correctly fall back to the artist search approach).
 
-**2. Create a new `getDeezerCountryPlaylist` function**
+### What This Fixes
 
-This function will:
-- Fetch tracks from the real Deezer playlist for the given country using `https://api.deezer.com/playlist/{playlistId}/tracks?limit=50`
-- Return tracks in their original chart order (which reflects actual trending position)
-- Fall back to the global chart if the playlist fetch fails
-
-**3. Update `getDeezerCountryChart` to use real playlists**
-
-Replace the current logic (searching by artist names) with a call to the new playlist function. The hardcoded `countryArtistSearches` map will be kept as a fallback only -- if the playlist API fails, the system can still search by artist names.
-
-**4. Keep Spotify playlists as-is**
-
-The existing `spotifyCountryPlaylists` and `getSpotifyCountryTop50` already use real chart playlists, so no changes needed there.
-
-### What This Means for Users
-
-- Country filters will show **actually trending music** in each country, updated in real-time by Deezer
-- New breakout artists will appear automatically when they chart
-- Results will match what users see on Deezer's own country charts
-- The experience stays stable (no random shuffling) while being genuinely live data
-
-### Technical Notes
-
-- Deezer playlist endpoint: `GET https://api.deezer.com/playlist/{id}/tracks?limit={n}`
-- No authentication needed for Deezer public API
-- Playlist IDs are sourced from Deezer's official chart playlists
-- The `countryArtistSearches` map is retained as fallback but no longer the primary source
-
+- Nigeria will show actual Nigerian trending music (Ayra Starr, Wizkid, etc.)
+- UK will show UK charts, not Brazilian music
+- Brazil will show Brazilian charts, not UK music
+- Japan will show Japanese charts, not Spanish music
+- South Africa will show current SA trending, not a 2017 Coldplay playlist
+- Kenya and South Korea will show real chart data instead of empty results
+- Ghana and India will use the existing artist fallback (Sarkodie, Arijit Singh, etc.) since Deezer doesn't maintain official charts for these countries
