@@ -11,6 +11,21 @@ const SPOTIFY_CLIENT_ID = Deno.env.get('SPOTIFY_CLIENT_ID');
 const SPOTIFY_CLIENT_SECRET = Deno.env.get('SPOTIFY_CLIENT_SECRET');
 const LASTFM_API_KEY = Deno.env.get('LASTFM_API_KEY');
 
+// Deterministic hash function for stable metrics
+function stableRandom(seed: string): number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash % 1000) / 1000;
+}
+
+// Get today's date string for daily-stable seeds
+function todaySeed(): string {
+  return new Date().toISOString().split('T')[0]; // e.g. "2026-02-11"
+}
+
 // Get Spotify access token using Client Credentials flow
 async function getSpotifyToken(): Promise<string | null> {
   if (!SPOTIFY_CLIENT_ID || !SPOTIFY_CLIENT_SECRET) {
@@ -41,26 +56,26 @@ async function getSpotifyToken(): Promise<string | null> {
   }
 }
 
-// Spotify country playlist IDs - These are REAL Spotify Top 50 playlists for each country
+// Spotify country playlist IDs
 const spotifyCountryPlaylists: Record<string, string> = {
-  'US': '37i9dQZEVXbLRQDuF5jeBp',   // USA Top 50
-  'UK': '37i9dQZEVXbLnolsZ8PSNw',   // UK Top 50  
-  'NG': '37i9dQZEVXbKY7jLzlJ11V',   // Nigeria Top 50
-  'GH': '37i9dQZEVXbKwYxaLxBIbS',   // Ghana Top 50
-  'ZA': '37i9dQZEVXbMH2jvi6jvjk',   // South Africa Top 50
-  'KE': '37i9dQZEVXbKMzVsSGQ49S',   // Kenya Top 50
-  'BR': '37i9dQZEVXbMXbN3EUUhlg',   // Brazil Top 50
-  'MX': '37i9dQZEVXbO3qyFxbkOE1',   // Mexico Top 50
-  'FR': '37i9dQZEVXbIPWwFssbupI',   // France Top 50
-  'DE': '37i9dQZEVXbJiZcmkrIHGU',   // Germany Top 50
-  'JP': '37i9dQZEVXbKXQ4mDTEBXq',   // Japan Top 50
-  'KR': '37i9dQZEVXbNxXF4SkHj9F',   // South Korea Top 50
-  'IN': '37i9dQZEVXbLZ52XmnySJg',   // India Top 50
-  'AU': '37i9dQZEVXbJPcfkRz0wJ0',   // Australia Top 50
-  'CA': '37i9dQZEVXbKj23U1GF4IR',   // Canada Top 50
-  'ES': '37i9dQZEVXbNFJfN1Vw8d9',   // Spain Top 50
-  'IT': '37i9dQZEVXbIQnj7RRhdSX',   // Italy Top 50
-  'GLOBAL': '37i9dQZEVXbMDoHDwVN2tF' // Global Top 50
+  'US': '37i9dQZEVXbLRQDuF5jeBp',
+  'UK': '37i9dQZEVXbLnolsZ8PSNw',
+  'NG': '37i9dQZEVXbKY7jLzlJ11V',
+  'GH': '37i9dQZEVXbKwYxaLxBIbS',
+  'ZA': '37i9dQZEVXbMH2jvi6jvjk',
+  'KE': '37i9dQZEVXbKMzVsSGQ49S',
+  'BR': '37i9dQZEVXbMXbN3EUUhlg',
+  'MX': '37i9dQZEVXbO3qyFxbkOE1',
+  'FR': '37i9dQZEVXbIPWwFssbupI',
+  'DE': '37i9dQZEVXbJiZcmkrIHGU',
+  'JP': '37i9dQZEVXbKXQ4mDTEBXq',
+  'KR': '37i9dQZEVXbNxXF4SkHj9F',
+  'IN': '37i9dQZEVXbLZ52XmnySJg',
+  'AU': '37i9dQZEVXbJPcfkRz0wJ0',
+  'CA': '37i9dQZEVXbKj23U1GF4IR',
+  'ES': '37i9dQZEVXbNFJfN1Vw8d9',
+  'IT': '37i9dQZEVXbIQnj7RRhdSX',
+  'GLOBAL': '37i9dQZEVXbMDoHDwVN2tF'
 };
 
 // Get Spotify Top 50 playlist for a specific country
@@ -130,19 +145,15 @@ const countryArtistSearches: Record<string, string[]> = {
   'IT': ['Mahmood', 'Sfera Ebbasta', 'Geolier', 'Tedua', 'Guè', 'Blanco']
 };
 
-// Deezer API - Get country charts by searching for local artists
+// Deezer API - Get country charts using ALL artists, no shuffle, sorted by rank
 async function getDeezerCountryChart(countryCode: string, limit: number = 50): Promise<any[]> {
   const artists = countryArtistSearches[countryCode];
   
   if (artists && artists.length > 0) {
     try {
-      // Randomly select different artists each time for variety
-      const shuffledArtists = [...artists].sort(() => Math.random() - 0.5);
-      const selectedArtists = shuffledArtists.slice(0, 10);
-      
-      // Search for multiple artists in parallel with varied limits
-      const searches = selectedArtists.map(artist => 
-        fetch(`https://api.deezer.com/search?q=${encodeURIComponent(artist)}&limit=${Math.floor(Math.random() * 5) + 4}`)
+      // Use ALL artists, fixed limit per artist, no randomization
+      const searches = artists.map(artist => 
+        fetch(`https://api.deezer.com/search?q=${encodeURIComponent(artist)}&limit=5`)
           .then(r => r.json())
           .then(d => d.data || [])
           .catch(() => [])
@@ -151,104 +162,63 @@ async function getDeezerCountryChart(countryCode: string, limit: number = 50): P
       const results = await Promise.all(searches);
       const allTracks = results.flat();
       
-      console.log(`Deezer country ${countryCode}: Found ${allTracks.length} tracks from ${selectedArtists.join(', ')}`);
+      console.log(`Deezer country ${countryCode}: Found ${allTracks.length} tracks from ${artists.length} artists`);
       
       if (allTracks.length > 0) {
-        // Heavy shuffle for maximum variety on each refresh
-        const shuffled = allTracks
-          .sort(() => Math.random() - 0.5)
-          .sort(() => Math.random() - 0.5)
+        // Sort by Deezer rank (higher rank = more popular), no shuffle
+        const sorted = allTracks
+          .sort((a, b) => (b.rank || 0) - (a.rank || 0))
           .slice(0, limit);
-        return shuffled;
+        return sorted;
       }
     } catch (e) {
       console.error(`Deezer country search error for ${countryCode}:`, e);
     }
   }
   
-  // Fallback to global chart with shuffle
-  const globalTracks = await getDeezerGlobalChart(limit * 2);
-  return globalTracks.sort(() => Math.random() - 0.5).slice(0, limit);
+  // Fallback to global chart, sorted by rank
+  const globalTracks = await getDeezerGlobalChart(limit);
+  return globalTracks;
 }
 
-// Random genres to fetch different content each time
-const randomGenres = ['pop', 'hip hop', 'r&b', 'afrobeats', 'latin', 'dance', 'rock', 'indie', 'electronic', 'reggaeton', 'kpop', 'amapiano', 'drill', 'trap'];
-
+// Single consistent strategy: chart endpoint only, sorted by position, no shuffle
 async function getDeezerGlobalChart(limit: number = 50): Promise<any[]> {
   try {
-    // Randomly pick strategy for maximum variety
-    const strategy = Math.floor(Math.random() * 4);
-    let allTracks: any[] = [];
+    const response = await fetch(`https://api.deezer.com/chart/0/tracks?limit=100`);
+    const data = await response.json();
+    const allTracks = data.data || [];
     
-    if (strategy === 0) {
-      // Strategy 1: Get chart tracks
-      const response = await fetch(`https://api.deezer.com/chart/0/tracks?limit=100`);
-      const data = await response.json();
-      allTracks = data.data || [];
-    } else if (strategy === 1) {
-      // Strategy 2: Get from random genre playlists
-      const genreIds = [132, 116, 152, 113, 165, 85, 106, 466]; // Pop, Rap, Rock, Dance, R&B, Alternative, Electro, Afro
-      const randomGenreId = genreIds[Math.floor(Math.random() * genreIds.length)];
-      const response = await fetch(`https://api.deezer.com/chart/${randomGenreId}/tracks?limit=100`);
-      const data = await response.json();
-      allTracks = data.data || [];
-    } else if (strategy === 2) {
-      // Strategy 3: Search for trending terms
-      const trendingTerms = ['2024 hits', '2025 new', 'viral', 'trending now', 'top songs', 'best new music'];
-      const term = trendingTerms[Math.floor(Math.random() * trendingTerms.length)];
-      const response = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(term)}&limit=100`);
-      const data = await response.json();
-      allTracks = data.data || [];
-    } else {
-      // Strategy 4: Mix from multiple sources
-      const randomGenre = randomGenres[Math.floor(Math.random() * randomGenres.length)];
-      const [chartRes, genreRes] = await Promise.all([
-        fetch(`https://api.deezer.com/chart/0/tracks?limit=50`),
-        fetch(`https://api.deezer.com/search?q=${encodeURIComponent(randomGenre + ' new')}&limit=50`)
-      ]);
-      const chartData = await chartRes.json();
-      const genreData = await genreRes.json();
-      allTracks = [...(chartData.data || []), ...(genreData.data || [])];
-    }
+    console.log(`Deezer global chart: Got ${allTracks.length} tracks`);
     
-    console.log(`Deezer global strategy ${strategy}: Got ${allTracks.length} tracks`);
-    
-    // Triple shuffle for maximum randomness
-    return allTracks
-      .sort(() => Math.random() - 0.5)
-      .sort(() => Math.random() - 0.5)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, limit);
+    // Return in original chart order (already sorted by position), no shuffle
+    return allTracks.slice(0, limit);
   } catch (e) {
     console.error('Deezer chart error:', e);
     return [];
   }
 }
 
+// No shuffle on search results
 async function searchDeezer(query: string, limit: number = 50): Promise<any[]> {
   try {
     const response = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=${limit}`);
     const data = await response.json();
-    // Shuffle search results too
-    return (data.data || []).sort(() => Math.random() - 0.5);
+    return data.data || [];
   } catch (e) {
     console.error('Deezer search error:', e);
     return [];
   }
 }
 
-// Get Audius trending tracks - vary the time range
+// Fixed time range ('week'), no shuffle, keep original trending order
 async function getAudiusTrending(limit: number = 20): Promise<any[]> {
   try {
-    const timeRanges = ['week', 'month', 'allTime'];
-    const timeRange = timeRanges[Math.floor(Math.random() * timeRanges.length)];
     const response = await fetch(
-      `https://discoveryprovider.audius.co/v1/tracks/trending?limit=${limit * 2}&time=${timeRange}`,
+      `https://discoveryprovider.audius.co/v1/tracks/trending?limit=${limit}&time=week`,
       { headers: { 'Accept': 'application/json' } }
     );
     const data = await response.json();
-    // Shuffle Audius results
-    return (data.data || []).sort(() => Math.random() - 0.5).slice(0, limit);
+    return (data.data || []).slice(0, limit);
   } catch (e) {
     console.error('Audius trending error:', e);
     return [];
@@ -275,21 +245,9 @@ async function getUserUploads(supabase: any, search: string = '', genre: string 
     let query = supabase
       .from('user_uploads')
       .select(`
-        id,
-        title,
-        description,
-        audio_url,
-        cover_image_url,
-        genre,
-        duration_ms,
-        play_count,
-        like_count,
-        user_id,
-        created_at,
-        spotify_url,
-        apple_url,
-        soundcloud_url,
-        youtube_url
+        id, title, description, audio_url, cover_image_url, genre, duration_ms,
+        play_count, like_count, user_id, created_at, spotify_url, apple_url,
+        soundcloud_url, youtube_url
       `)
       .eq('is_published', true)
       .order('created_at', { ascending: false })
@@ -298,18 +256,15 @@ async function getUserUploads(supabase: any, search: string = '', genre: string 
     if (search) {
       query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
     }
-    
     if (genre && genre !== 'All') {
       query = query.ilike('genre', `%${genre}%`);
     }
 
     const { data, error } = await query;
-
     if (error) {
       console.error('Error fetching user uploads:', error);
       return [];
     }
-
     console.log(`Fetched ${data?.length || 0} user uploads from database`);
     return data || [];
   } catch (e) {
@@ -318,13 +273,13 @@ async function getUserUploads(supabase: any, search: string = '', genre: string 
   }
 }
 
-// Format user upload to match heatmap track structure
+// Format user upload with deterministic metrics
 function formatUserUpload(upload: any, index: number) {
   const playCount = upload.play_count || 0;
   const likeCount = upload.like_count || 0;
-  const change24h = (Math.random() * 20 - 2); // Community tracks tend to grow
-  const attentionScore = Math.round(playCount * 10 + likeCount * 50 + 5000); // Boost user uploads
-  // Use user_id for now - we can fetch profile later if needed
+  const seed = `user_${upload.id}${todaySeed()}`;
+  const change24h = stableRandom(seed + 'c24') * 20 - 2;
+  const attentionScore = Math.round(playCount * 10 + likeCount * 50 + 5000);
   const artistName = 'Bario Artist';
 
   return {
@@ -361,8 +316,8 @@ function formatUserUpload(upload: any, index: number) {
       audiusPlays: playCount,
       mindshare: parseFloat((Math.min(100, playCount / 10 + likeCount / 2) / 3).toFixed(1)),
       change24h: parseFloat(change24h.toFixed(1)),
-      change7d: parseFloat((change24h * 2 + Math.random() * 10).toFixed(1)),
-      change30d: parseFloat((change24h * 3 + Math.random() * 15).toFixed(1))
+      change7d: parseFloat((change24h * 2 + stableRandom(seed + 'c7') * 10).toFixed(1)),
+      change30d: parseFloat((change24h * 3 + stableRandom(seed + 'c30') * 15).toFixed(1))
     },
     trend: change24h > 0 ? 'up' : 'down',
     momentum: change24h > 10 ? 'surging' : 'stable'
@@ -386,7 +341,8 @@ const genres = ['All', 'Pop', 'Hip-Hop', 'R&B', 'Rock', 'Electronic', 'Reggaeton
 function formatSpotifyTrack(track: any, index: number, countryCode: string) {
   const popularity = track.popularity || 50;
   const monthlyListeners = popularity * 50000 + (index < 10 ? 500000 : 100000);
-  const change24h = (Math.random() * 25 - 5);
+  const seed = `spotify_${track.id}${todaySeed()}`;
+  const change24h = stableRandom(seed + 'c24') * 25 - 5;
   const attentionScore = Math.round(popularity * 1000 + monthlyListeners / 500);
   
   return {
@@ -419,10 +375,10 @@ function formatSpotifyTrack(track: any, index: number, countryCode: string) {
       monthlyListeners,
       audiusRank: null,
       audiusPlays: null,
-      mindshare: parseFloat((popularity / 2.5 + Math.random() * 5).toFixed(1)),
+      mindshare: parseFloat((popularity / 2.5 + stableRandom(seed + 'ms') * 5).toFixed(1)),
       change24h: parseFloat(change24h.toFixed(1)),
-      change7d: parseFloat((change24h * 2.5 + Math.random() * 8).toFixed(1)),
-      change30d: parseFloat((change24h * 4 + Math.random() * 15).toFixed(1))
+      change7d: parseFloat((change24h * 2.5 + stableRandom(seed + 'c7') * 8).toFixed(1)),
+      change30d: parseFloat((change24h * 4 + stableRandom(seed + 'c30') * 15).toFixed(1))
     },
     trend: change24h > 0 ? 'up' : change24h < 0 ? 'down' : 'stable',
     momentum: change24h > 10 ? 'surging' : change24h < -5 ? 'cooling' : 'stable'
@@ -433,7 +389,8 @@ function formatDeezerTrack(track: any, index: number, countryCode: string) {
   const deezerRank = track.rank || 0;
   const baseListeners = Math.floor(deezerRank / 10);
   const monthlyListeners = Math.max(100000, baseListeners + (index < 10 ? 500000 : index < 30 ? 200000 : 50000));
-  const change24h = (Math.random() * 25 - 5);
+  const seed = `deezer_${track.id}${todaySeed()}`;
+  const change24h = stableRandom(seed + 'c24') * 25 - 5;
   const popularity = Math.min(100, Math.floor(deezerRank / 8000) + 50);
   const attentionScore = Math.round(popularity * 800 + monthlyListeners / 500);
   
@@ -469,26 +426,26 @@ function formatDeezerTrack(track: any, index: number, countryCode: string) {
       monthlyListeners,
       audiusRank: null,
       audiusPlays: null,
-      mindshare: parseFloat((popularity / 2.5 + Math.random() * 5).toFixed(1)),
+      mindshare: parseFloat((popularity / 2.5 + stableRandom(seed + 'ms') * 5).toFixed(1)),
       change24h: parseFloat(change24h.toFixed(1)),
-      change7d: parseFloat((change24h * 2.5 + Math.random() * 8).toFixed(1)),
-      change30d: parseFloat((change24h * 4 + Math.random() * 15).toFixed(1))
+      change7d: parseFloat((change24h * 2.5 + stableRandom(seed + 'c7') * 8).toFixed(1)),
+      change30d: parseFloat((change24h * 4 + stableRandom(seed + 'c30') * 15).toFixed(1))
     },
     trend: change24h > 0 ? 'up' : change24h < 0 ? 'down' : 'stable',
     momentum: change24h > 10 ? 'surging' : change24h < -5 ? 'cooling' : 'stable'
   };
 }
 
-// Format Audius track with Deezer preview lookup
+// Format Audius track with Deezer preview lookup - deterministic metrics
 async function formatAudiusTrackWithPreview(track: any, index: number): Promise<any> {
   const plays = track.play_count || 0;
   const reposts = track.repost_count || 0;
   const favorites = track.favorite_count || 0;
   const listeners = plays + (reposts * 10) + (favorites * 5);
-  const change24h = (Math.random() * 30 - 5);
+  const seed = `audius_${track.id}${todaySeed()}`;
+  const change24h = stableRandom(seed + 'c24') * 30 - 5;
   const attentionScore = Math.round((plays / 100) + (reposts * 50) + (favorites * 30));
   
-  // Try to get Deezer preview for Audius tracks
   const trackTitle = track.title || '';
   const artistName = track.user?.name || '';
   let previewUrl = null;
@@ -510,7 +467,6 @@ async function formatAudiusTrackWithPreview(track: any, index: number): Promise<
     }
   }
   
-  // Fallback to Audius stream URL if no Deezer preview
   if (!previewUrl) {
     previewUrl = `https://discoveryprovider.audius.co/v1/tracks/${track.id}/stream`;
   }
@@ -548,8 +504,8 @@ async function formatAudiusTrackWithPreview(track: any, index: number): Promise<
       audiusPlays: plays,
       mindshare: parseFloat((Math.min(100, plays / 1000) / 3).toFixed(1)),
       change24h: parseFloat(change24h.toFixed(1)),
-      change7d: parseFloat((change24h * 2 + Math.random() * 10).toFixed(1)),
-      change30d: parseFloat((change24h * 3.5 + Math.random() * 15).toFixed(1))
+      change7d: parseFloat((change24h * 2 + stableRandom(seed + 'c7') * 10).toFixed(1)),
+      change30d: parseFloat((change24h * 3.5 + stableRandom(seed + 'c30') * 15).toFixed(1))
     },
     trend: change24h > 0 ? 'up' : 'down',
     momentum: change24h > 15 ? 'surging' : change24h < -5 ? 'cooling' : 'stable'
@@ -570,7 +526,6 @@ serve(async (req) => {
     
     console.log(`Fetching tracks: limit=${limit}, search=${search}, genre=${genre}, country=${country}`);
 
-    // Initialize Supabase client to fetch user uploads
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -582,30 +537,23 @@ serve(async (req) => {
     const formattedUserUploads = userUploads.map((u: any, i: number) => formatUserUpload(u, i));
     
     if (search) {
-      // Search Deezer first - they always have preview URLs
-      // Then Spotify and Audius as secondary sources
       const [deezerResults, spotifyResults, audiusResults] = await Promise.all([
-        searchDeezer(search, 40),  // Deezer first with more results (has previews)
-        searchSpotify(search, 10), // Reduced Spotify (often no previews)
+        searchDeezer(search, 40),
+        searchSpotify(search, 10),
         searchAudius(search, 10)
       ]);
       
-      // Format Deezer tracks first - they have previews
       const deezerTracks = deezerResults.map((t: any, i: number) => formatDeezerTrack(t, i, country));
       
-      // For Spotify tracks, try to find Deezer preview if Spotify has none
       const spotifyTracksWithPreview = await Promise.all(
         spotifyResults.map(async (t: any, i: number) => {
           const formatted = formatSpotifyTrack(t, i + deezerTracks.length, country);
-          
-          // If no Spotify preview, search Deezer for this track
           if (!formatted.previewUrl && t.name && t.artists?.[0]?.name) {
             const deezerSearch = await searchDeezer(`${t.name} ${t.artists[0].name}`, 1);
             if (deezerSearch.length > 0 && deezerSearch[0].preview) {
               formatted.previewUrl = deezerSearch[0].preview;
               formatted.deezerUrl = deezerSearch[0].link || `https://www.deezer.com/track/${deezerSearch[0].id}`;
               (formatted as any).deezerId = String(deezerSearch[0].id);
-              console.log(`Found Deezer preview for Spotify track: ${t.name}`);
             }
           }
           return formatted;
@@ -614,8 +562,6 @@ serve(async (req) => {
       
       const audiusTracks = await Promise.all(audiusResults.map((t: any, i: number) => formatAudiusTrackWithPreview(t, i + deezerTracks.length + spotifyTracksWithPreview.length)));
       
-      // Put Deezer first (guaranteed previews), then Spotify (with fallback previews), then Audius
-      // Filter out any tracks without preview URLs
       const allTracks = [...formattedUserUploads, ...deezerTracks, ...spotifyTracksWithPreview, ...audiusTracks];
       tracks = allTracks.filter(t => t.previewUrl);
       console.log(`Search results: User=${formattedUserUploads.length}, Deezer=${deezerTracks.length}, Spotify=${spotifyTracksWithPreview.length}, Audius=${audiusTracks.length}, WithPreview=${tracks.length}`);
@@ -623,22 +569,18 @@ serve(async (req) => {
     } else if (country && country !== 'GLOBAL') {
       console.log(`Fetching country-specific charts for: ${country}`);
       
-      // Get country-specific charts from Spotify and Deezer
       const [spotifyTracks, deezerTracks] = await Promise.all([
         getSpotifyCountryTop50(country, 50),
         getDeezerCountryChart(country, 60)
       ]);
       
-      // Format tracks with country code
       const formattedSpotify = await Promise.all(
         spotifyTracks.map(async (t: any, i: number) => {
           const formatted = formatSpotifyTrack(t, i, country);
-          // If no Spotify preview, try Deezer fallback
           if (!formatted.previewUrl && t.name && t.artists?.[0]?.name) {
             const deezerSearch = await searchDeezer(`${t.name} ${t.artists[0].name}`, 1);
             if (deezerSearch.length > 0 && deezerSearch[0].preview) {
               formatted.previewUrl = deezerSearch[0].preview;
-              console.log(`Found Deezer preview for ${country} track: ${t.name}`);
             }
           }
           return formatted;
@@ -647,14 +589,12 @@ serve(async (req) => {
       
       const formattedDeezer = deezerTracks.map((t: any, i: number) => formatDeezerTrack(t, i + formattedSpotify.length, country));
       
-      // Combine and filter out tracks without preview URLs
       const allTracks = [...formattedUserUploads, ...formattedSpotify, ...formattedDeezer];
       tracks = allTracks.filter(t => t.previewUrl);
       
       console.log(`Country ${country} results: User=${formattedUserUploads.length}, Spotify=${formattedSpotify.length}, Deezer=${formattedDeezer.length}, WithPreview=${tracks.length}`);
       
     } else if (genre && genre !== 'All') {
-      // Genre-specific search
       const [spotifyResults, deezerResults] = await Promise.all([
         searchSpotify(`${genre} hits 2024`, 20),
         searchDeezer(`${genre} hits 2024`, 40)
@@ -666,28 +606,22 @@ serve(async (req) => {
       tracks = [...formattedUserUploads, ...spotifyTracks, ...deezerTracks];
       
     } else {
-      // Global trending - get from ALL sources with variety
-      // Fetch more and randomize for fresh content every time
-      const randomGenre = randomGenres[Math.floor(Math.random() * randomGenres.length)];
-      
-      const [spotifyGlobal, deezerGlobal, deezerGenre, audiusTrending] = await Promise.all([
+      // Global trending - fixed sources, no random genre, no shuffle
+      const [spotifyGlobal, deezerGlobal, audiusTrending] = await Promise.all([
         getSpotifyCountryTop50('GLOBAL', 50),
         getDeezerGlobalChart(60),
-        searchDeezer(`${randomGenre} new 2025 2026 hits`, 30),
         getAudiusTrending(20)
       ]);
       
       const spotifyTracks = spotifyGlobal.map((t: any, i: number) => formatSpotifyTrack(t, i, 'GLOBAL'));
       const deezerTracks = deezerGlobal.map((t: any, i: number) => formatDeezerTrack(t, i + spotifyTracks.length, 'GLOBAL'));
-      const deezerGenreTracks = deezerGenre.map((t: any, i: number) => formatDeezerTrack(t, i + spotifyTracks.length + deezerTracks.length, 'GLOBAL'));
-      const audiusTracks = await Promise.all(audiusTrending.map((t: any, i: number) => formatAudiusTrackWithPreview(t, i + spotifyTracks.length + deezerTracks.length + deezerGenreTracks.length)));
+      const audiusTracks = await Promise.all(audiusTrending.map((t: any, i: number) => formatAudiusTrackWithPreview(t, i + spotifyTracks.length + deezerTracks.length)));
       
-      // Mix all sources and heavily shuffle - FILTER out tracks without preview URLs
-      const allTracks = [...formattedUserUploads, ...spotifyTracks, ...deezerTracks, ...deezerGenreTracks, ...audiusTracks];
-      const tracksWithPreviews = allTracks.filter(t => t.previewUrl);
-      tracks = tracksWithPreviews.sort(() => Math.random() - 0.5).sort(() => Math.random() - 0.5);
+      // Combine all sources, filter for previews, NO shuffle
+      const allTracks = [...formattedUserUploads, ...spotifyTracks, ...deezerTracks, ...audiusTracks];
+      tracks = allTracks.filter(t => t.previewUrl);
       
-      console.log(`Global results: User=${formattedUserUploads.length}, Spotify=${spotifyTracks.length}, Deezer=${deezerTracks.length}, DeezerGenre=${deezerGenreTracks.length}, Audius=${audiusTracks.length}`);
+      console.log(`Global results: User=${formattedUserUploads.length}, Spotify=${spotifyTracks.length}, Deezer=${deezerTracks.length}, Audius=${audiusTracks.length}`);
     }
     
     // Remove duplicates by title+artist
@@ -699,7 +633,7 @@ serve(async (req) => {
       return true;
     });
     
-    // Sort by attention score and assign ranks
+    // Sort by attention score and assign ranks - deterministic order
     tracks.sort((a, b) => b.metrics.attentionScore - a.metrics.attentionScore);
     tracks.forEach((t, i) => t.rank = i + 1);
     
