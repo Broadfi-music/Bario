@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Mic, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { demoSession, demoSession2, DemoSpeaker, DemoSession, DEMO_SESSION_ID_2 } from '@/config/demoSpace';
+import { demoSession, demoSession2, demoSession3, DemoSpeaker, DemoSession, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3 } from '@/config/demoSpace';
 import AuthPromptModal from './AuthPromptModal';
 
 // Audio waveform animation component
@@ -39,7 +39,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
   // Pick the right demo session
-  const activeDemo: DemoSession = sessionId === DEMO_SESSION_ID_2 ? demoSession2 : demoSession;
+  const activeDemo: DemoSession = sessionId === DEMO_SESSION_ID_3 ? demoSession3 : sessionId === DEMO_SESSION_ID_2 ? demoSession2 : demoSession;
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);

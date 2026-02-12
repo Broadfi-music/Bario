@@ -31,6 +31,9 @@ export interface DemoSession {
 export const DEMO_SESSION_ID_2 = 'demo-live-session-2';
 export const DEMO_HOST_ID_2 = 'demo-host-teri';
 
+export const DEMO_SESSION_ID_3 = 'demo-live-session-3';
+export const DEMO_HOST_ID_3 = 'demo-host-marcus';
+
 export const demoSession: DemoSession = {
   id: DEMO_SESSION_ID,
   hostId: DEMO_HOST_ID,
@@ -96,6 +99,42 @@ export const demoSession2: DemoSession = {
   ],
 };
 
+export const demoSession3: DemoSession = {
+  id: DEMO_SESSION_ID_3,
+  hostId: DEMO_HOST_ID_3,
+  title: 'Innovative Ways to Make Money',
+  description: 'Discover creative and modern strategies to build multiple income streams',
+  coverImageUrl: '/demo/demo-space-cover-3.jpg',
+  audioUrl: '/demo/demo-space-audio-3.mp3',
+  hostName: 'Marcus Cole',
+  hostAvatar: null,
+  category: 'Finance',
+  baseListenerCount: 103,
+  speakers: [
+    {
+      id: 'demo-host-marcus',
+      name: 'Marcus Cole',
+      role: 'host',
+      avatarGradient: 'from-green-500 to-emerald-500',
+      avatarUrl: getDemoAvatar('Marcus Cole'),
+    },
+    {
+      id: 'demo-speaker-4',
+      name: 'Finance Guru',
+      role: 'co_host',
+      avatarGradient: 'from-yellow-500 to-amber-500',
+      avatarUrl: getDemoAvatar('Finance Guru'),
+    },
+    {
+      id: 'demo-speaker-5',
+      name: 'Side Hustle Pro',
+      role: 'speaker',
+      avatarGradient: 'from-teal-500 to-cyan-500',
+      avatarUrl: getDemoAvatar('Side Hustle Pro'),
+    },
+  ],
+};
+
 // Simulated chat messages that cycle through the demo session
 export const demoChatMessages = [
   { content: 'This chapter changed my perspective 🙏', userName: 'ThoughtLeader' },
@@ -136,13 +175,32 @@ export const demoChatMessages2 = [
   { content: 'Love this discussion format', userName: 'PodcastFan' },
 ];
 
+export const demoChatMessages3 = [
+  { content: 'This is game-changing advice! 💰', userName: 'MoneyMaker' },
+  { content: 'Side hustles are the future 🚀', userName: 'HustleHard' },
+  { content: 'Taking notes on everything! 📝', userName: 'WealthBuilder' },
+  { content: 'Passive income is the key 🔑', userName: 'InvestSmart' },
+  { content: 'Anyone tried dropshipping?', userName: 'EcomPro' },
+  { content: 'Multiple streams of income 💪', userName: 'DiversifyNow' },
+  { content: 'Great breakdown Marcus! 🔥', userName: 'FinanceFan' },
+  { content: 'The crypto tips are solid', userName: 'BlockchainBob' },
+  { content: 'Freelancing changed my life', userName: 'FreelanceKing' },
+  { content: 'Real estate is still king 🏠', userName: 'PropertyPro' },
+  { content: 'Love the practical examples', userName: 'ActionTaker' },
+  { content: 'This should be taught in schools', userName: 'EduReform' },
+  { content: 'Financial freedom here I come! ✨', userName: 'FreedomSeeker' },
+  { content: 'The affiliate marketing tips 👌', userName: 'AffiliateAce' },
+  { content: 'Sharing this with my network', userName: 'NetworkGrowth' },
+];
+
 // Helper to check if a session ID is any demo session
-export const isDemoSessionId = (id: string) => id === DEMO_SESSION_ID || id === DEMO_SESSION_ID_2;
+export const isDemoSessionId = (id: string) => id === DEMO_SESSION_ID || id === DEMO_SESSION_ID_2 || id === DEMO_SESSION_ID_3;
 
 // Get demo session by ID
 export const getDemoSessionById = (id: string): DemoSession | null => {
   if (id === DEMO_SESSION_ID) return demoSession;
   if (id === DEMO_SESSION_ID_2) return demoSession2;
+  if (id === DEMO_SESSION_ID_3) return demoSession3;
   return null;
 };
 
@@ -223,4 +281,42 @@ export const getDemoPodcastSession2 = () => ({
   host_name: demoSession2.hostName,
   host_avatar: demoSession2.hostAvatar,
   category: demoSession2.category,
+});
+
+export const getDemoLiveHost3 = () => ({
+  id: demoSession3.id,
+  host_id: demoSession3.hostId,
+  title: demoSession3.title,
+  description: demoSession3.description,
+  listener_count: demoSession3.baseListenerCount + Math.floor(Math.random() * 40),
+  host_name: demoSession3.hostName,
+  host_avatar: demoSession3.coverImageUrl,
+  category: demoSession3.category,
+  cover_image_url: demoSession3.coverImageUrl,
+});
+
+export const getDemoLiveSession3 = () => ({
+  id: demoSession3.id,
+  title: demoSession3.title,
+  host_id: demoSession3.hostId,
+  host_name: demoSession3.hostName,
+  host_avatar: demoSession3.coverImageUrl,
+  cover_image_url: demoSession3.coverImageUrl,
+  listener_count: demoSession3.baseListenerCount + Math.floor(Math.random() * 40),
+  status: 'live' as const,
+  is_battle: false,
+});
+
+export const getDemoPodcastSession3 = () => ({
+  id: demoSession3.id,
+  host_id: demoSession3.hostId,
+  title: demoSession3.title,
+  description: demoSession3.description,
+  cover_image_url: demoSession3.coverImageUrl,
+  status: 'live' as 'scheduled' | 'live' | 'ended',
+  listener_count: demoSession3.baseListenerCount + Math.floor(Math.random() * 40),
+  started_at: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
+  host_name: demoSession3.hostName,
+  host_avatar: demoSession3.hostAvatar,
+  category: demoSession3.category,
 });
