@@ -1,57 +1,46 @@
 
-# Fix Country Filter: Replace Invalid Playlist IDs with Verified Deezer Chart IDs
+# Add "Innovative Ways to Make Money" as a 3rd Demo Live Session
 
-## Problem Found
+## Overview
+Create a new demo live session identical in behavior to the existing "As A Man Thinketh" and "Reconciling the CEOs Capacity Dilemma" sessions -- with looped audio, simulated chat, gift animations, and presence on both the Heatmap "Live Now" section and the Space/Podcast Feed.
 
-I tested every single Deezer playlist ID in the code by calling the Deezer API directly. The results are bad -- most IDs are **wrong, empty, or returning errors**:
+## Assets to Copy
+1. **Audio file**: Copy `user-uploads://116-innovative-ways-to-develop-e.mp3` to `public/demo/demo-space-audio-3.mp3`
+2. **Cover image**: Copy `user-uploads://Digital_collage_modern_art_hand_giving_and_receiving_money_on_a_background_Premium_Photo.jpeg` to `public/demo/demo-space-cover-3.jpg`
 
-- **Nigeria (NG)**: ID `2094756498` returns a "no data" error -- completely broken
-- **UK and Brazil are swapped**: UK points to Brazil's playlist and vice versa
-- **Ghana (GH)**: ID `4371498262` returns empty (0 tracks)
-- **Kenya (KE)**: ID `5765498882` returns empty (0 tracks)
-- **South Korea (KR)**: ID `3843859162` returns empty (0 tracks)
-- **India (IN)**: ID `2489283764` returns empty (0 tracks)
-- **Japan (JP)**: ID `1116190041` is actually Spain's chart
-- **South Africa (ZA)**: ID `3430408142` is a random old playlist with Coldplay/Imagine Dragons, not a chart
+## File Changes
 
-This means when users filter by country, they're seeing either foreign music, old random playlists, or the system falls back to hardcoded artist searches -- which is exactly the problem you're seeing.
+### 1. `src/config/demoSpace.ts`
+- Add `DEMO_SESSION_ID_3 = 'demo-live-session-3'` and `DEMO_HOST_ID_3`
+- Add `demoSession3` object with title "Innovative Ways to Make Money", the new cover image, audio URL, a host name, category "Finance", speakers list, and base listener count
+- Add `demoChatMessages3` with money/finance-themed simulated chat messages
+- Add helper functions: `getDemoLiveHost3()`, `getDemoLiveSession3()`, `getDemoPodcastSession3()`
+- Update `isDemoSessionId()` and `getDemoSessionById()` to include the new session
 
-## Solution
+### 2. `src/lib/authUtils.ts`
+- Update `isDemoLiveSession()` to also match `'demo-live-session-3'`
 
-Replace all broken playlist IDs with the **verified official Deezer Charts playlist IDs** that I confirmed are working and returning real trending data right now.
+### 3. `src/components/podcast/PodcastFeed.tsx`
+- Import the new session helpers (`getDemoLiveHost3`, `DEMO_SESSION_ID_3`)
+- Inject the 3rd demo session into the live hosts list alongside the existing two
 
-### Verified Correct Playlist IDs
+### 4. `src/pages/GlobalHeatmap.tsx`
+- Import `getDemoLiveSession3`
+- Add it to the "Live Now" section so it appears on the heatmap
 
-| Country | Wrong ID (current) | Correct ID (verified) |
-|---------|-------------------|----------------------|
-| GLOBAL | 3155776842 | 3155776842 (no change) |
-| US | 1313621735 | 1313621735 (no change) |
-| UK | 1111141961 | **1111142221** |
-| NG | 2094756498 | **1362516565** |
-| GH | 4371498262 | **removed** (no official Deezer chart -- will use artist fallback) |
-| ZA | 3430408142 | **1362528775** |
-| KE | 5765498882 | **1362509215** |
-| BR | 1111142221 | **1111141961** |
-| MX | 1116189381 | **1111142361** |
-| JP | 1116190041 | **1362508955** |
-| KR | 3843859162 | **1362510315** |
-| IN | 2489283764 | **removed** (no official Deezer chart -- will use artist fallback) |
-| AU | 1362508475 | **1313616925** |
-| CA | 1652248171 | 1652248171 (no change, verified working) |
-| ES | 1116188681 | **1116190041** |
-| IT | 1116187241 | 1116187241 (no change, verified working) |
-| FR | 1109890291 | 1109890291 (no change, verified working) |
+### 5. `src/pages/Podcasts.tsx`
+- Import `DEMO_SESSION_ID_3` and `getDemoPodcastSession3`
+- Handle the new session ID in the session selection logic so clicking it opens the live view
 
-### File to Change
+### 6. `src/components/podcast/KickStyleLive.tsx`
+- Already handles demo sessions via `isDemoLiveSession()` -- no changes needed beyond the authUtils update
 
-**`supabase/functions/heatmap-tracks/index.ts`** -- Update the `deezerCountryPlaylists` mapping with the corrected IDs. Remove Ghana and India from the playlist map (they don't have official Deezer Charts playlists, so they'll correctly fall back to the artist search approach).
+### 7. `src/components/podcast/DemoLiveSpace.tsx`
+- Import `demoSession3` and `DEMO_SESSION_ID_3`
+- Add a condition so when `sessionId === DEMO_SESSION_ID_3`, it uses `demoSession3` for the audio, cover, and speakers
 
-### What This Fixes
+### 8. `src/components/podcast/TikTokGiftDisplay.tsx` and `src/components/podcast/GiftAnimation.tsx`
+- Already use `isDemoLiveSession()` -- will automatically work once authUtils is updated
 
-- Nigeria will show actual Nigerian trending music (Ayra Starr, Wizkid, etc.)
-- UK will show UK charts, not Brazilian music
-- Brazil will show Brazilian charts, not UK music
-- Japan will show Japanese charts, not Spanish music
-- South Africa will show current SA trending, not a 2017 Coldplay playlist
-- Kenya and South Korea will show real chart data instead of empty results
-- Ghana and India will use the existing artist fallback (Sarkodie, Arijit Singh, etc.) since Deezer doesn't maintain official charts for these countries
+## Result
+The new "Innovative Ways to Make Money" session will appear as a persistent live session on both the Heatmap and Space Feed, with looped audio playback, simulated chat messages, and gift animations -- identical in behavior to the existing demo sessions.
