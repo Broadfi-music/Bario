@@ -70,7 +70,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
         audioRef.current = null;
       }
     };
-  }, []);
+  }, [activeDemo.audioUrl]);
 
   // Simulate fluctuating listener count
   useEffect(() => {
