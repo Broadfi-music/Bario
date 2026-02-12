@@ -10,7 +10,7 @@ import PodcastFeed from '@/components/podcast/PodcastFeed';
 import KickStyleLive from '@/components/podcast/KickStyleLive';
 import BattleReelScroller from '@/components/podcast/BattleReelScroller';
 import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
-import { getDemoPodcastSession, getDemoPodcastSession2, DEMO_SESSION_ID, DEMO_SESSION_ID_2, getDemoSessionById } from '@/config/demoSpace';
+import { getDemoPodcastSession, getDemoPodcastSession2, getDemoPodcastSession3, DEMO_SESSION_ID, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3, getDemoSessionById } from '@/config/demoSpace';
 
 interface PodcastSession {
   id: string;
@@ -148,7 +148,9 @@ const Podcasts = () => {
       // Handle demo session specially
       if (isDemoLiveSession(sessionId)) {
         // Get the right demo session based on ID
-        if (sessionId === DEMO_SESSION_ID_2) {
+        if (sessionId === DEMO_SESSION_ID_3) {
+          setSelectedSession(getDemoPodcastSession3());
+        } else if (sessionId === DEMO_SESSION_ID_2) {
           setSelectedSession(getDemoPodcastSession2());
         } else {
           setSelectedSession(getDemoPodcastSession());

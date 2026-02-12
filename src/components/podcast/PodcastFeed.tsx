@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import BattleInviteModal from './BattleInviteModal';
 import BattleNotification from './BattleNotification';
 import BattleReelScroller from './BattleReelScroller';
-import { getDemoLiveHost, getDemoLiveHost2, DEMO_SESSION_ID, DEMO_SESSION_ID_2 } from '@/config/demoSpace';
+import { getDemoLiveHost, getDemoLiveHost2, getDemoLiveHost3, DEMO_SESSION_ID, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3 } from '@/config/demoSpace';
 
 interface LiveHost {
   id: string;
@@ -374,8 +374,8 @@ const PodcastFeed = () => {
       console.log('Live sessions fetched:', sessions?.length || 0);
       
       if (!sessions || sessions.length === 0) {
-        // No real sessions - show both demo sessions
-        setLiveHosts([getDemoLiveHost(), getDemoLiveHost2()]);
+        // No real sessions - show all demo sessions
+        setLiveHosts([getDemoLiveHost(), getDemoLiveHost2(), getDemoLiveHost3()]);
         return;
       }
 
@@ -420,12 +420,15 @@ const PodcastFeed = () => {
       // Always inject demo sessions
       const demoHost = getDemoLiveHost();
       const demoHost2 = getDemoLiveHost2();
+      const demoHost3 = getDemoLiveHost3();
       const hasDemo = realSessions.some(s => s.id === DEMO_SESSION_ID);
       const hasDemo2 = realSessions.some(s => s.id === DEMO_SESSION_ID_2);
+      const hasDemo3 = realSessions.some(s => s.id === DEMO_SESSION_ID_3);
       
       const demosToAdd = [];
       if (!hasDemo) demosToAdd.push(demoHost);
       if (!hasDemo2) demosToAdd.push(demoHost2);
+      if (!hasDemo3) demosToAdd.push(demoHost3);
       
       if (demosToAdd.length > 0) {
         if (realSessions.length < 3) {
@@ -440,8 +443,8 @@ const PodcastFeed = () => {
       }
     } catch (err) {
       console.error('Unexpected error fetching live sessions:', err);
-      // Even on error, show the demo session
-      setLiveHosts([getDemoLiveHost(), getDemoLiveHost2()]);
+      // Even on error, show the demo sessions
+      setLiveHosts([getDemoLiveHost(), getDemoLiveHost2(), getDemoLiveHost3()]);
     }
   };
 
