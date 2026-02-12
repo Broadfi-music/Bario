@@ -532,9 +532,10 @@ const KickStyleLive = ({
             {/* Participants (Audio Room) or Demo Space */}
             <div className="flex-1 min-h-0 overflow-hidden bg-gradient-to-b from-[#1a1a1d] to-[#0e0e10]">
               {isDemoLiveSession(currentSession.id) ? (
-                <DemoLiveSpace onLeave={() => onSessionSelect(null)} sessionId={currentSession.id} />
+                <DemoLiveSpace key={currentSession.id} onLeave={() => onSessionSelect(null)} sessionId={currentSession.id} />
               ) : (
                 <SpaceParticipants 
+                  key={currentSession.id}
                   sessionId={currentSession.id}
                   hostId={currentSession.host_id}
                   isHost={user?.id === currentSession.host_id}
@@ -640,6 +641,7 @@ const KickStyleLive = ({
             {/* Mobile Chat - Collapsible */}
             <div className="lg:hidden shrink-0 h-[200px] border-t border-white/5">
               <TwitchComments 
+                key={`mobile-chat-${currentSession.id}`}
                 sessionId={currentSession.id}
                 hostId={currentSession.host_id}
                 onSendGift={() => setShowGiftModal(true)}
@@ -659,6 +661,7 @@ const KickStyleLive = ({
             </div>
             <div className="flex-1 min-h-0 overflow-hidden">
               <TwitchComments 
+                key={`desktop-chat-${currentSession.id}`}
                 sessionId={currentSession.id}
                 hostId={currentSession.host_id}
                 onSendGift={() => setShowGiftModal(true)}
@@ -700,10 +703,10 @@ const KickStyleLive = ({
       )}
 
       {/* Gift Animation Overlay - TikTok style */}
-      <GiftAnimation sessionId={currentSession.id} />
+      <GiftAnimation key={`gift-${currentSession.id}`} sessionId={currentSession.id} />
       
       {/* TikTok-style gift display */}
-      <TikTokGiftDisplay sessionId={currentSession.id} />
+      <TikTokGiftDisplay key={`tiktok-gift-${currentSession.id}`} sessionId={currentSession.id} />
 
       {/* Modals */}
       <TikTokGiftModal
