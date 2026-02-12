@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Users, Heart, Gift, Share2, UserPlus, Headphones,
@@ -16,7 +16,7 @@ import TikTokGiftDisplay from './TikTokGiftDisplay';
 import DemoLiveSpace from './DemoLiveSpace';
 import { toast } from 'sonner';
 import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
-import { getDemoPodcastSession, getDemoSessionById, DEMO_SESSION_ID, DEMO_SESSION_ID_2 } from '@/config/demoSpace';
+import { getDemoPodcastSession, getDemoPodcastSession2, getDemoPodcastSession3, getDemoSessionById, DEMO_SESSION_ID, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3 } from '@/config/demoSpace';
 
 interface PodcastSession {
   id: string;
@@ -75,7 +75,24 @@ const KickStyleLive = ({
   const [topGifters, setTopGifters] = useState<TopGifter[]>([]);
   const [recommendedSessions, setRecommendedSessions] = useState<PodcastSession[]>([]);
 
-  const currentSession = selectedSession || sessions[currentIndex];
+  // Build a combined list of all scrollable sessions (demo + real)
+  const allSessions = useMemo(() => {
+    const demoSessions = [getDemoPodcastSession(), getDemoPodcastSession2(), getDemoPodcastSession3()];
+    const realIds = new Set(sessions.map(s => s.id));
+    const demoIds = new Set(demoSessions.map(s => s.id));
+    // Combine: demos first, then real sessions not already included
+    const combined = [...demoSessions, ...sessions.filter(s => !demoIds.has(s.id))];
+    return combined;
+  }, [sessions]);
+
+  // Find the current index in allSessions based on selectedSession
+  const activeIndex = useMemo(() => {
+    if (!selectedSession) return 0;
+    const idx = allSessions.findIndex(s => s.id === selectedSession.id);
+    return idx >= 0 ? idx : 0;
+  }, [selectedSession, allSessions]);
+
+  const currentSession = selectedSession || allSessions[activeIndex] || sessions[currentIndex];
 
   const [listenerCount, setListenerCount] = useState(0);
 
@@ -291,17 +308,21 @@ const KickStyleLive = ({
 
   // Vertical scroll navigation
   const goToNext = useCallback(() => {
-    const maxIndex = sessions.length - 1;
-    const newIndex = Math.min(currentIndex + 1, maxIndex);
-    onIndexChange(newIndex);
-    onSessionSelect(sessions[newIndex]);
-  }, [sessions, currentIndex, onIndexChange, onSessionSelect]);
+    const maxIndex = allSessions.length - 1;
+    const newIndex = Math.min(activeIndex + 1, maxIndex);
+    if (newIndex !== activeIndex) {
+      onIndexChange(newIndex);
+      onSessionSelect(allSessions[newIndex]);
+    }
+  }, [allSessions, activeIndex, onIndexChange, onSessionSelect]);
 
   const goToPrev = useCallback(() => {
-    const newIndex = Math.max(currentIndex - 1, 0);
-    onIndexChange(newIndex);
-    onSessionSelect(sessions[newIndex]);
-  }, [sessions, currentIndex, onIndexChange, onSessionSelect]);
+    const newIndex = Math.max(activeIndex - 1, 0);
+    if (newIndex !== activeIndex) {
+      onIndexChange(newIndex);
+      onSessionSelect(allSessions[newIndex]);
+    }
+  }, [allSessions, activeIndex, onIndexChange, onSessionSelect]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.touches[0].clientY);
@@ -325,10 +346,13 @@ const KickStyleLive = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [goToNext, goToPrev]);
 
+  const lastScrollTime = useRef(0);
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
-    if (e.deltaY > 30) goToNext();
-    else if (e.deltaY < -30) goToPrev();
+    const now = Date.now();
+    if (now - lastScrollTime.current < 600) return; // debounce
+    if (e.deltaY > 30) { lastScrollTime.current = now; goToNext(); }
+    else if (e.deltaY < -30) { lastScrollTime.current = now; goToPrev(); }
   }, [goToNext, goToPrev]);
 
   useEffect(() => {
@@ -645,6 +669,35 @@ const KickStyleLive = ({
           </aside>
         </div>
       </div>
+
+      {/* Scroll navigation indicators */}
+      {allSessions.length > 1 && (
+        <>
+          {/* Dot indicators */}
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-1.5">
+            {allSessions.map((s, i) => (
+              <button
+                key={s.id}
+                onClick={() => { onIndexChange(i); onSessionSelect(allSessions[i]); }}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  i === activeIndex ? 'bg-white scale-125' : 'bg-white/30 hover:bg-white/50'
+                }`}
+              />
+            ))}
+          </div>
+          {/* Up/Down arrows */}
+          {activeIndex > 0 && (
+            <button onClick={goToPrev} className="absolute top-16 left-1/2 -translate-x-1/2 z-50 text-white/40 hover:text-white animate-bounce">
+              <ChevronUp className="h-6 w-6" />
+            </button>
+          )}
+          {activeIndex < allSessions.length - 1 && (
+            <button onClick={goToNext} className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 text-white/40 hover:text-white animate-bounce">
+              <ChevronDown className="h-6 w-6" />
+            </button>
+          )}
+        </>
+      )}
 
       {/* Gift Animation Overlay - TikTok style */}
       <GiftAnimation sessionId={currentSession.id} />
