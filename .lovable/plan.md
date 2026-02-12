@@ -1,46 +1,82 @@
 
-# Add "Innovative Ways to Make Money" as a 3rd Demo Live Session
 
-## Overview
-Create a new demo live session identical in behavior to the existing "As A Man Thinketh" and "Reconciling the CEOs Capacity Dilemma" sessions -- with looped audio, simulated chat, gift animations, and presence on both the Heatmap "Live Now" section and the Space/Podcast Feed.
+# Fix: Feed Tab Not Working After Viewing Live Session from Heatmap
 
-## Assets to Copy
-1. **Audio file**: Copy `user-uploads://116-innovative-ways-to-develop-e.mp3` to `public/demo/demo-space-audio-3.mp3`
-2. **Cover image**: Copy `user-uploads://Digital_collage_modern_art_hand_giving_and_receiving_money_on_a_background_Premium_Photo.jpeg` to `public/demo/demo-space-cover-3.jpg`
+## Root Cause
 
-## File Changes
+In `src/pages/Podcasts.tsx`, there's a useEffect (line 145) that watches `[searchParams, liveSessions, selectedSession, activeTab]`. When clicking the Feed tab, three state changes fire at once: `setActiveTab('feed')`, `setSelectedSession(null)`, and `setSearchParams({})`.
 
-### 1. `src/config/demoSpace.ts`
-- Add `DEMO_SESSION_ID_3 = 'demo-live-session-3'` and `DEMO_HOST_ID_3`
-- Add `demoSession3` object with title "Innovative Ways to Make Money", the new cover image, audio URL, a host name, category "Finance", speakers list, and base listener count
-- Add `demoChatMessages3` with money/finance-themed simulated chat messages
-- Add helper functions: `getDemoLiveHost3()`, `getDemoLiveSession3()`, `getDemoPodcastSession3()`
-- Update `isDemoSessionId()` and `getDemoSessionById()` to include the new session
+The problem is that `setSearchParams({})` triggers a react-router URL navigation that can cause the useEffect to re-fire before the `setActiveTab('feed')` state update takes effect. In that intermediate render, the condition `!selectedSession && activeTab === 'live'` evaluates to `true`, which sets `selectedSession` back to a demo session -- keeping the Live view stuck on screen.
 
-### 2. `src/lib/authUtils.ts`
-- Update `isDemoLiveSession()` to also match `'demo-live-session-3'`
+## Fix
 
-### 3. `src/components/podcast/PodcastFeed.tsx`
-- Import the new session helpers (`getDemoLiveHost3`, `DEMO_SESSION_ID_3`)
-- Inject the 3rd demo session into the live hosts list alongside the existing two
+**File: `src/pages/Podcasts.tsx`**
 
-### 4. `src/pages/GlobalHeatmap.tsx`
-- Import `getDemoLiveSession3`
-- Add it to the "Live Now" section so it appears on the heatmap
+1. **Reduce the useEffect dependencies** -- it should only react to URL `searchParams` changes, not to `activeTab` or `selectedSession` (which creates circular state dependencies).
 
-### 5. `src/pages/Podcasts.tsx`
-- Import `DEMO_SESSION_ID_3` and `getDemoPodcastSession3`
-- Handle the new session ID in the session selection logic so clicking it opens the live view
+2. **Remove the problematic else-if** that auto-sets a demo session when the Live tab has no selected session. Instead, handle this in the render by passing a fallback directly to `KickStyleLive`.
 
-### 6. `src/components/podcast/KickStyleLive.tsx`
-- Already handles demo sessions via `isDemoLiveSession()` -- no changes needed beyond the authUtils update
+Changes:
 
-### 7. `src/components/podcast/DemoLiveSpace.tsx`
-- Import `demoSession3` and `DEMO_SESSION_ID_3`
-- Add a condition so when `sessionId === DEMO_SESSION_ID_3`, it uses `demoSession3` for the audio, cover, and speakers
+```typescript
+// BEFORE (line 145-177):
+useEffect(() => {
+  const sessionId = searchParams.get('session');
+  if (sessionId) {
+    // ... sets session and activeTab='live'
+  } else if (!searchParams.get('battle') && !selectedSession && activeTab === 'live') {
+    const demoSession = getDemoPodcastSession();
+    setSelectedSession(demoSession);  // <-- causes the race condition
+  }
+}, [searchParams, liveSessions, selectedSession, activeTab]);
 
-### 8. `src/components/podcast/TikTokGiftDisplay.tsx` and `src/components/podcast/GiftAnimation.tsx`
-- Already use `isDemoLiveSession()` -- will automatically work once authUtils is updated
+// AFTER:
+useEffect(() => {
+  const sessionId = searchParams.get('session');
+  if (sessionId) {
+    if (isDemoLiveSession(sessionId)) {
+      if (sessionId === DEMO_SESSION_ID_3) {
+        setSelectedSession(getDemoPodcastSession3());
+      } else if (sessionId === DEMO_SESSION_ID_2) {
+        setSelectedSession(getDemoPodcastSession2());
+      } else {
+        setSelectedSession(getDemoPodcastSession());
+      }
+      setActiveTab('live');
+      return;
+    }
+    setActiveTab('live');
+    const foundSession = liveSessions.find(p => p.id === sessionId);
+    if (foundSession) {
+      setSelectedSession(foundSession);
+    } else {
+      fetchSessionById(sessionId);
+    }
+  }
+  // NO else-if -- removed the auto-demo-set logic
+}, [searchParams, liveSessions]);
+// Removed selectedSession and activeTab from deps
+```
 
-## Result
-The new "Innovative Ways to Make Money" session will appear as a persistent live session on both the Heatmap and Space Feed, with looped audio playback, simulated chat messages, and gift animations -- identical in behavior to the existing demo sessions.
+3. **Add fallback in the render** so that when the Live tab is active with no selected session, it still shows a demo session:
+
+```typescript
+// In the render, line 476-484:
+{activeTab === 'live' ? (
+  <KickStyleLive
+    sessions={liveSessions}
+    currentIndex={currentIndex}
+    onIndexChange={setCurrentIndex}
+    selectedSession={selectedSession || getDemoPodcastSession()}  // fallback
+    onSessionSelect={setSelectedSession}
+    hostLiveSession={hostLiveSession}
+  />
+) : ...}
+```
+
+## Why This Fixes It
+
+- The useEffect no longer depends on `activeTab` or `selectedSession`, so switching tabs can't trigger a state loop
+- No more race condition between `setActiveTab` and `setSearchParams`
+- The Live tab still shows a demo session by default (via the render fallback) without needing the useEffect to manage it
+- Clicking Feed will cleanly switch tabs without the useEffect fighting back
