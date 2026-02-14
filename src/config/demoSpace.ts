@@ -42,7 +42,7 @@ export const demoSession: DemoSession = {
   coverImageUrl: '/demo/demo-space-cover.jpg',
   audioUrl: '/demo/demo-space-audio.mp3',
   hostName: 'Solomon Harvey',
-  hostAvatar: null,
+  hostAvatar: getDemoAvatar('Solomon Harvey'),
   category: 'Philosophy',
   baseListenerCount: 127,
   speakers: [
@@ -78,7 +78,7 @@ export const demoSession2: DemoSession = {
   coverImageUrl: '/demo/demo-space-cover-2.jpg',
   audioUrl: '/demo/demo-space-audio-2.mp3',
   hostName: 'Teri Beckman',
-  hostAvatar: null,
+  hostAvatar: getDemoAvatar('Teri Beckman'),
   category: 'Business',
   baseListenerCount: 89,
   speakers: [
@@ -107,7 +107,7 @@ export const demoSession3: DemoSession = {
   coverImageUrl: '/demo/demo-space-cover-3.jpg',
   audioUrl: '/demo/demo-space-audio-3.mp3',
   hostName: 'Marcus Cole',
-  hostAvatar: null,
+  hostAvatar: getDemoAvatar('Marcus Cole'),
   category: 'Finance',
   baseListenerCount: 103,
   speakers: [

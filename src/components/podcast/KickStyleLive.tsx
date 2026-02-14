@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Users, Heart, Gift, Share2, UserPlus, Headphones,
-  ChevronUp, ChevronDown, Crown, MessageSquare
+  ChevronUp, ChevronDown, Crown, MessageSquare, Trophy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,9 +15,11 @@ import ShareModal from './ShareModal';
 import TikTokGiftDisplay from './TikTokGiftDisplay';
 import DemoLiveSpace from './DemoLiveSpace';
 import TopEngagementModal from './TopEngagementModal';
+import DailyRankingModal from './DailyRankingModal';
 import { toast } from 'sonner';
 import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
-import { getDemoPodcastSession, getDemoPodcastSession2, getDemoPodcastSession3, getDemoSessionById, DEMO_SESSION_ID, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3 } from '@/config/demoSpace';
+import { getDemoPodcastSession, getDemoPodcastSession2, getDemoPodcastSession3, getDemoSessionById, DEMO_SESSION_ID, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3, isDemoSessionId } from '@/config/demoSpace';
+import { getRandomAvatarUrl } from '@/lib/randomAvatars';
 
 interface PodcastSession {
   id: string;
@@ -76,6 +78,8 @@ const KickStyleLive = ({
   const [topGifters, setTopGifters] = useState<TopGifter[]>([]);
   const [recommendedSessions, setRecommendedSessions] = useState<PodcastSession[]>([]);
   const [showEngagementModal, setShowEngagementModal] = useState(false);
+  const [showDailyRanking, setShowDailyRanking] = useState(false);
+  const [engagementCount, setEngagementCount] = useState(13);
 
   // Build a combined list of all scrollable sessions (demo + real)
   const allSessions = useMemo(() => {
@@ -279,6 +283,15 @@ const KickStyleLive = ({
     };
 
     fetchRecommended();
+  }, [sessions, currentSession]);
+
+  // Gradually increase engagement count for demo sessions
+  useEffect(() => {
+    if (!currentSession || !isDemoSessionId(currentSession.id)) return;
+    const interval = setInterval(() => {
+      setEngagementCount(prev => prev + Math.floor(Math.random() * 3) + 1);
+    }, 10000 + Math.random() * 5000);
+    return () => clearInterval(interval);
   }, [sessions, currentSession]);
 
   // Handle follow/unfollow
@@ -576,25 +589,38 @@ const KickStyleLive = ({
                     <p className="text-xs text-white/60 truncate max-w-[200px] lg:max-w-[300px]">
                       {currentSession.title}
                     </p>
-                    {/* Top Engagement Indicator - Clickable */}
-                    <button
-                      onClick={() => setShowEngagementModal(true)}
-                      className="flex items-center gap-1.5 mt-1 hover:opacity-80 transition-opacity"
-                    >
-                      {(topGifters.length > 0 ? topGifters.slice(0, 2) : [{ id: '1', user_avatar: undefined }, { id: '2', user_avatar: undefined }]).map((g, i) => (
-                        <div
-                          key={g.id}
-                          className={`w-5 h-5 rounded-full overflow-hidden border border-black/50 bg-gradient-to-br from-purple-500 to-pink-500 ${i > 0 ? '-ml-2' : ''}`}
-                        >
-                          {g.user_avatar && (
-                            <img src={g.user_avatar} alt="" className="w-full h-full object-cover" />
-                          )}
-                        </div>
-                      ))}
-                      <span className="text-[10px] text-white/50 font-medium ml-0.5">
-                        {topGifters.length > 0 ? topGifters.length : 13}
-                      </span>
-                    </button>
+                    {/* Top Engagement + Daily Ranking */}
+                    <div className="flex items-center gap-3 mt-1">
+                      {/* Top Engagement Indicator - Clickable */}
+                      <button
+                        onClick={() => setShowEngagementModal(true)}
+                        className="flex items-center gap-1 hover:opacity-80 transition-opacity"
+                      >
+                        {[
+                          getRandomAvatarUrl('ThoughtLeader'),
+                          getRandomAvatarUrl('MindfulMike'),
+                        ].map((avatar, i) => (
+                          <div
+                            key={i}
+                            className={`w-5 h-5 rounded-full overflow-hidden border border-black/50 ${i > 0 ? '-ml-2' : ''}`}
+                          >
+                            <img src={avatar} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        ))}
+                        <span className="text-[10px] text-white/50 font-medium ml-0.5">
+                          {isDemoSessionId(currentSession.id) ? engagementCount : (topGifters.length > 0 ? topGifters.length : 0)}
+                        </span>
+                      </button>
+
+                      {/* Daily Ranking Button */}
+                      <button
+                        onClick={() => setShowDailyRanking(true)}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-500/20 hover:bg-yellow-500/30 transition-colors"
+                      >
+                        <Trophy className="w-3 h-3 text-yellow-400" />
+                        <span className="text-[10px] text-yellow-400 font-semibold">D1</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -749,6 +775,13 @@ const KickStyleLive = ({
       <TopEngagementModal
         isOpen={showEngagementModal}
         onClose={() => setShowEngagementModal(false)}
+        sessionId={currentSession.id}
+        onSendGift={() => setShowGiftModal(true)}
+      />
+
+      <DailyRankingModal
+        isOpen={showDailyRanking}
+        onClose={() => setShowDailyRanking(false)}
         sessionId={currentSession.id}
         onSendGift={() => setShowGiftModal(true)}
       />
