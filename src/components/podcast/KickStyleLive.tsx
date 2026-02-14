@@ -14,6 +14,7 @@ import GiftAnimation from './GiftAnimation';
 import ShareModal from './ShareModal';
 import TikTokGiftDisplay from './TikTokGiftDisplay';
 import DemoLiveSpace from './DemoLiveSpace';
+import TopEngagementModal from './TopEngagementModal';
 import { toast } from 'sonner';
 import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
 import { getDemoPodcastSession, getDemoPodcastSession2, getDemoPodcastSession3, getDemoSessionById, DEMO_SESSION_ID, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3 } from '@/config/demoSpace';
@@ -74,6 +75,7 @@ const KickStyleLive = ({
   const [followerCount, setFollowerCount] = useState(0);
   const [topGifters, setTopGifters] = useState<TopGifter[]>([]);
   const [recommendedSessions, setRecommendedSessions] = useState<PodcastSession[]>([]);
+  const [showEngagementModal, setShowEngagementModal] = useState(false);
 
   // Build a combined list of all scrollable sessions (demo + real)
   const allSessions = useMemo(() => {
@@ -574,8 +576,11 @@ const KickStyleLive = ({
                     <p className="text-xs text-white/60 truncate max-w-[200px] lg:max-w-[300px]">
                       {currentSession.title}
                     </p>
-                    {/* Top Engagement Indicator */}
-                    <div className="flex items-center gap-1.5 mt-1">
+                    {/* Top Engagement Indicator - Clickable */}
+                    <button
+                      onClick={() => setShowEngagementModal(true)}
+                      className="flex items-center gap-1.5 mt-1 hover:opacity-80 transition-opacity"
+                    >
                       {(topGifters.length > 0 ? topGifters.slice(0, 2) : [{ id: '1', user_avatar: undefined }, { id: '2', user_avatar: undefined }]).map((g, i) => (
                         <div
                           key={g.id}
@@ -589,7 +594,7 @@ const KickStyleLive = ({
                       <span className="text-[10px] text-white/50 font-medium ml-0.5">
                         {topGifters.length > 0 ? topGifters.length : 13}
                       </span>
-                    </div>
+                    </button>
                   </div>
                 </div>
 
@@ -739,6 +744,13 @@ const KickStyleLive = ({
         onClose={() => setShowShareModal(false)}
         sessionId={currentSession.id}
         title={currentSession.title}
+      />
+
+      <TopEngagementModal
+        isOpen={showEngagementModal}
+        onClose={() => setShowEngagementModal(false)}
+        sessionId={currentSession.id}
+        onSendGift={() => setShowGiftModal(true)}
       />
     </div>
   );
