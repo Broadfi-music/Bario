@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, Gift, Crown } from 'lucide-react';
+import { X, Crown, Gift } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { isValidUUID } from '@/lib/authUtils';
+import { isDemoSessionId } from '@/config/demoSpace';
+import { getRandomAvatarUrl } from '@/lib/randomAvatars';
 
 interface Engager {
   user_id: string;
@@ -30,15 +32,39 @@ const rankBadges: Record<number, string> = {
   3: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
 };
 
+// Dummy engagers for demo sessions
+const DEMO_ENGAGER_NAMES = [
+  'ThoughtLeader', 'MindfulMike', 'WisdomSeeker', 'GrowthMaster', 'DeepThinker',
+  'SoulfulSara', 'ConsciousCris', 'PositivePete', 'BookWorm', 'LearnDaily',
+  'AudioLover', 'ZenMaster', 'ShareTheWisdom',
+];
+
+const generateDemoEngagers = (): Engager[] => {
+  return DEMO_ENGAGER_NAMES.map((name, i) => ({
+    user_id: `demo-engager-${i}`,
+    user_name: name,
+    user_avatar: getRandomAvatarUrl(name),
+    score: Math.max(1, Math.floor(80 - i * 5 + Math.random() * 10)),
+    rank: i + 1,
+  }));
+};
+
 const TopEngagementModal = ({ isOpen, onClose, sessionId, onSendGift }: TopEngagementModalProps) => {
   const [engagers, setEngagers] = useState<Engager[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!isOpen) return;
+
+    // Demo sessions use dummy data
+    if (isDemoSessionId(sessionId)) {
+      setEngagers(generateDemoEngagers());
+      setLoading(false);
+      return;
+    }
+
     fetchEngagement();
 
-    // Real-time updates
     const giftChannel = supabase
       .channel(`engagement-gifts-${sessionId}`)
       .on('postgres_changes', {
@@ -68,7 +94,6 @@ const TopEngagementModal = ({ isOpen, onClose, sessionId, onSendGift }: TopEngag
   const fetchEngagement = async () => {
     setLoading(true);
 
-    // Fetch gifts and comments in parallel
     const [giftsRes, commentsRes] = await Promise.all([
       supabase
         .from('podcast_gifts')
@@ -80,7 +105,6 @@ const TopEngagementModal = ({ isOpen, onClose, sessionId, onSendGift }: TopEngag
         .eq('session_id', sessionId),
     ]);
 
-    // Aggregate scores: gifts = points_value, comments = 1 each
     const scoreMap = new Map<string, number>();
 
     giftsRes.data?.forEach(g => {
@@ -97,11 +121,9 @@ const TopEngagementModal = ({ isOpen, onClose, sessionId, onSendGift }: TopEngag
       return;
     }
 
-    // Sort by score descending
     const sorted = Array.from(scoreMap.entries())
       .sort((a, b) => b[1] - a[1]);
 
-    // Fetch profiles
     const userIds = sorted.map(([id]) => id).filter(isValidUUID);
     const { data: profiles } = await supabase
       .from('profiles')
@@ -128,10 +150,8 @@ const TopEngagementModal = ({ isOpen, onClose, sessionId, onSendGift }: TopEngag
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
 
-      {/* Modal */}
       <div className="relative w-full max-w-md bg-[#1a1a1d] rounded-t-2xl sm:rounded-2xl max-h-[70vh] flex flex-col animate-in slide-in-from-bottom duration-300">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
@@ -158,12 +178,10 @@ const TopEngagementModal = ({ isOpen, onClose, sessionId, onSendGift }: TopEngag
                   key={e.user_id}
                   className="flex items-center gap-3 py-2.5 px-2 rounded-lg hover:bg-white/5"
                 >
-                  {/* Rank */}
                   <span className={`w-5 text-sm font-bold ${rankColors[e.rank] || 'text-white/40'}`}>
-                    {e.rank <= 3 ? e.rank : e.rank}
+                    {e.rank}
                   </span>
 
-                  {/* Avatar */}
                   <div className="w-10 h-10 rounded-full overflow-hidden bg-neutral-700 flex-shrink-0">
                     {e.user_avatar ? (
                       <img src={e.user_avatar} alt="" className="w-full h-full object-cover" />
@@ -174,7 +192,6 @@ const TopEngagementModal = ({ isOpen, onClose, sessionId, onSendGift }: TopEngag
                     )}
                   </div>
 
-                  {/* Name + Badge */}
                   <div className="flex-1 min-w-0">
                     <p className="text-white text-sm font-medium truncate">{e.user_name}</p>
                     {e.rank <= 3 && (
@@ -185,9 +202,8 @@ const TopEngagementModal = ({ isOpen, onClose, sessionId, onSendGift }: TopEngag
                     )}
                   </div>
 
-                  {/* Score */}
                   <span className="text-white/60 text-sm font-medium">
-                    {e.score >= 10 ? '10+' : e.score}
+                    {e.score >= 1000 ? `${(e.score / 1000).toFixed(1)}K` : e.score}
                   </span>
                 </div>
               ))}
