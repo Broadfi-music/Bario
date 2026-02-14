@@ -1,36 +1,67 @@
 
 
-# Fix: Isolate Audio, Gifts, and Chat Per Session When Scrolling
+# Add Invite Slots and Top Engagement to Live Sessions
 
-## Problem
-When scrolling between live sessions, three things leak across sessions:
-1. **Audio** continues playing from the previous session
-2. **Gifts** from one session appear in another
-3. **Chat messages** from one session show in another
+## Overview
+Based on the TikTok Live reference image, two features will be added to the live session UI:
 
-## Root Cause
-- `DemoLiveSpace` creates its audio player in a `useEffect` with an empty `[]` dependency array, so it never re-initializes when the session changes.
-- None of the session-specific child components (`DemoLiveSpace`, `GiftAnimation`, `TikTokGiftDisplay`, `TwitchComments`) have a React `key` prop tied to the session ID. Without a `key`, React reuses the same component instance and its internal state/subscriptions persist across session switches.
+1. **Invite Slots (Plus Circles)**: 4 circular "+" buttons displayed below the current speakers in both `DemoLiveSpace` and `SpaceParticipants`. Listeners can tap a slot to request to join as a speaker. For real sessions, the host sees an invitation request popup in their `HostStudio`. For demo sessions, tapping shows a simulated "Request sent!" toast.
 
-## Fix (2 files)
+2. **Top Engagement Indicator**: Below the session description in the action bar of `KickStyleLive`, show two overlapping user avatar circles with a count number (e.g., "13") representing the top engaged listeners/gifters -- similar to the reference image.
 
-### 1. `src/components/podcast/KickStyleLive.tsx`
-Add `key={currentSession.id}` to every session-specific component so React fully unmounts and remounts them when the session changes:
+---
 
-- `DemoLiveSpace` (line 535): add `key={currentSession.id}`
-- `SpaceParticipants` (line 537): add `key={currentSession.id}`
-- `TwitchComments` mobile (line 642): add `key={currentSession.id}`
-- `TwitchComments` desktop (line 661): add `key={currentSession.id}`
-- `GiftAnimation` (line 703): add `key={currentSession.id}`
-- `TikTokGiftDisplay` (line 706): add `key={currentSession.id}`
+## File Changes
 
-### 2. `src/components/podcast/DemoLiveSpace.tsx`
-Change the audio initialization `useEffect` dependency from `[]` to `[activeDemo.audioUrl]` so it properly cleans up and re-creates the audio element when switching between demo sessions. This ensures:
-- The old audio is paused and destroyed on unmount or session change
-- The new session's audio starts fresh
+### 1. `src/components/podcast/DemoLiveSpace.tsx`
+- After the speakers row, add a new row of **4 invite slot circles** (empty slots = MAX_SPEAKERS minus current speakers)
+- Each slot is a dashed-border circle with a "+" icon inside
+- Clicking a slot shows a toast: "Request sent to host!" (simulated for demo)
+- Slots are styled with `w-14 h-14` circles with `border-2 border-dashed border-white/20` and a `Plus` icon
 
-## Why This Works
-- React's `key` mechanism forces a complete unmount/remount cycle when the key value changes
-- Each remount triggers fresh `useEffect` calls, creating new audio players, new realtime subscriptions, and resetting all state
-- The cleanup functions in each component's `useEffect` will properly pause audio and unsubscribe from channels
+### 2. `src/components/podcast/SpaceParticipants.tsx`
+- After the participants grid, add an **Invite Slots row** showing empty "+" circles
+- Number of visible slots = `MAX_SPEAKERS - currentSpeakers` (up to 4 slots, showing only available ones)
+- When a listener clicks a slot:
+  - If not logged in, show the auth modal
+  - If not yet joined, join the session first
+  - If already joined, raise their hand (uses existing `toggleHandRaise` logic) and show toast "Request to speak sent!"
+- If the user already has hand raised, the slot they clicked shows "Requested" state (yellow border)
 
+### 3. `src/components/podcast/HostStudio.tsx`
+- The host already sees raised hands and can promote speakers -- no structural changes needed
+- Add a more prominent **"Speaker Request" notification badge** on the raised hands section header showing the count of pending requests
+- When a hand-raise comes in, show a toast notification: "[UserName] wants to join as a speaker" with Accept/Decline buttons (inline toast action)
+
+### 4. `src/components/podcast/KickStyleLive.tsx`
+- In the Action Bar section (below host info, above action buttons), add a **Top Engagement** row
+- Shows 2-3 overlapping avatar circles (from `topGifters` data already fetched) with a total engagement count
+- Layout: two small overlapping circles (offset with negative margin) followed by a count number, e.g., "13"
+- If no gifters exist, show simulated engagement count for demo sessions (random 8-20)
+
+---
+
+## Technical Details
+
+### Invite Slots Component (shared logic)
+```text
++--------+  +--------+  +--------+  +--------+
+|   +    |  |   +    |  |   +    |  |   +    |
++--------+  +--------+  +--------+  +--------+
+  Slot 1      Slot 2      Slot 3      Slot 4
+```
+- Visible slots = `Math.max(0, 4 - currentSpeakerCount)`
+- Each slot: `w-14 h-14 rounded-full border-2 border-dashed border-white/20` with `Plus` icon centered
+- On click: triggers hand-raise for real sessions, toast for demo sessions
+
+### Top Engagement Indicator
+```text
+[avatar1][avatar2 overlapping]  13
+```
+- Uses existing `topGifters` state from KickStyleLive
+- Avatars: `w-6 h-6 rounded-full` with `-ml-2` for overlap effect
+- Count: total unique engagers (gifters + commenters count, or fallback to listener count)
+
+### Host Notification for Speaker Requests
+- Uses `sonner` toast with action button when a new hand-raise is detected
+- Toast: "UserName wants to speak" with "Accept" button that calls `promoteSpeaker()`
