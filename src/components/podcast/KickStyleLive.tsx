@@ -574,6 +574,22 @@ const KickStyleLive = ({
                     <p className="text-xs text-white/60 truncate max-w-[200px] lg:max-w-[300px]">
                       {currentSession.title}
                     </p>
+                    {/* Top Engagement Indicator */}
+                    <div className="flex items-center gap-1.5 mt-1">
+                      {(topGifters.length > 0 ? topGifters.slice(0, 2) : [{ id: '1', user_avatar: undefined }, { id: '2', user_avatar: undefined }]).map((g, i) => (
+                        <div
+                          key={g.id}
+                          className={`w-5 h-5 rounded-full overflow-hidden border border-black/50 bg-gradient-to-br from-purple-500 to-pink-500 ${i > 0 ? '-ml-2' : ''}`}
+                        >
+                          {g.user_avatar && (
+                            <img src={g.user_avatar} alt="" className="w-full h-full object-cover" />
+                          )}
+                        </div>
+                      ))}
+                      <span className="text-[10px] text-white/50 font-medium ml-0.5">
+                        {topGifters.length > 0 ? topGifters.length : 13}
+                      </span>
+                    </div>
                   </div>
                 </div>
 

@@ -228,6 +228,31 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     }
   };
 
+  // Track previous raised hands to detect new requests
+  const prevRaisedHandsRef = useRef<string[]>([]);
+  
+  useEffect(() => {
+    if (!isLive || raisedHands.length === 0) {
+      prevRaisedHandsRef.current = raisedHands.map(h => h.id);
+      return;
+    }
+    
+    const prevIds = new Set(prevRaisedHandsRef.current);
+    const newRequests = raisedHands.filter(h => !prevIds.has(h.id));
+    
+    newRequests.forEach(req => {
+      toast(`User ${req.user_id.slice(0, 6)} wants to speak`, {
+        duration: 10000,
+        action: {
+          label: 'Accept',
+          onClick: () => promoteSpeaker(req.id),
+        },
+      });
+    });
+    
+    prevRaisedHandsRef.current = raisedHands.map(h => h.id);
+  }, [raisedHands, isLive]);
+
   // Host mute a participant
   const muteParticipant = async (participantId: string, shouldMute: boolean) => {
     const authSession = await getFreshSession();
@@ -680,6 +705,11 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
                 <div className="space-y-1.5">
                   <h4 className="text-[10px] text-yellow-400 uppercase tracking-wider flex items-center gap-1">
                     <HandMetal className="h-3 w-3" /> Wants to Speak ({currentSpeakers}/{MAX_SPEAKERS} speakers)
+                    {raisedHands.length > 0 && (
+                      <span className="ml-1 bg-yellow-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                        {raisedHands.length}
+                      </span>
+                    )}
                   </h4>
                   {currentSpeakers >= MAX_SPEAKERS && (
                     <p className="text-[10px] text-red-400 bg-red-500/10 px-2 py-1 rounded">

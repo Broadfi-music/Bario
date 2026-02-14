@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mic, MicOff, Hand, Volume2, Loader2, LogOut, Ban } from 'lucide-react';
+import { Mic, MicOff, Hand, Volume2, Loader2, LogOut, Ban, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAgoraAudio } from '@/hooks/useAgoraAudio';
@@ -623,6 +623,33 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
               </div>
             );
           })}
+
+          {/* Invite Slots - Plus circles for available speaker spots */}
+          {Array.from({ length: Math.max(0, MAX_SPEAKERS - currentSpeakers) }).map((_, i) => (
+            <div key={`invite-slot-${i}`} className="flex flex-col items-center gap-0.5">
+              <button
+                onClick={() => {
+                  if (!user) {
+                    setShowAuthModal(true);
+                    return;
+                  }
+                  if (myParticipation?.hand_raised) {
+                    toast.info('Request already sent!');
+                    return;
+                  }
+                  toggleHandRaise();
+                }}
+                className={`w-11 h-11 rounded-full border-2 border-dashed flex items-center justify-center transition-colors ${
+                  myParticipation?.hand_raised
+                    ? 'border-yellow-500/50 bg-yellow-500/10'
+                    : 'border-white/20 hover:border-white/40 hover:bg-white/5'
+                }`}
+              >
+                <Plus className={`w-4 h-4 ${myParticipation?.hand_raised ? 'text-yellow-400' : 'text-white/40'}`} />
+              </button>
+              <span className="text-[9px] text-white/30">Join</span>
+            </div>
+          ))}
         </div>
       </div>
 

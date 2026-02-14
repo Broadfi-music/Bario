@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mic, Users } from 'lucide-react';
+import { Mic, Users, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { demoSession, demoSession2, demoSession3, DemoSpeaker, DemoSession, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3 } from '@/config/demoSpace';
@@ -195,8 +195,26 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
 
       {/* Speakers Area - Horizontal Row */}
       <div className="flex-1 flex items-center justify-center px-4 py-4 min-h-0">
-        <div className="flex items-start justify-center gap-6">
+        <div className="flex items-start justify-center gap-4 flex-wrap">
           {activeDemo.speakers.map(speaker => renderSpeaker(speaker))}
+          {/* Invite Slots - Plus circles */}
+          {Array.from({ length: Math.max(0, 4 - activeDemo.speakers.length) }).map((_, i) => (
+            <div key={`slot-${i}`} className="flex flex-col items-center gap-1">
+              <button
+                onClick={() => {
+                  if (!user) {
+                    setShowAuthModal(true);
+                    return;
+                  }
+                  toast.success('Request sent to host!');
+                }}
+                className="w-10 h-10 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center hover:border-white/40 hover:bg-white/5 transition-colors"
+              >
+                <Plus className="w-4 h-4 text-white/40" />
+              </button>
+              <span className="text-white/30 text-[10px]">Join</span>
+            </div>
+          ))}
         </div>
       </div>
 
