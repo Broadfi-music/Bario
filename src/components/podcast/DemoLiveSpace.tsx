@@ -176,7 +176,14 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
       {/* Session Header */}
       <div className="px-4 py-3 border-b border-white/5">
         <div className="flex items-center justify-between">
-          <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="w-6 h-6 rounded-full overflow-hidden shrink-0">
+              {activeDemo.speakers[0]?.avatarUrl ? (
+                <img src={activeDemo.speakers[0].avatarUrl} alt={activeDemo.hostName} className="w-full h-full object-cover" />
+              ) : (
+                <div className={`w-full h-full bg-gradient-to-br ${activeDemo.speakers[0]?.avatarGradient}`} />
+              )}
+            </div>
             <h1 className="text-white font-semibold text-sm sm:text-base truncate">
               {activeDemo.title}
             </h1>
