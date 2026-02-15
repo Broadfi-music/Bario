@@ -16,6 +16,13 @@ import TikTokGiftDisplay from './TikTokGiftDisplay';
 import DemoLiveSpace from './DemoLiveSpace';
 import TopEngagementModal from './TopEngagementModal';
 import DailyRankingModal from './DailyRankingModal';
+import MysteryMusicDrop from './MysteryMusicDrop';
+import SpotlightRoulette from './SpotlightRoulette';
+import LivePoll from './LivePoll';
+import ComboGiftTracker from './ComboGiftTracker';
+import AchievementToast from './AchievementToast';
+import MiniGame from './MiniGame';
+import VibeCheck from './VibeCheck';
 import { toast } from 'sonner';
 import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
 import { getDemoPodcastSession, getDemoPodcastSession2, getDemoPodcastSession3, getDemoSessionById, DEMO_SESSION_ID, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3, isDemoSessionId } from '@/config/demoSpace';
@@ -593,15 +600,25 @@ const KickStyleLive = ({
               {isDemoLiveSession(currentSession.id) ? (
                 <DemoLiveSpace key={currentSession.id} onLeave={() => onSessionSelect(null)} sessionId={currentSession.id} />
               ) : (
-                <SpaceParticipants 
-                  key={currentSession.id}
-                  sessionId={currentSession.id}
-                  hostId={currentSession.host_id}
-                  isHost={user?.id === currentSession.host_id}
-                  title={currentSession.title}
-                  hostName={currentSession.host_name}
-                  hostAvatar={currentSession.host_avatar}
-                />
+                <div className="relative h-full">
+                  <SpaceParticipants 
+                    key={currentSession.id}
+                    sessionId={currentSession.id}
+                    hostId={currentSession.host_id}
+                    isHost={user?.id === currentSession.host_id}
+                    title={currentSession.title}
+                    hostName={currentSession.host_name}
+                    hostAvatar={currentSession.host_avatar}
+                  />
+                  {/* Engagement Overlays for real sessions */}
+                  <MysteryMusicDrop isDemo={false} />
+                  <SpotlightRoulette isDemo={false} />
+                  <LivePoll isDemo={false} />
+                  <ComboGiftTracker isDemo={false} />
+                  <AchievementToast isDemo={false} />
+                  <MiniGame isDemo={false} />
+                  <VibeCheck isDemo={false} />
+                </div>
               )}
             </div>
 
