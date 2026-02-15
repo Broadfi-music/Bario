@@ -469,7 +469,7 @@ const KickStyleLive = ({
         <div 
           className="h-[100dvh] overflow-hidden bg-[#0e0e10] scrollbar-hide"
         >
-          <div className="h-full flex pt-14 sm:pt-12">
+          <div className="h-full flex pt-[100px] sm:pt-12">
             {/* Main Content Area with Demo */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
               <DemoLiveSpace onLeave={() => {}} />
@@ -495,7 +495,7 @@ const KickStyleLive = ({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <div className={`h-full flex ${hostLiveSession ? 'pt-[88px]' : 'pt-14 sm:pt-12'}`}>
+      <div className={`h-full flex ${hostLiveSession ? 'pt-[88px]' : 'pt-[100px] sm:pt-12'}`}>
         {/* Left Sidebar - Recommendations & Gifters (Desktop only) */}
         <aside className="hidden lg:flex flex-col w-60 bg-[#18181b] border-r border-white/5 overflow-y-auto scrollbar-hide">
           {/* Recommended Section */}
