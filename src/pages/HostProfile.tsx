@@ -42,6 +42,9 @@ interface Schedule {
   scheduled_at: string;
 }
 
+import { getDemoAvatar } from '@/lib/randomAvatars';
+import { DEMO_HOST_ID, DEMO_HOST_ID_2, DEMO_HOST_ID_3 } from '@/config/demoSpace';
+
 // Demo host data
 const DEMO_HOSTS: Record<string, HostData> = {
   'host-1': {
@@ -98,7 +101,96 @@ const DEMO_HOSTS: Record<string, HostData> = {
     follower_count: 780000,
     is_live: true,
     current_session_id: 'demo-5'
-  }
+  },
+  // Demo live space hosts
+  [DEMO_HOST_ID]: {
+    id: DEMO_HOST_ID,
+    user_id: DEMO_HOST_ID,
+    full_name: 'Solomon Harvey',
+    username: 'solomonharvey',
+    avatar_url: getDemoAvatar('Solomon Harvey'),
+    bio: 'Author, philosopher, and thought leader. Hosting live discussions on self-mastery and the power of the mind.',
+    follower_count: 45200,
+    is_live: true,
+    current_session_id: 'demo-live-session'
+  },
+  [DEMO_HOST_ID_2]: {
+    id: DEMO_HOST_ID_2,
+    user_id: DEMO_HOST_ID_2,
+    full_name: 'Teri Beckman',
+    username: 'teribeckman',
+    avatar_url: getDemoAvatar('Teri Beckman'),
+    bio: 'Business strategist and CEO advisor. Helping leaders scale without burning out.',
+    follower_count: 28700,
+    is_live: true,
+    current_session_id: 'demo-live-session-2'
+  },
+  [DEMO_HOST_ID_3]: {
+    id: DEMO_HOST_ID_3,
+    user_id: DEMO_HOST_ID_3,
+    full_name: 'Marcus Cole',
+    username: 'marcuscole',
+    avatar_url: getDemoAvatar('Marcus Cole'),
+    bio: 'Finance educator and entrepreneur. Teaching innovative ways to build wealth.',
+    follower_count: 33100,
+    is_live: true,
+    current_session_id: 'demo-live-session-3'
+  },
+  'demo-speaker-1': {
+    id: 'demo-speaker-1',
+    user_id: 'demo-speaker-1',
+    full_name: 'Mind Coach',
+    username: 'mindcoach',
+    avatar_url: getDemoAvatar('Mind Coach'),
+    bio: 'Certified mindset coach helping people unlock their potential through positive thinking.',
+    follower_count: 12400,
+    is_live: true,
+    current_session_id: 'demo-live-session'
+  },
+  'demo-speaker-2': {
+    id: 'demo-speaker-2',
+    user_id: 'demo-speaker-2',
+    full_name: 'Wisdom Seeker',
+    username: 'wisdomseeker',
+    avatar_url: getDemoAvatar('Wisdom Seeker'),
+    bio: 'Philosophy enthusiast exploring ancient wisdom for modern life.',
+    follower_count: 8900,
+    is_live: true,
+    current_session_id: 'demo-live-session'
+  },
+  'demo-speaker-3': {
+    id: 'demo-speaker-3',
+    user_id: 'demo-speaker-3',
+    full_name: 'Jackson Johsep',
+    username: 'jacksonjohsep',
+    avatar_url: getDemoAvatar('Jackson Johsep'),
+    bio: 'Serial entrepreneur and business mentor with 15+ years of experience.',
+    follower_count: 19300,
+    is_live: true,
+    current_session_id: 'demo-live-session-2'
+  },
+  'demo-speaker-4': {
+    id: 'demo-speaker-4',
+    user_id: 'demo-speaker-4',
+    full_name: 'Finance Guru',
+    username: 'financeguru',
+    avatar_url: getDemoAvatar('Finance Guru'),
+    bio: 'Financial advisor and investment strategist. Making money work for you.',
+    follower_count: 15600,
+    is_live: true,
+    current_session_id: 'demo-live-session-3'
+  },
+  'demo-speaker-5': {
+    id: 'demo-speaker-5',
+    user_id: 'demo-speaker-5',
+    full_name: 'Side Hustle Pro',
+    username: 'sidehustlepro',
+    avatar_url: getDemoAvatar('Side Hustle Pro'),
+    bio: 'Building multiple income streams. Freelancer turned entrepreneur.',
+    follower_count: 11200,
+    is_live: true,
+    current_session_id: 'demo-live-session-3'
+  },
 };
 
 // No demo data - only real user data from database

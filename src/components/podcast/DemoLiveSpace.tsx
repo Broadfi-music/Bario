@@ -138,8 +138,9 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
     return (
       <div key={speaker.id} className="flex flex-col items-center gap-1">
         <div className="relative">
-          <div 
-            className={`w-10 h-10 rounded-full overflow-hidden flex items-center justify-center ${isActive ? 'ring-2 ring-green-500/50' : ''}`}
+          <button
+            onClick={() => navigate(`/host/${speaker.id}`)}
+            className={`w-10 h-10 rounded-full overflow-hidden flex items-center justify-center ${isActive ? 'ring-2 ring-green-500/50' : ''} cursor-pointer hover:opacity-80 transition-opacity`}
           >
             {speaker.avatarUrl ? (
               <img src={speaker.avatarUrl} alt={speaker.name} className="w-full h-full object-cover" />
@@ -148,7 +149,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
                 <span className="text-white font-bold text-xs">{speaker.name.charAt(0)}</span>
               </div>
             )}
-          </div>
+          </button>
           {isActive && (
             <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2">
               <AudioWaveform isActive={true} />
@@ -160,9 +161,12 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
             </div>
           )}
         </div>
-        <span className="text-white text-[10px] font-medium text-center leading-tight max-w-[70px] truncate">
+        <button
+          onClick={() => navigate(`/host/${speaker.id}`)}
+          className="text-white text-[10px] font-medium text-center leading-tight max-w-[70px] truncate hover:text-white/80 transition-colors"
+        >
           {speaker.name}
-        </span>
+        </button>
       </div>
     );
   };
