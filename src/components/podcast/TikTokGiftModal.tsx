@@ -38,8 +38,8 @@ const GIFTS = [
   { type: 'crown', icon: Crown, label: 'Crown', coins: 500, earnings: 6.40, color: 'from-purple-500/30 to-pink-500/30', isVideo: true },
 ];
 
-// Image-only gifts for demo sessions (rose, tofu, flame heart)
-const DEMO_GIFTS = GIFTS.filter(g => ['rose', 'tofu', 'flame'].includes(g.type));
+// Show all gifts for all sessions (demo + real)
+const DEMO_GIFTS = GIFTS;
 
 const TikTokGiftModal = ({ 
   isOpen, 
@@ -261,7 +261,7 @@ const TikTokGiftModal = ({
           </div>
 
           {/* Gift Grid */}
-          <div className={`grid ${isDemo ? 'grid-cols-3' : 'grid-cols-4'} gap-2 mb-4`}>
+          <div className="grid grid-cols-4 gap-2 mb-4">
             {availableGifts.map((gift) => {
               const count = giftCount[gift.type] || 1;
               const totalCost = gift.coins * count;
