@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mic, Users, Plus } from 'lucide-react';
+import { Users, Plus, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { demoSession, demoSession2, demoSession3, DemoSpeaker, DemoSession, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3 } from '@/config/demoSpace';
 import AuthPromptModal from './AuthPromptModal';
+import { getRandomAvatarUrl } from '@/lib/randomAvatars';
+import { useFollowSystem } from '@/hooks/useFollowSystem';
 
 // Audio waveform animation component
 const AudioWaveform = ({ isActive }: { isActive: boolean }) => {
@@ -37,6 +39,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { isFollowing, toggleFollow } = useFollowSystem();
   
   // Pick the right demo session
   const activeDemo: DemoSession = sessionId === DEMO_SESSION_ID_3 ? demoSession3 : sessionId === DEMO_SESSION_ID_2 ? demoSession2 : demoSession;
@@ -46,6 +49,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   const [listenerCount, setListenerCount] = useState(activeDemo.baseListenerCount);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [activeSpeaker, setActiveSpeaker] = useState<string>(activeDemo.speakers[0].id);
+  const [engagementCount, setEngagementCount] = useState(12);
 
   // Initialize and auto-play audio
   useEffect(() => {
@@ -92,10 +96,25 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
       const currentIndex = speakers.findIndex(s => s.id === activeSpeaker);
       const nextIndex = (currentIndex + 1) % speakers.length;
       setActiveSpeaker(speakers[nextIndex].id);
-    }, 15000 + Math.random() * 10000); // 15-25 seconds
-
+    }, 15000 + Math.random() * 10000);
     return () => clearInterval(interval);
   }, [activeSpeaker]);
+
+  // Simulate engagement count growth
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setEngagementCount(prev => prev + Math.floor(Math.random() * 3));
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleFollow = () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    toggleFollow(activeDemo.speakers[0].id);
+  };
 
   const togglePlay = () => {
     if (!audioRef.current) return;
@@ -184,9 +203,46 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
                 <div className={`w-full h-full bg-gradient-to-br ${activeDemo.speakers[0]?.avatarGradient}`} />
               )}
             </div>
-            <h1 className="text-white font-semibold text-sm sm:text-base truncate">
-              {activeDemo.title}
-            </h1>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-white font-semibold text-sm sm:text-base truncate">
+                {activeDemo.title}
+              </h1>
+              <div className="flex items-center gap-2 mt-1">
+                {/* Top Engagement */}
+                <button className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+                  {[
+                    getRandomAvatarUrl('ThoughtLeader'),
+                    getRandomAvatarUrl('MindfulMike'),
+                  ].map((avatar, i) => (
+                    <div
+                      key={i}
+                      className={`w-4 h-4 rounded-full overflow-hidden border border-black/50 ${i > 0 ? '-ml-1.5' : ''}`}
+                    >
+                      <img src={avatar} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                  <span className="text-[10px] text-white/50 font-medium ml-0.5">{engagementCount}</span>
+                </button>
+
+                {/* D1 Ranking */}
+                <button className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-yellow-500/20 hover:bg-yellow-500/30 transition-colors">
+                  <Trophy className="w-3 h-3 text-yellow-400" />
+                  <span className="text-[10px] text-yellow-400 font-semibold">D1</span>
+                </button>
+
+                {/* Follow Button */}
+                <button
+                  onClick={handleFollow}
+                  className={`h-5 px-2 rounded text-[10px] font-semibold transition-colors ${
+                    isFollowing(activeDemo.speakers[0].id)
+                      ? 'bg-white/10 text-white hover:bg-white/20'
+                      : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
+                  }`}
+                >
+                  {isFollowing(activeDemo.speakers[0].id) ? 'Following' : 'Follow'}
+                </button>
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-1 text-white/60 ml-4">
             <Users className="h-3.5 w-3.5" />
