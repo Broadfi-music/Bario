@@ -134,7 +134,19 @@ const KickStyleLive = ({
   useEffect(() => {
     if (!currentSession) return;
 
-    // Initial fetch
+    // Demo sessions use simulated listener counts
+    if (isDemoSessionId(currentSession.id)) {
+      setListenerCount(currentSession.listener_count || 127);
+      const interval = setInterval(() => {
+        setListenerCount(prev => {
+          const change = Math.floor(Math.random() * 11) - 5;
+          return Math.max(85, Math.min(200, prev + change));
+        });
+      }, 8000 + Math.random() * 4000);
+      return () => clearInterval(interval);
+    }
+
+    // Real sessions - fetch from DB
     const fetchListenerCount = async () => {
       const { count } = await supabase
         .from('podcast_participants')
@@ -301,6 +313,13 @@ const KickStyleLive = ({
       return;
     }
     if (!currentSession) return;
+
+    // Demo sessions use local state only (host IDs aren't valid UUIDs)
+    if (isDemoSessionId(currentSession.id)) {
+      setIsFollowing(prev => !prev);
+      toast.success(isFollowing ? 'Unfollowed' : 'Following!');
+      return;
+    }
 
     if (isFollowing) {
       await supabase
