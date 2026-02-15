@@ -10,7 +10,6 @@ import TopEngagementModal from './TopEngagementModal';
 import DailyRankingModal from './DailyRankingModal';
 import MysteryMusicDrop from './MysteryMusicDrop';
 import SpotlightRoulette from './SpotlightRoulette';
-import LivePoll from './LivePoll';
 import ComboGiftTracker from './ComboGiftTracker';
 import AchievementToast from './AchievementToast';
 import MiniGame from './MiniGame';
@@ -206,7 +205,6 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
       {/* Engagement Overlays */}
       <MysteryMusicDrop isDemo />
       <SpotlightRoulette isDemo />
-      <LivePoll isDemo />
       <ComboGiftTracker isDemo />
       <AchievementToast isDemo />
       <MiniGame isDemo />
