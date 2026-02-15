@@ -8,6 +8,13 @@ import { demoSession, demoSession2, demoSession3, DemoSpeaker, DemoSession, DEMO
 import AuthPromptModal from './AuthPromptModal';
 import TopEngagementModal from './TopEngagementModal';
 import DailyRankingModal from './DailyRankingModal';
+import MysteryMusicDrop from './MysteryMusicDrop';
+import SpotlightRoulette from './SpotlightRoulette';
+import LivePoll from './LivePoll';
+import ComboGiftTracker from './ComboGiftTracker';
+import AchievementToast from './AchievementToast';
+import MiniGame from './MiniGame';
+import VibeCheck from './VibeCheck';
 import { getRandomAvatarUrl } from '@/lib/randomAvatars';
 
 // Audio waveform animation component
@@ -195,7 +202,16 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-black">
+    <div className="h-full flex flex-col bg-black relative overflow-hidden">
+      {/* Engagement Overlays */}
+      <MysteryMusicDrop isDemo />
+      <SpotlightRoulette isDemo />
+      <LivePoll isDemo />
+      <ComboGiftTracker isDemo />
+      <AchievementToast isDemo />
+      <MiniGame isDemo />
+      <VibeCheck isDemo />
+
       {/* Session Header */}
       <div className="px-4 pt-2 pb-2 sm:py-3 border-b border-white/5 bg-black">
         <div className="flex items-start gap-2">
