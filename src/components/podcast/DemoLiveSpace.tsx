@@ -173,30 +173,6 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-[#1a1a1d] to-[#0e0e10]">
-      {/* Session Header */}
-      <div className="px-4 py-3 border-b border-white/5">
-        <div className="flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-white font-semibold text-sm sm:text-base truncate">
-              {activeDemo.title}
-            </h1>
-            <p className="text-white/50 text-xs truncate mt-0.5">
-              {activeDemo.description}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 ml-4">
-            <div className="flex items-center gap-1.5 text-red-400 bg-red-500/20 px-2 py-1 rounded-full">
-              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-              <span className="text-xs font-medium">LIVE</span>
-            </div>
-            <div className="flex items-center gap-1 text-white/60">
-              <Users className="h-3.5 w-3.5" />
-              <span className="text-xs">{listenerCount}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Speakers Area - Horizontal Row */}
       <div className="flex-1 flex items-center justify-center px-4 py-4 min-h-0">
         <div className="flex items-start justify-center gap-4 flex-wrap">
