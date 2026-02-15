@@ -184,6 +184,19 @@ const KickStyleLive = ({
   useEffect(() => {
     if (!currentSession) return;
 
+    // Demo sessions use simulated top gifters
+    if (isDemoSessionId(currentSession.id)) {
+      const demoGifterNames = ['ThoughtLeader', 'MindfulMike', 'GrowthMaster', 'WisdomSeeker', 'DeepThinker', 'SoulfulSara', 'PositivePete', 'BookWorm'];
+      setTopGifters(demoGifterNames.map((name, i) => ({
+        id: `demo-gifter-${i}`,
+        user_id: `demo-gifter-${i}`,
+        total_points: Math.max(10, Math.floor(120 - i * 12 + Math.random() * 15)),
+        user_name: name,
+        user_avatar: getRandomAvatarUrl(name),
+      })));
+      return;
+    }
+
     const fetchTopGifters = async () => {
       const { data: gifts } = await supabase
         .from('podcast_gifts')
@@ -238,7 +251,6 @@ const KickStyleLive = ({
           filter: `session_id=eq.${currentSession.id}`
         },
         () => {
-          // Refetch top gifters when a new gift is sent
           fetchTopGifters();
         }
       )
@@ -249,49 +261,49 @@ const KickStyleLive = ({
     };
   }, [currentSession]);
 
-  // Fetch recommended sessions (other live audio rooms - exclude battle sessions)
+  // Fetch recommended sessions - include demo sessions + real live sessions
   useEffect(() => {
     const fetchRecommended = async () => {
-      // IMPORTANT: Filter out battle sessions (they have "Battle:" prefix in title)
-      const { data: liveSessions } = await supabase
-        .from('podcast_sessions')
-        .select(`
-          id,
-          host_id,
-          title,
-          description,
-          cover_image_url,
-          status,
-          listener_count,
-          started_at
-        `)
-        .eq('status', 'live')
-        .not('title', 'ilike', 'Battle:%') // Exclude battle sessions
-        .neq('id', currentSession?.id || '')
-        .limit(8);
+      // Build demo sessions list (excluding current)
+      const demoRecommended = [getDemoPodcastSession(), getDemoPodcastSession2(), getDemoPodcastSession3()]
+        .filter(s => s.id !== currentSession?.id);
 
-      if (liveSessions && liveSessions.length > 0) {
-        // Fetch host profiles
-        const hostIds = liveSessions.map(s => s.host_id).filter(isValidUUID);
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('user_id, full_name, avatar_url, username')
-          .in('user_id', hostIds);
+      // Fetch real live sessions
+      let realSessions: PodcastSession[] = [];
+      try {
+        const { data: liveSessions } = await supabase
+          .from('podcast_sessions')
+          .select('id, host_id, title, description, cover_image_url, status, listener_count, started_at')
+          .eq('status', 'live')
+          .not('title', 'ilike', 'Battle:%')
+          .limit(8);
 
-        const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+        if (liveSessions && liveSessions.length > 0) {
+          const hostIds = liveSessions.map(s => s.host_id).filter(isValidUUID);
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('user_id, full_name, avatar_url, username')
+            .in('user_id', hostIds.length > 0 ? hostIds : ['00000000-0000-0000-0000-000000000000']);
 
-        const enrichedSessions: PodcastSession[] = liveSessions.map(s => ({
-          ...s,
-          status: s.status as 'scheduled' | 'live' | 'ended',
-          host_name: profileMap.get(s.host_id)?.full_name || profileMap.get(s.host_id)?.username || 'Host',
-          host_avatar: profileMap.get(s.host_id)?.avatar_url || null,
-        }));
+          const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
-        setRecommendedSessions(enrichedSessions);
-      } else {
-        // Fallback to passed sessions prop
-        setRecommendedSessions(sessions.filter(s => s.id !== currentSession?.id).slice(0, 8));
+          realSessions = liveSessions
+            .filter(s => s.id !== currentSession?.id)
+            .map(s => ({
+              ...s,
+              status: s.status as 'scheduled' | 'live' | 'ended',
+              host_name: profileMap.get(s.host_id)?.full_name || profileMap.get(s.host_id)?.username || 'Host',
+              host_avatar: profileMap.get(s.host_id)?.avatar_url || null,
+            }));
+        }
+      } catch (err) {
+        console.error('Error fetching recommended sessions:', err);
       }
+
+      // Combine demo + real, deduplicate
+      const realIds = new Set(realSessions.map(s => s.id));
+      const combined = [...demoRecommended.filter(s => !realIds.has(s.id)), ...realSessions].slice(0, 8);
+      setRecommendedSessions(combined);
     };
 
     fetchRecommended();
