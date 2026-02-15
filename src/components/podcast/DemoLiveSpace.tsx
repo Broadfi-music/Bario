@@ -266,10 +266,10 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
 
       {/* Speakers Area - Horizontal Row */}
       <div className="flex-1 flex items-center justify-center px-4 py-4 min-h-0 bg-black">
-        <div className="flex items-start justify-center gap-4 flex-wrap">
+        <div className="flex items-start justify-center gap-4 flex-wrap max-w-[280px]">
           {activeDemo.speakers.map(speaker => renderSpeaker(speaker))}
-          {/* Invite Slots - Plus circles */}
-          {Array.from({ length: 4 }).map((_, i) => (
+          {/* 5 join slots: 1 completes top row of 4, then 4 below */}
+          {Array.from({ length: 5 }).map((_, i) => (
             <div key={`slot-${i}`} className="flex flex-col items-center gap-1">
               <button
                 onClick={() => {
