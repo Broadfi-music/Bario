@@ -565,26 +565,17 @@ const KickStyleLive = ({
             <div className="shrink-0 border-t border-white/5 bg-[#18181b] px-3 py-2 lg:px-4 lg:py-3">
               {/* Host Info Row */}
               <div className="flex items-center justify-between mb-2 lg:mb-3">
-                <div className="flex items-center gap-3">
-                  <div 
-                    className="w-10 h-10 lg:w-12 lg:h-12 rounded-full overflow-hidden ring-2 ring-white/30 cursor-pointer"
-                    onClick={() => navigate(`/host/${currentSession.host_id}`)}
-                  >
-                    {currentSession.host_avatar ? (
-                      <img src={currentSession.host_avatar} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500" />
-                    )}
-                  </div>
+                <div className="flex items-start gap-3">
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span 
-                        className="font-bold text-white text-xs cursor-pointer hover:text-white/80"
-                        onClick={() => navigate(`/host/${currentSession.host_id}`)}
-                      >
-                        {currentSession.host_name}
-                      </span>
-                    </div>
+                    <h2 className="text-white font-semibold text-sm truncate">
+                      {currentSession.title}
+                    </h2>
+                    <span 
+                      className="font-bold text-white/70 text-xs cursor-pointer hover:text-white/80"
+                      onClick={() => navigate(`/host/${currentSession.host_id}`)}
+                    >
+                      {currentSession.host_name}
+                    </span>
                     {/* Top Engagement + Daily Ranking */}
                     <div className="flex items-center gap-3 mt-1">
                       {/* Top Engagement Indicator - Clickable */}
@@ -635,15 +626,6 @@ const KickStyleLive = ({
                   {isFollowing ? 'Following' : 'Follow'}
                 </button>
 
-                <Button
-                  onClick={() => setShowShareModal(true)}
-                  size="sm"
-                  variant="outline"
-                  className="h-6 px-2 text-[10px] font-semibold border-white/20 text-white/70 hover:bg-white/5"
-                >
-                  <Share2 className="h-3 w-3 mr-1" />
-                  Share
-                </Button>
 
                 <span className="text-xs text-white/40 ml-auto hidden sm:block">
                   {formatViewers(followerCount)} followers
