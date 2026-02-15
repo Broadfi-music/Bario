@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { demoSession, demoSession2, demoSession3, DemoSpeaker, DemoSession, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3 } from '@/config/demoSpace';
 import AuthPromptModal from './AuthPromptModal';
+import TopEngagementModal from './TopEngagementModal';
+import DailyRankingModal from './DailyRankingModal';
 import { getRandomAvatarUrl } from '@/lib/randomAvatars';
-import { useFollowSystem } from '@/hooks/useFollowSystem';
 
 // Audio waveform animation component
 const AudioWaveform = ({ isActive }: { isActive: boolean }) => {
@@ -39,8 +40,6 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const { isFollowing, toggleFollow } = useFollowSystem();
-  
   // Pick the right demo session
   const activeDemo: DemoSession = sessionId === DEMO_SESSION_ID_3 ? demoSession3 : sessionId === DEMO_SESSION_ID_2 ? demoSession2 : demoSession;
   
@@ -50,6 +49,10 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [activeSpeaker, setActiveSpeaker] = useState<string>(activeDemo.speakers[0].id);
   const [engagementCount, setEngagementCount] = useState(12);
+  const [localFollowing, setLocalFollowing] = useState(false);
+  const [showEngagementModal, setShowEngagementModal] = useState(false);
+  const [showDailyRanking, setShowDailyRanking] = useState(false);
+  const [showGiftModal, setShowGiftModal] = useState(false);
 
   // Initialize and auto-play audio
   useEffect(() => {
@@ -113,7 +116,8 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
       setShowAuthModal(true);
       return;
     }
-    toggleFollow(activeDemo.speakers[0].id);
+    setLocalFollowing(prev => !prev);
+    toast.success(localFollowing ? 'Unfollowed' : 'Following!');
   };
 
   const togglePlay = () => {
@@ -223,7 +227,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
             {/* Engagement, D1, Follow under title */}
             <div className="flex items-center gap-2 mt-1">
               {/* Top Engagement */}
-              <button className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+              <button onClick={() => setShowEngagementModal(true)} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
                 {[
                   getRandomAvatarUrl('ThoughtLeader'),
                   getRandomAvatarUrl('MindfulMike'),
@@ -239,7 +243,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
               </button>
 
               {/* D1 Ranking */}
-              <button className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-yellow-500/20 hover:bg-yellow-500/30 transition-colors">
+              <button onClick={() => setShowDailyRanking(true)} className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-yellow-500/20 hover:bg-yellow-500/30 transition-colors">
                 <Trophy className="w-3 h-3 text-yellow-400" />
                 <span className="text-[10px] text-yellow-400 font-semibold">D1</span>
               </button>
@@ -248,12 +252,12 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
               <button
                 onClick={handleFollow}
                 className={`h-5 px-2 rounded text-[10px] font-semibold transition-colors ${
-                  isFollowing(activeDemo.speakers[0].id)
+                  localFollowing
                     ? 'bg-white/10 text-white hover:bg-white/20'
                     : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
                 }`}
               >
-                {isFollowing(activeDemo.speakers[0].id) ? 'Following' : 'Follow'}
+                {localFollowing ? 'Following' : 'Follow'}
               </button>
             </div>
           </div>
@@ -265,7 +269,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
         <div className="flex items-start justify-center gap-4 flex-wrap">
           {activeDemo.speakers.map(speaker => renderSpeaker(speaker))}
           {/* Invite Slots - Plus circles */}
-          {Array.from({ length: Math.max(0, 4 - activeDemo.speakers.length) }).map((_, i) => (
+          {Array.from({ length: Math.max(0, 8 - activeDemo.speakers.length) }).map((_, i) => (
             <div key={`slot-${i}`} className="flex flex-col items-center gap-1">
               <button
                 onClick={() => {
@@ -290,6 +294,22 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
       <AuthPromptModal 
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)} 
+      />
+
+      {/* Top Engagement Modal */}
+      <TopEngagementModal
+        isOpen={showEngagementModal}
+        onClose={() => setShowEngagementModal(false)}
+        sessionId={activeDemo.id}
+        onSendGift={() => { setShowEngagementModal(false); setShowGiftModal(true); }}
+      />
+
+      {/* Daily Ranking Modal */}
+      <DailyRankingModal
+        isOpen={showDailyRanking}
+        onClose={() => setShowDailyRanking(false)}
+        sessionId={activeDemo.id}
+        onSendGift={() => { setShowDailyRanking(false); setShowGiftModal(true); }}
       />
     </div>
   );
