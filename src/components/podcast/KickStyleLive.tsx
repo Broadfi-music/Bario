@@ -633,49 +633,24 @@ const KickStyleLive = ({
 
               {/* Action Buttons Row */}
               <div className="flex items-center gap-2 flex-wrap">
-                <Button
+                <button
                   onClick={handleFollow}
-                  size="sm"
-                  className={`h-8 px-3 text-xs font-semibold ${
+                  className={`h-6 px-2 rounded text-[10px] font-semibold transition-colors ${
                     isFollowing 
                       ? 'bg-white/10 text-white hover:bg-white/20' 
-                      : 'bg-black text-white hover:bg-neutral-800 border border-white/20'
+                      : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
                   }`}
                 >
-                  <Heart className={`h-3.5 w-3.5 mr-1.5 ${isFollowing ? 'fill-red-500 text-red-500' : ''}`} />
                   {isFollowing ? 'Following' : 'Follow'}
-                </Button>
-
-                <Button
-                  onClick={() => setIsSubscribed(!isSubscribed)}
-                  size="sm"
-                  className={`h-8 px-3 text-xs font-semibold ${
-                    isSubscribed 
-                      ? 'bg-white/10 text-white hover:bg-white/20' 
-                      : 'bg-neutral-800 text-white hover:bg-neutral-700 border border-white/20'
-                  }`}
-                >
-                  <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-                  {isSubscribed ? 'Subscribed' : 'Subscribe'}
-                </Button>
-
-                <Button
-                  onClick={() => setShowGiftModal(true)}
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-3 text-xs font-semibold border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
-                >
-                  <Gift className="h-3.5 w-3.5 mr-1.5" />
-                  Gift
-                </Button>
+                </button>
 
                 <Button
                   onClick={() => setShowShareModal(true)}
                   size="sm"
                   variant="outline"
-                  className="h-8 px-3 text-xs font-semibold border-white/20 text-white/70 hover:bg-white/5"
+                  className="h-6 px-2 text-[10px] font-semibold border-white/20 text-white/70 hover:bg-white/5"
                 >
-                  <Share2 className="h-3.5 w-3.5 mr-1.5" />
+                  <Share2 className="h-3 w-3 mr-1" />
                   Share
                 </Button>
 

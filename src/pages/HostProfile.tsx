@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Users, Play, Calendar, Radio, Heart, Share2, Edit, MoreVertical, Pause, Plus, Mic, Trash2 } from 'lucide-react';
+import { ChevronLeft, Users, Play, Calendar, Radio, Heart, Share2, Edit, MoreVertical, Pause, Plus, Mic, Trash2, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -598,6 +598,13 @@ const HostProfile = () => {
             >
               <Heart className={`h-4 w-4 mr-2 ${isFollowing ? 'fill-[#53fc18]' : ''}`} />
               {isFollowing ? 'Following' : 'Follow'}
+            </Button>
+            <Button
+              variant="outline"
+              className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+            >
+              <UserPlus className="h-4 w-4 mr-2" />
+              Subscribe
             </Button>
             {isOwner && (
               <>
