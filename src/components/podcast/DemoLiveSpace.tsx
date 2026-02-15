@@ -195,58 +195,63 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
       {/* Session Header */}
       <div className="px-4 py-3 border-b border-white/5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="w-6 h-6 rounded-full overflow-hidden shrink-0">
-              {activeDemo.speakers[0]?.avatarUrl ? (
-                <img src={activeDemo.speakers[0].avatarUrl} alt={activeDemo.hostName} className="w-full h-full object-cover" />
-              ) : (
-                <div className={`w-full h-full bg-gradient-to-br ${activeDemo.speakers[0]?.avatarGradient}`} />
-              )}
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+            <div className="flex flex-col items-center shrink-0">
+              <div className="w-6 h-6 rounded-full overflow-hidden">
+                {activeDemo.speakers[0]?.avatarUrl ? (
+                  <img src={activeDemo.speakers[0].avatarUrl} alt={activeDemo.hostName} className="w-full h-full object-cover" />
+                ) : (
+                  <div className={`w-full h-full bg-gradient-to-br ${activeDemo.speakers[0]?.avatarGradient}`} />
+                )}
+              </div>
+              <span className="text-[8px] text-white/60 font-medium mt-0.5 truncate max-w-[50px]">{activeDemo.hostName}</span>
             </div>
             <div className="flex-1 min-w-0">
               <h1 className="text-white font-semibold text-sm sm:text-base truncate">
                 {activeDemo.title}
               </h1>
-              <div className="flex items-center gap-2 mt-1">
-                {/* Top Engagement */}
-                <button className="flex items-center gap-1 hover:opacity-80 transition-opacity">
-                  {[
-                    getRandomAvatarUrl('ThoughtLeader'),
-                    getRandomAvatarUrl('MindfulMike'),
-                  ].map((avatar, i) => (
-                    <div
-                      key={i}
-                      className={`w-4 h-4 rounded-full overflow-hidden border border-black/50 ${i > 0 ? '-ml-1.5' : ''}`}
-                    >
-                      <img src={avatar} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  ))}
-                  <span className="text-[10px] text-white/50 font-medium ml-0.5">{engagementCount}</span>
-                </button>
-
-                {/* D1 Ranking */}
-                <button className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-yellow-500/20 hover:bg-yellow-500/30 transition-colors">
-                  <Trophy className="w-3 h-3 text-yellow-400" />
-                  <span className="text-[10px] text-yellow-400 font-semibold">D1</span>
-                </button>
-
-                {/* Follow Button */}
-                <button
-                  onClick={handleFollow}
-                  className={`h-5 px-2 rounded text-[10px] font-semibold transition-colors ${
-                    isFollowing(activeDemo.speakers[0].id)
-                      ? 'bg-white/10 text-white hover:bg-white/20'
-                      : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
-                  }`}
-                >
-                  {isFollowing(activeDemo.speakers[0].id) ? 'Following' : 'Follow'}
-                </button>
-              </div>
             </div>
           </div>
-          <div className="flex items-center gap-1 text-white/60 ml-4">
-            <Users className="h-3.5 w-3.5" />
-            <span className="text-xs">{listenerCount}</span>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Top Engagement */}
+            <button className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+              {[
+                getRandomAvatarUrl('ThoughtLeader'),
+                getRandomAvatarUrl('MindfulMike'),
+              ].map((avatar, i) => (
+                <div
+                  key={i}
+                  className={`w-4 h-4 rounded-full overflow-hidden border border-black/50 ${i > 0 ? '-ml-1.5' : ''}`}
+                >
+                  <img src={avatar} alt="" className="w-full h-full object-cover" />
+                </div>
+              ))}
+              <span className="text-[10px] text-white/50 font-medium ml-0.5">{engagementCount}</span>
+            </button>
+
+            {/* D1 Ranking */}
+            <button className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-yellow-500/20 hover:bg-yellow-500/30 transition-colors">
+              <Trophy className="w-3 h-3 text-yellow-400" />
+              <span className="text-[10px] text-yellow-400 font-semibold">D1</span>
+            </button>
+
+            {/* Follow Button */}
+            <button
+              onClick={handleFollow}
+              className={`h-5 px-2 rounded text-[10px] font-semibold transition-colors ${
+                isFollowing(activeDemo.speakers[0].id)
+                  ? 'bg-white/10 text-white hover:bg-white/20'
+                  : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
+              }`}
+            >
+              {isFollowing(activeDemo.speakers[0].id) ? 'Following' : 'Follow'}
+            </button>
+
+            {/* Listener Count */}
+            <div className="flex items-center gap-1 text-white/60">
+              <Users className="h-3.5 w-3.5" />
+              <span className="text-xs">{listenerCount}</span>
+            </div>
           </div>
         </div>
       </div>
