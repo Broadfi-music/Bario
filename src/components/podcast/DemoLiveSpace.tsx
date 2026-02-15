@@ -222,25 +222,6 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
         </div>
       </div>
 
-      {/* Join/Leave Controls */}
-      <div className="flex items-center gap-2 px-4 py-3 border-t border-white/5 bg-black/50">
-        <Button
-          onClick={handleJoinSession}
-          size="sm"
-          className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs"
-        >
-          <Mic className="h-3 w-3 mr-1.5" />
-          Join Session
-        </Button>
-        <Button
-          onClick={handleLeave}
-          variant="outline"
-          size="sm"
-          className="bg-white/10 border-white/20 hover:bg-white/20 text-white text-xs"
-        >
-          Leave
-        </Button>
-      </div>
 
       {/* Auth Modal */}
       <AuthPromptModal 
