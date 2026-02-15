@@ -191,9 +191,48 @@ const DEMO_HOSTS: Record<string, HostData> = {
     is_live: true,
     current_session_id: 'demo-live-session-3'
   },
+  // Demo gifters (from top gifters sidebar)
+  'demo-gifter-0': {
+    id: 'demo-gifter-0', user_id: 'demo-gifter-0', full_name: 'ThoughtLeader', username: 'thoughtleader',
+    avatar_url: getDemoAvatar('ThoughtLeader'), bio: 'Passionate about ideas that change the world. Top gifter and active community member.',
+    follower_count: 8200, is_live: false, current_session_id: null
+  },
+  'demo-gifter-1': {
+    id: 'demo-gifter-1', user_id: 'demo-gifter-1', full_name: 'MindfulMike', username: 'mindfulmike',
+    avatar_url: getDemoAvatar('MindfulMike'), bio: 'Mindfulness practitioner and generous supporter of great content.',
+    follower_count: 5400, is_live: false, current_session_id: null
+  },
+  'demo-gifter-2': {
+    id: 'demo-gifter-2', user_id: 'demo-gifter-2', full_name: 'GrowthMaster', username: 'growthmaster',
+    avatar_url: getDemoAvatar('GrowthMaster'), bio: 'Always growing, always learning. Community builder.',
+    follower_count: 6100, is_live: false, current_session_id: null
+  },
+  'demo-gifter-3': {
+    id: 'demo-gifter-3', user_id: 'demo-gifter-3', full_name: 'WisdomSeeker', username: 'wisdomseeker2',
+    avatar_url: getDemoAvatar('WisdomSeeker'), bio: 'Seeking wisdom in every conversation.',
+    follower_count: 3800, is_live: false, current_session_id: null
+  },
+  'demo-gifter-4': {
+    id: 'demo-gifter-4', user_id: 'demo-gifter-4', full_name: 'DeepThinker', username: 'deepthinker',
+    avatar_url: getDemoAvatar('DeepThinker'), bio: 'Deep thoughts, deeper conversations.',
+    follower_count: 4500, is_live: false, current_session_id: null
+  },
+  'demo-gifter-5': {
+    id: 'demo-gifter-5', user_id: 'demo-gifter-5', full_name: 'SoulfulSara', username: 'soulfulsara',
+    avatar_url: getDemoAvatar('SoulfulSara'), bio: 'Music lover and soulful spirit.',
+    follower_count: 7300, is_live: false, current_session_id: null
+  },
+  'demo-gifter-6': {
+    id: 'demo-gifter-6', user_id: 'demo-gifter-6', full_name: 'PositivePete', username: 'positivepete',
+    avatar_url: getDemoAvatar('PositivePete'), bio: 'Spreading positivity one gift at a time.',
+    follower_count: 2900, is_live: false, current_session_id: null
+  },
+  'demo-gifter-7': {
+    id: 'demo-gifter-7', user_id: 'demo-gifter-7', full_name: 'BookWorm', username: 'bookworm',
+    avatar_url: getDemoAvatar('BookWorm'), bio: 'Avid reader and podcast enthusiast.',
+    follower_count: 3200, is_live: false, current_session_id: null
+  },
 };
-
-// No demo data - only real user data from database
 
 const formatFollowers = (count: number) => {
   if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
@@ -299,6 +338,25 @@ const HostProfile = () => {
     if (hostId && DEMO_HOSTS[hostId]) {
       setHost(DEMO_HOSTS[hostId]);
       setFollowerCount(DEMO_HOSTS[hostId].follower_count);
+      setLoading(false);
+      return;
+    }
+
+    // Dynamic demo user (e.g. demo-user-ThoughtLeader from chat)
+    if (hostId && hostId.startsWith('demo-user-')) {
+      const displayName = hostId.replace('demo-user-', '');
+      setHost({
+        id: hostId,
+        user_id: hostId,
+        full_name: displayName,
+        username: displayName.toLowerCase(),
+        avatar_url: getDemoAvatar(displayName),
+        bio: `Active community member and listener on Bario Space.`,
+        follower_count: Math.floor(Math.random() * 5000) + 500,
+        is_live: false,
+        current_session_id: null,
+      });
+      setFollowerCount(Math.floor(Math.random() * 5000) + 500);
       setLoading(false);
       return;
     }
@@ -523,7 +581,15 @@ const HostProfile = () => {
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-[#18181b] border-b border-white/5">
         <div className="flex items-center justify-between h-12 px-3">
-          <button onClick={() => navigate(-1)} className="flex items-center gap-1 text-white/60 hover:text-white">
+          <button onClick={() => {
+            const params = new URLSearchParams(window.location.search);
+            const fromSession = params.get('from');
+            if (fromSession) {
+              navigate(`/podcasts?session=${fromSession}`);
+            } else {
+              navigate(-1);
+            }
+          }} className="flex items-center gap-1 text-white/60 hover:text-white">
             <ChevronLeft className="h-5 w-5" />
             <span className="text-sm">Back</span>
           </button>

@@ -162,7 +162,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
       <div key={speaker.id} className="flex flex-col items-center gap-1">
         <div className="relative">
           <button
-            onClick={() => navigate(`/host/${speaker.id}`)}
+            onClick={() => navigate(`/host/${speaker.id}?from=${activeDemo.id}`)}
             className={`w-10 h-10 rounded-full overflow-hidden flex items-center justify-center ${isActive ? 'ring-2 ring-green-500/50' : ''} cursor-pointer hover:opacity-80 transition-opacity`}
           >
             {speaker.avatarUrl ? (
@@ -185,7 +185,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
           )}
         </div>
         <button
-          onClick={() => navigate(`/host/${speaker.id}`)}
+          onClick={() => navigate(`/host/${speaker.id}?from=${activeDemo.id}`)}
           className="text-white text-[10px] font-medium text-center leading-tight max-w-[70px] truncate hover:text-white/80 transition-colors"
         >
           {speaker.name}
@@ -200,7 +200,10 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
       <div className="px-4 pt-2 pb-2 sm:py-3 border-b border-white/5 bg-black">
         <div className="flex items-start gap-2">
           {/* Host avatar + name */}
-          <div className="flex flex-col items-center shrink-0">
+          <button
+            onClick={() => navigate(`/host/${activeDemo.speakers[0]?.id}?from=${activeDemo.id}`)}
+            className="flex flex-col items-center shrink-0 hover:opacity-80 transition-opacity"
+          >
             <div className="w-6 h-6 rounded-full overflow-hidden">
               {activeDemo.speakers[0]?.avatarUrl ? (
                 <img src={activeDemo.speakers[0].avatarUrl} alt={activeDemo.hostName} className="w-full h-full object-cover" />
@@ -209,7 +212,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
               )}
             </div>
             <span className="text-[8px] text-white/60 font-medium mt-0.5 truncate max-w-[50px]">{activeDemo.hostName}</span>
-          </div>
+          </button>
 
           {/* Title + engagement row underneath */}
           <div className="flex-1 min-w-0">

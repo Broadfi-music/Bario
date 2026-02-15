@@ -187,14 +187,26 @@ const KickStyleLive = ({
     // Demo sessions use simulated top gifters
     if (isDemoSessionId(currentSession.id)) {
       const demoGifterNames = ['ThoughtLeader', 'MindfulMike', 'GrowthMaster', 'WisdomSeeker', 'DeepThinker', 'SoulfulSara', 'PositivePete', 'BookWorm'];
-      setTopGifters(demoGifterNames.map((name, i) => ({
+      const initialGifters = demoGifterNames.map((name, i) => ({
         id: `demo-gifter-${i}`,
         user_id: `demo-gifter-${i}`,
         total_points: Math.max(10, Math.floor(120 - i * 12 + Math.random() * 15)),
         user_name: name,
         user_avatar: getRandomAvatarUrl(name),
-      })));
-      return;
+      }));
+      setTopGifters(initialGifters);
+      
+      // Real-time simulation: update gifter points periodically
+      const interval = setInterval(() => {
+        setTopGifters(prev => {
+          const updated = prev.map(g => ({
+            ...g,
+            total_points: g.total_points + Math.floor(Math.random() * 8),
+          }));
+          return updated.sort((a, b) => b.total_points - a.total_points);
+        });
+      }, 6000 + Math.random() * 4000);
+      return () => clearInterval(interval);
     }
 
     const fetchTopGifters = async () => {
@@ -548,7 +560,8 @@ const KickStyleLive = ({
                 topGifters.map((gifter, i) => (
                   <div
                     key={gifter.id}
-                    className="flex items-center gap-2 p-2 rounded bg-white/5"
+                    onClick={() => navigate(`/host/${gifter.user_id}?from=${currentSession.id}`)}
+                    className="flex items-center gap-2 p-2 rounded bg-white/5 cursor-pointer hover:bg-white/10 transition-colors"
                   >
                     <span className={`text-xs font-bold ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-orange-400' : 'text-white/40'}`}>
                       #{i + 1}
