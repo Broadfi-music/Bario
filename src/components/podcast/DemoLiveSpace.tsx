@@ -266,9 +266,8 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
 
       {/* Speakers Area - Horizontal Row */}
       <div className="flex-1 flex items-center justify-center px-4 py-4 min-h-0 bg-black">
-        <div className="flex items-start justify-center gap-4 flex-wrap max-w-[280px]">
+        <div className="grid grid-cols-4 gap-4 justify-items-center">
           {activeDemo.speakers.map(speaker => renderSpeaker(speaker))}
-          {/* 5 join slots: 1 completes top row of 4, then 4 below */}
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={`slot-${i}`} className="flex flex-col items-center gap-1">
               <button
