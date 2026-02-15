@@ -1,67 +1,33 @@
 
+# Clean Up Live Session UI
 
-# Add Invite Slots and Top Engagement to Live Sessions
+## Summary
+Remove unnecessary text, icons, and labels from both the DemoLiveSpace header and the KickStyleLive action bar to achieve a cleaner TikTok-style layout.
 
-## Overview
-Based on the TikTok Live reference image, two features will be added to the live session UI:
-
-1. **Invite Slots (Plus Circles)**: 4 circular "+" buttons displayed below the current speakers in both `DemoLiveSpace` and `SpaceParticipants`. Listeners can tap a slot to request to join as a speaker. For real sessions, the host sees an invitation request popup in their `HostStudio`. For demo sessions, tapping shows a simulated "Request sent!" toast.
-
-2. **Top Engagement Indicator**: Below the session description in the action bar of `KickStyleLive`, show two overlapping user avatar circles with a count number (e.g., "13") representing the top engaged listeners/gifters -- similar to the reference image.
-
----
-
-## File Changes
+## Changes
 
 ### 1. `src/components/podcast/DemoLiveSpace.tsx`
-- After the speakers row, add a new row of **4 invite slot circles** (empty slots = MAX_SPEAKERS minus current speakers)
-- Each slot is a dashed-border circle with a "+" icon inside
-- Clicking a slot shows a toast: "Request sent to host!" (simulated for demo)
-- Slots are styled with `w-14 h-14` circles with `border-2 border-dashed border-white/20` and a `Plus` icon
+- **Remove** the session title (`activeDemo.title`) -- line 180-182
+- **Remove** the description text (`activeDemo.description`) -- line 183-185
+- **Remove** the "LIVE" badge next to the header -- lines 188-191
+- **Remove** the Users icon and listener count -- lines 192-195
+- Simplify or remove the entire Session Header block since all its content is being removed
 
-### 2. `src/components/podcast/SpaceParticipants.tsx`
-- After the participants grid, add an **Invite Slots row** showing empty "+" circles
-- Number of visible slots = `MAX_SPEAKERS - currentSpeakers` (up to 4 slots, showing only available ones)
-- When a listener clicks a slot:
-  - If not logged in, show the auth modal
-  - If not yet joined, join the session first
-  - If already joined, raise their hand (uses existing `toggleHandRaise` logic) and show toast "Request to speak sent!"
-- If the user already has hand raised, the slot they clicked shows "Requested" state (yellow border)
-
-### 3. `src/components/podcast/HostStudio.tsx`
-- The host already sees raised hands and can promote speakers -- no structural changes needed
-- Add a more prominent **"Speaker Request" notification badge** on the raised hands section header showing the count of pending requests
-- When a hand-raise comes in, show a toast notification: "[UserName] wants to join as a speaker" with Accept/Decline buttons (inline toast action)
-
-### 4. `src/components/podcast/KickStyleLive.tsx`
-- In the Action Bar section (below host info, above action buttons), add a **Top Engagement** row
-- Shows 2-3 overlapping avatar circles (from `topGifters` data already fetched) with a total engagement count
-- Layout: two small overlapping circles (offset with negative margin) followed by a count number, e.g., "13"
-- If no gifters exist, show simulated engagement count for demo sessions (random 8-20)
-
----
+### 2. `src/components/podcast/KickStyleLive.tsx`
+- **Remove** the "LIVE" badge next to the host name (`<span className="text-xs bg-red-500/20...">LIVE</span>`) -- line 587
+- **Remove** the session title line below the host name (`currentSession.title`) -- lines 589-591
+- **Remove** the Headphones icon and "Listeners" count section -- lines 627-631
+- **Reduce** the host name text size from `text-sm lg:text-base` to `text-xs` for a more compact look
 
 ## Technical Details
 
-### Invite Slots Component (shared logic)
-```text
-+--------+  +--------+  +--------+  +--------+
-|   +    |  |   +    |  |   +    |  |   +    |
-+--------+  +--------+  +--------+  +--------+
-  Slot 1      Slot 2      Slot 3      Slot 4
-```
-- Visible slots = `Math.max(0, 4 - currentSpeakerCount)`
-- Each slot: `w-14 h-14 rounded-full border-2 border-dashed border-white/20` with `Plus` icon centered
-- On click: triggers hand-raise for real sessions, toast for demo sessions
+### DemoLiveSpace Header Cleanup
+The entire `Session Header` div (lines 176-198) will be removed since all its children (title, description, LIVE badge, listener count) are being removed. This gives the speakers area more vertical space.
 
-### Top Engagement Indicator
-```text
-[avatar1][avatar2 overlapping]  13
-```
-- Uses existing `topGifters` state from KickStyleLive
-- Avatars: `w-6 h-6 rounded-full` with `-ml-2` for overlap effect
-- Count: total unique engagers (gifters + commenters count, or fallback to listener count)
-
-### Host Notification for Speaker Requests
-- Uses `sonner` toast with action button when a new hand-raise is detected
-- Toast: "UserName wants to speak" with "Accept" button that calls `promoteSpeaker()`
+### KickStyleLive Action Bar Cleanup
+In the Host Info Row:
+- The host name stays but gets smaller text (`text-xs`)
+- The "LIVE" span next to the name is removed
+- The title paragraph below the name is removed  
+- The Headphones + listener count div on the right side is removed
+- Top Engagement and Daily Ranking indicators remain untouched
