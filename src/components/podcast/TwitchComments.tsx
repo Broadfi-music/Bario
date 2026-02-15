@@ -431,7 +431,7 @@ const sendComment = async (content: string, isEmoji = false) => {
   };
 
   const handleUserClick = (userId: string) => {
-    navigate(`/host/${userId}`);
+    navigate(`/host/${userId}?from=${sessionId}`);
   };
 
 return (
