@@ -173,6 +173,21 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-[#1a1a1d] to-[#0e0e10]">
+      {/* Session Header */}
+      <div className="px-4 py-3 border-b border-white/5">
+        <div className="flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-white font-semibold text-sm sm:text-base truncate">
+              {activeDemo.title}
+            </h1>
+          </div>
+          <div className="flex items-center gap-1 text-white/60 ml-4">
+            <Users className="h-3.5 w-3.5" />
+            <span className="text-xs">{listenerCount}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Speakers Area - Horizontal Row */}
       <div className="flex-1 flex items-center justify-center px-4 py-4 min-h-0">
         <div className="flex items-start justify-center gap-4 flex-wrap">
