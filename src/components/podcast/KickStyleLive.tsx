@@ -579,16 +579,12 @@ const KickStyleLive = ({
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <span 
-                        className="font-bold text-white text-sm lg:text-base cursor-pointer hover:text-white/80"
+                        className="font-bold text-white text-xs cursor-pointer hover:text-white/80"
                         onClick={() => navigate(`/host/${currentSession.host_id}`)}
                       >
                         {currentSession.host_name}
                       </span>
-                      <span className="text-xs bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded">LIVE</span>
                     </div>
-                    <p className="text-xs text-white/60 truncate max-w-[200px] lg:max-w-[300px]">
-                      {currentSession.title}
-                    </p>
                     {/* Top Engagement + Daily Ranking */}
                     <div className="flex items-center gap-3 mt-1">
                       {/* Top Engagement Indicator - Clickable */}
@@ -624,11 +620,6 @@ const KickStyleLive = ({
                   </div>
                 </div>
 
-                {/* Listener Count - Real-time */}
-                <div className="flex items-center gap-1.5 text-white/60">
-                  <Headphones className="h-4 w-4" />
-                  <span className="text-sm font-medium">{formatViewers(listenerCount)} Listeners</span>
-                </div>
               </div>
 
               {/* Action Buttons Row */}
