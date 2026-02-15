@@ -1,15 +1,43 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ComboGiftTrackerProps {
   isDemo?: boolean;
+  sessionId?: string;
 }
 
-const ComboGiftTracker = ({ isDemo = true }: ComboGiftTrackerProps) => {
+const ComboGiftTracker = ({ isDemo = true, sessionId }: ComboGiftTrackerProps) => {
   const [comboCount, setComboCount] = useState(0);
   const [showCombo, setShowCombo] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const addGiftToCombo = () => {
+    setComboCount(prev => prev + 1);
+    setShowCombo(true);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      setShowCombo(false);
+      setTimeout(() => setComboCount(0), 500);
+    }, 4000);
+  };
+
+  // Real session: subscribe to gifts via realtime
+  useEffect(() => {
+    if (isDemo || !sessionId) return;
+
+    const channel = supabase
+      .channel(`combo-gifts-${sessionId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'podcast_gifts', filter: `session_id=eq.${sessionId}` },
+        () => addGiftToCombo()
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [isDemo, sessionId]);
 
   // Demo: simulate gift bursts
   useEffect(() => {
@@ -20,23 +48,12 @@ const ComboGiftTracker = ({ isDemo = true }: ComboGiftTrackerProps) => {
       let i = 0;
       const burstInterval = setInterval(() => {
         i++;
-        setComboCount(prev => prev + 1);
-        setShowCombo(true);
-
-        // Reset hide timer
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        timeoutRef.current = setTimeout(() => {
-          setShowCombo(false);
-          setTimeout(() => setComboCount(0), 500);
-        }, 4000);
-
+        addGiftToCombo();
         if (i >= burstSize) clearInterval(burstInterval);
       }, 600 + Math.random() * 400);
     };
 
-    // First burst after 45 seconds
     const initial = setTimeout(triggerBurst, 45000);
-    // Then every 1-2 minutes
     const interval = setInterval(triggerBurst, 60000 + Math.random() * 60000);
 
     return () => {
@@ -60,46 +77,26 @@ const ComboGiftTracker = ({ isDemo = true }: ComboGiftTrackerProps) => {
       {showCombo && comboCount >= 2 && (
         <motion.div
           initial={{ scale: 0, opacity: 0 }}
-          animate={{ 
-            scale: 1, 
-            opacity: 1,
-            x: style.shake ? [0, -3, 3, -3, 3, 0] : 0,
-          }}
+          animate={{ scale: 1, opacity: 1, x: style.shake ? [0, -3, 3, -3, 3, 0] : 0 }}
           exit={{ scale: 0, opacity: 0 }}
           transition={{ type: 'spring', damping: 12 }}
           className="absolute top-16 left-2 z-40"
         >
           <div className={`${style.bg} ${style.border} border rounded-xl px-3 py-2 backdrop-blur-lg shadow-lg ${style.glow}`}>
             <div className="flex items-center gap-2">
-              <motion.div
-                animate={{ rotate: [0, 15, -15, 0] }}
-                transition={{ duration: 0.3, repeat: Infinity }}
-              >
+              <motion.div animate={{ rotate: [0, 15, -15, 0] }} transition={{ duration: 0.3, repeat: Infinity }}>
                 <Zap className={`w-4 h-4 ${style.text}`} />
               </motion.div>
               <div>
-                <motion.span
-                  key={comboCount}
-                  initial={{ scale: 1.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className={`text-lg font-black ${style.text}`}
-                >
+                <motion.span key={comboCount} initial={{ scale: 1.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className={`text-lg font-black ${style.text}`}>
                   x{comboCount}
                 </motion.span>
                 <p className="text-[9px] text-white/40 -mt-0.5">COMBO</p>
               </div>
               {comboCount >= 10 && (
-                <motion.span
-                  animate={{ scale: [1, 1.3, 1] }}
-                  transition={{ duration: 0.5, repeat: Infinity }}
-                  className="text-lg"
-                >
-                  💥
-                </motion.span>
+                <motion.span animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.5, repeat: Infinity }} className="text-lg">💥</motion.span>
               )}
-              {comboCount >= 5 && comboCount < 10 && (
-                <span className="text-sm">🔥</span>
-              )}
+              {comboCount >= 5 && comboCount < 10 && <span className="text-sm">🔥</span>}
             </div>
           </div>
         </motion.div>

@@ -18,7 +18,6 @@ import TopEngagementModal from './TopEngagementModal';
 import DailyRankingModal from './DailyRankingModal';
 import MysteryMusicDrop from './MysteryMusicDrop';
 import SpotlightRoulette from './SpotlightRoulette';
-import LivePoll from './LivePoll';
 import ComboGiftTracker from './ComboGiftTracker';
 import AchievementToast from './AchievementToast';
 import MiniGame from './MiniGame';
@@ -611,10 +610,9 @@ const KickStyleLive = ({
                     hostAvatar={currentSession.host_avatar}
                   />
                   {/* Engagement Overlays for real sessions */}
-                  <MysteryMusicDrop isDemo={false} />
-                  <SpotlightRoulette isDemo={false} />
-                  <LivePoll isDemo={false} />
-                  <ComboGiftTracker isDemo={false} />
+                  <MysteryMusicDrop isDemo={false} sessionId={currentSession.id} />
+                  <SpotlightRoulette isDemo={false} sessionId={currentSession.id} />
+                  <ComboGiftTracker isDemo={false} sessionId={currentSession.id} />
                   <AchievementToast isDemo={false} />
                   <MiniGame isDemo={false} />
                   <VibeCheck isDemo={false} />
