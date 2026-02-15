@@ -195,9 +195,9 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-b from-[#1a1a1d] to-[#0e0e10]">
+    <div className="h-full flex flex-col bg-black">
       {/* Session Header */}
-      <div className="px-4 py-3 border-b border-white/5">
+      <div className="px-4 py-3 border-b border-white/5 bg-black">
         <div className="flex items-start gap-2">
           {/* Host avatar + name */}
           <div className="flex flex-col items-center shrink-0">
@@ -265,11 +265,11 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
       </div>
 
       {/* Speakers Area - Horizontal Row */}
-      <div className="flex-1 flex items-center justify-center px-4 py-4 min-h-0">
+      <div className="flex-1 flex items-center justify-center px-4 py-4 min-h-0 bg-black">
         <div className="flex items-start justify-center gap-4 flex-wrap">
           {activeDemo.speakers.map(speaker => renderSpeaker(speaker))}
           {/* Invite Slots - Plus circles */}
-          {Array.from({ length: Math.max(0, 8 - activeDemo.speakers.length) }).map((_, i) => (
+          {Array.from({ length: 4 }).map((_, i) => (
             <div key={`slot-${i}`} className="flex flex-col items-center gap-1">
               <button
                 onClick={() => {

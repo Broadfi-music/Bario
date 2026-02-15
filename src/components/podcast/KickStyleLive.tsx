@@ -564,7 +564,7 @@ const KickStyleLive = ({
           {/* Video/Audio Space Area */}
           <div className="flex-1 flex flex-col min-h-0 lg:min-w-0">
             {/* Participants (Audio Room) or Demo Space */}
-            <div className="flex-1 min-h-0 overflow-hidden bg-gradient-to-b from-[#1a1a1d] to-[#0e0e10]">
+            <div className="flex-1 min-h-0 overflow-hidden bg-black">
               {isDemoLiveSession(currentSession.id) ? (
                 <DemoLiveSpace key={currentSession.id} onLeave={() => onSessionSelect(null)} sessionId={currentSession.id} />
               ) : (
