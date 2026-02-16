@@ -12,7 +12,7 @@ import MysteryMusicDrop from './MysteryMusicDrop';
 import SpotlightRoulette from './SpotlightRoulette';
 import ComboGiftTracker from './ComboGiftTracker';
 import AchievementToast from './AchievementToast';
-import MiniGame from './MiniGame';
+
 import VibeCheck from './VibeCheck';
 import { getRandomAvatarUrl } from '@/lib/randomAvatars';
 
@@ -207,7 +207,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
       <SpotlightRoulette isDemo />
       <ComboGiftTracker isDemo />
       <AchievementToast isDemo />
-      <MiniGame isDemo />
+      
       <VibeCheck isDemo />
 
       {/* Session Header */}

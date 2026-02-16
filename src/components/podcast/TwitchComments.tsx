@@ -134,6 +134,37 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
     fetchMyProfile();
   }, [user?.id]);
 
+  // TikTok-style "joined the room" messages for demo
+  useEffect(() => {
+    if (!isDemoSession(sessionId)) return;
+
+    const JOIN_NAMES = [
+      'AudioLover', 'ZenMaster', 'TransformNow', 'MasterMind', 'EarlyRiser',
+      'WorkLifeBalance', 'PeacefulListener', 'InnerPeace', 'SaveForLater',
+      'PhilosophyFan', 'ValueSeeker', 'MorningRitual', 'ClassicReader',
+    ];
+
+    const addJoinMessage = () => {
+      const name = JOIN_NAMES[Math.floor(Math.random() * JOIN_NAMES.length)];
+      const id = `join-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+      const joinMsg: Comment = {
+        id,
+        user_id: `demo-join-${name}`,
+        content: `joined the room 👋`,
+        is_emoji: false,
+        created_at: new Date().toISOString(),
+        user_name: name,
+      };
+      setComments(prev => [...prev.slice(-8), joinMsg]);
+    };
+
+    // First join after 5s, then every 8-15s
+    const initial = setTimeout(addJoinMessage, 5000);
+    const interval = setInterval(addJoinMessage, 8000 + Math.random() * 7000);
+
+    return () => { clearTimeout(initial); clearInterval(interval); };
+  }, [sessionId]);
+
   // Demo chat cycling - messages appear and disappear with random names
   useEffect(() => {
     if (!isDemoSession(sessionId)) return;
@@ -152,7 +183,7 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
         created_at: new Date().toISOString(),
         user_name: name,
       };
-      setComments(prev => [...prev.slice(-8), newMsg]); // Keep max 9 messages
+      setComments(prev => [...prev.slice(-8), newMsg]);
     };
 
     // Add initial message immediately
@@ -454,6 +485,15 @@ return (
           >
             {comment.is_emoji ? (
               <span className="text-2xl inline-block animate-bounce">{comment.content}</span>
+            ) : comment.id.startsWith('join-') ? (
+              <div className="flex items-center gap-1.5 px-2 py-1 animate-in slide-in-from-right-4 duration-150">
+                <div className="w-4 h-4 rounded-full overflow-hidden flex-shrink-0">
+                  <img src={getDemoAvatar(comment.user_name || 'User')} alt="" className="w-full h-full object-cover" />
+                </div>
+                <span className="text-[10px] text-white/40">
+                  <span className="text-cyan-400 font-medium">{comment.user_name}</span> {comment.content}
+                </span>
+              </div>
             ) : (
               <div className="flex items-start gap-2 bg-black/40 rounded px-2 py-1.5 backdrop-blur-sm hover:bg-black/60 transition-colors animate-in slide-in-from-right-4 duration-150">
                 {/* Chat avatar */}

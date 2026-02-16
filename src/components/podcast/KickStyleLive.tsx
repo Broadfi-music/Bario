@@ -20,7 +20,7 @@ import MysteryMusicDrop from './MysteryMusicDrop';
 import SpotlightRoulette from './SpotlightRoulette';
 import ComboGiftTracker from './ComboGiftTracker';
 import AchievementToast from './AchievementToast';
-import MiniGame from './MiniGame';
+
 import VibeCheck from './VibeCheck';
 import { toast } from 'sonner';
 import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
@@ -614,7 +614,7 @@ const KickStyleLive = ({
                   <SpotlightRoulette isDemo={false} sessionId={currentSession.id} />
                   <ComboGiftTracker isDemo={false} sessionId={currentSession.id} />
                   <AchievementToast isDemo={false} />
-                  <MiniGame isDemo={false} />
+                  
                   <VibeCheck isDemo={false} />
                 </div>
               )}
