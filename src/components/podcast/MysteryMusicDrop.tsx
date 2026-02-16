@@ -65,7 +65,7 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId }: MysteryMusicDropProps) =
       try {
         if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
         const audio = new Audio();
-        audio.volume = 0.30;
+        audio.volume = 0.20;
         audio.loop = true;
         audio.preload = 'auto';
         
