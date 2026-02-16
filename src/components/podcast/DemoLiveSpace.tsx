@@ -204,7 +204,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   return (
     <div className="h-full flex flex-col bg-black relative overflow-hidden">
       {/* Engagement Overlays */}
-      <MysteryMusicDrop isDemo />
+      <MysteryMusicDrop isDemo roomCategory={activeDemo.category} roomTitle={activeDemo.title} />
       <SpotlightRoulette isDemo />
       <ComboGiftTracker isDemo />
       <AchievementToast isDemo />
