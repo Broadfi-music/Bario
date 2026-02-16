@@ -48,26 +48,27 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId }: MysteryMusicDropProps) =
   // Trigger drops on timer
   useEffect(() => {
     const triggerDrop = () => {
-      if (tracksRef.current.length === 0) return;
+      // Only use tracks with deezer preview URLs (most reliable for browser playback)
+      const playable = tracksRef.current.filter(t => 
+        t.previewUrl && (t.previewUrl.includes('deezer') || t.previewUrl.includes('cdns-preview'))
+      );
+      if (playable.length === 0) return;
 
-      const track = tracksRef.current[trackIndexRef.current % tracksRef.current.length];
+      const track = playable[trackIndexRef.current % playable.length];
       trackIndexRef.current++;
       setCurrentDrop(track);
       setVotes({ keep: 0, skip: 0 });
       setUserVoted(false);
       setTimeLeft(90);
 
-      // Play preview at background volume
+      // Play preview - NO crossOrigin (Deezer doesn't support CORS headers)
       try {
         if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-        const audio = new Audio();
+        const audio = new Audio(track.previewUrl);
         audio.volume = 0.30;
         audio.loop = true;
-        audio.crossOrigin = 'anonymous';
-        audio.src = track.previewUrl;
         audioRef.current = audio;
         
-        // Attempt play - log success/failure for debugging
         audio.play()
           .then(() => console.log('🎵 Mystery Drop playing:', track.title, 'by', track.artist))
           .catch((err) => console.warn('🎵 Mystery Drop autoplay blocked:', err.message));
