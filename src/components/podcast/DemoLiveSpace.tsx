@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, Plus, Trophy } from 'lucide-react';
+import { Users, Plus, Trophy, Mic, MicOff, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { demoSession, demoSession2, demoSession3, DemoSpeaker, DemoSession, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3 } from '@/config/demoSpace';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import AuthPromptModal from './AuthPromptModal';
 import TopEngagementModal from './TopEngagementModal';
 import DailyRankingModal from './DailyRankingModal';
@@ -60,6 +61,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   const [showEngagementModal, setShowEngagementModal] = useState(false);
   const [showDailyRanking, setShowDailyRanking] = useState(false);
   const [showGiftModal, setShowGiftModal] = useState(false);
+  const [mutedSpeakers, setMutedSpeakers] = useState<Record<string, boolean>>({});
 
   // Initialize and auto-play audio
   useEffect(() => {
@@ -162,27 +164,100 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
     navigate('/podcasts');
   };
 
-   const renderSpeaker = (speaker: DemoSpeaker) => {
-    const isActive = speaker.id === activeSpeaker && isPlaying;
-    
+  const handleSpeakerMuteToggle = (speakerId: string) => {
+    setMutedSpeakers(prev => {
+      const newState = { ...prev, [speakerId]: !prev[speakerId] };
+      toast.success(newState[speakerId] ? 'Mic muted' : 'Mic unmuted');
+      return newState;
+    });
+  };
+
+  const handleSpeakerLeave = (speakerName: string) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    toast.success(`${speakerName} left the session`);
+    onLeave?.();
+    navigate('/podcasts');
+  };
+
+  const renderSpeaker = (speaker: DemoSpeaker) => {
+    const isActive = speaker.id === activeSpeaker && isPlaying && !mutedSpeakers[speaker.id];
+    const isSpeakerMuted = !!mutedSpeakers[speaker.id];
+    // In a real app, check if speaker.id matches the logged-in user's participant ID
+    // For demo, all speakers/hosts get the self-action popover
+    const isSelf = speaker.role === 'host' || speaker.role === 'co_host' || speaker.role === 'speaker';
+
+    const avatarContent = (
+      <div className={`w-10 h-10 rounded-full overflow-hidden flex items-center justify-center ${isActive ? 'ring-2 ring-green-500/50' : ''} ${isSpeakerMuted ? 'opacity-50' : ''} cursor-pointer hover:opacity-80 transition-opacity`}>
+        {speaker.avatarUrl ? (
+          <img src={speaker.avatarUrl} alt={speaker.name} className="w-full h-full object-cover" />
+        ) : (
+          <div className={`w-full h-full bg-gradient-to-br ${speaker.avatarGradient} flex items-center justify-center`}>
+            <span className="text-white font-bold text-xs">{speaker.name.charAt(0)}</span>
+          </div>
+        )}
+      </div>
+    );
+
     return (
       <div key={speaker.id} className="flex flex-col items-center gap-1">
         <div className="relative">
-          <button
-            onClick={() => navigate(`/host/${speaker.id}?from=${activeDemo.id}`)}
-            className={`w-10 h-10 rounded-full overflow-hidden flex items-center justify-center ${isActive ? 'ring-2 ring-green-500/50' : ''} cursor-pointer hover:opacity-80 transition-opacity`}
-          >
-            {speaker.avatarUrl ? (
-              <img src={speaker.avatarUrl} alt={speaker.name} className="w-full h-full object-cover" />
-            ) : (
-              <div className={`w-full h-full bg-gradient-to-br ${speaker.avatarGradient} flex items-center justify-center`}>
-                <span className="text-white font-bold text-xs">{speaker.name.charAt(0)}</span>
-              </div>
-            )}
-          </button>
+          {isSelf ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="relative">
+                  {avatarContent}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-36 p-1.5 bg-zinc-900 border-white/10 rounded-xl shadow-xl"
+                side="top"
+                sideOffset={8}
+              >
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={() => handleSpeakerMuteToggle(speaker.id)}
+                    className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-xs font-medium text-white hover:bg-white/10 transition-colors"
+                  >
+                    {isSpeakerMuted ? (
+                      <>
+                        <MicOff className="w-3.5 h-3.5 text-red-400" />
+                        <span>Unmute Mic</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-3.5 h-3.5 text-green-400" />
+                        <span>Mute Mic</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => handleSpeakerLeave(speaker.name)}
+                    className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Leave Session</span>
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <button
+              onClick={() => navigate(`/host/${speaker.id}?from=${activeDemo.id}`)}
+              className="relative"
+            >
+              {avatarContent}
+            </button>
+          )}
           {isActive && (
             <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2">
               <AudioWaveform isActive={true} />
+            </div>
+          )}
+          {isSpeakerMuted && (
+            <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2">
+              <MicOff className="w-3 h-3 text-red-400" />
             </div>
           )}
           {speaker.role === 'host' && (
