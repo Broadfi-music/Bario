@@ -185,33 +185,52 @@ async function getDeezerCountryPlaylist(countryCode: string, limit: number = 50)
   }
 }
 
-// Deezer API - Get country charts using real playlists, artist search as fallback
+// Deezer API - Get country charts using real playlists PLUS local artist searches for authentic results
 async function getDeezerCountryChart(countryCode: string, limit: number = 50): Promise<any[]> {
-  // Primary: fetch from real Deezer country chart playlist
-  const playlistTracks = await getDeezerCountryPlaylist(countryCode, limit);
-  if (playlistTracks.length > 0) {
-    return playlistTracks;
-  }
-
-  // Fallback: search by hardcoded artist names
+  // Fetch playlist AND local artist tracks in parallel for richer regional data
   const artists = countryArtistSearches[countryCode];
-  if (artists && artists.length > 0) {
-    try {
-      const searches = artists.map(artist => 
-        fetch(`https://api.deezer.com/search?q=${encodeURIComponent(artist)}&limit=5`)
-          .then(r => r.json())
-          .then(d => d.data || [])
-          .catch(() => [])
-      );
-      const results = await Promise.all(searches);
-      const allTracks = results.flat();
-      console.log(`Deezer country ${countryCode} fallback: Found ${allTracks.length} tracks from ${artists.length} artists`);
-      if (allTracks.length > 0) {
-        return allTracks.sort((a, b) => (b.rank || 0) - (a.rank || 0)).slice(0, limit);
-      }
-    } catch (e) {
-      console.error(`Deezer country search error for ${countryCode}:`, e);
+  
+  const [playlistTracks, artistTracks] = await Promise.all([
+    getDeezerCountryPlaylist(countryCode, limit),
+    artists && artists.length > 0
+      ? Promise.all(
+          artists.slice(0, 12).map(artist =>
+            fetch(`https://api.deezer.com/search?q=${encodeURIComponent(artist)}&limit=4`)
+              .then(r => r.json())
+              .then(d => d.data || [])
+              .catch(() => [])
+          )
+        ).then(results => results.flat())
+      : Promise.resolve([])
+  ]);
+
+  if (playlistTracks.length > 0 && artistTracks.length > 0) {
+    // Merge: prioritize local artist tracks, then fill with playlist
+    const seen = new Set<string>();
+    const merged: any[] = [];
+    
+    // Add local artist tracks first (sorted by rank)
+    const sortedArtist = artistTracks.sort((a: any, b: any) => (b.rank || 0) - (a.rank || 0));
+    for (const t of sortedArtist) {
+      const key = `${(t.title || '').toLowerCase()}_${(t.artist?.name || '').toLowerCase()}`;
+      if (!seen.has(key)) { seen.add(key); merged.push(t); }
     }
+    
+    // Fill remaining with playlist tracks
+    for (const t of playlistTracks) {
+      const key = `${(t.title || '').toLowerCase()}_${(t.artist?.name || '').toLowerCase()}`;
+      if (!seen.has(key)) { seen.add(key); merged.push(t); }
+    }
+    
+    console.log(`Deezer country ${countryCode}: ${sortedArtist.length} artist tracks + ${playlistTracks.length} playlist tracks = ${merged.length} merged`);
+    return merged.slice(0, limit);
+  }
+  
+  if (playlistTracks.length > 0) return playlistTracks;
+  
+  if (artistTracks.length > 0) {
+    console.log(`Deezer country ${countryCode} artist-only: Found ${artistTracks.length} tracks`);
+    return artistTracks.sort((a: any, b: any) => (b.rank || 0) - (a.rank || 0)).slice(0, limit);
   }
   
   // Final fallback: global chart
