@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { User, Mic, Heart, MessageSquare } from 'lucide-react';
+import { Mic, Heart, MessageSquare } from 'lucide-react';
 
 interface AuthPromptModalProps {
   isOpen: boolean;
@@ -26,8 +26,8 @@ const AuthPromptModal = ({ isOpen, onClose, action = 'interact with podcasts' }:
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-black/95 border-white/10 max-w-sm">
         <DialogHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-            <User className="h-8 w-8 text-white" />
+          <div className="mx-auto w-16 h-16 rounded-full bg-black flex items-center justify-center">
+            <img src="/bario-logo.png" alt="Bario" className="h-10 w-10 object-contain" />
           </div>
           <DialogTitle className="text-white text-xl">Sign in to continue</DialogTitle>
           <DialogDescription className="text-white/60 text-sm">
@@ -39,15 +39,15 @@ const AuthPromptModal = ({ isOpen, onClose, action = 'interact with podcasts' }:
           {/* Features preview */}
           <div className="space-y-3 py-4 border-t border-b border-white/10">
             <div className="flex items-center gap-3 text-sm text-white/80">
-              <Mic className="h-4 w-4 text-purple-400" />
+              <Mic className="h-4 w-4 text-white" />
               <span>Request to speak in live rooms</span>
             </div>
             <div className="flex items-center gap-3 text-sm text-white/80">
-              <MessageSquare className="h-4 w-4 text-blue-400" />
+              <MessageSquare className="h-4 w-4 text-white" />
               <span>Send messages and reactions</span>
             </div>
             <div className="flex items-center gap-3 text-sm text-white/80">
-              <Heart className="h-4 w-4 text-pink-400" />
+              <Heart className="h-4 w-4 text-white" />
               <span>Send gifts to your favorite hosts</span>
             </div>
           </div>
@@ -56,7 +56,7 @@ const AuthPromptModal = ({ isOpen, onClose, action = 'interact with podcasts' }:
           <div className="flex flex-col gap-2">
             <Button 
               onClick={handleSignUp}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white h-11"
+              className="w-full bg-black text-white border border-white/20 hover:bg-white/10 h-11"
             >
               Create Account
             </Button>
