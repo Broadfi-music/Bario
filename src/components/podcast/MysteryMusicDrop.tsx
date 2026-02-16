@@ -57,14 +57,23 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId }: MysteryMusicDropProps) =
       setUserVoted(false);
       setTimeLeft(90);
 
-      // Play preview at audible volume
+      // Play preview at background volume
       try {
         if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-        audioRef.current = new Audio(track.previewUrl);
-        audioRef.current.volume = 0.25;
-        audioRef.current.loop = true;
-        audioRef.current.play().catch(() => {});
-      } catch {}
+        const audio = new Audio();
+        audio.volume = 0.30;
+        audio.loop = true;
+        audio.crossOrigin = 'anonymous';
+        audio.src = track.previewUrl;
+        audioRef.current = audio;
+        
+        // Attempt play - log success/failure for debugging
+        audio.play()
+          .then(() => console.log('🎵 Mystery Drop playing:', track.title, 'by', track.artist))
+          .catch((err) => console.warn('🎵 Mystery Drop autoplay blocked:', err.message));
+      } catch (e) {
+        console.error('🎵 Mystery Drop audio error:', e);
+      }
     };
 
     // First drop after 20s, then every 3 minutes
