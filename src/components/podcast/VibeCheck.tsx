@@ -75,7 +75,7 @@ const VibeCheck = ({ isDemo = true }: VibeCheckProps) => {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
           transition={{ type: 'spring', damping: 18 }}
-          className="absolute bottom-44 left-1/2 -translate-x-1/2 z-40"
+          className="absolute bottom-56 left-1/2 -translate-x-1/2 z-40"
         >
           <div className="bg-black/90 backdrop-blur-lg rounded-xl border border-white/10 px-3 py-2 min-w-[180px]">
             <p className="text-[8px] font-bold text-white/50 uppercase text-center mb-1.5 tracking-wider">
