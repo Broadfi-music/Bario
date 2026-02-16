@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Music, ThumbsUp, ThumbsDown, Disc3 } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Disc3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Track {
@@ -14,9 +14,11 @@ interface Track {
 interface MysteryMusicDropProps {
   isDemo?: boolean;
   sessionId?: string;
+  roomCategory?: string;
+  roomTitle?: string;
 }
 
-const MysteryMusicDrop = ({ isDemo = true, sessionId }: MysteryMusicDropProps) => {
+const MysteryMusicDrop = ({ isDemo = true, sessionId, roomCategory, roomTitle }: MysteryMusicDropProps) => {
   const [currentDrop, setCurrentDrop] = useState<Track | null>(null);
   const [votes, setVotes] = useState({ keep: 0, skip: 0 });
   const [userVoted, setUserVoted] = useState(false);
@@ -26,17 +28,19 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId }: MysteryMusicDropProps) =
   const trackIndexRef = useRef(0);
   const fetchedRef = useRef(false);
 
-  // Fetch real trending tracks from edge function
+  // Fetch contextual trending tracks from edge function
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
 
     const fetchTracks = async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('mystery-music');
+        const { data, error } = await supabase.functions.invoke('mystery-music', {
+          body: { category: roomCategory || '', roomTitle: roomTitle || '' },
+        });
         if (!error && data?.tracks?.length) {
           tracksRef.current = data.tracks;
-          console.log(`🎵 Mystery Music: loaded ${data.tracks.length} trending tracks`);
+          console.log(`🎵 Mystery Music: loaded ${data.tracks.length} contextual tracks for "${roomCategory || 'general'}"`);
         }
       } catch (e) {
         console.error('Failed to fetch mystery tracks:', e);
@@ -48,7 +52,6 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId }: MysteryMusicDropProps) =
   // Trigger drops on timer
   useEffect(() => {
     const triggerDrop = () => {
-      // Only use tracks with deezer preview URLs (most reliable for browser playback)
       const playable = tracksRef.current.filter(t => 
         t.previewUrl && (t.previewUrl.includes('dzcdn.net') || t.previewUrl.includes('deezer') || t.source === 'deezer')
       );
@@ -61,7 +64,7 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId }: MysteryMusicDropProps) =
       setUserVoted(false);
       setTimeLeft(90);
 
-      // Play preview - NO crossOrigin (Deezer doesn't support CORS headers)
+      // Play preview at low volume so host/speakers remain primary
       try {
         if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
         const audio = new Audio();
@@ -72,7 +75,7 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId }: MysteryMusicDropProps) =
         audio.addEventListener('canplaythrough', () => {
           console.log('🎵 Mystery Drop audio ready:', track.title);
         });
-        audio.addEventListener('error', (e) => {
+        audio.addEventListener('error', () => {
           console.error('🎵 Mystery Drop audio FAILED to load:', track.title, audio.error?.message || 'unknown error');
         });
         
@@ -87,7 +90,6 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId }: MysteryMusicDropProps) =
       }
     };
 
-    // First drop after 20s, then every 3 minutes
     const initial = setTimeout(triggerDrop, 20000);
     const interval = setInterval(triggerDrop, 180000);
 
