@@ -55,20 +55,21 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId }: MysteryMusicDropProps) =
       setCurrentDrop(track);
       setVotes({ keep: 0, skip: 0 });
       setUserVoted(false);
-      setTimeLeft(15);
+      setTimeLeft(90);
 
-      // Play preview
+      // Play preview at audible volume
       try {
         if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
         audioRef.current = new Audio(track.previewUrl);
-        audioRef.current.volume = 0.25;
+        audioRef.current.volume = 0.65;
+        audioRef.current.loop = true;
         audioRef.current.play().catch(() => {});
       } catch {}
     };
 
-    // First drop after 30s, then every 2-3 minutes
-    const initial = setTimeout(triggerDrop, 30000);
-    const interval = setInterval(triggerDrop, 120000 + Math.random() * 60000);
+    // First drop after 20s, then every 3 minutes
+    const initial = setTimeout(triggerDrop, 20000);
+    const interval = setInterval(triggerDrop, 180000);
 
     return () => {
       clearTimeout(initial);
