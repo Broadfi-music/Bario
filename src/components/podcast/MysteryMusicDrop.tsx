@@ -16,9 +16,12 @@ interface MysteryMusicDropProps {
   sessionId?: string;
   roomCategory?: string;
   roomTitle?: string;
+  enabled?: boolean;
+  onSkip?: () => void;
+  isHost?: boolean;
 }
 
-const MysteryMusicDrop = ({ isDemo = true, sessionId, roomCategory, roomTitle }: MysteryMusicDropProps) => {
+const MysteryMusicDrop = ({ isDemo = true, sessionId, roomCategory, roomTitle, enabled = true, onSkip, isHost = false }: MysteryMusicDropProps) => {
   const [currentDrop, setCurrentDrop] = useState<Track | null>(null);
   const [votes, setVotes] = useState({ keep: 0, skip: 0 });
   const [userVoted, setUserVoted] = useState(false);
@@ -51,6 +54,7 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId, roomCategory, roomTitle }:
 
   // Trigger drops on timer
   useEffect(() => {
+    if (!enabled) return;
     const triggerDrop = () => {
       const playable = tracksRef.current.filter(t => 
         t.previewUrl && (t.previewUrl.includes('dzcdn.net') || t.previewUrl.includes('deezer') || t.source === 'deezer')
@@ -98,7 +102,7 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId, roomCategory, roomTitle }:
       clearInterval(interval);
       audioRef.current?.pause();
     };
-  }, []);
+  }, [enabled]);
 
   // Countdown timer
   useEffect(() => {
@@ -198,6 +202,14 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId, roomCategory, roomTitle }:
                   <ThumbsDown className="w-2.5 h-2.5" /> {votes.skip}
                 </button>
               </div>
+              {isHost && onSkip && (
+                <button
+                  onClick={() => { setCurrentDrop(null); audioRef.current?.pause(); onSkip(); }}
+                  className="w-full mt-1 py-1 rounded-md text-[9px] font-semibold bg-white/10 text-white/60 hover:bg-white/20 hover:text-white transition-all"
+                >
+                  Skip Drop
+                </button>
+              )}
           </div>
         </motion.div>
       )}
