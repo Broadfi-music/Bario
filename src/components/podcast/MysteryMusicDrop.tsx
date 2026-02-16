@@ -50,7 +50,7 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId }: MysteryMusicDropProps) =
     const triggerDrop = () => {
       // Only use tracks with deezer preview URLs (most reliable for browser playback)
       const playable = tracksRef.current.filter(t => 
-        t.previewUrl && (t.previewUrl.includes('deezer') || t.previewUrl.includes('cdns-preview'))
+        t.previewUrl && (t.previewUrl.includes('dzcdn.net') || t.previewUrl.includes('deezer') || t.source === 'deezer')
       );
       if (playable.length === 0) return;
 
