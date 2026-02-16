@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, Mic, Radio, Home, Flame, Swords, Trophy } from 'lucide-react';
+import NotificationBell from '@/components/NotificationBell';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
@@ -438,6 +439,7 @@ const Podcasts = () => {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
+            <NotificationBell />
             {user && (
               <Button
                 onClick={() => setShowHostStudio(true)}

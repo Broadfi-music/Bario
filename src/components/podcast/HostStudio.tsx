@@ -353,6 +353,29 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
         startRecording();
       }, 1500); // Wait for audio track to be established
       
+      // Notify all followers that host went live
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, avatar_url')
+          .eq('user_id', user.id)
+          .single();
+
+        await supabase.functions.invoke('create-notification', {
+          body: {
+            notify_followers: true,
+            source_user_id: user.id,
+            type: 'follow_live',
+            title: '🔴 Live Now!',
+            message: `${profile?.full_name || 'Someone you follow'} just went live: ${title.trim()}`,
+            icon_url: profile?.avatar_url || null,
+            action_url: `/podcasts?session=${newSessionId}`,
+          },
+        });
+      } catch (notifErr) {
+        console.log('Notification send failed (non-critical):', notifErr);
+      }
+
       toast.success('You are now LIVE!');
     } catch (err) {
       console.error('Failed to start session:', err);

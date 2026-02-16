@@ -37,6 +37,11 @@ import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Register service worker for push notifications
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>

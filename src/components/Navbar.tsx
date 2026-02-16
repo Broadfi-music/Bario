@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import NotificationBell from './NotificationBell';
 
 export const Navbar = () => {
   const { user } = useAuth();
@@ -28,6 +29,7 @@ export const Navbar = () => {
                 Space
               </Button>
             </Link>
+            <NotificationBell />
             {user ? (
               <Link to="/dashboard">
                 <Button className="bg-[#4ade80] text-black hover:bg-[#4ade80]/90 rounded-full text-[10px] sm:text-xs px-3 sm:px-4 h-7 sm:h-8 font-medium">
