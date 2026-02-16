@@ -64,9 +64,19 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId }: MysteryMusicDropProps) =
       // Play preview - NO crossOrigin (Deezer doesn't support CORS headers)
       try {
         if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-        const audio = new Audio(track.previewUrl);
+        const audio = new Audio();
         audio.volume = 0.30;
         audio.loop = true;
+        audio.preload = 'auto';
+        
+        audio.addEventListener('canplaythrough', () => {
+          console.log('🎵 Mystery Drop audio ready:', track.title);
+        });
+        audio.addEventListener('error', (e) => {
+          console.error('🎵 Mystery Drop audio FAILED to load:', track.title, audio.error?.message || 'unknown error');
+        });
+        
+        audio.src = track.previewUrl;
         audioRef.current = audio;
         
         audio.play()
