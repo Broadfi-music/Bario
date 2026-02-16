@@ -65,7 +65,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   useEffect(() => {
     audioRef.current = new Audio(activeDemo.audioUrl);
     audioRef.current.loop = true;
-    audioRef.current.volume = 0.7;
+    audioRef.current.volume = 1.0;
     
     // Auto-play with a small delay
     const playTimer = setTimeout(() => {
