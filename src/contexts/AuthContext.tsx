@@ -148,6 +148,77 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error: error as Error | null };
   };
 
+  // Register push subscription after login
+  useEffect(() => {
+    if (!user || !session) return;
+
+    const registerPushSubscription = async () => {
+      try {
+        if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') return;
+
+        const registration = await navigator.serviceWorker.ready;
+        const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+        if (!vapidPublicKey) {
+          console.log('No VAPID public key configured, skipping push subscription');
+          return;
+        }
+
+        // Check if push manager is available
+        if (!('pushManager' in registration)) {
+          console.log('Push manager not available');
+          return;
+        }
+
+        const pushManager = (registration as any).pushManager;
+
+        // Convert VAPID key to Uint8Array
+        const padding = '='.repeat((4 - (vapidPublicKey.length % 4)) % 4);
+        const base64 = (vapidPublicKey + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = atob(base64);
+        const applicationServerKey = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; i++) {
+          applicationServerKey[i] = rawData.charCodeAt(i);
+        }
+
+        const subscription = await pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey,
+        });
+
+        const subJson = subscription.toJSON();
+        if (!subJson.endpoint || !subJson.keys) return;
+
+        // Check if already saved
+        const { data: existing } = await supabase
+          .from('push_subscriptions')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('endpoint', subJson.endpoint)
+          .limit(1);
+
+        if (existing && existing.length > 0) return;
+
+        await supabase.from('push_subscriptions').insert({
+          user_id: user.id,
+          endpoint: subJson.endpoint,
+          p256dh: subJson.keys!.p256dh!,
+          auth_key: subJson.keys!.auth!,
+        });
+
+        console.log('Push subscription registered');
+      } catch (err) {
+        console.log('Push subscription setup skipped:', err);
+      }
+    };
+
+    // Delay to not block UI
+    const timer = setTimeout(registerPushSubscription, 3000);
+    return () => clearTimeout(timer);
+  }, [user, session]);
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
