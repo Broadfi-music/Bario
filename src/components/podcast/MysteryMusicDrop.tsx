@@ -61,7 +61,7 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId }: MysteryMusicDropProps) =
       try {
         if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
         audioRef.current = new Audio(track.previewUrl);
-        audioRef.current.volume = 0.65;
+        audioRef.current.volume = 0.40;
         audioRef.current.loop = true;
         audioRef.current.play().catch(() => {});
       } catch {}
@@ -127,29 +127,28 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId }: MysteryMusicDropProps) =
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: 300, opacity: 0 }}
           transition={{ type: 'spring', damping: 20 }}
-          className="absolute top-16 right-2 z-40 w-64"
+          className="absolute top-14 right-1 z-40 w-44 sm:w-56"
         >
-          <div className="bg-black/90 backdrop-blur-lg rounded-xl border border-purple-500/30 p-3 shadow-2xl shadow-purple-500/10">
-            <div className="flex items-center gap-2 mb-2">
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}>
-                <Disc3 className="w-4 h-4 text-purple-400" />
-              </motion.div>
-              <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Mystery Drop!</span>
-              <span className="ml-auto text-[10px] text-white/40">{timeLeft}s</span>
-            </div>
-
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/10 flex-shrink-0">
-                <img src={currentDrop.coverUrl} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            <div className="bg-black/90 backdrop-blur-lg rounded-xl border border-purple-500/30 p-2 shadow-2xl shadow-purple-500/10">
+              <div className="flex items-center gap-1.5 mb-1">
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}>
+                  <Disc3 className="w-3 h-3 text-purple-400" />
+                </motion.div>
+                <span className="text-[8px] font-bold text-purple-400 uppercase tracking-wider">Mystery Drop!</span>
+                <span className="ml-auto text-[8px] text-white/40">{timeLeft}s</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-white truncate">{currentDrop.title}</p>
-                <p className="text-[10px] text-white/50 truncate">{currentDrop.artist}</p>
-              </div>
-              <Music className="w-3 h-3 text-white/30" />
-            </div>
 
-            <div className="h-1.5 bg-white/10 rounded-full mb-2 overflow-hidden">
+              <div className="flex items-center gap-1.5 mb-2">
+                <div className="w-7 h-7 rounded-md overflow-hidden bg-white/10 flex-shrink-0">
+                  <img src={currentDrop.coverUrl} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-semibold text-white truncate">{currentDrop.title}</p>
+                  <p className="text-[8px] text-white/50 truncate">{currentDrop.artist}</p>
+                </div>
+              </div>
+
+            <div className="h-1 bg-white/10 rounded-full mb-1.5 overflow-hidden">
               <motion.div
                 className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full"
                 animate={{ width: `${keepPercent}%` }}
@@ -157,26 +156,26 @@ const MysteryMusicDrop = ({ isDemo = true, sessionId }: MysteryMusicDropProps) =
               />
             </div>
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleVote('keep')}
-                disabled={userVoted}
-                className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  userVoted ? 'opacity-60' : 'hover:scale-105'
-                } bg-green-500/20 text-green-400 border border-green-500/30`}
-              >
-                <ThumbsUp className="w-3 h-3" /> Keep ({votes.keep})
-              </button>
-              <button
-                onClick={() => handleVote('skip')}
-                disabled={userVoted}
-                className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  userVoted ? 'opacity-60' : 'hover:scale-105'
-                } bg-red-500/20 text-red-400 border border-red-500/30`}
-              >
-                <ThumbsDown className="w-3 h-3" /> Skip ({votes.skip})
-              </button>
-            </div>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => handleVote('keep')}
+                  disabled={userVoted}
+                  className={`flex-1 flex items-center justify-center gap-0.5 py-1 rounded-md text-[9px] font-semibold transition-all ${
+                    userVoted ? 'opacity-60' : 'hover:scale-105'
+                  } bg-green-500/20 text-green-400 border border-green-500/30`}
+                >
+                  <ThumbsUp className="w-2.5 h-2.5" /> {votes.keep}
+                </button>
+                <button
+                  onClick={() => handleVote('skip')}
+                  disabled={userVoted}
+                  className={`flex-1 flex items-center justify-center gap-0.5 py-1 rounded-md text-[9px] font-semibold transition-all ${
+                    userVoted ? 'opacity-60' : 'hover:scale-105'
+                  } bg-red-500/20 text-red-400 border border-red-500/30`}
+                >
+                  <ThumbsDown className="w-2.5 h-2.5" /> {votes.skip}
+                </button>
+              </div>
           </div>
         </motion.div>
       )}

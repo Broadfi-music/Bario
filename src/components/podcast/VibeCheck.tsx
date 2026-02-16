@@ -75,15 +75,15 @@ const VibeCheck = ({ isDemo = true }: VibeCheckProps) => {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 80, opacity: 0 }}
           transition={{ type: 'spring', damping: 18 }}
-          className="absolute bottom-52 left-1/2 -translate-x-1/2 z-40"
+          className="absolute bottom-44 left-1/2 -translate-x-1/2 z-40"
         >
-          <div className="bg-black/90 backdrop-blur-lg rounded-2xl border border-white/10 px-4 py-3 min-w-[220px]">
-            <p className="text-[10px] font-bold text-white/50 uppercase text-center mb-2 tracking-wider">
+          <div className="bg-black/90 backdrop-blur-lg rounded-xl border border-white/10 px-3 py-2 min-w-[180px]">
+            <p className="text-[8px] font-bold text-white/50 uppercase text-center mb-1.5 tracking-wider">
               Vibe Check ✨
             </p>
 
             {!showResults ? (
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center justify-center gap-1">
                 {VIBES.map((vibe, i) => (
                   <motion.button
                     key={vibe.emoji}
@@ -91,7 +91,7 @@ const VibeCheck = ({ isDemo = true }: VibeCheckProps) => {
                     whileTap={{ scale: 0.9 }}
                     onClick={() => handleVote(i)}
                     disabled={userVoted}
-                    className={`text-2xl p-1.5 rounded-xl transition-all ${
+                    className={`text-lg p-1 rounded-lg transition-all ${
                       userVoted ? 'opacity-50' : 'hover:bg-white/10'
                     }`}
                   >
@@ -100,9 +100,8 @@ const VibeCheck = ({ isDemo = true }: VibeCheckProps) => {
                 ))}
               </div>
             ) : (
-              <div className="space-y-2">
-                {/* Simple donut-like visualization */}
-                <div className="flex items-center justify-center gap-1 h-6">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-center gap-1 h-4">
                   {votes.map((v, i) => (
                     <motion.div
                       key={i}
@@ -116,8 +115,8 @@ const VibeCheck = ({ isDemo = true }: VibeCheckProps) => {
                 </div>
                 {/* Winner */}
                 <div className="text-center">
-                  <span className="text-lg">{VIBES[topIdx].emoji}</span>
-                  <p className="text-[10px] text-white/60">
+                  <span className="text-sm">{VIBES[topIdx].emoji}</span>
+                  <p className="text-[8px] text-white/60">
                     Room is feeling <span className="text-white font-bold">{VIBES[topIdx].label}</span>
                   </p>
                 </div>
@@ -125,7 +124,7 @@ const VibeCheck = ({ isDemo = true }: VibeCheckProps) => {
             )}
 
             {!showResults && (
-              <p className="text-[9px] text-white/30 text-center mt-1">
+              <p className="text-[8px] text-white/30 text-center mt-0.5">
                 {userVoted ? 'Voted!' : 'Tap your vibe'}
               </p>
             )}
