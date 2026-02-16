@@ -1037,6 +1037,39 @@ export type Database = {
         }
         Relationships: []
       }
+      space_join_requests: {
+        Row: {
+          created_at: string
+          id: string
+          responded_at: string | null
+          session_id: string
+          status: string
+          user_avatar: string | null
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          responded_at?: string | null
+          session_id: string
+          status?: string
+          user_avatar?: string | null
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          responded_at?: string | null
+          session_id?: string
+          status?: string
+          user_avatar?: string | null
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       strike_votes: {
         Row: {
           created_at: string | null
