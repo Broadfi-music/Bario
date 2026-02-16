@@ -8,6 +8,7 @@ import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import GlobalAudioPlayer from "@/components/GlobalAudioPlayer";
 import GlobalBattleNotification from "@/components/podcast/GlobalBattleNotification";
 import GlobalJoinRequestNotification from "@/components/podcast/GlobalJoinRequestNotification";
+import PushSubscriptionManager from "@/components/PushSubscriptionManager";
 
 import GlobalHeatmap from "@/pages/GlobalHeatmap";
 import AIRemix from "@/pages/AIRemix";
@@ -53,6 +54,7 @@ const App = () => {
             <BrowserRouter>
               <GlobalBattleNotification />
               <GlobalJoinRequestNotification />
+              <PushSubscriptionManager />
               <Routes>
                 {/* Heatmap is the new homepage */}
                 <Route path="/" element={<GlobalHeatmap />} />
