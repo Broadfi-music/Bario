@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Users, Plus, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { demoSession, demoSession2, demoSession3, DemoSpeaker, DemoSession, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3 } from '@/config/demoSpace';
 import AuthPromptModal from './AuthPromptModal';
 import TopEngagementModal from './TopEngagementModal';
@@ -288,12 +289,40 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={`slot-${i}`} className="flex flex-col items-center gap-1">
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (!user) {
                     setShowAuthModal(true);
                     return;
                   }
-                  toast.success('Request sent to host!');
+                  // Get user profile for name/avatar
+                  const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('full_name, username, avatar_url')
+                    .eq('user_id', user.id)
+                    .single();
+
+                  const userName = profile?.username || profile?.full_name || user.email?.split('@')[0] || 'Listener';
+                  const userAvatar = profile?.avatar_url || null;
+
+                  const { error } = await supabase
+                    .from('space_join_requests')
+                    .insert({
+                      session_id: activeDemo.id,
+                      user_id: user.id,
+                      user_name: userName,
+                      user_avatar: userAvatar,
+                      status: 'pending',
+                    });
+
+                  if (error) {
+                    if (error.code === '23505') {
+                      toast.info('You already sent a request to join!');
+                    } else {
+                      toast.error('Failed to send join request');
+                    }
+                  } else {
+                    toast.success('Request sent to host!');
+                  }
                 }}
                 className="w-10 h-10 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center hover:border-white/40 hover:bg-white/5 transition-colors"
               >
