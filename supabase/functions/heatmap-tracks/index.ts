@@ -934,7 +934,44 @@ serve(async (req) => {
       return true;
     });
     
-    // Sort by attention score - chart position preserved via chartBonus
+    // === DYNAMIC RANKING: Apply real engagement boosts ===
+    try {
+      const trackIds = tracks.map(t => String(t.id));
+      const { data: engagementData } = await supabase
+        .from('heatmap_engagement')
+        .select('track_id, score_boost, plays_count, saves_count, votes_count, updated_at')
+        .eq('country_code', country)
+        .in('track_id', trackIds);
+      
+      if (engagementData && engagementData.length > 0) {
+        const engagementMap = new Map(engagementData.map(e => [e.track_id, e]));
+        
+        for (const track of tracks) {
+          const engagement = engagementMap.get(String(track.id));
+          if (engagement) {
+            // Add engagement boost to attention score
+            track.metrics.attentionScore += engagement.score_boost;
+            
+            // Replace stableRandom change metrics with real engagement-based deltas
+            const totalEngagement = (engagement.plays_count || 0) + (engagement.saves_count || 0) * 5 + (engagement.votes_count || 0) * 2;
+            if (totalEngagement > 0) {
+              // Real change based on engagement activity
+              const engagementChange = Math.min(50, totalEngagement * 0.5);
+              track.metrics.change24h = parseFloat(engagementChange.toFixed(1));
+              track.metrics.change7d = parseFloat((engagementChange * 1.5).toFixed(1));
+              track.metrics.change30d = parseFloat((engagementChange * 2.5).toFixed(1));
+              track.trend = 'up';
+              track.momentum = engagementChange > 15 ? 'surging' : 'stable';
+            }
+          }
+        }
+        console.log(`Applied engagement boosts from ${engagementData.length} tracks`);
+      }
+    } catch (engErr) {
+      console.error('Engagement lookup error (non-fatal):', engErr);
+    }
+    
+    // Sort by attention score (now includes engagement boost) - songs compete!
     tracks.sort((a, b) => b.metrics.attentionScore - a.metrics.attentionScore);
     tracks.forEach((t, i) => t.rank = i + 1);
     

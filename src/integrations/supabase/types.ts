@@ -220,6 +220,45 @@ export type Database = {
         }
         Relationships: []
       }
+      heatmap_engagement: {
+        Row: {
+          country_code: string
+          created_at: string
+          id: string
+          last_played_at: string | null
+          plays_count: number
+          saves_count: number
+          score_boost: number
+          track_id: string
+          updated_at: string
+          votes_count: number
+        }
+        Insert: {
+          country_code?: string
+          created_at?: string
+          id?: string
+          last_played_at?: string | null
+          plays_count?: number
+          saves_count?: number
+          score_boost?: number
+          track_id: string
+          updated_at?: string
+          votes_count?: number
+        }
+        Update: {
+          country_code?: string
+          created_at?: string
+          id?: string
+          last_played_at?: string | null
+          plays_count?: number
+          saves_count?: number
+          score_boost?: number
+          track_id?: string
+          updated_at?: string
+          votes_count?: number
+        }
+        Relationships: []
+      }
       heatmap_smart_feed_events: {
         Row: {
           created_at: string

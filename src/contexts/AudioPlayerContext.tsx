@@ -7,6 +7,8 @@ interface AudioTrack {
   audioUrl: string;
   coverUrl?: string;
   type: 'podcast' | 'music' | 'radio';
+  countryCode?: string;
+  isHeatmapTrack?: boolean;
 }
 
 interface AudioPlayerContextType {
@@ -63,6 +65,24 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     };
   }, []);
 
+  const fireEngagement = (track: AudioTrack, action: 'play' | 'save' | 'vote') => {
+    if (!track.isHeatmapTrack) return;
+    // Fire-and-forget: don't block UI
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/track-engagement`;
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify({
+        track_id: track.id,
+        country_code: track.countryCode || 'GLOBAL',
+        action,
+      }),
+    }).catch(() => {}); // Silent fail
+  };
+
   const playTrack = (track: AudioTrack) => {
     if (audioRef.current) {
       if (currentTrack?.id === track.id) {
@@ -73,6 +93,8 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       }
       setCurrentTrack(track);
       setIsPlaying(true);
+      // Track engagement for heatmap tracks
+      fireEngagement(track, 'play');
     }
   };
 
