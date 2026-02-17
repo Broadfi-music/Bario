@@ -161,9 +161,13 @@ export function useHeatmapTracks(limit = 99) {
         setTracks(processedTracks);
         setSummary(data.summary || summary);
         
-        // Extract unique genres
-        const uniqueGenres = [...new Set(processedTracks.map((t: HeatmapTrack) => t.genre).filter(Boolean))];
-        setGenres(uniqueGenres as string[]);
+        // Use official genre list from API if available, otherwise extract from tracks
+        if (data.genres && data.genres.length > 0) {
+          setGenres(data.genres.filter((g: string) => g !== 'All'));
+        } else {
+          const uniqueGenres = [...new Set(processedTracks.map((t: HeatmapTrack) => t.genre).filter(Boolean))];
+          setGenres(uniqueGenres as string[]);
+        }
         
         console.log(`Heatmap loaded: ${processedTracks.length} tracks for ${countryToUse}`);
       }

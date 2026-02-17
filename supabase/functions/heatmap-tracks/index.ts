@@ -788,6 +788,29 @@ serve(async (req) => {
       console.log(`Country ${country}: ${formattedLocal.length} local (top: ${topLocal}), ${formattedTrending.length} trending, ${formattedChart.length} global`);
       
     } else if (genre && genre !== 'All') {
+      // Normalize genre param to match our keys (handles case-insensitive + aliases)
+      const genreAliasMap: Record<string, string> = {
+        'afrobeats': 'Afro', 'afro': 'Afro', 'afrobeat': 'Afro', 'african': 'Afro',
+        'pop': 'Pop', 'rap': 'Rap', 'hip-hop': 'Rap', 'hiphop': 'Rap', 'hip hop': 'Rap',
+        'rock': 'Rock', 'r&b': 'R&B', 'rnb': 'R&B', 'r and b': 'R&B',
+        'classical': 'Classical', 'jazz': 'Jazz',
+        'soul & funk': 'Soul & Funk', 'soul': 'Soul & Funk', 'funk': 'Soul & Funk',
+        'indie & alternative': 'Indie & Alternative', 'indie': 'Indie & Alternative', 'alternative': 'Indie & Alternative',
+        'latin music': 'Latin Music', 'latin': 'Latin Music',
+        'dance & edm': 'Dance & EDM', 'edm': 'Dance & EDM', 'dance': 'Dance & EDM',
+        'reggaeton': 'Reggaeton', 'electronic': 'Electronic',
+        'country': 'Country', 'metal': 'Metal',
+        'k-pop': 'K-Pop', 'kpop': 'K-Pop', 'k pop': 'K-Pop',
+        'reggae': 'Reggae', 'blues': 'Blues', 'folk': 'Folk',
+        'lofi': 'Lofi', 'lo-fi': 'Lofi', 'lo fi': 'Lofi',
+        'acoustic': 'Acoustic', 'caribbean': 'Caribbean',
+        'japanese music': 'Japanese Music', 'jpop': 'Japanese Music', 'j-pop': 'Japanese Music',
+        'animeverse': 'AnimeVerse', 'anime': 'AnimeVerse',
+        'trap': 'Trap', 'amapiano': 'Amapiano', 'gospel': 'Gospel',
+      };
+      const normalizedGenre = genreAliasMap[genre.toLowerCase()] || genre;
+      console.log(`Genre filter: raw="${genre}" → normalized="${normalizedGenre}"`);
+
       // Known top artists per genre for accurate results (Billboard + Deezer trending 2025)
       const genreArtistSearches: Record<string, string[]> = {
         'Pop': ['Taylor Swift', 'Sabrina Carpenter', 'Billie Eilish', 'Dua Lipa', 'The Weeknd', 'Ariana Grande', 'Bruno Mars', 'Lady Gaga'],
@@ -815,10 +838,12 @@ serve(async (req) => {
         'Japanese Music': ['YOASOBI', 'Ado', 'Fujii Kaze', 'Kenshi Yonezu', 'King Gnu', 'Official HIGE DANdism'],
         'AnimeVerse': ['anime opening 2025', 'anime ost trending', 'YOASOBI anime', 'LiSA anime'],
         'Trap': ['Metro Boomin', 'Future', 'Travis Scott', '21 Savage', 'Gunna', 'Young Thug', 'Lil Durk'],
+        'Amapiano': ['Kabza De Small', 'DJ Maphorisa', 'Tyla', 'Uncle Waffles', 'DBN Gogo', 'Young Stunna', 'Focalistic', 'Oscar Mbo'],
+        'Gospel': ['Maverick City Music', 'Elevation Worship', 'Hillsong', 'CeCe Winans', 'Kirk Franklin', 'Sinach'],
       };
 
       let deezerTracks: any[] = [];
-      const artistSearches = genreArtistSearches[genre];
+      const artistSearches = genreArtistSearches[normalizedGenre];
 
       if (artistSearches) {
         // Search for each artist's top tracks in parallel
@@ -839,10 +864,10 @@ serve(async (req) => {
         
         // Sort by Deezer rank (popularity) descending
         mergedResults.sort((a, b) => (b.rank || 0) - (a.rank || 0));
-        deezerTracks = mergedResults.slice(0, 50).map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre }));
+        deezerTracks = mergedResults.slice(0, 50).map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre: normalizedGenre }));
       } else {
-        const results = await searchDeezer(`${genre} music 2025`, 50);
-        deezerTracks = results.map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre }));
+        const results = await searchDeezer(`${normalizedGenre} music 2025`, 50);
+        deezerTracks = results.map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre: normalizedGenre }));
       }
 
       tracks = [...formattedUserUploads, ...deezerTracks];
