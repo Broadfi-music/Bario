@@ -1,61 +1,68 @@
 
 
-# Fix Nigeria (and All Countries) to Show Currently Trending Music
+# Fix All Genres on Bario Using Deezer's Official Genre Categories
 
 ## Problem
-The current implementation searches for each artist's name on Deezer and sorts by `RANKING`, which returns their **all-time most popular** tracks (e.g., CKay's "love nwantiti" from 2021). This does NOT reflect what is trending right now in Nigeria or on streaming platforms.
+The current genre list across Bario is limited and inconsistent:
+- **Heatmap edge function**: `['All', 'Pop', 'Hip-Hop', 'R&B', 'Rock', 'Electronic', 'Reggaeton', 'Latin', 'Afrobeats', 'K-Pop']` (only 9 genres)
+- **Upload page**: `['Pop', 'Hip-Hop', 'R&B', 'Rock', 'Electronic', 'Afrobeats', 'Amapiano', 'Reggae', 'Jazz', 'Classical', 'Country', 'Latin', 'K-Pop', 'Other']`
+- **BarioMusic page**: `['Pop', 'Hip-Hop', 'R&B', 'Afrobeats', 'Amapiano', 'Electronic', 'Rock', 'Jazz']`
+- **Create/NewRemix pages**: `['amapiano', 'trap', 'funk', 'hiphop', 'country', '80s', 'R&B', 'soul', 'pop', 'genz', 'jazz', 'reggae', 'gospel', 'instrumental']`
 
-## Root Cause
-The Deezer free API does not provide country-specific real-time charts. The `order=RANKING` parameter returns lifetime popularity, not current trends.
+These are incomplete compared to Deezer's official genre catalog and inconsistent with each other.
+
+## Deezer's Official Genre Categories (from Explore page)
+From the Deezer Explore page, the full "Explore all" genre list is:
+Pop, Rap, Rock, R&B, Classical, Jazz, Soul & Funk, Afro, Indie & Alternative, Latin Music, Dance & EDM, Reggaeton, Electronic, Country, Metal, K-Pop, Reggae, Blues, Folk, Lofi, Acoustic, Caribbean, Japanese Music, AnimeVerse
 
 ## Solution
-Modify the search strategy to bias toward **recent and currently active** tracks rather than all-time hits:
 
-### 1. Search for recent releases instead of just artist names
-Instead of searching `artist:"Wizkid"`, search for `artist:"Wizkid" 2025` or `artist:"Wizkid" 2026` to bias results toward newer tracks. If no results come back for the latest year, fall back to the previous year.
+### 1. Create a shared genre constants file
+Create `src/constants/genres.ts` to define a single source of truth for all genre lists used across the app.
 
-### 2. Use multiple search passes per artist
-- First pass: Search `artist:"ArtistName"` with `order=RANKING` (current approach)
-- Filter results to prefer tracks released in the last 12 months by checking the `release_date` field from the Deezer album data
-- If an artist has no recent tracks, keep their top 1 all-time hit as a fallback
-
-### 3. Supplement with Deezer editorial/genre playlists
-- Search for genre-specific trending content like `"afrobeats 2026"` or `"amapiano new"` to capture currently hot tracks that may not be from the hardcoded artist list
-- This catches rising artists not yet in the curated list
-
-## Technical Changes
-
-### File: `supabase/functions/heatmap-tracks/index.ts`
-
-**Update `getLocalArtistTracks` function:**
-- For each artist, fetch their top tracks AND check album release dates
-- Prioritize tracks from albums released in the last 12 months
-- Keep max 1 older "classic" hit per artist as fallback
-- Add a supplementary search for `"afrobeats 2026 new"` (for NG), `"amapiano 2026"` (for ZA), etc.
-
-**Add genre-based trending searches per country:**
+**Heatmap/Filter genres** (most relevant for charts -- 18 genres):
 ```
-Country genre map:
-- NG: ["afrobeats 2026", "naija new music"]
-- ZA: ["amapiano 2026", "south african music new"]  
-- GH: ["ghana music 2026", "highlife new"]
-- KE: ["kenyan music 2026", "gengetone new"]
-- BR: ["funk brasileiro 2026", "sertanejo new"]
-- KR: ["kpop 2026", "korean pop new"]
-- JP: ["jpop 2026", "japanese music new"]
-- etc.
+All, Pop, Rap, Rock, R&B, Afro, Dance & EDM, Electronic, Latin, Reggaeton, K-Pop, Jazz, Soul & Funk, Classical, Country, Indie & Alternative, Reggae, Metal, Blues, Lofi, Folk, Caribbean, Acoustic, Japanese Music
 ```
 
-**Update deduplication and ranking:**
-- Tracks with recent release dates get a `recencyBonus` added to their `attentionScore`
-- Formula: if released within last 6 months, add 50000 to attentionScore; within 12 months, add 25000
-- This ensures new releases rank above old classics even if the old ones have higher lifetime Deezer rank
+**Upload genres** (for user uploads -- same list plus "Other" and "Amapiano"):
+Same as above plus Amapiano and Other
 
-### Result
-When selecting Nigeria, the chart will show:
-- Top positions: Currently active/new releases from Nigerian artists (e.g., Asake's 2026 singles, Rema's latest, Ayra Starr's newest drops)
-- Middle positions: Genre-trending tracks from the Afrobeats/Naija scene
-- Lower positions: Global chart hits (international trending)
-- Sprinkled in: 1-2 all-time classics per artist as recognizable anchors
+**Remix/Create genres** (for AI remix -- keeps current style but aligned):
+Same core genres mapped to lowercase slugs
 
-This same logic applies to ALL country filters automatically.
+### 2. Update the edge function genre list
+In `supabase/functions/heatmap-tracks/index.ts`, update:
+- The `genres` array (line 547) to match the full Deezer genre set
+- The genre search logic (line 773-776) to properly search Deezer using the correct genre names
+
+### 3. Update all frontend genre lists
+Update genre arrays in:
+- `src/pages/GlobalHeatmap.tsx` -- uses genres from the hook (auto-updated from API)
+- `src/pages/Upload.tsx` -- line 217
+- `src/pages/BarioMusic.tsx` -- line 44
+- `src/pages/Create.tsx` -- line 61
+- `src/pages/NewRemix.tsx` -- line 41
+
+### 4. Fix genre assignment on tracks
+Currently tracks default to `'Pop'` or `'Electronic'` as fallback genre. Update `formatDeezerTrack` to use Deezer's genre_id field to assign proper genres using a mapping from Deezer genre IDs to genre names.
+
+## Technical Details
+
+### New file: `src/constants/genres.ts`
+Exports:
+- `HEATMAP_GENRES` -- full list for chart filtering
+- `UPLOAD_GENRES` -- for upload form
+- `REMIX_GENRES` -- for remix/create forms
+- `DEEZER_GENRE_ID_MAP` -- maps Deezer numeric genre IDs to genre names
+
+### Edge function changes (`supabase/functions/heatmap-tracks/index.ts`)
+- Update `genres` constant to full Deezer-aligned list
+- Add `deezerGenreIdMap` to map `track.genre_id` from Deezer API responses to correct genre names
+- Update `formatDeezerTrack` to use `track.album?.genre_id` for genre assignment instead of hardcoded fallbacks
+- Update genre search (line 773-776) to use proper Deezer genre terms
+
+### Frontend page changes
+- Import from shared constants file
+- Replace hardcoded genre arrays with imported constants
+
