@@ -1,86 +1,68 @@
 
 
-# Testing, Fixing, and Enabling Push Notifications
+# Fix Heatmap Country Filter to Show Real Trending Music
 
-## Current Status
+## Problem
 
-### What's Working
-- Notification bell icon is present in both Navbar and Podcasts header
-- NotificationCenter drawer opens correctly with "Notifications" title, "Read all" and "Clear" buttons
-- Mystery Music "Drop" toggle is visible in the live session header
-- MysteryMusicDrop component accepts `enabled`, `isHost`, and `onSkip` props
-- Database tables (`notifications`, `push_subscriptions`) exist with proper RLS
-- Database triggers for `new_follower`, `gift_received`, `battle_invite`, `join_accepted` are active
-- 7 test notifications exist in the database for 3 users
-- Service worker (`sw.js`) is registered on app mount
-- 34 registered users in the platform
+The country filter is NOT showing actual trending music for each country. Instead, it searches for hardcoded artist names (e.g., "Tyla", "Kabza De Small" for South Africa) and prioritizes those search results over the real Deezer country chart playlist. This means users see artist catalog tracks ranked by Deezer's internal popularity score, not by what's actually trending in that country right now.
 
-### What's Missing / Broken
-1. **No `send-push-notification` edge function exists** -- it was planned but never created
-2. **No VAPID keys configured** -- needed for Web Push API
-3. **Push subscription flow not implemented** -- users never subscribe to push notifications after login
-4. **No scheduled/periodic notifications** -- nothing sends notifications to offline users proactively
-5. **Console shows repeated `CHANNEL_ERROR`** for battle invite subscriptions (unrelated but noisy)
+The same issue affects GLOBAL -- Spotify returns 404 for all playlists, so only the Deezer global chart is used, which is correct. But the Deezer chart endpoint (`/chart/0/tracks`) returns the actual real-time global chart, so that part is fine.
 
-## Implementation Plan
+## Root Cause
 
-### Step 1: Generate and Store VAPID Keys
-- Generate a VAPID key pair (can be done via the edge function itself on first run, or hardcoded)
-- Store `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` as secrets
-- Add `VAPID_PUBLIC_KEY` as a public env variable in the codebase (it's safe -- it's a public key)
+In the `getDeezerCountryChart` function, artist search results are placed FIRST and playlist tracks fill the remaining slots. The merge logic (lines 207-227) does:
+1. Add all artist search results first (sorted by Deezer's `rank` field -- which is a track's overall popularity, NOT chart position)
+2. Then fill remaining with actual chart playlist tracks
 
-### Step 2: Create `send-push-notification` Edge Function
-- New edge function at `supabase/functions/send-push-notification/index.ts`
-- Accepts `user_id`, `title`, `message`, `action_url`, and optionally `notify_all` flag
-- Looks up push subscriptions for the target user(s)
-- Uses Web Push protocol with VAPID keys to send browser push notifications
-- Falls back gracefully if no subscriptions exist
+This completely defeats the purpose of having country chart playlists.
 
-### Step 3: Add Push Subscription Flow in AuthContext
-- After successful login/signup, request notification permission via `Notification.requestPermission()`
-- If granted, subscribe to push via `serviceWorkerRegistration.pushManager.subscribe()`
-- Save the subscription (endpoint, p256dh, auth) to `push_subscriptions` table
-- This ensures every logged-in user is subscribed for push notifications
+## Solution
 
-### Step 4: Create `send-bulk-notifications` Edge Function
-- New edge function that can send notifications to all users or specific user groups
-- Used for periodic engagement notifications (chart updates, weekly recaps, etc.)
-- Inserts into `notifications` table AND sends push notifications
-- Can be called manually or via a cron-like trigger
+### Change 1: Use ONLY chart playlists for country data
 
-### Step 5: Send Test Notifications to All 34 Users
-- Insert notifications for all registered users with engaging content:
-  - "Trending Now: Aperture by Harry Styles just hit #1!"
-  - "Live Now: Solomon Harvey is hosting 'As A Man Thinketh'"
-  - "Your weekly recap is ready"
-- Also trigger push notifications for any users with active subscriptions
+Modify `getDeezerCountryChart` to use ONLY the Deezer country playlist. Remove the artist search merging entirely. Artist searches should only be used as a last-resort fallback if the playlist returns zero tracks.
 
-### Step 6: Fix Minor Issues
-- Suppress the `CHANNEL_ERROR` spam in console for battle invite subscriptions
-- Ensure the notification bell shows unread count badge properly for logged-in users
+This means:
+- South Africa will show whatever is actually trending on Deezer's ZA chart
+- Nigeria will show Deezer's NG chart
+- etc.
 
-### Step 7: Screenshots and Verification
-- Navigate to the app logged in and show notification bell with unread count
-- Open NotificationCenter and show notifications listed
-- Show the Mystery Drop toggle and Skip button in live session
-- Show the Mystery Drop card appearing with track info and vote buttons
+### Change 2: Use Deezer's editorial chart playlists
+
+The current playlist IDs may be user-created playlists rather than official Deezer editorial charts. Replace them with Deezer's official chart endpoint where available:
+- Use `https://api.deezer.com/chart/{country_id}/tracks` for countries where Deezer has official charts
+- Fall back to editorial playlists only where the chart endpoint is unavailable
+
+Deezer provides country-specific charts at `https://api.deezer.com/chart/0/tracks` (global) but for country-specific, we should try using the editorial playlists endpoint or verified chart playlist IDs.
+
+### Change 3: Keep playlist order as chart position
+
+Currently, tracks are re-sorted by `attentionScore` (line 693), which destroys the original chart ordering. For country charts, the playlist order IS the chart position, so we should preserve it by using the original index as a significant factor in the attention score calculation.
 
 ## Technical Details
 
-### Files to Create
-- `supabase/functions/send-push-notification/index.ts` -- Web Push delivery edge function
-- `supabase/functions/send-bulk-notifications/index.ts` -- Bulk notification sender
+### File: `supabase/functions/heatmap-tracks/index.ts`
 
-### Files to Modify
-- `src/contexts/AuthContext.tsx` -- Add push subscription registration after login
-- `src/components/podcast/DemoLiveSpace.tsx` -- Minor fix if needed
-- `supabase/config.toml` -- Add verify_jwt config for new edge functions
+**Modify `getDeezerCountryChart` (lines 189-238)**:
+- Remove the parallel artist search
+- Use only `getDeezerCountryPlaylist` to get the actual chart
+- Fall back to artist search ONLY if the playlist returns 0 tracks
 
-### Secrets to Add
-- `VAPID_PUBLIC_KEY` -- Public key for Web Push (also embedded in client code)
-- `VAPID_PRIVATE_KEY` -- Private key for Web Push (edge function only)
+**Modify `formatDeezerTrack` (lines 444-493)**:
+- Factor in the chart position (index) more heavily into `attentionScore` so tracks maintain their chart order after the global sort
 
-### Database Operations
-- Insert notifications for all 34 users to demonstrate the system working
-- No schema changes needed (tables already exist)
+**Modify the country branch (lines 625-651)**:
+- Since Spotify returns 404 for all country playlists, remove the Spotify call for country-specific queries to avoid wasted API calls and latency
+- Rely solely on Deezer chart playlists for country data
+
+**Modify the GLOBAL branch (lines 664-681)**:
+- Remove the Spotify global call (also 404) to avoid latency
+- Keep Deezer global chart + Audius trending as sources
+
+### Summary of changes:
+- 1 file modified: `supabase/functions/heatmap-tracks/index.ts`
+- Artist search lists kept in code but only used as fallback when playlist returns nothing
+- Chart position preserved in ranking
+- Spotify calls removed (all returning 404) to improve response speed
+- No database changes needed
 
