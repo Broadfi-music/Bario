@@ -811,98 +811,97 @@ serve(async (req) => {
       const normalizedGenre = genreAliasMap[genre.toLowerCase()] || genre;
       console.log(`Genre filter: raw="${genre}" → normalized="${normalizedGenre}"`);
 
-      // Known top artists per genre for accurate results (Billboard + Deezer trending 2025)
-      const genreArtistSearches: Record<string, string[]> = {
-        'Pop': ['Taylor Swift', 'Sabrina Carpenter', 'Billie Eilish', 'Dua Lipa', 'The Weeknd', 'Ariana Grande', 'Bruno Mars', 'Lady Gaga'],
-        'Rap': ['Kendrick Lamar', 'Drake', 'Travis Scott', 'Future', 'J. Cole', 'Lil Baby', '21 Savage', 'Metro Boomin'],
-        'Rock': ['Linkin Park', 'Imagine Dragons', 'Coldplay', 'Green Day', 'Foo Fighters', 'Arctic Monkeys'],
-        'R&B': ['SZA', 'Chris Brown', 'Bryson Tiller', 'Summer Walker', 'Daniel Caesar', 'Brent Faiyaz', 'Usher'],
-        'Classical': ['Ludovico Einaudi', 'Yo-Yo Ma', 'Lang Lang', 'André Rieu', 'Hans Zimmer'],
-        'Jazz': ['Robert Glasper', 'Kamasi Washington', 'Gregory Porter', 'Norah Jones', 'Diana Krall'],
-        'Soul & Funk': ['Anderson .Paak', 'Leon Bridges', 'H.E.R.', 'Lucky Daye', 'Silk Sonic'],
-        'Afro': ['Burna Boy', 'Wizkid', 'Davido', 'Rema', 'Asake', 'Ayra Starr', 'Tems', 'CKay'],
-        'Indie & Alternative': ['Hozier', 'Tame Impala', 'Radiohead', 'The 1975', 'Clairo', 'Bon Iver'],
-        'Latin Music': ['Bad Bunny', 'Peso Pluma', 'Karol G', 'Rauw Alejandro', 'Feid', 'Ozuna', 'J Balvin'],
-        'Dance & EDM': ['David Guetta', 'Calvin Harris', 'Tiësto', 'Martin Garrix', 'Marshmello', 'Fisher'],
-        'Reggaeton': ['Bad Bunny', 'Daddy Yankee', 'Ozuna', 'J Balvin', 'Rauw Alejandro', 'Anuel AA'],
-        'Electronic': ['Fred again..', 'Skrillex', 'Disclosure', 'Flume', 'ODESZA', 'Bonobo'],
-        'Country': ['Morgan Wallen', 'Luke Combs', 'Zach Bryan', 'Chris Stapleton', 'Jelly Roll', 'Shaboozey'],
-        'Metal': ['Metallica', 'Slipknot', 'Avenged Sevenfold', 'Gojira', 'Bring Me The Horizon', 'Ghost'],
-        'K-Pop': ['BTS', 'BLACKPINK', 'Stray Kids', 'NewJeans', 'aespa', 'SEVENTEEN', 'IVE', 'LE SSERAFIM'],
-        'Reggae': ['Bob Marley', 'Shaggy', 'Sean Paul', 'Protoje', 'Koffee', 'Chronixx'],
-        'Blues': ['Gary Clark Jr.', 'Joe Bonamassa', 'Kingfish', 'Buddy Guy', 'Beth Hart'],
-        'Folk': ['Mumford & Sons', 'Fleet Foxes', 'Iron & Wine', 'The Lumineers', 'Vance Joy'],
-        'Lofi': ['lofi girl', 'Idealism', 'Jinsang', 'Kupla', 'Tomppabeats', 'Lofive'],
-        'Acoustic': ['Ed Sheeran acoustic', 'John Mayer acoustic', 'Jack Johnson', 'Jason Mraz', 'Passenger'],
-        'Caribbean': ['Machel Montano', 'Bunji Garlin', 'Destra Garcia', 'Kes', 'Patrice Roberts'],
-        'Japanese Music': ['YOASOBI', 'Ado', 'Fujii Kaze', 'Kenshi Yonezu', 'King Gnu', 'Official HIGE DANdism'],
-        'AnimeVerse': ['anime opening 2025', 'anime ost trending', 'YOASOBI anime', 'LiSA anime'],
-        'Trap': ['Metro Boomin', 'Future', 'Travis Scott', '21 Savage', 'Gunna', 'Young Thug', 'Lil Durk'],
-        'Amapiano': ['Kabza De Small', 'DJ Maphorisa', 'Tyla', 'Uncle Waffles', 'DBN Gogo', 'Young Stunna', 'Focalistic', 'Oscar Mbo'],
-        'Gospel': ['Maverick City Music', 'Elevation Worship', 'Hillsong', 'CeCe Winans', 'Kirk Franklin', 'Sinach'],
+      // Deezer editorial playlist IDs per genre (from Deezer Explore page - curated & accurate)
+      const genrePlaylistIds: Record<string, number[]> = {
+        'Pop': [1996494362, 1964085082],           // Hot Hits, Feel Good Pop
+        'Rap': [6682665064, 1109890291],            // Fresh Rap, Rap Caviar
+        'Rock': [1306978785, 1282308225],           // Hot New Rock, Rock Hits
+        'R&B': [5014647904, 2021225582],            // Hot R&B, Fresh R&B
+        'Classical': [1500943781, 1739207922],       // New Classical, Classical Essentials
+        'Jazz': [2138566342, 1282333465],            // Jazz Now, Jazz Vibes
+        'Soul & Funk': [1746835762, 4485213484],     // New Funk, Feel Good Soul
+        'Afro': [1257036831, 10567515462],           // New Afro, Feel Good Afro
+        'Indie & Alternative': [1402845615, 1282312585], // New Alternative, Indie Hits
+        'Latin Music': [3482267886, 10759132562],    // Feel Good Latin, Bombón
+        'Dance & EDM': [2249258602, 146819501],      // New Dance, Hyper Rave
+        'Reggaeton': [10759132562, 3482267886],      // Bombón, Feel Good Latin
+        'Electronic': [2249258602, 146819501],       // New Dance, Hyper Rave
+        'Country': [1282316005, 1282316005],         // Country Hits
+        'Metal': [1050179021, 1282320445],           // Metal Radar, Metal Hits
+        'K-Pop': [12244134951, 1282336565],          // Fresh K-Pop, K-Pop Hits
+        'Reggae': [1282324085, 1282324085],          // Reggae Hits
+        'Blues': [1282328565, 1282328565],            // Blues Hits
+        'Folk': [1282340925, 1282340925],             // Folk Hits
+        'Acoustic': [1282344725, 1282344725],         // Acoustic Hits
+        'Caribbean': [1282348565, 1282348565],        // Caribbean Hits
+        'Japanese Music': [1282352525, 1282352525],   // Japanese Music Hits
+        'AnimeVerse': [1282356245, 1282356245],       // AnimeVerse
+      };
+
+      // Fallback search terms for genres without reliable playlists
+      const genreFallbackSearch: Record<string, string> = {
+        'Lofi': 'lofi beats chill 2025',
+        'Trap': 'trap music 2025 hip hop',
+        'Amapiano': 'amapiano 2025 trending',
+        'Gospel': 'gospel music 2025 worship',
       };
 
       let deezerTracks: any[] = [];
-      const artistSearches = genreArtistSearches[normalizedGenre];
+      const playlistIds = genrePlaylistIds[normalizedGenre];
 
-      if (artistSearches) {
-        // Search for each artist's top tracks using exact artist search + artist name validation
-        const searchPromises = artistSearches.map(async (artist) => {
-          // Use Deezer's artist:"name" syntax for more precise results
-          const isSearchPhrase = artist.includes(' ') && !artist.includes('"');
-          const query = isSearchPhrase && !artist.toLowerCase().includes('anime') && !artist.toLowerCase().includes('lofi') && !artist.toLowerCase().includes('trending')
-            ? `artist:"${artist}"`
-            : artist;
-          const results = await searchDeezer(query, 15);
+      if (playlistIds) {
+        // PRIMARY: Fetch from Deezer editorial playlists (curated by Deezer editors)
+        try {
+          const playlistResults = await Promise.all(
+            playlistIds.map(async (pid) => {
+              try {
+                const response = await fetch(`https://api.deezer.com/playlist/${pid}/tracks?limit=50`);
+                const data = await response.json();
+                return data.data || [];
+              } catch {
+                return [];
+              }
+            })
+          );
           
-          // CRITICAL: Validate artist name matches to prevent fuzzy search pollution
-          const searchedArtist = artist.toLowerCase().replace(/"/g, '');
-          const validated = results.filter((t: any) => {
-            const returnedArtist = (t.artist?.name || '').toLowerCase();
-            // Skip validation for search phrases (like "anime opening 2025")
-            if (artist.toLowerCase().includes('anime') || artist.toLowerCase().includes('lofi') || artist.toLowerCase().includes('trending') || artist.toLowerCase().includes('ost')) {
-              return true;
-            }
-            // Exact match
-            if (returnedArtist === searchedArtist) return true;
-            // For short artist names (<=4 chars like "IVE", "BTS", "Ado"), require exact match only
-            if (searchedArtist.length <= 4) {
-              return returnedArtist === searchedArtist;
-            }
-            // For longer names, allow substring but with minimum length ratio to prevent false positives
-            const shorter = searchedArtist.length < returnedArtist.length ? searchedArtist : returnedArtist;
-            const longer = searchedArtist.length < returnedArtist.length ? returnedArtist : searchedArtist;
-            if (shorter.length < longer.length * 0.5) return false; // Too different in length
-            return returnedArtist.includes(searchedArtist) || searchedArtist.includes(returnedArtist);
-          });
+          // Merge and deduplicate
+          const seenIds = new Set<string>();
+          const seenKeys = new Set<string>();
+          const mergedTracks: any[] = [];
           
-          return validated;
-        });
-        const allResults = await Promise.all(searchPromises);
-        
-        // Merge results, deduplicate, keep tracks with previews
-        const seenIds = new Set<string>();
-        const seenTitleArtist = new Set<string>();
-        const mergedResults: any[] = [];
-        for (const results of allResults) {
-          for (const track of results) {
-            const titleArtistKey = `${(track.title || '').toLowerCase()}_${(track.artist?.name || '').toLowerCase()}`;
-            if (!seenIds.has(String(track.id)) && !seenTitleArtist.has(titleArtistKey) && track.preview) {
-              seenIds.add(String(track.id));
-              seenTitleArtist.add(titleArtistKey);
-              mergedResults.push(track);
+          for (const tracks of playlistResults) {
+            for (const t of tracks) {
+              const key = `${(t.title || '').toLowerCase()}_${(t.artist?.name || '').toLowerCase()}`;
+              if (!seenIds.has(String(t.id)) && !seenKeys.has(key) && t.preview) {
+                seenIds.add(String(t.id));
+                seenKeys.add(key);
+                mergedTracks.push(t);
+              }
             }
           }
+          
+          deezerTracks = mergedTracks.map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL', i), genre: normalizedGenre }));
+          console.log(`Genre "${normalizedGenre}": Got ${deezerTracks.length} tracks from ${playlistIds.length} editorial playlists`);
+        } catch (e) {
+          console.error(`Playlist fetch failed for ${normalizedGenre}:`, e);
         }
+      }
+
+      // If playlists returned too few tracks, supplement with search
+      if (deezerTracks.length < 15) {
+        const searchTerm = genreFallbackSearch[normalizedGenre] || `${normalizedGenre} music 2025 trending`;
+        console.log(`Genre "${normalizedGenre}": only ${deezerTracks.length} tracks, supplementing with search: "${searchTerm}"`);
+        const results = await searchDeezer(searchTerm, 50);
         
-        // Sort by Deezer rank (popularity) descending
-        mergedResults.sort((a, b) => (b.rank || 0) - (a.rank || 0));
-        deezerTracks = mergedResults.slice(0, 50).map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre: normalizedGenre }));
-        console.log(`Genre "${normalizedGenre}": ${mergedResults.length} validated tracks from ${artistSearches.length} artists`);
-      } else {
-        const results = await searchDeezer(`${normalizedGenre} music 2025`, 50);
-        deezerTracks = results.map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre: normalizedGenre }));
-        console.log(`Genre "${normalizedGenre}": ${deezerTracks.length} tracks from generic search (no artist map)`);
+        const existingIds = new Set(deezerTracks.map(t => t.id));
+        const existingKeys = new Set(deezerTracks.map(t => `${t.title.toLowerCase()}_${t.artist.toLowerCase()}`));
+        const supplementTracks = results
+          .filter((t: any) => t.preview && !existingIds.has(String(t.id)))
+          .filter((t: any) => !existingKeys.has(`${(t.title || '').toLowerCase()}_${(t.artist?.name || '').toLowerCase()}`))
+          .map((t: any, i: number) => ({ ...formatDeezerTrack(t, i + deezerTracks.length, 'GLOBAL'), genre: normalizedGenre }));
+        
+        deezerTracks = [...deezerTracks, ...supplementTracks];
+        console.log(`Genre "${normalizedGenre}": total after supplement = ${deezerTracks.length}`);
       }
 
       tracks = [...formattedUserUploads, ...deezerTracks];
