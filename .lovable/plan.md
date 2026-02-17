@@ -1,68 +1,105 @@
 
 
-# Fix All Genres on Bario Using Deezer's Official Genre Categories
+# Bario Codebase Restructuring and README Update
 
-## Problem
-The current genre list across Bario is limited and inconsistent:
-- **Heatmap edge function**: `['All', 'Pop', 'Hip-Hop', 'R&B', 'Rock', 'Electronic', 'Reggaeton', 'Latin', 'Afrobeats', 'K-Pop']` (only 9 genres)
-- **Upload page**: `['Pop', 'Hip-Hop', 'R&B', 'Rock', 'Electronic', 'Afrobeats', 'Amapiano', 'Reggae', 'Jazz', 'Classical', 'Country', 'Latin', 'K-Pop', 'Other']`
-- **BarioMusic page**: `['Pop', 'Hip-Hop', 'R&B', 'Afrobeats', 'Amapiano', 'Electronic', 'Rock', 'Jazz']`
-- **Create/NewRemix pages**: `['amapiano', 'trap', 'funk', 'hiphop', 'country', '80s', 'R&B', 'soul', 'pop', 'genz', 'jazz', 'reggae', 'gospel', 'instrumental']`
+## Overview
 
-These are incomplete compared to Deezer's official genre catalog and inconsistent with each other.
+This plan reorganizes the entire codebase so any developer (frontend, backend, or full-stack) can quickly understand the project structure, and updates the README to serve as comprehensive developer documentation.
 
-## Deezer's Official Genre Categories (from Explore page)
-From the Deezer Explore page, the full "Explore all" genre list is:
-Pop, Rap, Rock, R&B, Classical, Jazz, Soul & Funk, Afro, Indie & Alternative, Latin Music, Dance & EDM, Reggaeton, Electronic, Country, Metal, K-Pop, Reggae, Blues, Folk, Lofi, Acoustic, Caribbean, Japanese Music, AnimeVerse
+## Native App Question
 
-## Solution
+Lovable builds web apps with **React + TypeScript**. It cannot write Flutter, Swift, or Kotlin code. However, your app can become a real native Android/iOS app using **Capacitor**, which wraps your existing React code into a native shell. No rewrite needed -- your current codebase is already configured for this. A developer would clone the repo, run `npx cap add android` / `npx cap add ios`, and build with Android Studio or Xcode.
 
-### 1. Create a shared genre constants file
-Create `src/constants/genres.ts` to define a single source of truth for all genre lists used across the app.
+## What Changes
 
-**Heatmap/Filter genres** (most relevant for charts -- 18 genres):
+### 1. Updated README.md
+
+A complete rewrite covering:
+- Project overview and architecture diagram
+- Tech stack breakdown
+- Folder structure guide (what each directory does)
+- Setup instructions (local dev, environment variables, Capacitor mobile builds)
+- All API endpoints with request/response examples
+- Database schema reference (all 30+ tables)
+- Realtime features explanation
+- Authentication flow
+- Edge function documentation
+- Contribution guidelines
+
+### 2. Code Organization Documentation
+
+Add inline documentation files to key directories:
+
+**New files to create:**
+- `src/README.md` -- Frontend architecture overview
+- `supabase/functions/README.md` -- Backend functions guide with auth requirements and payload schemas
+- `ARCHITECTURE.md` -- High-level system architecture doc at project root
+- `CONTRIBUTING.md` -- Developer contribution guide
+
+### 3. Folder Structure Reference
+
+The README will document the current structure clearly:
+
+```text
+bario/
++-- public/                    # Static assets (icons, demo audio, gift animations)
++-- src/
+|   +-- assets/                # App images (album art, backgrounds, track covers)
+|   +-- components/
+|   |   +-- ui/                # Reusable UI primitives (shadcn/ui - button, dialog, etc.)
+|   |   +-- podcast/           # Live streaming & battle components (36 files)
+|   |   +-- *.tsx              # Shared app components (Navbar, AudioPlayer, Hero, etc.)
+|   +-- config/                # App configuration (demo space settings)
+|   +-- constants/             # Static data (genre lists)
+|   +-- contexts/              # React contexts (Auth, AudioPlayer)
+|   +-- hooks/                 # Custom hooks (Agora audio, notifications, Spotify, etc.)
+|   +-- integrations/          # Auto-generated backend client (DO NOT EDIT)
+|   +-- lib/                   # Utility functions (audio processing, auth helpers)
+|   +-- pages/                 # Route pages (26 pages)
++-- supabase/
+|   +-- functions/             # 21 serverless backend functions
+|   +-- migrations/            # Database migration SQL files
+|   +-- config.toml            # Backend configuration (auto-managed)
 ```
-All, Pop, Rap, Rock, R&B, Afro, Dance & EDM, Electronic, Latin, Reggaeton, K-Pop, Jazz, Soul & Funk, Classical, Country, Indie & Alternative, Reggae, Metal, Blues, Lofi, Folk, Caribbean, Acoustic, Japanese Music
-```
 
-**Upload genres** (for user uploads -- same list plus "Other" and "Amapiano"):
-Same as above plus Amapiano and Other
+### 4. README Content Sections
 
-**Remix/Create genres** (for AI remix -- keeps current style but aligned):
-Same core genres mapped to lowercase slugs
-
-### 2. Update the edge function genre list
-In `supabase/functions/heatmap-tracks/index.ts`, update:
-- The `genres` array (line 547) to match the full Deezer genre set
-- The genre search logic (line 773-776) to properly search Deezer using the correct genre names
-
-### 3. Update all frontend genre lists
-Update genre arrays in:
-- `src/pages/GlobalHeatmap.tsx` -- uses genres from the hook (auto-updated from API)
-- `src/pages/Upload.tsx` -- line 217
-- `src/pages/BarioMusic.tsx` -- line 44
-- `src/pages/Create.tsx` -- line 61
-- `src/pages/NewRemix.tsx` -- line 41
-
-### 4. Fix genre assignment on tracks
-Currently tracks default to `'Pop'` or `'Electronic'` as fallback genre. Update `formatDeezerTrack` to use Deezer's genre_id field to assign proper genres using a mapping from Deezer genre IDs to genre names.
+1. **Bario Music Platform** -- One-paragraph summary
+2. **Tech Stack** -- React 18, TypeScript, Vite, Tailwind, shadcn/ui, Agora, Capacitor
+3. **Architecture** -- Frontend SPA + serverless backend + realtime WebSockets
+4. **Folder Structure** -- Annotated tree (as above)
+5. **Getting Started** -- Clone, install, env vars, run
+6. **Mobile App Build** -- Capacitor setup for Android/iOS
+7. **Pages & Routes** -- Table mapping all 26 routes to their page components
+8. **API Reference** -- All 21 edge functions with method, auth, payload, response
+9. **Database Schema** -- All tables with columns and RLS policy summaries
+10. **Realtime Features** -- Chat, battle scores, gifts, session updates
+11. **Key Features** -- Heatmap, Three Strike, Battles, Gifting, Notifications
+12. **Environment Variables** -- Required secrets and where they're used
+13. **Component Guide** -- What each major component does
+14. **Contributing** -- Code style, PR process, testing
 
 ## Technical Details
 
-### New file: `src/constants/genres.ts`
-Exports:
-- `HEATMAP_GENRES` -- full list for chart filtering
-- `UPLOAD_GENRES` -- for upload form
-- `REMIX_GENRES` -- for remix/create forms
-- `DEEZER_GENRE_ID_MAP` -- maps Deezer numeric genre IDs to genre names
+### Files to Create/Update
 
-### Edge function changes (`supabase/functions/heatmap-tracks/index.ts`)
-- Update `genres` constant to full Deezer-aligned list
-- Add `deezerGenreIdMap` to map `track.genre_id` from Deezer API responses to correct genre names
-- Update `formatDeezerTrack` to use `track.album?.genre_id` for genre assignment instead of hardcoded fallbacks
-- Update genre search (line 773-776) to use proper Deezer genre terms
+| File | Action | Purpose |
+|------|--------|---------|
+| `README.md` | Rewrite | Full developer documentation |
+| `ARCHITECTURE.md` | Create | System architecture with diagrams |
+| `CONTRIBUTING.md` | Create | Developer contribution guidelines |
+| `src/README.md` | Create | Frontend code guide |
+| `supabase/functions/README.md` | Create | Backend functions reference |
 
-### Frontend page changes
-- Import from shared constants file
-- Replace hardcoded genre arrays with imported constants
+### Key Improvements
+
+- Every edge function will be documented with its HTTP method, auth requirement, request body schema, and response format
+- All 30+ database tables will be listed with their purpose and key columns
+- The 36 podcast/live components will be grouped and explained by feature area (battles, gifts, chat, moderation)
+- Route table maps URLs to components so developers know where to find page code
+- Clear separation between auto-generated files (DO NOT EDIT) and editable code
+
+### No Breaking Changes
+
+This is purely documentation -- no functional code changes, no file moves, no refactoring. The app continues to work exactly as it does now.
 
