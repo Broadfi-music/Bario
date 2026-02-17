@@ -7,8 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
-const LASTFM_API_KEY = Deno.env.get('LASTFM_API_KEY');
-
 // Deterministic hash function for stable metrics
 function stableRandom(seed: string): number {
   let hash = 0;
@@ -19,114 +17,45 @@ function stableRandom(seed: string): number {
   return Math.abs(hash % 1000) / 1000;
 }
 
-// Get today's date string for daily-stable seeds
 function todaySeed(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-// Deezer country chart playlist IDs (real Deezer playlists that update automatically)
-const deezerCountryPlaylists: Record<string, number> = {
-  'GLOBAL': 3155776842,
-  'US': 1313621735,
-  'UK': 1111142221,
-  'NG': 1362516565,
-  'ZA': 1362528775,
-  'KE': 1362509215,
-  'BR': 1111141961,
-  'MX': 1111142361,
-  'FR': 1109890291,
-  'DE': 1111143121,
-  'JP': 1362508955,
-  'KR': 1362510315,
-  'AU': 1313616925,
-  'CA': 1652248171,
-  'ES': 1116190041,
-  'IT': 1116187241,
+// Country-specific top artists - this is the PRIMARY source for country charts
+const countryArtists: Record<string, string[]> = {
+  'NG': ['Wizkid', 'Burna Boy', 'Davido', 'Rema', 'Asake', 'Ayra Starr', 'Tems', 'Omah Lay', 'Ckay', 'Fireboy DML', 'Joeboy', 'Kizz Daniel', 'Shallipopi', 'Young Jonn', 'Seyi Vibez', 'Spyro', 'BNXN'],
+  'US': ['Drake', 'Kendrick Lamar', 'Taylor Swift', 'The Weeknd', 'Bad Bunny', 'SZA', 'Post Malone', 'Travis Scott', 'Morgan Wallen', 'Billie Eilish', 'Doja Cat', 'Future', 'Metro Boomin', 'Sabrina Carpenter'],
+  'UK': ['Central Cee', 'Ed Sheeran', 'Dua Lipa', 'Dave', 'Stormzy', 'Little Simz', 'Tion Wayne', 'Headie One', 'Skepta', 'AJ Tracey', 'Jorja Smith', 'Sam Smith'],
+  'GH': ['Sarkodie', 'Shatta Wale', 'Stonebwoy', 'Black Sherif', 'King Promise', 'Gyakie', 'Camidoh', 'Kuami Eugene', 'KiDi', 'Lasmid'],
+  'ZA': ['Tyla', 'Kabza De Small', 'DJ Maphorisa', 'Nasty C', 'Cassper Nyovest', 'A-Reece', 'Master KG', 'Focalistic', 'Ami Faku', 'Sun-El Musician', 'DBN Gogo', 'Uncle Waffles', 'Young Stunna'],
+  'KE': ['Sauti Sol', 'Nyashinski', 'Khaligraph Jones', 'Otile Brown', 'Nviiri The Storyteller', 'Bensoul', 'Bien', 'Nikita Kering'],
+  'BR': ['Anitta', 'Ludmilla', 'MC Livinho', 'Luisa Sonza', 'Pedro Sampaio', 'Gusttavo Lima', 'Jorge & Mateus', 'Henrique & Juliano'],
+  'MX': ['Peso Pluma', 'Natanael Cano', 'Junior H', 'Luis R Conriquez', 'Fuerza Regida', 'Grupo Frontera', 'Ivan Cornejo'],
+  'FR': ['Aya Nakamura', 'Jul', 'Ninho', 'Damso', 'Gazo', 'Tiakola', 'PLK', 'Laylow', 'Werenoi'],
+  'DE': ['Apache 207', 'Luciano', 'RAF Camora', 'Capital Bra', 'Bonez MC', 'Sido', 'Kontra K', 'Samra'],
+  'JP': ['YOASOBI', 'Ado', 'King Gnu', 'Fujii Kaze', 'Mrs. GREEN APPLE', 'Kenshi Yonezu', 'Official HIGE DANdism', 'imase'],
+  'KR': ['BTS', 'BLACKPINK', 'Stray Kids', 'NewJeans', 'aespa', 'IVE', 'LE SSERAFIM', 'SEVENTEEN', 'NCT', 'TWICE', 'ENHYPEN'],
+  'IN': ['Arijit Singh', 'Diljit Dosanjh', 'AP Dhillon', 'Badshah', 'Divine', 'Raftaar', 'Karan Aujla', 'Shreya Ghoshal'],
+  'AU': ['The Kid LAROI', 'Tame Impala', 'Troye Sivan', 'Vance Joy', '5 Seconds of Summer', 'Sia'],
+  'CA': ['The Weeknd', 'Justin Bieber', 'Shawn Mendes', 'NAV', 'PartyNextDoor', 'Alessia Cara'],
+  'ES': ['Rosalía', 'Quevedo', 'Rauw Alejandro', 'Rels B', 'Mora', 'Omar Montes', 'C. Tangana'],
+  'IT': ['Mahmood', 'Sfera Ebbasta', 'Geolier', 'Tedua', 'Guè', 'Blanco', 'Annalisa']
 };
 
-// Country-specific artist searches - ONLY used as fallback when playlist returns 0 tracks
-const countryArtistSearches: Record<string, string[]> = {
-  'NG': ['Wizkid', 'Burna Boy', 'Davido', 'Rema', 'Asake', 'Ayra Starr', 'Tems', 'Omah Lay', 'Ckay', 'Fireboy DML'],
-  'US': ['Drake', 'Kendrick Lamar', 'Taylor Swift', 'The Weeknd', 'Bad Bunny', 'SZA', 'Post Malone', 'Travis Scott'],
-  'UK': ['Central Cee', 'Ed Sheeran', 'Dua Lipa', 'Dave', 'Stormzy', 'Little Simz'],
-  'GH': ['Sarkodie', 'Shatta Wale', 'Stonebwoy', 'Black Sherif', 'King Promise', 'Gyakie'],
-  'ZA': ['Tyla', 'Kabza De Small', 'DJ Maphorisa', 'Nasty C', 'Cassper Nyovest', 'Master KG', 'Focalistic'],
-  'KE': ['Sauti Sol', 'Nyashinski', 'Khaligraph Jones', 'Otile Brown'],
-  'BR': ['Anitta', 'Ludmilla', 'MC Livinho', 'Luisa Sonza', 'Pedro Sampaio'],
-  'MX': ['Peso Pluma', 'Natanael Cano', 'Junior H', 'Luis R Conriquez', 'Fuerza Regida'],
-  'FR': ['Aya Nakamura', 'Jul', 'Ninho', 'Damso', 'Gazo', 'Tiakola'],
-  'DE': ['Apache 207', 'Luciano', 'RAF Camora', 'Capital Bra'],
-  'JP': ['YOASOBI', 'Ado', 'King Gnu', 'Fujii Kaze', 'Mrs. GREEN APPLE'],
-  'KR': ['BTS', 'BLACKPINK', 'Stray Kids', 'NewJeans', 'aespa', 'IVE', 'LE SSERAFIM'],
-  'IN': ['Arijit Singh', 'Diljit Dosanjh', 'AP Dhillon', 'Badshah'],
-  'AU': ['The Kid LAROI', 'Tame Impala', 'Troye Sivan'],
-  'CA': ['The Weeknd', 'Justin Bieber', 'Shawn Mendes'],
-  'ES': ['Rosalía', 'Quevedo', 'Rauw Alejandro'],
-  'IT': ['Mahmood', 'Sfera Ebbasta', 'Geolier', 'Tedua']
+// Country display names for search queries
+const countryNames: Record<string, string> = {
+  'NG': 'Nigeria', 'US': 'United States', 'UK': 'United Kingdom', 'GH': 'Ghana',
+  'ZA': 'South Africa', 'KE': 'Kenya', 'BR': 'Brazil', 'MX': 'Mexico',
+  'FR': 'France', 'DE': 'Germany', 'JP': 'Japan', 'KR': 'South Korea',
+  'IN': 'India', 'AU': 'Australia', 'CA': 'Canada', 'ES': 'Spain', 'IT': 'Italy'
 };
 
-// Fetch tracks from a real Deezer country chart playlist
-async function getDeezerCountryPlaylist(countryCode: string, limit: number = 50): Promise<any[]> {
-  const playlistId = deezerCountryPlaylists[countryCode] || deezerCountryPlaylists['GLOBAL'];
-  
-  try {
-    const response = await fetch(`https://api.deezer.com/playlist/${playlistId}/tracks?limit=${limit}`);
-    if (!response.ok) {
-      console.error(`Deezer playlist ${playlistId} error: ${response.status}`);
-      return [];
-    }
-    const data = await response.json();
-    const tracks = data.data || [];
-    console.log(`Deezer playlist ${playlistId} (${countryCode}): Got ${tracks.length} tracks`);
-    return tracks;
-  } catch (e) {
-    console.error(`Deezer playlist fetch error for ${countryCode}:`, e);
-    return [];
-  }
-}
-
-// Get country chart - USE ONLY the playlist, artist search is last-resort fallback only
-async function getDeezerCountryChart(countryCode: string, limit: number = 50): Promise<any[]> {
-  // Step 1: Try the official playlist ONLY
-  const playlistTracks = await getDeezerCountryPlaylist(countryCode, limit);
-  
-  if (playlistTracks.length > 0) {
-    console.log(`Deezer country ${countryCode}: Using ${playlistTracks.length} playlist tracks (real chart)`);
-    return playlistTracks;
-  }
-  
-  // Step 2: Fallback - only if playlist returned ZERO tracks
-  console.log(`Deezer country ${countryCode}: Playlist empty, falling back to artist search`);
-  const artists = countryArtistSearches[countryCode];
-  if (artists && artists.length > 0) {
-    try {
-      const results = await Promise.all(
-        artists.slice(0, 8).map(artist =>
-          fetch(`https://api.deezer.com/search?q=${encodeURIComponent(artist)}&limit=5`)
-            .then(r => r.json())
-            .then(d => d.data || [])
-            .catch(() => [])
-        )
-      );
-      const artistTracks = results.flat().sort((a: any, b: any) => (b.rank || 0) - (a.rank || 0));
-      console.log(`Deezer country ${countryCode} artist fallback: Found ${artistTracks.length} tracks`);
-      if (artistTracks.length > 0) return artistTracks.slice(0, limit);
-    } catch (e) {
-      console.error(`Artist search fallback error for ${countryCode}:`, e);
-    }
-  }
-  
-  // Step 3: Final fallback - global chart
-  return await getDeezerGlobalChart(limit);
-}
-
-// Single consistent strategy: chart endpoint only, sorted by position, no shuffle
+// Single consistent strategy: chart endpoint only, sorted by position
 async function getDeezerGlobalChart(limit: number = 50): Promise<any[]> {
   try {
     const response = await fetch(`https://api.deezer.com/chart/0/tracks?limit=100`);
     const data = await response.json();
     const allTracks = data.data || [];
-    
     console.log(`Deezer global chart: Got ${allTracks.length} tracks`);
     return allTracks.slice(0, limit);
   } catch (e) {
@@ -135,7 +64,7 @@ async function getDeezerGlobalChart(limit: number = 50): Promise<any[]> {
   }
 }
 
-// No shuffle on search results
+// Search Deezer
 async function searchDeezer(query: string, limit: number = 50): Promise<any[]> {
   try {
     const response = await fetch(`https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=${limit}`);
@@ -147,7 +76,53 @@ async function searchDeezer(query: string, limit: number = 50): Promise<any[]> {
   }
 }
 
-// Fixed time range ('week'), no shuffle, keep original trending order
+// Get country chart using artist top tracks - the REAL way to get authentic country music
+async function getCountryChart(countryCode: string, limit: number = 60): Promise<any[]> {
+  const artists = countryArtists[countryCode];
+  if (!artists || artists.length === 0) {
+    console.log(`No artists configured for ${countryCode}, falling back to search`);
+    return await searchDeezer(`top hits ${countryNames[countryCode] || countryCode} 2026`, limit);
+  }
+
+  // Fetch top tracks for each artist in parallel (3 tracks per artist for variety)
+  const tracksPerArtist = Math.max(3, Math.ceil(limit / artists.length));
+  
+  try {
+    const results = await Promise.all(
+      artists.map(artist =>
+        fetch(`https://api.deezer.com/search?q=${encodeURIComponent(artist)}&limit=${tracksPerArtist}&order=RANKING`)
+          .then(r => r.json())
+          .then(d => (d.data || []).map((t: any) => ({ ...t, _countryArtist: artist })))
+          .catch(() => [])
+      )
+    );
+
+    const allTracks = results.flat();
+    
+    // Deduplicate by title+artist
+    const seen = new Set<string>();
+    const unique: any[] = [];
+    for (const t of allTracks) {
+      const key = `${(t.title || '').toLowerCase()}_${(t.artist?.name || '').toLowerCase()}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(t);
+      }
+    }
+
+    console.log(`Country ${countryCode}: Got ${unique.length} unique tracks from ${artists.length} artists`);
+    
+    // Sort by Deezer rank (higher = more popular) to get truly trending tracks
+    unique.sort((a: any, b: any) => (b.rank || 0) - (a.rank || 0));
+    
+    return unique.slice(0, limit);
+  } catch (e) {
+    console.error(`Country chart error for ${countryCode}:`, e);
+    return [];
+  }
+}
+
+// Audius trending
 async function getAudiusTrending(limit: number = 20): Promise<any[]> {
   try {
     const response = await fetch(
@@ -202,7 +177,6 @@ async function getUserUploads(supabase: any, search: string = '', genre: string 
       console.error('Error fetching user uploads:', error);
       return [];
     }
-    console.log(`Fetched ${data?.length || 0} user uploads from database`);
     return data || [];
   } catch (e) {
     console.error('User uploads fetch error:', e);
@@ -210,20 +184,18 @@ async function getUserUploads(supabase: any, search: string = '', genre: string 
   }
 }
 
-// Format user upload with deterministic metrics
 function formatUserUpload(upload: any, index: number) {
   const playCount = upload.play_count || 0;
   const likeCount = upload.like_count || 0;
   const seed = `user_${upload.id}${todaySeed()}`;
   const change24h = stableRandom(seed + 'c24') * 20 - 2;
   const attentionScore = Math.round(playCount * 10 + likeCount * 50 + 5000);
-  const artistName = 'Bario Artist';
 
   return {
     id: `user_${upload.id}`,
     rank: index + 1,
     title: upload.title,
-    artist: artistName,
+    artist: 'Bario Artist',
     artistId: upload.user_id,
     album: 'Single',
     artwork: upload.cover_image_url || '/placeholder.svg',
@@ -284,11 +256,8 @@ function formatDeezerTrack(track: any, index: number, countryCode: string, chart
   const change24h = stableRandom(seed + 'c24') * 25 - 5;
   const popularity = Math.min(100, Math.floor(deezerRank / 8000) + 50);
   
-  // If chartIndex is provided, use it to heavily weight the attention score
-  // so chart position is preserved after the global sort.
-  // Lower chartIndex = higher on the chart = higher attentionScore
   const chartBonus = typeof chartIndex === 'number' 
-    ? Math.max(0, (100 - chartIndex) * 1000)  // #1 gets +100000, #50 gets +50000
+    ? Math.max(0, (100 - chartIndex) * 1000)
     : 0;
   const attentionScore = Math.round(popularity * 800 + monthlyListeners / 500 + chartBonus);
   
@@ -334,7 +303,7 @@ function formatDeezerTrack(track: any, index: number, countryCode: string, chart
   };
 }
 
-// Format Audius track with Deezer preview lookup - deterministic metrics
+// Format Audius track with Deezer preview lookup
 async function formatAudiusTrackWithPreview(track: any, index: number): Promise<any> {
   const plays = track.play_count || 0;
   const reposts = track.repost_count || 0;
@@ -429,12 +398,11 @@ serve(async (req) => {
     
     let tracks: any[] = [];
     
-    // Always fetch user uploads first
     const userUploads = await getUserUploads(supabase, search, genre, 20);
     const formattedUserUploads = userUploads.map((u: any, i: number) => formatUserUpload(u, i));
     
     if (search) {
-      // Search mode: query Deezer + Audius (no Spotify - returns 404)
+      // Search mode: query Deezer + Audius
       const [deezerResults, audiusResults] = await Promise.all([
         searchDeezer(search, 50),
         searchAudius(search, 10)
@@ -445,36 +413,36 @@ serve(async (req) => {
       
       const allTracks = [...formattedUserUploads, ...deezerTracks, ...audiusTracks];
       tracks = allTracks.filter(t => t.previewUrl);
-      console.log(`Search results: User=${formattedUserUploads.length}, Deezer=${deezerTracks.length}, Audius=${audiusTracks.length}, WithPreview=${tracks.length}`);
+      console.log(`Search results: User=${formattedUserUploads.length}, Deezer=${deezerTracks.length}, Audius=${audiusTracks.length}`);
       
     } else if (country && country !== 'GLOBAL') {
-      // Country-specific: ONLY Deezer chart playlist (no Spotify - returns 404)
+      // Country-specific: Use artist searches for authentic regional results
       console.log(`Fetching country-specific chart for: ${country}`);
       
-      const deezerTracks = await getDeezerCountryChart(country, 60);
+      const countryTracks = await getCountryChart(country, 60);
       
-      // Pass chartIndex to preserve original chart ordering
-      const formattedDeezer = deezerTracks.map((t: any, i: number) => formatDeezerTrack(t, i, country, i));
+      // Pass chartIndex to preserve ranking order
+      const formattedDeezer = countryTracks.map((t: any, i: number) => formatDeezerTrack(t, i, country, i));
       
       const allTracks = [...formattedUserUploads, ...formattedDeezer];
       tracks = allTracks.filter(t => t.previewUrl);
       
-      console.log(`Country ${country} results: User=${formattedUserUploads.length}, Deezer=${formattedDeezer.length}, WithPreview=${tracks.length}`);
+      // Log first 5 artists to verify authenticity
+      const topArtists = formattedDeezer.slice(0, 5).map(t => t.artist).join(', ');
+      console.log(`Country ${country} results: ${formattedDeezer.length} tracks. Top artists: ${topArtists}`);
       
     } else if (genre && genre !== 'All') {
       const deezerResults = await searchDeezer(`${genre} hits 2024`, 50);
       const deezerTracks = deezerResults.map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre }));
-      
       tracks = [...formattedUserUploads, ...deezerTracks];
       
     } else {
-      // Global trending: Deezer global chart + Audius (no Spotify - returns 404)
+      // Global trending: Deezer global chart + Audius
       const [deezerGlobal, audiusTrending] = await Promise.all([
         getDeezerGlobalChart(60),
         getAudiusTrending(20)
       ]);
       
-      // Pass chartIndex to preserve Deezer's global chart order
       const deezerTracks = deezerGlobal.map((t: any, i: number) => formatDeezerTrack(t, i, 'GLOBAL', i));
       const audiusTracks = await Promise.all(audiusTrending.map((t: any, i: number) => formatAudiusTrackWithPreview(t, i + deezerTracks.length)));
       
@@ -493,8 +461,7 @@ serve(async (req) => {
       return true;
     });
     
-    // Sort by attention score and assign ranks - deterministic order
-    // Chart position is preserved because chartBonus is baked into attentionScore
+    // Sort by attention score - chart position preserved via chartBonus
     tracks.sort((a, b) => b.metrics.attentionScore - a.metrics.attentionScore);
     tracks.forEach((t, i) => t.rank = i + 1);
     
