@@ -201,27 +201,30 @@ export function useHeatmapTracks(limit = 99) {
     fetchTracks(undefined, currentGenre, currentCountry);
   }, [fetchTracks, currentGenre, currentCountry]);
 
-  // Subscribe to realtime updates
+  // Subscribe to realtime engagement updates - rankings refresh when users interact
   useEffect(() => {
     fetchTracks(undefined, currentGenre, currentCountry);
 
     const channel = supabase
-      .channel('heatmap-metrics')
+      .channel('heatmap-engagement-live')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'heatmap_track_metrics'
+          table: 'heatmap_engagement'
         },
-        () => fetchTracks(undefined, currentGenre, currentCountry)
+        () => {
+          console.log('Engagement changed — refreshing rankings...');
+          fetchTracks(undefined, currentGenre, currentCountry);
+        }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [currentGenre, currentCountry]);
 
   // Realtime simulation for UI updates - DISABLED to prevent glitches
 
