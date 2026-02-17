@@ -46,7 +46,7 @@ const BarioMusic = () => {
     'Afro', 'Indie & Alternative', 'Latin Music', 'Dance & EDM',
     'Reggaeton', 'Electronic', 'Country', 'Metal', 'K-Pop',
     'Reggae', 'Blues', 'Folk', 'Lofi', 'Acoustic',
-    'Caribbean', 'Japanese Music', 'AnimeVerse', 'Trap', 'Amapiano'
+    'Caribbean', 'Japanese Music', 'AnimeVerse', 'Amapiano'
   ];
 
   useEffect(() => {
