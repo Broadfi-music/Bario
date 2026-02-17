@@ -100,9 +100,20 @@ async function getLocalArtistTracks(countryCode: string, limit: number = 30): Pr
   try {
     const results = await Promise.all(
       artists.map(artist =>
-        fetch(`https://api.deezer.com/search?q=${encodeURIComponent(artist)}&limit=${tracksPerArtist}&order=RANKING`)
+        fetch(`https://api.deezer.com/search?q=${encodeURIComponent('artist:"' + artist + '"')}&limit=${tracksPerArtist + 5}&order=RANKING`)
           .then(r => r.json())
-          .then(d => (d.data || []).map((t: any) => ({ ...t, _countryArtist: artist })))
+          .then(d => (d.data || [])
+            .filter((t: any) => {
+              // Only keep tracks where the returned artist closely matches who we searched for
+              const returnedArtist = (t.artist?.name || '').toLowerCase();
+              const searchedArtist = artist.toLowerCase();
+              return returnedArtist === searchedArtist || 
+                     returnedArtist.includes(searchedArtist) || 
+                     searchedArtist.includes(returnedArtist);
+            })
+            .slice(0, tracksPerArtist)
+            .map((t: any) => ({ ...t, _countryArtist: artist }))
+          )
           .catch(() => [])
       )
     );
