@@ -788,61 +788,59 @@ serve(async (req) => {
       console.log(`Country ${country}: ${formattedLocal.length} local (top: ${topLocal}), ${formattedTrending.length} trending, ${formattedChart.length} global`);
       
     } else if (genre && genre !== 'All') {
-      // Map genre names to Deezer genre IDs for chart endpoint
-      const genreIdLookup: Record<string, number> = {
-        'Pop': 132, 'Rap': 116, 'Rock': 152, 'R&B': 165,
-        'Classical': 98, 'Jazz': 129, 'Soul & Funk': 169, 'Afro': 2,
-        'Indie & Alternative': 85, 'Latin Music': 197, 'Dance & EDM': 113,
-        'Reggaeton': 122, 'Electronic': 106, 'Country': 84, 'Metal': 464,
-        'K-Pop': 173, 'Reggae': 144, 'Blues': 153, 'Folk': 466,
-        'Acoustic': 95, 'Caribbean': 65, 'Japanese Music': 75,
-      };
-
-      // Genres that need search-based approach (no Deezer chart endpoint)
-      const searchOnlyGenres: Record<string, string[]> = {
-        'AnimeVerse': ['anime opening', 'anime ost'],
-        'Trap': ['trap metro boomin', 'trap nation'],
-        'Lofi': ['lofi hip hop', 'lo-fi chill beats'],
+      // Known top artists per genre for accurate results (Billboard + Deezer trending 2025)
+      const genreArtistSearches: Record<string, string[]> = {
+        'Pop': ['Taylor Swift', 'Sabrina Carpenter', 'Billie Eilish', 'Dua Lipa', 'The Weeknd', 'Ariana Grande', 'Bruno Mars', 'Lady Gaga'],
+        'Rap': ['Kendrick Lamar', 'Drake', 'Travis Scott', 'Future', 'J. Cole', 'Lil Baby', '21 Savage', 'Metro Boomin'],
+        'Rock': ['Linkin Park', 'Imagine Dragons', 'Coldplay', 'Green Day', 'Foo Fighters', 'Arctic Monkeys'],
+        'R&B': ['SZA', 'Chris Brown', 'Bryson Tiller', 'Summer Walker', 'Daniel Caesar', 'Brent Faiyaz', 'Usher'],
+        'Classical': ['Ludovico Einaudi', 'Yo-Yo Ma', 'Lang Lang', 'André Rieu', 'Hans Zimmer'],
+        'Jazz': ['Robert Glasper', 'Kamasi Washington', 'Gregory Porter', 'Norah Jones', 'Diana Krall'],
+        'Soul & Funk': ['Anderson .Paak', 'Leon Bridges', 'H.E.R.', 'Lucky Daye', 'Silk Sonic'],
+        'Afro': ['Burna Boy', 'Wizkid', 'Davido', 'Rema', 'Asake', 'Ayra Starr', 'Tems', 'CKay'],
+        'Indie & Alternative': ['Hozier', 'Tame Impala', 'Radiohead', 'The 1975', 'Clairo', 'Bon Iver'],
+        'Latin Music': ['Bad Bunny', 'Peso Pluma', 'Karol G', 'Rauw Alejandro', 'Feid', 'Ozuna', 'J Balvin'],
+        'Dance & EDM': ['David Guetta', 'Calvin Harris', 'Tiësto', 'Martin Garrix', 'Marshmello', 'Fisher'],
+        'Reggaeton': ['Bad Bunny', 'Daddy Yankee', 'Ozuna', 'J Balvin', 'Rauw Alejandro', 'Anuel AA'],
+        'Electronic': ['Fred again..', 'Skrillex', 'Disclosure', 'Flume', 'ODESZA', 'Bonobo'],
+        'Country': ['Morgan Wallen', 'Luke Combs', 'Zach Bryan', 'Chris Stapleton', 'Jelly Roll', 'Shaboozey'],
+        'Metal': ['Metallica', 'Slipknot', 'Avenged Sevenfold', 'Gojira', 'Bring Me The Horizon', 'Ghost'],
+        'K-Pop': ['BTS', 'BLACKPINK', 'Stray Kids', 'NewJeans', 'aespa', 'SEVENTEEN', 'IVE', 'LE SSERAFIM'],
+        'Reggae': ['Bob Marley', 'Shaggy', 'Sean Paul', 'Protoje', 'Koffee', 'Chronixx'],
+        'Blues': ['Gary Clark Jr.', 'Joe Bonamassa', 'Kingfish', 'Buddy Guy', 'Beth Hart'],
+        'Folk': ['Mumford & Sons', 'Fleet Foxes', 'Iron & Wine', 'The Lumineers', 'Vance Joy'],
+        'Lofi': ['lofi girl', 'Idealism', 'Jinsang', 'Kupla', 'Tomppabeats', 'Lofive'],
+        'Acoustic': ['Ed Sheeran acoustic', 'John Mayer acoustic', 'Jack Johnson', 'Jason Mraz', 'Passenger'],
+        'Caribbean': ['Machel Montano', 'Bunji Garlin', 'Destra Garcia', 'Kes', 'Patrice Roberts'],
+        'Japanese Music': ['YOASOBI', 'Ado', 'Fujii Kaze', 'Kenshi Yonezu', 'King Gnu', 'Official HIGE DANdism'],
+        'AnimeVerse': ['anime opening 2025', 'anime ost trending', 'YOASOBI anime', 'LiSA anime'],
+        'Trap': ['Metro Boomin', 'Future', 'Travis Scott', '21 Savage', 'Gunna', 'Young Thug', 'Lil Durk'],
       };
 
       let deezerTracks: any[] = [];
+      const artistSearches = genreArtistSearches[genre];
 
-      if (searchOnlyGenres[genre]) {
-        // Use multi-search for genres without Deezer chart IDs
-        const searchTerms = searchOnlyGenres[genre];
-        const searchPromises = searchTerms.map(term => searchDeezer(term, 30));
-        const allSearchResults = await Promise.all(searchPromises);
+      if (artistSearches) {
+        // Search for each artist's top tracks in parallel
+        const searchPromises = artistSearches.map(artist => searchDeezer(artist, 8));
+        const allResults = await Promise.all(searchPromises);
+        
+        // Merge results, deduplicate, keep tracks with previews
         const seenIds = new Set<string>();
         const mergedResults: any[] = [];
-        for (const results of allSearchResults) {
+        for (const results of allResults) {
           for (const track of results) {
-            if (!seenIds.has(String(track.id))) {
+            if (!seenIds.has(String(track.id)) && track.preview) {
               seenIds.add(String(track.id));
               mergedResults.push(track);
             }
           }
         }
+        
+        // Sort by Deezer rank (popularity) descending
+        mergedResults.sort((a, b) => (b.rank || 0) - (a.rank || 0));
         deezerTracks = mergedResults.slice(0, 50).map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre }));
-      } else if (genreIdLookup[genre]) {
-        // Use Deezer's editorial/chart endpoint for genres with IDs
-        try {
-          const genreId = genreIdLookup[genre];
-          const [chartRes, searchRes] = await Promise.all([
-            fetch(`https://api.deezer.com/chart/${genreId}/tracks?limit=40`).then(r => r.json()).catch(() => ({ data: [] })),
-            searchDeezer(`${genre} 2025`, 20),
-          ]);
-          const chartData = chartRes.data || chartRes.tracks?.data || [];
-          const seenIds = new Set(chartData.map((t: any) => String(t.id)));
-          const uniqueSearch = searchRes.filter((t: any) => !seenIds.has(String(t.id)));
-          const combined = [...chartData, ...uniqueSearch].slice(0, 50);
-          deezerTracks = combined.map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre }));
-        } catch (e) {
-          console.error(`Genre chart error for ${genre}:`, e);
-          const fallback = await searchDeezer(`${genre} music 2025`, 50);
-          deezerTracks = fallback.map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre }));
-        }
       } else {
-        // Fallback: search-based
         const results = await searchDeezer(`${genre} music 2025`, 50);
         deezerTracks = results.map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre }));
       }
