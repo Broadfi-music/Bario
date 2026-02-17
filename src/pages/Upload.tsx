@@ -215,8 +215,11 @@ const Upload = () => {
   ];
 
   const genres = [
-    'Pop', 'Hip-Hop', 'R&B', 'Rock', 'Electronic', 'Afrobeats', 'Amapiano', 
-    'Reggae', 'Jazz', 'Classical', 'Country', 'Latin', 'K-Pop', 'Other'
+    'Pop', 'Rap', 'Rock', 'R&B', 'Classical', 'Jazz', 'Soul & Funk',
+    'Afro', 'Indie & Alternative', 'Latin Music', 'Dance & EDM',
+    'Reggaeton', 'Electronic', 'Country', 'Metal', 'K-Pop',
+    'Reggae', 'Blues', 'Folk', 'Lofi', 'Acoustic',
+    'Caribbean', 'Japanese Music', 'AnimeVerse', 'Amapiano', 'Gospel', 'Instrumental', 'Other'
   ];
 
   return (

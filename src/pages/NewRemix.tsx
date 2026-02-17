@@ -39,9 +39,12 @@ const NewRemix = () => {
   }, [user, loading, navigate]);
 
   const genres = [
-    'amapiano', 'trap', 'funk', 'hiphop', 'country', '80s', 
-    'R&B', 'soul', 'pop', 'genz', 'jazz', 'reggae', 'gospel', 'instrumental',
-    'afrobeats', 'fuji', 'k-pop'
+    'pop', 'rap', 'rock', 'r&b', 'classical', 'jazz', 'soul & funk',
+    'afro', 'indie & alternative', 'latin music', 'dance & edm',
+    'reggaeton', 'electronic', 'country', 'metal', 'k-pop',
+    'reggae', 'blues', 'folk', 'lofi', 'acoustic',
+    'caribbean', 'japanese music', 'amapiano', 'gospel', 'instrumental',
+    'trap', 'funk', 'hiphop'
   ];
 
   const eras = ['1970', '1990', '2025', '2050'];

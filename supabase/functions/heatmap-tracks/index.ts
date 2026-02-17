@@ -544,7 +544,24 @@ const countries = [
   { code: 'ES', name: 'Spain' }, { code: 'IT', name: 'Italy' }
 ];
 
-const genres = ['All', 'Pop', 'Hip-Hop', 'R&B', 'Rock', 'Electronic', 'Reggaeton', 'Latin', 'Afrobeats', 'K-Pop'];
+const genres = [
+  'All', 'Pop', 'Rap', 'Rock', 'R&B', 'Classical', 'Jazz', 'Soul & Funk',
+  'Afro', 'Indie & Alternative', 'Latin Music', 'Dance & EDM',
+  'Reggaeton', 'Electronic', 'Country', 'Metal', 'K-Pop',
+  'Reggae', 'Blues', 'Folk', 'Lofi', 'Acoustic',
+  'Caribbean', 'Japanese Music', 'AnimeVerse'
+];
+
+// Deezer genre_id to genre name mapping
+const deezerGenreIdMap: Record<number, string> = {
+  0: 'All', 132: 'Pop', 116: 'Rap', 152: 'Rock', 165: 'R&B',
+  98: 'Classical', 129: 'Jazz', 169: 'Soul & Funk', 2: 'Afro',
+  85: 'Indie & Alternative', 197: 'Latin Music', 113: 'Dance & EDM',
+  122: 'Reggaeton', 106: 'Electronic', 84: 'Country', 464: 'Metal',
+  173: 'K-Pop', 144: 'Reggae', 153: 'Blues', 466: 'Folk',
+  95: 'Acoustic', 65: 'Caribbean', 75: 'Japanese Music',
+  174: 'Gospel', 168: 'R&B',
+};
 
 // Format Deezer track - chartIndex preserves original chart position in attentionScore
 function formatDeezerTrack(track: any, index: number, countryCode: string, chartIndex?: number) {
@@ -581,7 +598,7 @@ function formatDeezerTrack(track: any, index: number, countryCode: string, chart
     artwork: track.album?.cover_big || track.album?.cover_medium || track.album?.cover || 
              `https://e-cdns-images.dzcdn.net/images/cover/${track.md5_image}/500x500-000000-80-0-0.jpg`,
     previewUrl: track.preview,
-    genre: track.genre || 'Pop',
+    genre: deezerGenreIdMap[track.album?.genre_id] || track.genre || 'Pop',
     duration: (track.duration || 200) * 1000,
     country: countryCode,
     deezerRank,
@@ -656,7 +673,7 @@ async function formatAudiusTrackWithPreview(track: any, index: number): Promise<
     album: track.album?.playlist_name || 'Single',
     artwork: track.artwork?.['480x480'] || track.artwork?.['1000x1000'] || '/placeholder.svg',
     previewUrl,
-    genre: track.genre || 'Electronic',
+    genre: track.genre || 'Electronic',  // Audius tracks keep their genre or default
     duration: (track.duration || 200) * 1000,
     country: 'GLOBAL',
     deezerRank: 0,
@@ -771,7 +788,22 @@ serve(async (req) => {
       console.log(`Country ${country}: ${formattedLocal.length} local (top: ${topLocal}), ${formattedTrending.length} trending, ${formattedChart.length} global`);
       
     } else if (genre && genre !== 'All') {
-      const deezerResults = await searchDeezer(`${genre} hits 2024`, 50);
+      // Use proper Deezer search terms for each genre
+      const genreSearchMap: Record<string, string> = {
+        'Pop': 'pop hits', 'Rap': 'rap hip hop', 'Rock': 'rock hits',
+        'R&B': 'r&b rnb', 'Classical': 'classical music', 'Jazz': 'jazz',
+        'Soul & Funk': 'soul funk', 'Afro': 'afrobeats afro',
+        'Indie & Alternative': 'indie alternative', 'Latin Music': 'latin reggaeton',
+        'Dance & EDM': 'dance edm', 'Reggaeton': 'reggaeton',
+        'Electronic': 'electronic', 'Country': 'country music',
+        'Metal': 'metal heavy', 'K-Pop': 'kpop k-pop',
+        'Reggae': 'reggae dancehall', 'Blues': 'blues',
+        'Folk': 'folk', 'Lofi': 'lofi lo-fi chill',
+        'Acoustic': 'acoustic', 'Caribbean': 'caribbean soca',
+        'Japanese Music': 'jpop japanese music', 'AnimeVerse': 'anime opening soundtrack',
+      };
+      const searchTerm = genreSearchMap[genre] || genre;
+      const deezerResults = await searchDeezer(`${searchTerm} 2025`, 50);
       const deezerTracks = deezerResults.map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre }));
       tracks = [...formattedUserUploads, ...deezerTracks];
       
