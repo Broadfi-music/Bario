@@ -112,6 +112,7 @@ export function useHeatmapTracks(limit = 99) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentCountry, setCurrentCountry] = useState('GLOBAL');
+  const [currentGenre, setCurrentGenre] = useState<string | undefined>(undefined);
 
   const fetchTracks = useCallback(async (search?: string, genre?: string, country?: string) => {
     try {
@@ -184,23 +185,25 @@ export function useHeatmapTracks(limit = 99) {
   }, [fetchTracks, currentCountry]);
 
   const filterByGenre = useCallback((genre: string) => {
-    fetchTracks(undefined, genre, currentCountry);
+    const g = genre || undefined;
+    setCurrentGenre(g);
+    fetchTracks(undefined, g, currentCountry);
   }, [fetchTracks, currentCountry]);
 
   const filterByCountry = useCallback((country: string) => {
     setCurrentCountry(country);
-    // Clear tracks and fetch fresh data for new country
+    setCurrentGenre(undefined); // Reset genre when changing country
     setTracks([]);
     fetchTracks(undefined, undefined, country);
   }, [fetchTracks]);
 
   const refetch = useCallback(() => {
-    fetchTracks(undefined, undefined, currentCountry);
-  }, [fetchTracks, currentCountry]);
+    fetchTracks(undefined, currentGenre, currentCountry);
+  }, [fetchTracks, currentGenre, currentCountry]);
 
   // Subscribe to realtime updates
   useEffect(() => {
-    fetchTracks(undefined, undefined, currentCountry);
+    fetchTracks(undefined, currentGenre, currentCountry);
 
     const channel = supabase
       .channel('heatmap-metrics')
@@ -211,7 +214,7 @@ export function useHeatmapTracks(limit = 99) {
           schema: 'public',
           table: 'heatmap_track_metrics'
         },
-        () => fetchTracks(undefined, undefined, currentCountry)
+        () => fetchTracks(undefined, currentGenre, currentCountry)
       )
       .subscribe();
 
@@ -221,19 +224,17 @@ export function useHeatmapTracks(limit = 99) {
   }, []);
 
   // Realtime simulation for UI updates - DISABLED to prevent glitches
-  // The tracks are already sorted by rank from the API, no need to re-order them
-  // Previous implementation was causing visual glitches by randomly updating track metrics
 
   // Auto-refresh tracks every 2 minutes for fresh music - very gentle refresh
   useEffect(() => {
     const refreshInterval = setInterval(() => {
       console.log('Auto-refreshing heatmap tracks...');
       // Silent refresh - don't clear tracks to avoid flashing
-      fetchTracks(undefined, undefined, currentCountry);
-    }, 120000); // Refresh every 2 minutes for stable experience
+      fetchTracks(undefined, currentGenre, currentCountry);
+    }, 120000);
 
     return () => clearInterval(refreshInterval);
-  }, [currentCountry]);
+  }, [currentCountry, currentGenre]);
 
   return { tracks, genres, summary, loading, error, refetch, searchTracks, filterByGenre, filterByCountry };
 }

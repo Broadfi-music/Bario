@@ -846,17 +846,50 @@ serve(async (req) => {
       const artistSearches = genreArtistSearches[normalizedGenre];
 
       if (artistSearches) {
-        // Search for each artist's top tracks in parallel
-        const searchPromises = artistSearches.map(artist => searchDeezer(artist, 8));
+        // Search for each artist's top tracks using exact artist search + artist name validation
+        const searchPromises = artistSearches.map(async (artist) => {
+          // Use Deezer's artist:"name" syntax for more precise results
+          const isSearchPhrase = artist.includes(' ') && !artist.includes('"');
+          const query = isSearchPhrase && !artist.toLowerCase().includes('anime') && !artist.toLowerCase().includes('lofi') && !artist.toLowerCase().includes('trending')
+            ? `artist:"${artist}"`
+            : artist;
+          const results = await searchDeezer(query, 15);
+          
+          // CRITICAL: Validate artist name matches to prevent fuzzy search pollution
+          const searchedArtist = artist.toLowerCase().replace(/"/g, '');
+          const validated = results.filter((t: any) => {
+            const returnedArtist = (t.artist?.name || '').toLowerCase();
+            // Skip validation for search phrases (like "anime opening 2025")
+            if (artist.toLowerCase().includes('anime') || artist.toLowerCase().includes('lofi') || artist.toLowerCase().includes('trending') || artist.toLowerCase().includes('ost')) {
+              return true;
+            }
+            // Exact match
+            if (returnedArtist === searchedArtist) return true;
+            // For short artist names (<=4 chars like "IVE", "BTS", "Ado"), require exact match only
+            if (searchedArtist.length <= 4) {
+              return returnedArtist === searchedArtist;
+            }
+            // For longer names, allow substring but with minimum length ratio to prevent false positives
+            const shorter = searchedArtist.length < returnedArtist.length ? searchedArtist : returnedArtist;
+            const longer = searchedArtist.length < returnedArtist.length ? returnedArtist : searchedArtist;
+            if (shorter.length < longer.length * 0.5) return false; // Too different in length
+            return returnedArtist.includes(searchedArtist) || searchedArtist.includes(returnedArtist);
+          });
+          
+          return validated;
+        });
         const allResults = await Promise.all(searchPromises);
         
         // Merge results, deduplicate, keep tracks with previews
         const seenIds = new Set<string>();
+        const seenTitleArtist = new Set<string>();
         const mergedResults: any[] = [];
         for (const results of allResults) {
           for (const track of results) {
-            if (!seenIds.has(String(track.id)) && track.preview) {
+            const titleArtistKey = `${(track.title || '').toLowerCase()}_${(track.artist?.name || '').toLowerCase()}`;
+            if (!seenIds.has(String(track.id)) && !seenTitleArtist.has(titleArtistKey) && track.preview) {
               seenIds.add(String(track.id));
+              seenTitleArtist.add(titleArtistKey);
               mergedResults.push(track);
             }
           }
@@ -865,9 +898,11 @@ serve(async (req) => {
         // Sort by Deezer rank (popularity) descending
         mergedResults.sort((a, b) => (b.rank || 0) - (a.rank || 0));
         deezerTracks = mergedResults.slice(0, 50).map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre: normalizedGenre }));
+        console.log(`Genre "${normalizedGenre}": ${mergedResults.length} validated tracks from ${artistSearches.length} artists`);
       } else {
         const results = await searchDeezer(`${normalizedGenre} music 2025`, 50);
         deezerTracks = results.map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre: normalizedGenre }));
+        console.log(`Genre "${normalizedGenre}": ${deezerTracks.length} tracks from generic search (no artist map)`);
       }
 
       tracks = [...formattedUserUploads, ...deezerTracks];
