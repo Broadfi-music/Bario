@@ -6,7 +6,7 @@ export const DEEZER_GENRES = [
   'Afro', 'Indie & Alternative', 'Latin Music', 'Dance & EDM',
   'Reggaeton', 'Electronic', 'Country', 'Metal', 'K-Pop',
   'Reggae', 'Blues', 'Folk', 'Lofi', 'Acoustic',
-  'Caribbean', 'Japanese Music', 'AnimeVerse'
+  'Caribbean', 'Japanese Music', 'AnimeVerse', 'Trap'
 ] as const;
 
 // Heatmap/filter genres - includes "All" prefix
