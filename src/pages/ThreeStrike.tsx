@@ -346,6 +346,18 @@ const ThreeStrike = () => {
           });
       }
       
+      // Fire engagement event for save votes (boosts heatmap ranking)
+      if (type === 'save') {
+        fetch(`https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/track-engagement`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN1ZmJvaGhzeGxyZWZrb3VibWVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ4ODY3NjAsImV4cCI6MjA4MDQ2Mjc2MH0.1Ms3xhguJjQ-bbPronddzgO-XCYcTZTkcWS-uUMg1q4',
+          },
+          body: JSON.stringify({ track_id: track.id, country_code: selectedCountry, action: 'vote' }),
+        }).catch(() => {}); // Fire-and-forget
+      }
+      
       toast.success(type === 'strike' ? 'Strike added! 🔥' : 'Vote saved! ⭐');
     } catch (error) {
       console.error('Error voting:', error);
