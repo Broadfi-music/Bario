@@ -1,191 +1,233 @@
-# Bario Music Platform
+# 🎵 Bario Music Platform
 
-A social music platform for creators with live streaming, battles, and community features.
+A social music platform for creators featuring live audio streaming, real-time battles, virtual gifting, a global music heatmap, and community-driven music discovery — built with React, TypeScript, and serverless backend functions.
 
+**Live:** [era-remix-studio.lovable.app](https://era-remix-studio.lovable.app)
 
 ---
 
-## API Endpoints
+## Tech Stack
 
-### Edge Functions
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | React 18, TypeScript, Vite |
+| **Styling** | Tailwind CSS, shadcn/ui, Framer Motion |
+| **State** | React Query (TanStack), React Context |
+| **Routing** | React Router v6 |
+| **Backend** | Lovable Cloud (Supabase) — Postgres, Auth, Edge Functions, Realtime |
+| **Audio** | Agora RTC SDK (real-time voice) |
+| **3D** | Three.js (text animations) |
+| **Mobile** | Capacitor (wrap as native iOS/Android app) |
+| **Payments** | Paystack (coin purchases) |
 
-All API endpoints are deployed as serverless edge functions. Base URL: `https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/`
+---
 
-| Function | Method | Description | Auth Required |
-|----------|--------|-------------|---------------|
-| `/bario-api?endpoint=tracks` | GET | Get trending tracks with search/filter | No |
-| `/bario-api?endpoint=track&id=xxx` | GET | Get single track details | No |
-| `/bario-api?endpoint=uploads` | GET | Get Bario Music user uploads | No |
-| `/bario-api?endpoint=upload&id=xxx` | GET | Get single upload details | No |
-| `/bario-api?endpoint=live` | GET | Get live podcast sessions | No |
-| `/bario-api?endpoint=creators` | GET | Get top creators | No |
-| `/bario-api?endpoint=coin-packages` | GET | Get available coin packages | No |
-| `/bario-api?endpoint=health` | GET | API health check | No |
-| `/agora-token` | POST | Generate Agora RTC token for audio rooms | Yes |
-| `/remix` | POST | AI-powered music remix processing | Yes |
-| `/music-search` | POST | Search music across multiple platforms | No |
-| `/user-upload` | POST | Upload user music files | Yes |
-| `/podcast-episodes` | POST | Manage podcast episodes | Yes |
-| `/podcast-recording` | POST | Handle podcast recording sessions | Yes |
-| `/heatmap-tracks` | GET | Fetch trending tracks for heatmap | No |
-| `/heatmap-track-detail` | GET | Get detailed track information | No |
-| `/heatmap-sync` | POST | Sync heatmap data from external sources | No |
-| `/dashboard-music` | GET | Get personalized dashboard music feed | Yes |
-| `/spotify-auth` | POST | Spotify OAuth authentication flow | No |
-| `/spotify-search` | POST | Search Spotify catalog | No |
-| `/get-track` | GET | Get single track details | No |
-| `/gift-transaction` | POST | Process virtual gifts and credit creator earnings | Yes |
-| `/paystack-payment` | POST | Handle coin purchases via Paystack | Yes |
-| `/process-withdrawal` | POST | Process creator withdrawal requests | Yes |
+## Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│                   Client                     │
+│  React SPA (Vite) + Agora RTC Audio SDK     │
+└──────────┬──────────────┬───────────────────┘
+           │              │
+     REST API        WebSocket (Realtime)
+           │              │
+┌──────────▼──────────────▼───────────────────┐
+│              Lovable Cloud                   │
+│  ┌────────────┐  ┌───────────┐  ┌────────┐  │
+│  │  21 Edge   │  │ Postgres  │  │ Auth   │  │
+│  │ Functions  │  │ Database  │  │ (JWT)  │  │
+│  └────────────┘  └───────────┘  └────────┘  │
+│  ┌────────────┐  ┌───────────┐              │
+│  │  Storage   │  │ Realtime  │              │
+│  │  (files)   │  │ (pub/sub) │              │
+│  └────────────┘  └───────────┘              │
+└─────────────────────────────────────────────┘
+```
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed system design.
+
+---
+
+## Folder Structure
+
+```text
+bario/
+├── public/                          # Static assets
+│   ├── demo/                        # Demo space audio & cover images
+│   ├── gifts/                       # Gift animation videos & images
+│   ├── sw.js                        # Service Worker for push notifications
+│   └── bario-logo.png
+├── src/
+│   ├── assets/                      # App images (album art, backgrounds, cards)
+│   ├── components/
+│   │   ├── ui/                      # Reusable UI primitives (shadcn/ui)
+│   │   ├── podcast/                 # Live streaming & battle components (36 files)
+│   │   └── *.tsx                    # Shared components (Navbar, AudioPlayer, Hero)
+│   ├── config/                      # App configuration (demo space settings)
+│   ├── constants/                   # Static data (genre lists)
+│   ├── contexts/                    # React contexts (AuthContext, AudioPlayerContext)
+│   ├── hooks/                       # Custom hooks (Agora, notifications, Spotify, etc.)
+│   ├── integrations/                # ⚠️ Auto-generated backend client — DO NOT EDIT
+│   ├── lib/                         # Utility functions (audio processing, auth helpers)
+│   └── pages/                       # Route page components (26 pages)
+├── supabase/
+│   ├── functions/                   # 21 serverless edge functions (API layer)
+│   └── migrations/                  # Database migration SQL files
+├── ARCHITECTURE.md                  # System architecture documentation
+├── CONTRIBUTING.md                  # Developer contribution guidelines
+└── README.md                        # This file
+```
+
+See [src/README.md](./src/README.md) for frontend details. See [supabase/functions/README.md](./supabase/functions/README.md) for backend API reference.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ ([install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating))
+- npm or bun
+
+### Local Development
+
+```bash
+# Clone the repository
+git clone <YOUR_GIT_URL>
+cd <YOUR_PROJECT_NAME>
+
+# Install dependencies
+npm install
+
+# Start dev server (http://localhost:8080)
+npm run dev
+```
+
+### Environment Variables
+
+| Variable | Where | Description |
+|----------|-------|-------------|
+| `VITE_SUPABASE_URL` | `.env` (auto) | Backend project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | `.env` (auto) | Backend anon key |
+| `AGORA_APP_ID` | Edge function secret | Agora App ID for audio rooms |
+| `AGORA_APP_CERTIFICATE` | Edge function secret | Agora App Certificate |
+| `PAYSTACK_SECRET_KEY` | Edge function secret | Paystack payment processing |
+
+---
+
+## Mobile App Build (Capacitor)
+
+The app can be wrapped as a native iOS/Android app using Capacitor — **no rewrite needed**.
+
+```bash
+# Install Capacitor
+npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/android
+
+# Initialize
+npx cap init
+
+# Add platforms
+npx cap add ios        # Requires macOS + Xcode
+npx cap add android    # Requires Android Studio
+
+# Build and sync
+npm run build
+npx cap sync
+
+# Run on device/emulator
+npx cap run ios
+npx cap run android
+```
+
+---
+
+## Pages & Routes
+
+| Route | Page Component | Description |
+|-------|---------------|-------------|
+| `/` | `GlobalHeatmap` | Homepage — global music heatmap |
+| `/heatmap` | `GlobalHeatmap` | Music heatmap (alias) |
+| `/heatmap/:id` | `HeatmapDetail` | Track detail with metrics |
+| `/auth` | `Auth` | Sign up / Sign in |
+| `/dashboard` | `Dashboard` | User dashboard with music feed |
+| `/dashboard/profile` | `DashboardProfile` | User profile management |
+| `/dashboard/settings` | `DashboardSettings` | Account settings |
+| `/dashboard/new-remix` | `NewRemix` | Create a new AI remix |
+| `/dashboard/create` | `Create` | Create content |
+| `/dashboard/library` | `Library` | User's music library |
+| `/dashboard/analytics` | `Analytics` | Creator analytics |
+| `/dashboard/upload` | `Upload` | Upload music tracks |
+| `/dashboard/rewards` | `Rewards` | Coin balance & earnings |
+| `/dashboard/creator/:id` | `CreatorProfile` | View creator profile |
+| `/dashboard/artist/:id` | `ArtistProfile` | View artist profile |
+| `/dashboard/music-result` | `MusicResultPage` | Music search results |
+| `/ai-remix` | `AIRemix` | AI remix studio |
+| `/advanced` | `Advanced` | Advanced remix settings |
+| `/podcasts` | `Podcasts` | Browse live spaces & episodes |
+| `/podcast-host/:hostId` | `PodcastHost` | Host's live studio |
+| `/host/:hostId` | `HostProfile` | Host public profile |
+| `/bario-music` | `BarioMusic` | Bario Music catalog |
+| `/bario-music/:id` | `BarioMusicDetail` | Track detail page |
+| `/three-strike` | `ThreeStrike` | Three Strike voting game |
+| `/pricing` | `Pricing` | Coin purchase packages |
+
+---
+
+## API Reference
+
+All endpoints are serverless edge functions. Base URL pattern: `<BACKEND_URL>/functions/v1/`
+
+### Consolidated API (`/bario-api`)
+
+| Endpoint Parameter | Method | Auth | Description |
+|--------------------|--------|------|-------------|
+| `?endpoint=tracks` | GET | No | Trending tracks with search/filter |
+| `?endpoint=track&id=xxx` | GET | No | Single track details |
+| `?endpoint=uploads` | GET | No | User-uploaded music |
+| `?endpoint=upload&id=xxx` | GET | No | Single upload details |
+| `?endpoint=live` | GET | No | Active live sessions |
+| `?endpoint=creators` | GET | No | Top creators list |
+| `?endpoint=coin-packages` | GET | No | Available coin packages |
+| `?endpoint=health` | GET | No | API health check |
+
+### Individual Functions
+
+| Function | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/agora-token` | POST | Yes | Generate Agora RTC token for audio rooms |
+| `/remix` | POST | Yes | AI-powered music remix |
+| `/music-search` | POST | No | Search music across platforms |
+| `/user-upload` | POST | Yes | Upload user music files |
+| `/podcast-episodes` | POST | Yes | Manage podcast episodes (CRUD) |
+| `/podcast-recording` | POST | Yes | Handle recording sessions |
+| `/heatmap-tracks` | GET | No | Trending tracks for heatmap |
+| `/heatmap-track-detail` | GET | No | Detailed track info + metrics |
+| `/heatmap-sync` | POST | No | Sync heatmap data from external sources |
+| `/dashboard-music` | GET | Yes | Personalized dashboard feed |
+| `/spotify-auth` | POST | No | Spotify OAuth flow |
+| `/spotify-search` | POST | No | Search Spotify catalog |
+| `/get-track` | GET | No | Get single track |
+| `/gift-transaction` | POST | Yes | Process virtual gifts & credit earnings |
+| `/paystack-payment` | POST | Yes | Coin purchases via Paystack |
+| `/process-withdrawal` | POST | Yes | Creator withdrawal requests |
+| `/mystery-music` | POST | No | Mystery music drop |
+| `/create-notification` | POST | Yes | Create in-app notification |
+| `/send-push-notification` | POST | Yes | Send push notification to user |
+| `/send-bulk-notifications` | POST | Yes | Broadcast notifications |
 
 ### Authentication
 
-All authenticated endpoints require a valid JWT token in the Authorization header:
+Authenticated endpoints require a JWT token:
 ```
-Authorization: Bearer <your_jwt_token>
+Authorization: Bearer <jwt_token>
 ```
 
----
-
-## API Usage Examples
-
-### 1. Agora Token (Audio Streaming)
-
-Generate a token for real-time audio communication.
+### Example: Gift Transaction
 
 ```bash
-curl -X POST 'https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/agora-token' \
-  -H 'Authorization: Bearer YOUR_JWT_TOKEN' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "sessionId": "session-uuid",
-    "userId": "user-uuid",
-    "userName": "John",
-    "isHost": true
-  }'
-```
-
-**Response:**
-```json
-{
-  "appId": "xxx...",
-  "channelName": "podcast-session-uuid",
-  "token": "007xxx...",
-  "uid": 12345,
-  "canPublish": true,
-  "speakerSlotsFull": false,
-  "maxSpeakers": 100
-}
-```
-
-### 2. Music Search
-
-Search for tracks across multiple platforms.
-
-```bash
-curl -X POST 'https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/music-search' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "query": "drake",
-    "limit": 10
-  }'
-```
-
-**Response:**
-```json
-{
-  "tracks": [
-    {
-      "id": "track-id",
-      "title": "Track Name",
-      "artist": "Artist Name",
-      "coverUrl": "https://...",
-      "previewUrl": "https://...",
-      "source": "spotify"
-    }
-  ]
-}
-```
-
-### 3. User Upload
-
-Upload a music track to the platform.
-
-```bash
-curl -X POST 'https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/user-upload' \
-  -H 'Authorization: Bearer YOUR_JWT_TOKEN' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "title": "My Track",
-    "genre": "hip-hop",
-    "audioUrl": "https://storage.url/audio.mp3",
-    "coverUrl": "https://storage.url/cover.jpg"
-  }'
-```
-
-### 4. Heatmap Tracks
-
-Get trending tracks for the global heatmap.
-
-```bash
-curl 'https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/heatmap-tracks?limit=20&country=US'
-```
-
-**Response:**
-```json
-{
-  "tracks": [
-    {
-      "id": "track-id",
-      "title": "Track Name",
-      "artist_name": "Artist",
-      "attention_score": 95,
-      "mindshare": 12.5,
-      "cover_image_url": "https://..."
-    }
-  ]
-}
-```
-
-### 5. Remix
-
-Create an AI-powered remix of a track.
-
-```bash
-curl -X POST 'https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/remix' \
-  -H 'Authorization: Bearer YOUR_JWT_TOKEN' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "trackId": "original-track-id",
-    "style": "lo-fi",
-    "prompt": "Make it more chill and atmospheric"
-  }'
-```
-
-### 6. Podcast Episodes
-
-Manage podcast episodes.
-
-```bash
-# Create episode
-curl -X POST 'https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/podcast-episodes' \
-  -H 'Authorization: Bearer YOUR_JWT_TOKEN' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "action": "create",
-    "title": "Episode Title",
-    "description": "Episode description",
-    "audioUrl": "https://storage.url/episode.mp3"
-  }'
-```
-
-### 7. Gift Transaction
-
-Process virtual gifts during streams.
-
-```bash
-curl -X POST 'https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/gift-transaction' \
-  -H 'Authorization: Bearer YOUR_JWT_TOKEN' \
+curl -X POST '<BACKEND_URL>/functions/v1/gift-transaction' \
+  -H 'Authorization: Bearer YOUR_JWT' \
   -H 'Content-Type: application/json' \
   -d '{
     "sessionId": "session-uuid",
@@ -197,8 +239,9 @@ curl -X POST 'https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/gift-transac
 ```
 
 **Gift Types & Values:**
-| Gift Type | Cost (Coins) | Creator Earning (USD) |
-|-----------|--------------|----------------------|
+
+| Gift | Cost (Coins) | Creator Earning (USD) |
+|------|-------------|----------------------|
 | Rose | 10 | $0.0128 |
 | Heart | 50 | $0.064 |
 | Star | 100 | $0.128 |
@@ -210,163 +253,99 @@ curl -X POST 'https://sufbohhsxlrefkoubmed.supabase.co/functions/v1/gift-transac
 
 ## Database Schema
 
-### Core Tables
+### Core Tables (30+)
 
-| Table | Description |
-|-------|-------------|
-| `profiles` | User profiles with avatar, bio, social links |
-| `podcast_sessions` | Live streaming sessions |
-| `podcast_battles` | Battle streaming between creators |
-| `podcast_comments` | Real-time chat messages |
-| `podcast_gifts` | Virtual gifts sent during streams |
-| `podcast_episodes` | Recorded podcast episodes |
-| `battle_invites` | Battle challenge invitations |
-| `user_uploads` | User-uploaded music tracks |
-| `heatmap_tracks` | Global trending music data |
-| `follows` | User follow relationships |
-| `user_coins` | User coin balances |
-| `coin_transactions` | Coin purchase/spend history |
-| `creator_earnings` | Creator earnings from gifts |
-| `withdrawal_requests` | Creator withdrawal requests |
-| `strike_votes` | Three Strike voting data |
-
----
-
-## Real-time Features
-
-The platform uses Supabase Realtime for:
-
-- **Live Chat**: Messages broadcast to all viewers instantly
-- **Battle Scores**: Real-time score updates during battles (with 500ms conflict resolution)
-- **Session Updates**: Live/ended status changes
-- **Gift Animations**: Instant gift notifications
-
-### Battle Score Sync
-
-Battle scores use a combination of:
-1. **Realtime Subscriptions**: Immediate updates via WebSocket
-2. **Polling Fallback**: 2-second interval sync to ensure all devices stay in sync
-3. **Optimistic Updates**: Tapper sees score immediately with 500ms protection window
-4. **Winner Threshold**: Automatic win celebration at 650 points
-
-### Subscribing to Real-time Updates
-
-```typescript
-import { supabase } from '@/integrations/supabase/client';
-
-// Subscribe to chat messages
-const channel = supabase
-  .channel('chat-session-id')
-  .on(
-    'postgres_changes',
-    {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'podcast_comments',
-      filter: 'session_id=eq.session-uuid'
-    },
-    (payload) => console.log('New message:', payload)
-  )
-  .subscribe();
-
-// Subscribe to battle score updates
-const battleChannel = supabase
-  .channel('battle-scores')
-  .on(
-    'postgres_changes',
-    {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'podcast_battles',
-      filter: 'id=eq.battle-uuid'
-    },
-    (payload) => {
-      console.log('Score update:', payload.new.host_score, payload.new.opponent_score);
-    }
-  )
-  .subscribe();
-```
+| Table | Purpose | Key Columns |
+|-------|---------|-------------|
+| `profiles` | User profiles | `user_id`, `full_name`, `username`, `avatar_url`, `bio`, social links |
+| `podcast_sessions` | Live streaming sessions | `host_id`, `title`, `status`, `listener_count`, `is_recording` |
+| `podcast_battles` | Battle streams | `host_id`, `opponent_id`, `host_score`, `opponent_score`, `winner_id` |
+| `podcast_comments` | Real-time chat | `session_id`, `user_id`, `content`, `is_emoji` |
+| `podcast_gifts` | Gifts sent during streams | `sender_id`, `recipient_id`, `gift_type`, `points_value` |
+| `podcast_episodes` | Recorded episodes | `host_id`, `title`, `audio_url`, `play_count` |
+| `podcast_participants` | Session participants | `session_id`, `user_id`, `role`, `is_muted`, `hand_raised` |
+| `podcast_banned_users` | Banned users per session | `session_id`, `user_id`, `banned_by`, `reason` |
+| `podcast_schedules` | Scheduled sessions | `user_id`, `title`, `scheduled_at`, `reminder_enabled` |
+| `battle_invites` | Battle invitations | `from_user_id`, `to_user_id`, `status`, `battle_id` |
+| `user_uploads` | User-uploaded tracks | `user_id`, `title`, `audio_url`, `genre`, `play_count` |
+| `user_albums` | User albums | `user_id`, `title`, `cover_image_url`, `track_count` |
+| `user_favorites` | Saved/favorited tracks | `user_id`, `track_id`, `track_title`, `artist_name` |
+| `user_predictions` | User predictions | `user_id`, `title`, `yes_votes`, `no_votes`, `status` |
+| `prediction_votes` | Prediction votes | `user_id`, `prediction_id`, `vote` |
+| `heatmap_tracks` | Global trending tracks | `title`, `artist_name`, `spotify_id`, `deezer_id`, `preview_url` |
+| `heatmap_artists` | Artist data | `name`, `country`, `spotify_id`, `followers` |
+| `heatmap_track_metrics` | Track attention scores | `track_id`, `attention_score`, `mindshare`, `spotify_popularity` |
+| `heatmap_track_comments` | Track comments | `track_id`, `user_name`, `content`, `sentiment` |
+| `heatmap_top_voices` | Top voices/influencers | `name`, `score`, `delta`, `type` |
+| `heatmap_smart_feed_events` | Smart feed events | `event_type`, `title`, `track_id` |
+| `follows` | User follow relationships | `follower_id`, `following_id` |
+| `user_coins` | Coin balances | `user_id`, `balance`, `total_purchased`, `total_spent` |
+| `coin_transactions` | Purchase/spend history | `user_id`, `type`, `coins`, `amount`, `status` |
+| `coin_packages` | Purchasable coin packages | `name`, `coins`, `price_usd`, `bonus_coins` |
+| `creator_earnings` | Creator earnings | `user_id`, `pending_earnings_usd`, `total_earnings_usd` |
+| `withdrawal_requests` | Withdrawal requests | `user_id`, `amount_usd`, `bank_name`, `status` |
+| `strike_votes` | Three Strike votes | `user_id`, `track_id`, `vote_type` |
+| `tracks` | Remix tracks | `user_id`, `genre`, `status`, `original_audio_url` |
+| `remixes` | Published remixes | `user_id`, `title`, `remix_file_url`, `play_count` |
+| `likes` | Remix likes | `user_id`, `remix_id` |
+| `notifications` | In-app notifications | `user_id`, `title`, `message`, `type`, `is_read` |
+| `push_subscriptions` | Push notification endpoints | `user_id`, `endpoint`, `p256dh`, `auth_key` |
+| `space_join_requests` | Join requests for spaces | `session_id`, `user_id`, `status` |
+| `host_playlists` | Host playlists | `user_id`, `name` |
+| `host_playlist_tracks` | Playlist tracks | `playlist_id`, `title`, `audio_url`, `position` |
 
 ---
 
-## Three Strike Voting
+## Realtime Features
 
-A music discovery game where users vote to "strike" or "save" tracks:
+The platform uses WebSocket subscriptions for instant updates:
 
-- **Strike**: Mark a track you don't like
-- **Save**: Mark a track you love
-- **3 Strikes = Eliminated**: Tracks with 3+ strikes are eliminated
-- **Country Filter**: View trending music by country (Nigeria, USA, UK, etc.)
+| Feature | Table | Event | Description |
+|---------|-------|-------|-------------|
+| Live Chat | `podcast_comments` | INSERT | Messages appear instantly for all viewers |
+| Battle Scores | `podcast_battles` | UPDATE | Score taps sync across all devices |
+| Session Status | `podcast_sessions` | UPDATE | Live/ended status changes |
+| Gift Animations | `podcast_gifts` | INSERT | Gift notifications trigger animations |
+| Join Requests | `space_join_requests` | INSERT/UPDATE | Host sees requests in real-time |
+| Notifications | `notifications` | INSERT | Bell icon updates instantly |
 
-### Country-Specific Music
+### Battle Score Sync Strategy
 
-Each country filter shows music from regional artists:
-- **Nigeria**: Wizkid, Burna Boy, Davido, Rema, Asake
-- **USA**: Drake, Taylor Swift, Kendrick Lamar, The Weeknd
-- **UK**: Central Cee, Ed Sheeran, Dave, Stormzy
-- **South Korea**: BTS, BLACKPINK, NewJeans, Stray Kids
-- And more...
+1. **Realtime subscriptions** — instant WebSocket updates
+2. **Polling fallback** — 2-second interval sync for reliability
+3. **Optimistic updates** — tapper sees score immediately (500ms protection window)
+4. **Winner threshold** — automatic celebration at 650 points
 
 ---
 
-## Development Setup
+## Key Features
 
-**Use your preferred IDE**
+### 🗺️ Global Music Heatmap
+Real-time trending music visualization aggregating data from Spotify, Deezer, Last.fm, Audius, and iTunes. Tracks are scored by "attention score" and "mindshare" metrics.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### ⚡ Three Strike Voting
+Music discovery game — users vote to "strike" or "save" tracks. 3 strikes = eliminated. Filtered by country (Nigeria, USA, UK, South Korea, etc.).
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 🎙️ Live Audio Spaces
+Real-time audio rooms powered by Agora RTC. Hosts can manage speakers, record sessions, and receive gifts. Listeners can request to join, chat, and send reactions.
 
-Follow these steps:
+### ⚔️ Creator Battles
+1v1 score battles between creators. Audience taps to vote. Real-time score sync with optimistic updates and automatic winner detection.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 🎁 Virtual Gifting Economy
+TikTok-style virtual gifts (Rose → Crown). Coins purchased via Paystack. Creators earn USD from gifts and can withdraw to bank accounts.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### 🔔 Push Notifications
+Browser push notifications via Service Worker. Triggers: new followers, gifts received, battle invites, join requests. Works even when the app is closed.
 
-# Step 3: Install the necessary dependencies.
-npm i
+---
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+## Contributing
 
-**Edit a file directly in GitHub**
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on code style, PR process, and development workflow.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+## License
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## Technologies
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-- Supabase (Database, Auth, Edge Functions, Realtime)
-- Agora (Real-time audio)
-
-## Environment Variables
-
-The following environment variables are required:
-
-| Variable | Description |
-|----------|-------------|
-| `VITE_SUPABASE_URL` | Supabase project URL |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon key |
-| `AGORA_APP_ID` | Agora App ID (edge function secret) |
-| `AGORA_APP_CERTIFICATE` | Agora App Certificate (edge function secret) |
-| `PAYSTACK_SECRET_KEY` | Paystack secret key for payments (edge function secret) |
+Private — All rights reserved.
