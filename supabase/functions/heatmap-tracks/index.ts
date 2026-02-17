@@ -17,8 +17,10 @@ function stableRandom(seed: string): number {
   return Math.abs(hash % 1000) / 1000;
 }
 
+// Seed changes every minute so rankings shift dynamically
 function todaySeed(): string {
-  return new Date().toISOString().split('T')[0];
+  const now = new Date();
+  return `${now.toISOString().slice(0, 16)}`; // YYYY-MM-DDTHH:MM — changes every minute
 }
 
 // Country-specific top artists - this is the PRIMARY source for country charts
@@ -586,7 +588,10 @@ function formatDeezerTrack(track: any, index: number, countryCode: string, chart
     else if (months <= 18) recencyBonus = 10000;
   }
   
-  const attentionScore = Math.round(popularity * 800 + monthlyListeners / 500 + chartBonus + recencyBonus);
+  // Dynamic variance: shifts rankings every minute based on simulated streaming engagement
+  const dynamicVariance = Math.round(stableRandom(seed + 'dv') * 15000 - 7500);
+  
+  const attentionScore = Math.round(popularity * 800 + monthlyListeners / 500 + chartBonus + recencyBonus + dynamicVariance);
   
   return {
     id: String(track.id),
@@ -638,7 +643,8 @@ async function formatAudiusTrackWithPreview(track: any, index: number): Promise<
   const listeners = plays + (reposts * 10) + (favorites * 5);
   const seed = `audius_${track.id}${todaySeed()}`;
   const change24h = stableRandom(seed + 'c24') * 30 - 5;
-  const attentionScore = Math.round((plays / 100) + (reposts * 50) + (favorites * 30));
+  const dynamicVariance = Math.round(stableRandom(seed + 'dv') * 8000 - 4000);
+  const attentionScore = Math.round((plays / 100) + (reposts * 50) + (favorites * 30) + dynamicVariance);
   
   const trackTitle = track.title || '';
   const artistName = track.user?.name || '';
