@@ -52,8 +52,9 @@ serve(async (req) => {
     if (action === 'save') saves++;
     if (action === 'vote') votes++;
 
-    // Calculate score_boost: plays * 100 + saves * 500 + votes * 200
-    const score_boost = plays * 100 + saves * 500 + votes * 200;
+    // Calculate score_boost: must be large enough to move rankings
+    // Base attention scores are ~50,000-170,000 so boosts need to be significant
+    const score_boost = plays * 5000 + saves * 25000 + votes * 15000;
 
     if (existing) {
       await supabase
