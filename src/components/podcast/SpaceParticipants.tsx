@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Mic, MicOff, Hand, Volume2, Loader2, LogOut, Ban, Plus } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAgoraAudio } from '@/hooks/useAgoraAudio';
@@ -550,26 +551,107 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
             const canKick = isHost && !isHostRole && p.user_id !== user?.id;
             const isMe = p.user_id === user?.id;
             
+            const avatarElement = (
+              <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${avatarColor} flex items-center justify-center overflow-hidden transition-all cursor-pointer hover:opacity-80 ${
+                isHostRole ? 'ring-2 ring-purple-500 ring-offset-1 ring-offset-black' : ''
+              } ${isSpeaking ? 'ring-2 ring-green-500 ring-offset-1 ring-offset-black animate-pulse' : ''} ${
+                isMe ? 'ring-2 ring-blue-500 ring-offset-1 ring-offset-black' : ''
+              }`}>
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-white text-xs font-bold">
+                    {name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
+            );
+
             return (
               <div 
                 key={p.id} 
-                className="flex flex-col items-center gap-0.5 cursor-pointer group relative"
-                onClick={isHostRole ? goToHostProfile : undefined}
+                className="flex flex-col items-center gap-0.5 group relative"
               >
                 <div className="relative">
-                  <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${avatarColor} flex items-center justify-center overflow-hidden transition-all ${
-                    isHostRole ? 'ring-2 ring-purple-500 ring-offset-1 ring-offset-black' : ''
-                  } ${isSpeaking ? 'ring-2 ring-green-500 ring-offset-1 ring-offset-black animate-pulse' : ''} ${
-                    isMe ? 'ring-2 ring-blue-500 ring-offset-1 ring-offset-black' : ''
-                  }`}>
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-white text-xs font-bold">
-                        {name.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
+                  {isMe ? (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="relative">
+                          {avatarElement}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-36 p-1.5 bg-zinc-900 border-white/10 rounded-xl shadow-xl"
+                        side="top"
+                        sideOffset={8}
+                      >
+                        <div className="flex flex-col gap-1">
+                          {myParticipation && myParticipation.role !== 'listener' && (
+                            <button
+                              onClick={handleToggleMute}
+                              disabled={!isAudioConnected}
+                              className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-xs font-medium text-white hover:bg-white/10 transition-colors"
+                            >
+                              {isMuted ? (
+                                <>
+                                  <MicOff className="w-3.5 h-3.5 text-red-400" />
+                                  <span>Unmute Mic</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Mic className="w-3.5 h-3.5 text-green-400" />
+                                  <span>Mute Mic</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                          <button
+                            onClick={leaveSession}
+                            className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+                          >
+                            <LogOut className="w-3.5 h-3.5" />
+                            <span>Leave Session</span>
+                          </button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  ) : isHostRole ? (
+                    <button onClick={goToHostProfile} className="relative">
+                      {avatarElement}
+                    </button>
+                  ) : canKick ? (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className="relative">
+                          {avatarElement}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-36 p-1.5 bg-zinc-900 border-white/10 rounded-xl shadow-xl"
+                        side="top"
+                        sideOffset={8}
+                      >
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => kickParticipant(p.id, p.user_id)}
+                            className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-xs font-medium text-white hover:bg-white/10 transition-colors"
+                          >
+                            <LogOut className="w-3.5 h-3.5 text-red-400" />
+                            <span>Kick</span>
+                          </button>
+                          <button
+                            onClick={() => banParticipant(p.id, p.user_id)}
+                            className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+                          >
+                            <Ban className="w-3.5 h-3.5" />
+                            <span>Ban</span>
+                          </button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <div>{avatarElement}</div>
+                  )}
                   
                   {/* Audio waveform animation when speaking */}
                   {isSpeaking && !isParticipantMuted && (
@@ -585,28 +667,15 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
                     </div>
                   )}
 
-                  {p.hand_raised && (
-                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg animate-bounce ring-2 ring-black">
-                      <span className="text-[10px]">✋</span>
+                  {isParticipantMuted && isMe && myParticipation?.role !== 'listener' && (
+                    <div className="absolute -bottom-0.5 -right-0.5 rounded-full p-0.5 bg-red-500/50">
+                      <MicOff className="w-2 h-2 text-white" />
                     </div>
                   )}
 
-                  {canKick && (
-                    <div className="absolute inset-0 bg-black/70 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center gap-0.5 transition-opacity">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); kickParticipant(p.id, p.user_id); }}
-                        className="p-1 bg-red-500/80 rounded-full hover:bg-red-500"
-                        title="Kick"
-                      >
-                        <LogOut className="w-2.5 h-2.5 text-white" />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); banParticipant(p.id, p.user_id); }}
-                        className="p-1 bg-orange-500/80 rounded-full hover:bg-orange-500"
-                        title="Ban"
-                      >
-                        <Ban className="w-2.5 h-2.5 text-white" />
-                      </button>
+                  {p.hand_raised && (
+                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg animate-bounce ring-2 ring-black">
+                      <span className="text-[10px]">✋</span>
                     </div>
                   )}
                 </div>
@@ -624,28 +693,41 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
             );
           })}
 
-          {/* Invite Slots - Plus circles for available speaker spots */}
+          {/* Invite Slots - Click to join session automatically */}
           {Array.from({ length: Math.max(0, MAX_SPEAKERS - currentSpeakers) }).map((_, i) => (
             <div key={`invite-slot-${i}`} className="flex flex-col items-center gap-0.5">
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (!user) {
                     setShowAuthModal(true);
                     return;
                   }
-                  if (myParticipation?.hand_raised) {
-                    toast.info('Request already sent!');
+                  // If already joined, request to speak
+                  if (myParticipation) {
+                    if (myParticipation.hand_raised) {
+                      toast.info('Request already sent!');
+                      return;
+                    }
+                    toggleHandRaise();
                     return;
                   }
-                  toggleHandRaise();
+                  // Auto-join session as listener
+                  await joinSession();
                 }}
+                disabled={isJoining || isAudioConnecting}
                 className={`w-11 h-11 rounded-full border-2 border-dashed flex items-center justify-center transition-colors ${
-                  myParticipation?.hand_raised
-                    ? 'border-yellow-500/50 bg-yellow-500/10'
-                    : 'border-white/20 hover:border-white/40 hover:bg-white/5'
+                  isJoining || isAudioConnecting
+                    ? 'border-white/10 bg-white/5'
+                    : myParticipation?.hand_raised
+                      ? 'border-yellow-500/50 bg-yellow-500/10'
+                      : 'border-white/20 hover:border-white/40 hover:bg-white/5'
                 }`}
               >
-                <Plus className={`w-4 h-4 ${myParticipation?.hand_raised ? 'text-yellow-400' : 'text-white/40'}`} />
+                {isJoining || isAudioConnecting ? (
+                  <Loader2 className="w-4 h-4 text-white/40 animate-spin" />
+                ) : (
+                  <Plus className={`w-4 h-4 ${myParticipation?.hand_raised ? 'text-yellow-400' : 'text-white/40'}`} />
+                )}
               </button>
               <span className="text-[9px] text-white/30">Join</span>
             </div>
@@ -653,63 +735,14 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
         </div>
       </div>
 
-      {/* Bottom Controls */}
-      <div className="flex items-center justify-center py-2 gap-1.5 border-t border-white/5 mt-2 flex-wrap">
-        {/* Mic control for speakers/hosts */}
-        {myParticipation && myParticipation.role !== 'listener' && (
-          <Button
-            onClick={handleToggleMute}
-            disabled={!isAudioConnected}
-            size="icon"
-            variant="ghost"
-            className={`h-8 w-8 rounded-full border ${isMuted ? 'border-red-500/50 text-red-400' : 'border-green-500/50 text-green-400'}`}
-          >
-            {isMuted ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
-          </Button>
-        )}
-
-        {/* Request to speak button */}
-        <button 
-          onClick={toggleHandRaise}
-          disabled={isBanned}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded-full border transition-colors text-xs ${
-            myParticipation?.hand_raised 
-              ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-400' 
-              : 'border-white/20 text-white/60 hover:text-white hover:border-white/40'
-          } ${isBanned ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          <Hand className="h-3 w-3" />
-          <span>{myParticipation?.hand_raised ? 'Requested' : 'Request'}</span>
-        </button>
-
-        {/* Join/Leave Button */}
-        {!myParticipation ? (
-          <Button
-            onClick={joinSession}
-            disabled={isBanned || isJoining || isAudioConnecting}
-            size="sm"
-            className="h-7 px-3 text-xs bg-green-600 hover:bg-green-700"
-          >
-            {isJoining || isAudioConnecting ? (
-              <>
-                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                Joining...
-              </>
-            ) : (
-              'Join Session'
-            )}
-          </Button>
-        ) : (
-          <Button
-            onClick={leaveSession}
-            size="sm"
-            variant="outline"
-            className="h-7 px-3 text-xs border-white/20 text-white/60 hover:text-red-400 hover:border-red-400/50"
-          >
-            Leave
-          </Button>
-        )}
-      </div>
+      {/* Audio connection status bar */}
+      {isAudioConnecting && (
+        <div className="flex items-center justify-center py-1.5 border-t border-white/5 mt-2">
+          <span className="text-[10px] text-yellow-400 flex items-center gap-1">
+            <Loader2 className="w-3 h-3 animate-spin" /> Connecting audio...
+          </span>
+        </div>
+      )}
 
       <AuthPromptModal 
         isOpen={showAuthModal} 
