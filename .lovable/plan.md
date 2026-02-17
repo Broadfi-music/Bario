@@ -1,68 +1,40 @@
 
-
-# Fix Heatmap Country Filter to Show Real Trending Music
+# Fix Country Filter: Mix of Real Charts + Local Artists
 
 ## Problem
-
-The country filter is NOT showing actual trending music for each country. Instead, it searches for hardcoded artist names (e.g., "Tyla", "Kabza De Small" for South Africa) and prioritizes those search results over the real Deezer country chart playlist. This means users see artist catalog tracks ranked by Deezer's internal popularity score, not by what's actually trending in that country right now.
-
-The same issue affects GLOBAL -- Spotify returns 404 for all playlists, so only the Deezer global chart is used, which is correct. But the Deezer chart endpoint (`/chart/0/tracks`) returns the actual real-time global chart, so that part is fine.
-
-## Root Cause
-
-In the `getDeezerCountryChart` function, artist search results are placed FIRST and playlist tracks fill the remaining slots. The merge logic (lines 207-227) does:
-1. Add all artist search results first (sorted by Deezer's `rank` field -- which is a track's overall popularity, NOT chart position)
-2. Then fill remaining with actual chart playlist tracks
-
-This completely defeats the purpose of having country chart playlists.
+The country filter currently searches ONLY for hardcoded artist names (Tyla, Kabza De Small, etc.) and returns their catalog tracks sorted by Deezer's internal popularity score. This does NOT reflect what's actually trending. The real Deezer South Africa chart shows Taylor Swift, Alex Warren, Benson Boone -- international hits that South Africans stream.
 
 ## Solution
+Show BOTH: the real Deezer country chart (what people there are streaming) AND local artist tracks, blended together.
 
-### Change 1: Use ONLY chart playlists for country data
-
-Modify `getDeezerCountryChart` to use ONLY the Deezer country playlist. Remove the artist search merging entirely. Artist searches should only be used as a last-resort fallback if the playlist returns zero tracks.
-
-This means:
-- South Africa will show whatever is actually trending on Deezer's ZA chart
-- Nigeria will show Deezer's NG chart
-- etc.
-
-### Change 2: Use Deezer's editorial chart playlists
-
-The current playlist IDs may be user-created playlists rather than official Deezer editorial charts. Replace them with Deezer's official chart endpoint where available:
-- Use `https://api.deezer.com/chart/{country_id}/tracks` for countries where Deezer has official charts
-- Fall back to editorial playlists only where the chart endpoint is unavailable
-
-Deezer provides country-specific charts at `https://api.deezer.com/chart/0/tracks` (global) but for country-specific, we should try using the editorial playlists endpoint or verified chart playlist IDs.
-
-### Change 3: Keep playlist order as chart position
-
-Currently, tracks are re-sorted by `attentionScore` (line 693), which destroys the original chart ordering. For country charts, the playlist order IS the chart position, so we should preserve it by using the original index as a significant factor in the attention score calculation.
+### How it will work
+1. Fetch the real Deezer global chart filtered by country editorial playlist (or search "top South Africa 2025" as fallback)
+2. Fetch top tracks from hardcoded local artists (Tyla, Kabza De Small, Oscar Mbo, etc.)
+3. Interleave them: real chart tracks get positions 1-30, local artist tracks fill positions 31-60
+4. Both sections preserve their internal ordering (chart position for real chart, Deezer rank for local artists)
 
 ## Technical Details
 
 ### File: `supabase/functions/heatmap-tracks/index.ts`
 
-**Modify `getDeezerCountryChart` (lines 189-238)**:
-- Remove the parallel artist search
-- Use only `getDeezerCountryPlaylist` to get the actual chart
-- Fall back to artist search ONLY if the playlist returns 0 tracks
+**Update `getCountryChart` function (lines 80-123)**:
+- Split into two parallel fetches:
+  - `getCountryChartPlaylist(countryCode)` -- fetches real trending chart using `https://api.deezer.com/search?q=top+hits+{country}+2025&order=RANKING`
+  - `getLocalArtistTracks(countryCode)` -- keeps the existing artist search logic for local artists
+- Merge results: chart tracks first (with high chartBonus), local artist tracks second (with moderate chartBonus)
+- Deduplicate: if a local artist already appears in the chart, skip the duplicate
 
-**Modify `formatDeezerTrack` (lines 444-493)**:
-- Factor in the chart position (index) more heavily into `attentionScore` so tracks maintain their chart order after the global sort
+**Update `countryArtists` list for South Africa (line 30)**:
+- Add missing current trending artists: Oscar Mbo, Musa Keys, Tyler ICU, Daliwonga, Kelvin Momo
+- These are the artists actually charting on SA streaming platforms right now
 
-**Modify the country branch (lines 625-651)**:
-- Since Spotify returns 404 for all country playlists, remove the Spotify call for country-specific queries to avoid wasted API calls and latency
-- Rely solely on Deezer chart playlists for country data
+**No changes needed to**:
+- `formatDeezerTrack` -- already handles chartBonus correctly
+- Frontend code -- the response format stays the same
+- Global chart logic -- already uses the real Deezer global chart endpoint
 
-**Modify the GLOBAL branch (lines 664-681)**:
-- Remove the Spotify global call (also 404) to avoid latency
-- Keep Deezer global chart + Audius trending as sources
-
-### Summary of changes:
-- 1 file modified: `supabase/functions/heatmap-tracks/index.ts`
-- Artist search lists kept in code but only used as fallback when playlist returns nothing
-- Chart position preserved in ranking
-- Spotify calls removed (all returning 404) to improve response speed
-- No database changes needed
-
+### Result
+When you select "South Africa":
+- Top slots: whatever is actually trending there (could be Taylor Swift, Benson Boone, or local hits)
+- Lower slots: guaranteed South African artists (Tyla, Kabza De Small, Oscar Mbo, etc.)
+- Both sections clearly ranked by real popularity data
