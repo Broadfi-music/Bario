@@ -209,12 +209,12 @@ export function useHeatmapTracks(limit = 99) {
   // Realtime simulation for UI updates - DISABLED to prevent glitches
 
   // Auto-refresh tracks every 2 minutes for fresh music - very gentle refresh
+  // Auto-refresh every 1 minute — rankings shift as streaming engagement changes
   useEffect(() => {
     const refreshInterval = setInterval(() => {
-      console.log('Auto-refreshing heatmap tracks...');
-      // Silent refresh - don't clear tracks to avoid flashing
+      console.log('Auto-refreshing heatmap tracks (1 min)...');
       fetchTracks(undefined, currentGenre, currentCountry);
-    }, 120000);
+    }, 60000);
 
     return () => clearInterval(refreshInterval);
   }, [currentCountry, currentGenre]);
