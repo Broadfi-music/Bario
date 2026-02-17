@@ -50,6 +50,27 @@ const countryNames: Record<string, string> = {
   'IN': 'India', 'AU': 'Australia', 'CA': 'Canada', 'ES': 'Spain', 'IT': 'Italy'
 };
 
+// Genre-based trending search queries per country to catch current hits
+const countryTrendingQueries: Record<string, string[]> = {
+  'NG': ['afrobeats 2025', 'naija new music 2025'],
+  'ZA': ['amapiano 2025', 'south african music new 2025'],
+  'GH': ['ghana music 2025', 'afrobeats ghana new'],
+  'KE': ['kenyan music 2025', 'gengetone new'],
+  'BR': ['funk brasileiro 2025', 'sertanejo new 2025'],
+  'MX': ['corridos tumbados 2025', 'mexican music new'],
+  'FR': ['rap francais 2025', 'french pop new'],
+  'DE': ['german rap 2025', 'deutschrap new'],
+  'JP': ['jpop 2025', 'japanese music new'],
+  'KR': ['kpop 2025', 'korean pop new'],
+  'IN': ['bollywood 2025', 'indian music new'],
+  'US': ['hip hop 2025', 'pop music new 2025'],
+  'UK': ['uk rap 2025', 'british pop new'],
+  'AU': ['australian music 2025', 'aussie pop new'],
+  'CA': ['canadian music 2025', 'toronto rap new'],
+  'ES': ['reggaeton 2025', 'spanish pop new'],
+  'IT': ['italian rap 2025', 'italian pop new']
+};
+
 // Single consistent strategy: chart endpoint only, sorted by position
 async function getDeezerGlobalChart(limit: number = 50): Promise<any[]> {
   try {
@@ -90,32 +111,72 @@ async function getGlobalChartForCountry(limit: number = 20): Promise<any[]> {
   }
 }
 
-// Fetch top tracks from known local artists for a country
+// Fetch album release date from Deezer to determine recency
+async function getAlbumReleaseDate(albumId: number): Promise<string | null> {
+  try {
+    const response = await fetch(`https://api.deezer.com/album/${albumId}`);
+    const data = await response.json();
+    return data.release_date || null;
+  } catch {
+    return null;
+  }
+}
+
+// Calculate months since a date string (YYYY-MM-DD)
+function monthsSince(dateStr: string): number {
+  const d = new Date(dateStr);
+  const now = new Date();
+  return (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+}
+
+// Fetch top tracks from known local artists, biased toward recent releases
 async function getLocalArtistTracks(countryCode: string, limit: number = 30): Promise<any[]> {
   const artists = countryArtists[countryCode];
   if (!artists || artists.length === 0) return [];
 
-  const tracksPerArtist = Math.max(2, Math.ceil(limit / artists.length));
+  const tracksPerArtist = Math.max(3, Math.ceil(limit / artists.length));
+  const currentYear = new Date().getFullYear();
 
   try {
     const results = await Promise.all(
-      artists.map(artist =>
-        fetch(`https://api.deezer.com/search?q=${encodeURIComponent('artist:"' + artist + '"')}&limit=${tracksPerArtist + 5}&order=RANKING`)
-          .then(r => r.json())
-          .then(d => (d.data || [])
-            .filter((t: any) => {
-              // Only keep tracks where the returned artist closely matches who we searched for
-              const returnedArtist = (t.artist?.name || '').toLowerCase();
-              const searchedArtist = artist.toLowerCase();
-              return returnedArtist === searchedArtist || 
-                     returnedArtist.includes(searchedArtist) || 
-                     searchedArtist.includes(returnedArtist);
-            })
-            .slice(0, tracksPerArtist)
-            .map((t: any) => ({ ...t, _countryArtist: artist }))
-          )
-          .catch(() => [])
-      )
+      artists.map(async (artist) => {
+        // Fetch more tracks than needed so we can filter for recency
+        const fetchLimit = tracksPerArtist + 10;
+        const response = await fetch(
+          `https://api.deezer.com/search?q=${encodeURIComponent('artist:"' + artist + '"')}&limit=${fetchLimit}&order=RANKING`
+        );
+        const data = await response.json();
+        const rawTracks = (data.data || []).filter((t: any) => {
+          const returnedArtist = (t.artist?.name || '').toLowerCase();
+          const searchedArtist = artist.toLowerCase();
+          return returnedArtist === searchedArtist || 
+                 returnedArtist.includes(searchedArtist) || 
+                 searchedArtist.includes(returnedArtist);
+        });
+
+        // Check album release dates for top tracks
+        const tracksWithDates = await Promise.all(
+          rawTracks.slice(0, Math.min(rawTracks.length, 8)).map(async (t: any) => {
+            let releaseDate: string | null = null;
+            if (t.album?.id) {
+              releaseDate = await getAlbumReleaseDate(t.album.id);
+            }
+            return { ...t, _releaseDate: releaseDate, _countryArtist: artist };
+          })
+        );
+
+        // Separate recent vs older tracks
+        const recent = tracksWithDates.filter(t => t._releaseDate && monthsSince(t._releaseDate) <= 12);
+        const older = tracksWithDates.filter(t => !t._releaseDate || monthsSince(t._releaseDate) > 12);
+
+        // Take all recent tracks + max 1 classic fallback
+        const selected = [...recent.slice(0, tracksPerArtist)];
+        if (selected.length < tracksPerArtist && older.length > 0) {
+          selected.push(older[0]); // 1 all-time classic per artist
+        }
+
+        return selected.length > 0 ? selected : rawTracks.slice(0, 1).map((t: any) => ({ ...t, _releaseDate: null, _countryArtist: artist }));
+      })
     );
 
     const allTracks = results.flat();
@@ -131,8 +192,15 @@ async function getLocalArtistTracks(countryCode: string, limit: number = 30): Pr
       }
     }
 
-    unique.sort((a: any, b: any) => (b.rank || 0) - (a.rank || 0));
-    console.log(`Local artists for ${countryCode}: Got ${unique.length} unique tracks from ${artists.length} artists`);
+    // Sort: recent tracks first (by release date desc), then by rank
+    unique.sort((a: any, b: any) => {
+      const aRecent = a._releaseDate && monthsSince(a._releaseDate) <= 12 ? 1 : 0;
+      const bRecent = b._releaseDate && monthsSince(b._releaseDate) <= 12 ? 1 : 0;
+      if (aRecent !== bRecent) return bRecent - aRecent;
+      return (b.rank || 0) - (a.rank || 0);
+    });
+
+    console.log(`Local artists for ${countryCode}: Got ${unique.length} unique tracks (${unique.filter(t => t._releaseDate && monthsSince(t._releaseDate) <= 12).length} recent) from ${artists.length} artists`);
     return unique.slice(0, limit);
   } catch (e) {
     console.error(`Local artist tracks error for ${countryCode}:`, e);
@@ -140,24 +208,67 @@ async function getLocalArtistTracks(countryCode: string, limit: number = 30): Pr
   }
 }
 
-// Blended country chart: global trending hits + local artists
-async function getCountryChart(countryCode: string, limit: number = 60): Promise<{ chart: any[]; local: any[] }> {
-  const [chartTracks, localTracks] = await Promise.all([
-    getGlobalChartForCountry(20),
-    getLocalArtistTracks(countryCode, 50)
+// Search for genre-trending tracks for a country (catches rising artists not in curated list)
+async function getGenreTrendingTracks(countryCode: string, limit: number = 15): Promise<any[]> {
+  const queries = countryTrendingQueries[countryCode];
+  if (!queries || queries.length === 0) return [];
+
+  try {
+    const results = await Promise.all(
+      queries.map(query =>
+        fetch(`https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=${Math.ceil(limit / queries.length) + 5}`)
+          .then(r => r.json())
+          .then(d => d.data || [])
+          .catch(() => [])
+      )
+    );
+    const allTracks = results.flat();
+    
+    // Deduplicate
+    const seen = new Set<string>();
+    const unique: any[] = [];
+    for (const t of allTracks) {
+      const key = `${(t.title || '').toLowerCase()}_${(t.artist?.name || '').toLowerCase()}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(t);
+      }
+    }
+    console.log(`Genre trending for ${countryCode}: Got ${unique.length} tracks from queries: ${queries.join(', ')}`);
+    return unique.slice(0, limit);
+  } catch (e) {
+    console.error(`Genre trending error for ${countryCode}:`, e);
+    return [];
+  }
+}
+
+// Blended country chart: local artists (recency-biased) + genre trending + global chart
+async function getCountryChart(countryCode: string, limit: number = 60): Promise<{ chart: any[]; local: any[]; trending: any[] }> {
+  const [chartTracks, localTracks, trendingTracks] = await Promise.all([
+    getGlobalChartForCountry(15),
+    getLocalArtistTracks(countryCode, 40),
+    getGenreTrendingTracks(countryCode, 15)
   ]);
 
-  // Deduplicate: remove chart tracks that already appear in local (local artists take priority)
+  // Deduplicate: local > trending > chart priority
   const localKeys = new Set(
     localTracks.map(t => `${(t.title || '').toLowerCase()}_${(t.artist?.name || '').toLowerCase()}`)
   );
-  const uniqueChart = chartTracks.filter(t => {
+  const uniqueTrending = trendingTracks.filter(t => {
     const key = `${(t.title || '').toLowerCase()}_${(t.artist?.name || '').toLowerCase()}`;
     return !localKeys.has(key);
   });
+  const allLocalKeys = new Set([
+    ...localKeys,
+    ...uniqueTrending.map(t => `${(t.title || '').toLowerCase()}_${(t.artist?.name || '').toLowerCase()}`)
+  ]);
+  const uniqueChart = chartTracks.filter(t => {
+    const key = `${(t.title || '').toLowerCase()}_${(t.artist?.name || '').toLowerCase()}`;
+    return !allLocalKeys.has(key);
+  });
 
-  console.log(`Blended ${countryCode}: ${localTracks.length} local + ${uniqueChart.length} global chart (deduped from ${chartTracks.length})`);
-  return { chart: uniqueChart, local: localTracks };
+  console.log(`Blended ${countryCode}: ${localTracks.length} local + ${uniqueTrending.length} trending + ${uniqueChart.length} global chart`);
+  return { chart: uniqueChart, local: localTracks, trending: uniqueTrending };
 }
 
 // Audius trending
@@ -297,7 +408,18 @@ function formatDeezerTrack(track: any, index: number, countryCode: string, chart
   const chartBonus = typeof chartIndex === 'number' 
     ? Math.max(0, (100 - chartIndex) * 1000)
     : 0;
-  const attentionScore = Math.round(popularity * 800 + monthlyListeners / 500 + chartBonus);
+  
+  // Recency bonus: boost tracks with recent release dates
+  let recencyBonus = 0;
+  const releaseDate = track._releaseDate;
+  if (releaseDate) {
+    const months = monthsSince(releaseDate);
+    if (months <= 6) recencyBonus = 50000;
+    else if (months <= 12) recencyBonus = 25000;
+    else if (months <= 18) recencyBonus = 10000;
+  }
+  
+  const attentionScore = Math.round(popularity * 800 + monthlyListeners / 500 + chartBonus + recencyBonus);
   
   return {
     id: String(track.id),
@@ -454,22 +576,24 @@ serve(async (req) => {
       console.log(`Search results: User=${formattedUserUploads.length}, Deezer=${deezerTracks.length}, Audius=${audiusTracks.length}`);
       
     } else if (country && country !== 'GLOBAL') {
-      // Country-specific: Blend real trending chart + local artist tracks
-      console.log(`Fetching blended chart for: ${country}`);
+      // Country-specific: Blend local artists (recency-biased) + genre trending + global chart
+      console.log(`Fetching recency-biased blended chart for: ${country}`);
       
-      const { chart: globalChartTracks, local: localTracks } = await getCountryChart(country, 60);
+      const { chart: globalChartTracks, local: localTracks, trending: trendingTracks } = await getCountryChart(country, 60);
       
-      // Local artists get high chartBonus (top positions) — they're the primary content
+      // Local artists get high chartBonus (top positions) — recent releases dominate
       const formattedLocal = localTracks.map((t: any, i: number) => formatDeezerTrack(t, i, country, i));
+      // Genre trending tracks fill middle positions
+      const formattedTrending = trendingTracks.map((t: any, i: number) => formatDeezerTrack(t, i + formattedLocal.length, country, i + 30));
       // Global chart tracks get lower chartBonus (fill remaining positions)
-      const formattedChart = globalChartTracks.map((t: any, i: number) => formatDeezerTrack(t, i + formattedLocal.length, country, i + 40));
+      const formattedChart = globalChartTracks.map((t: any, i: number) => formatDeezerTrack(t, i + formattedLocal.length + formattedTrending.length, country, i + 50));
       
-      const allTracks = [...formattedUserUploads, ...formattedLocal, ...formattedChart];
+      const allTracks = [...formattedUserUploads, ...formattedLocal, ...formattedTrending, ...formattedChart];
       tracks = allTracks.filter(t => t.previewUrl);
       
-      const topLocal = formattedLocal.slice(0, 3).map(t => t.artist).join(', ');
-      const topChart = formattedChart.slice(0, 3).map(t => t.artist).join(', ');
-      console.log(`Country ${country}: ${formattedLocal.length} local (${topLocal}), ${formattedChart.length} global (${topChart})`);
+      const recentCount = formattedLocal.filter(t => t.metrics.attentionScore > 90000).length;
+      const topLocal = formattedLocal.slice(0, 3).map(t => `${t.artist} - ${t.title}`).join(', ');
+      console.log(`Country ${country}: ${formattedLocal.length} local (top: ${topLocal}), ${formattedTrending.length} trending, ${formattedChart.length} global`);
       
     } else if (genre && genre !== 'All') {
       const deezerResults = await searchDeezer(`${genre} hits 2024`, 50);
