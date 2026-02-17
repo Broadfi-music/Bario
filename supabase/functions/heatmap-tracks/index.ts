@@ -23,7 +23,7 @@ function todaySeed(): string {
 
 // Country-specific top artists - this is the PRIMARY source for country charts
 const countryArtists: Record<string, string[]> = {
-  'NG': ['Wizkid', 'Burna Boy', 'Davido', 'Rema', 'Asake', 'Ayra Starr', 'Tems', 'Omah Lay', 'Ckay', 'Fireboy DML', 'Joeboy', 'Kizz Daniel', 'Shallipopi', 'Young Jonn', 'Seyi Vibez', 'Spyro', 'BNXN'],
+  'NG': ['Wizkid', 'Asake', 'Burna Boy', 'Davido', 'Rema', 'Omah Lay', 'Ayra Starr', 'CKay', 'Seyi Vibez', 'Young Jonn', 'ODUMODUBLVCK', 'FOLA', 'Mavo', 'Tems', 'Shallipopi', 'BNXN', 'Kizz Daniel', 'Adekunle Gold', 'Fireboy DML', 'Flavour', 'Blaqbonez', 'Naira Marley', 'Phyno', 'Chike', 'Magixx', 'Ayo Maff', 'Victony', 'Shoday', 'Olamide'],
   'US': ['Drake', 'Kendrick Lamar', 'Taylor Swift', 'The Weeknd', 'Bad Bunny', 'SZA', 'Post Malone', 'Travis Scott', 'Morgan Wallen', 'Billie Eilish', 'Doja Cat', 'Future', 'Metro Boomin', 'Sabrina Carpenter'],
   'UK': ['Central Cee', 'Ed Sheeran', 'Dua Lipa', 'Dave', 'Stormzy', 'Little Simz', 'Tion Wayne', 'Headie One', 'Skepta', 'AJ Tracey', 'Jorja Smith', 'Sam Smith'],
   'GH': ['Sarkodie', 'Shatta Wale', 'Stonebwoy', 'Black Sherif', 'King Promise', 'Gyakie', 'Camidoh', 'Kuami Eugene', 'KiDi', 'Lasmid'],
@@ -52,7 +52,7 @@ const countryNames: Record<string, string> = {
 
 // Genre-based trending search queries per country to catch current hits
 const countryTrendingQueries: Record<string, string[]> = {
-  'NG': ['afrobeats 2025', 'naija new music 2025'],
+  'NG': ['Jogodo Wizkid Asake', 'Turbulence Wizkid Asake', 'MONEY CONSTANT DJ Maphorisa Wizkid', 'Nakupenda Davido', 'afrobeats 2025 new'],
   'ZA': ['amapiano 2025', 'south african music new 2025'],
   'GH': ['ghana music 2025', 'afrobeats ghana new'],
   'KE': ['kenyan music 2025', 'gengetone new'],
