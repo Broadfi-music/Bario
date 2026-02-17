@@ -27,7 +27,7 @@ const countryArtists: Record<string, string[]> = {
   'US': ['Drake', 'Kendrick Lamar', 'Taylor Swift', 'The Weeknd', 'Bad Bunny', 'SZA', 'Post Malone', 'Travis Scott', 'Morgan Wallen', 'Billie Eilish', 'Doja Cat', 'Future', 'Metro Boomin', 'Sabrina Carpenter'],
   'UK': ['Central Cee', 'Ed Sheeran', 'Dua Lipa', 'Dave', 'Stormzy', 'Little Simz', 'Tion Wayne', 'Headie One', 'Skepta', 'AJ Tracey', 'Jorja Smith', 'Sam Smith'],
   'GH': ['Sarkodie', 'Shatta Wale', 'Stonebwoy', 'Black Sherif', 'King Promise', 'Gyakie', 'Camidoh', 'Kuami Eugene', 'KiDi', 'Lasmid'],
-  'ZA': ['Tyla', 'Kabza De Small', 'DJ Maphorisa', 'Nasty C', 'Cassper Nyovest', 'A-Reece', 'Master KG', 'Focalistic', 'Ami Faku', 'Sun-El Musician', 'DBN Gogo', 'Uncle Waffles', 'Young Stunna'],
+  'ZA': ['Tyla', 'Kabza De Small', 'DJ Maphorisa', 'Nasty C', 'Cassper Nyovest', 'A-Reece', 'Master KG', 'Focalistic', 'Ami Faku', 'Sun-El Musician', 'DBN Gogo', 'Uncle Waffles', 'Young Stunna', 'Oscar Mbo', 'Musa Keys', 'Tyler ICU', 'Daliwonga', 'Kelvin Momo'],
   'KE': ['Sauti Sol', 'Nyashinski', 'Khaligraph Jones', 'Otile Brown', 'Nviiri The Storyteller', 'Bensoul', 'Bien', 'Nikita Kering'],
   'BR': ['Anitta', 'Ludmilla', 'MC Livinho', 'Luisa Sonza', 'Pedro Sampaio', 'Gusttavo Lima', 'Jorge & Mateus', 'Henrique & Juliano'],
   'MX': ['Peso Pluma', 'Natanael Cano', 'Junior H', 'Luis R Conriquez', 'Fuerza Regida', 'Grupo Frontera', 'Ivan Cornejo'],
@@ -76,17 +76,30 @@ async function searchDeezer(query: string, limit: number = 50): Promise<any[]> {
   }
 }
 
-// Get country chart using artist top tracks - the REAL way to get authentic country music
-async function getCountryChart(countryCode: string, limit: number = 60): Promise<any[]> {
-  const artists = countryArtists[countryCode];
-  if (!artists || artists.length === 0) {
-    console.log(`No artists configured for ${countryCode}, falling back to search`);
-    return await searchDeezer(`top hits ${countryNames[countryCode] || countryCode} 2026`, limit);
+// Fetch real trending chart for a country (what people there are actually streaming)
+async function getCountryChartPlaylist(countryCode: string, limit: number = 30): Promise<any[]> {
+  const name = countryNames[countryCode] || countryCode;
+  try {
+    const response = await fetch(
+      `https://api.deezer.com/search?q=${encodeURIComponent('top hits ' + name + ' 2025')}&limit=${limit}&order=RANKING`
+    );
+    const data = await response.json();
+    const tracks = data.data || [];
+    console.log(`Country chart playlist for ${countryCode}: Got ${tracks.length} tracks`);
+    return tracks;
+  } catch (e) {
+    console.error(`Country chart playlist error for ${countryCode}:`, e);
+    return [];
   }
+}
 
-  // Fetch top tracks for each artist in parallel (3 tracks per artist for variety)
-  const tracksPerArtist = Math.max(3, Math.ceil(limit / artists.length));
-  
+// Fetch top tracks from known local artists for a country
+async function getLocalArtistTracks(countryCode: string, limit: number = 30): Promise<any[]> {
+  const artists = countryArtists[countryCode];
+  if (!artists || artists.length === 0) return [];
+
+  const tracksPerArtist = Math.max(2, Math.ceil(limit / artists.length));
+
   try {
     const results = await Promise.all(
       artists.map(artist =>
@@ -98,7 +111,7 @@ async function getCountryChart(countryCode: string, limit: number = 60): Promise
     );
 
     const allTracks = results.flat();
-    
+
     // Deduplicate by title+artist
     const seen = new Set<string>();
     const unique: any[] = [];
@@ -110,16 +123,33 @@ async function getCountryChart(countryCode: string, limit: number = 60): Promise
       }
     }
 
-    console.log(`Country ${countryCode}: Got ${unique.length} unique tracks from ${artists.length} artists`);
-    
-    // Sort by Deezer rank (higher = more popular) to get truly trending tracks
     unique.sort((a: any, b: any) => (b.rank || 0) - (a.rank || 0));
-    
+    console.log(`Local artists for ${countryCode}: Got ${unique.length} unique tracks from ${artists.length} artists`);
     return unique.slice(0, limit);
   } catch (e) {
-    console.error(`Country chart error for ${countryCode}:`, e);
+    console.error(`Local artist tracks error for ${countryCode}:`, e);
     return [];
   }
+}
+
+// Blended country chart: real trending + local artists
+async function getCountryChart(countryCode: string, limit: number = 60): Promise<{ chart: any[]; local: any[] }> {
+  const [chartTracks, localTracks] = await Promise.all([
+    getCountryChartPlaylist(countryCode, 30),
+    getLocalArtistTracks(countryCode, 40)
+  ]);
+
+  // Deduplicate: remove local tracks that already appear in chart
+  const chartKeys = new Set(
+    chartTracks.map(t => `${(t.title || '').toLowerCase()}_${(t.artist?.name || '').toLowerCase()}`)
+  );
+  const uniqueLocal = localTracks.filter(t => {
+    const key = `${(t.title || '').toLowerCase()}_${(t.artist?.name || '').toLowerCase()}`;
+    return !chartKeys.has(key);
+  });
+
+  console.log(`Blended ${countryCode}: ${chartTracks.length} chart + ${uniqueLocal.length} local (deduped from ${localTracks.length})`);
+  return { chart: chartTracks, local: uniqueLocal };
 }
 
 // Audius trending
@@ -416,20 +446,22 @@ serve(async (req) => {
       console.log(`Search results: User=${formattedUserUploads.length}, Deezer=${deezerTracks.length}, Audius=${audiusTracks.length}`);
       
     } else if (country && country !== 'GLOBAL') {
-      // Country-specific: Use artist searches for authentic regional results
-      console.log(`Fetching country-specific chart for: ${country}`);
+      // Country-specific: Blend real trending chart + local artist tracks
+      console.log(`Fetching blended chart for: ${country}`);
       
-      const countryTracks = await getCountryChart(country, 60);
+      const { chart: chartTracks, local: localTracks } = await getCountryChart(country, 60);
       
-      // Pass chartIndex to preserve ranking order
-      const formattedDeezer = countryTracks.map((t: any, i: number) => formatDeezerTrack(t, i, country, i));
+      // Chart tracks get high chartBonus (positions 1-30)
+      const formattedChart = chartTracks.map((t: any, i: number) => formatDeezerTrack(t, i, country, i));
+      // Local artist tracks get moderate chartBonus (positions 31-60)
+      const formattedLocal = localTracks.map((t: any, i: number) => formatDeezerTrack(t, i + formattedChart.length, country, i + 30));
       
-      const allTracks = [...formattedUserUploads, ...formattedDeezer];
+      const allTracks = [...formattedUserUploads, ...formattedChart, ...formattedLocal];
       tracks = allTracks.filter(t => t.previewUrl);
       
-      // Log first 5 artists to verify authenticity
-      const topArtists = formattedDeezer.slice(0, 5).map(t => t.artist).join(', ');
-      console.log(`Country ${country} results: ${formattedDeezer.length} tracks. Top artists: ${topArtists}`);
+      const topChart = formattedChart.slice(0, 3).map(t => t.artist).join(', ');
+      const topLocal = formattedLocal.slice(0, 3).map(t => t.artist).join(', ');
+      console.log(`Country ${country}: ${formattedChart.length} chart (${topChart}), ${formattedLocal.length} local (${topLocal})`);
       
     } else if (genre && genre !== 'All') {
       const deezerResults = await searchDeezer(`${genre} hits 2024`, 50);
