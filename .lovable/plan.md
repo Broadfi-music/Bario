@@ -1,105 +1,166 @@
 
 
-# Bario Codebase Restructuring and README Update
+# Dynamic Ranking System -- Songs Competing in Real-Time
 
-## Overview
+## The Problem
 
-This plan reorganizes the entire codebase so any developer (frontend, backend, or full-stack) can quickly understand the project structure, and updates the README to serve as comprehensive developer documentation.
+Right now, the heatmap ranking is static. When you select Nigeria, the same songs appear in the same order every time. The "change" percentages are generated from a daily seed, not from actual user engagement. Songs never overtake each other.
 
-## Native App Question
+## The Solution
 
-Lovable builds web apps with **React + TypeScript**. It cannot write Flutter, Swift, or Kotlin code. However, your app can become a real native Android/iOS app using **Capacitor**, which wraps your existing React code into a native shell. No rewrite needed -- your current codebase is already configured for this. A developer would clone the repo, run `npx cap add android` / `npx cap add ios`, and build with Android Studio or Xcode.
+Make songs compete for rank based on **real user activity on Bario** -- plays, saves, strikes, and gifts. Every time a user plays a track, saves it, or votes on it, that track's score increases and it can climb the rankings, pushing other songs down.
+
+## How It Works
+
+```text
+User plays "Jogodo" by Wizkid
+       |
+       v
++------------------+
+| play_events table |  <-- Records: user_id, track_id, country, timestamp
++------------------+
+       |
+       v
++------------------------+
+| heatmap_engagement     |  <-- Aggregated: track_id, country, plays_24h, saves_24h, votes_24h
++------------------------+
+       |
+       v
++----------------------------+
+| attentionScore calculation |
+|                            |
+| Base API score (Deezer)    |
+| + plays_24h * 100          |
+| + saves_24h * 500          |
+| + votes_24h * 200          |
+| = FINAL RANK               |
++----------------------------+
+```
 
 ## What Changes
 
-### 1. Updated README.md
+### 1. New Database Table: `heatmap_engagement`
 
-A complete rewrite covering:
-- Project overview and architecture diagram
-- Tech stack breakdown
-- Folder structure guide (what each directory does)
-- Setup instructions (local dev, environment variables, Capacitor mobile builds)
-- All API endpoints with request/response examples
-- Database schema reference (all 30+ tables)
-- Realtime features explanation
-- Authentication flow
-- Edge function documentation
-- Contribution guidelines
+Tracks real user engagement per track per country:
 
-### 2. Code Organization Documentation
+| Column | Type | Purpose |
+|--------|------|---------|
+| track_id | text | Deezer/Audius track ID |
+| country_code | text | Country filter context |
+| plays_count | integer | Total plays from Bario users |
+| saves_count | integer | Total saves/favorites |
+| votes_count | integer | Three Strike votes |
+| score_boost | float | Calculated engagement boost |
+| last_played_at | timestamp | Recency signal |
+| updated_at | timestamp | Last activity |
 
-Add inline documentation files to key directories:
+### 2. Update Edge Function: `heatmap-tracks`
 
-**New files to create:**
-- `src/README.md` -- Frontend architecture overview
-- `supabase/functions/README.md` -- Backend functions guide with auth requirements and payload schemas
-- `ARCHITECTURE.md` -- High-level system architecture doc at project root
-- `CONTRIBUTING.md` -- Developer contribution guide
+After fetching tracks from Deezer/Audius APIs:
+- Query `heatmap_engagement` for each track
+- Add engagement boost to `attentionScore`
+- Replace fake `stableRandom` change metrics with real deltas (compare current score vs 24h-ago score)
+- Re-sort tracks by new combined score -- this is where songs overtake each other
 
-### 3. Folder Structure Reference
+### 3. Track User Activity (Frontend)
 
-The README will document the current structure clearly:
+When a user interacts with a heatmap track:
+- **Plays a preview**: Increment play count via a lightweight edge function call
+- **Saves/favorites a track**: Already saved to `user_favorites` -- add a trigger to update engagement
+- **Three Strike vote (save)**: Already in `strike_votes` -- add a trigger to update engagement
+
+### 4. New Edge Function: `track-engagement`
+
+A small function called when users play/interact with tracks:
 
 ```text
-bario/
-+-- public/                    # Static assets (icons, demo audio, gift animations)
-+-- src/
-|   +-- assets/                # App images (album art, backgrounds, track covers)
-|   +-- components/
-|   |   +-- ui/                # Reusable UI primitives (shadcn/ui - button, dialog, etc.)
-|   |   +-- podcast/           # Live streaming & battle components (36 files)
-|   |   +-- *.tsx              # Shared app components (Navbar, AudioPlayer, Hero, etc.)
-|   +-- config/                # App configuration (demo space settings)
-|   +-- constants/             # Static data (genre lists)
-|   +-- contexts/              # React contexts (Auth, AudioPlayer)
-|   +-- hooks/                 # Custom hooks (Agora audio, notifications, Spotify, etc.)
-|   +-- integrations/          # Auto-generated backend client (DO NOT EDIT)
-|   +-- lib/                   # Utility functions (audio processing, auth helpers)
-|   +-- pages/                 # Route pages (26 pages)
-+-- supabase/
-|   +-- functions/             # 21 serverless backend functions
-|   +-- migrations/            # Database migration SQL files
-|   +-- config.toml            # Backend configuration (auto-managed)
+POST /track-engagement
+Body: { track_id, country_code, action: "play" | "save" | "vote" }
 ```
 
-### 4. README Content Sections
+Updates `heatmap_engagement` table and recalculates `score_boost`.
 
-1. **Bario Music Platform** -- One-paragraph summary
-2. **Tech Stack** -- React 18, TypeScript, Vite, Tailwind, shadcn/ui, Agora, Capacitor
-3. **Architecture** -- Frontend SPA + serverless backend + realtime WebSockets
-4. **Folder Structure** -- Annotated tree (as above)
-5. **Getting Started** -- Clone, install, env vars, run
-6. **Mobile App Build** -- Capacitor setup for Android/iOS
-7. **Pages & Routes** -- Table mapping all 26 routes to their page components
-8. **API Reference** -- All 21 edge functions with method, auth, payload, response
-9. **Database Schema** -- All tables with columns and RLS policy summaries
-10. **Realtime Features** -- Chat, battle scores, gifts, session updates
-11. **Key Features** -- Heatmap, Three Strike, Battles, Gifting, Notifications
-12. **Environment Variables** -- Required secrets and where they're used
-13. **Component Guide** -- What each major component does
-14. **Contributing** -- Code style, PR process, testing
+### 5. Real Change Metrics
+
+Instead of `stableRandom()`, the edge function will:
+- Store a snapshot of each track's score every hour (or use the engagement timestamps)
+- Calculate real `change24h` = current_score - score_24h_ago
+- Songs that get more plays in the last 24h will show positive change and climb ranks
+- Songs losing momentum will show negative change and drop
+
+## What Users Will See
+
+- When they play a song, it gets a small rank boost
+- Popular songs on Bario will climb higher than songs nobody plays
+- The "change" arrows and percentages will reflect real movement
+- Different countries will have different engagement patterns, making each chart feel unique and alive
+- Ranks will shift throughout the day as users interact
 
 ## Technical Details
 
-### Files to Create/Update
+### Database Migration
+
+```sql
+CREATE TABLE heatmap_engagement (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  track_id text NOT NULL,
+  country_code text NOT NULL DEFAULT 'GLOBAL',
+  plays_count integer NOT NULL DEFAULT 0,
+  saves_count integer NOT NULL DEFAULT 0,
+  votes_count integer NOT NULL DEFAULT 0,
+  score_boost double precision NOT NULL DEFAULT 0,
+  last_played_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(track_id, country_code)
+);
+
+-- RLS: anyone can read, authenticated users can upsert
+ALTER TABLE heatmap_engagement ENABLE ROW LEVEL SECURITY;
+
+-- Public read
+CREATE POLICY "Anyone can view engagement" ON heatmap_engagement FOR SELECT USING (true);
+
+-- Allow edge function (service role) to update -- no user-facing insert needed
+
+-- Add realtime for live ranking updates
+ALTER PUBLICATION supabase_realtime ADD TABLE heatmap_engagement;
+```
+
+### Edge Function Changes (heatmap-tracks)
+
+- After building the track list, query `heatmap_engagement` for all track IDs in the current country
+- Add `score_boost` to each track's `attentionScore`
+- Replace `stableRandom` change values with real engagement deltas
+- Re-sort by final score
+
+### New Edge Function: `track-engagement`
+
+- Accepts `{ track_id, country_code, action }`
+- Upserts into `heatmap_engagement`: increments the relevant counter and recalculates `score_boost`
+- Formula: `score_boost = plays_count * 100 + saves_count * 500 + votes_count * 200`
+
+### Frontend Changes
+
+- In the audio player (when a heatmap track plays): fire a background POST to `/track-engagement` with action "play"
+- In Three Strike (on "save" vote): fire POST with action "vote"
+- In favorites (on save): fire POST with action "save"
+- These are fire-and-forget calls -- no UI blocking
+
+## Files to Create/Modify
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `README.md` | Rewrite | Full developer documentation |
-| `ARCHITECTURE.md` | Create | System architecture with diagrams |
-| `CONTRIBUTING.md` | Create | Developer contribution guidelines |
-| `src/README.md` | Create | Frontend code guide |
-| `supabase/functions/README.md` | Create | Backend functions reference |
+| Database migration | Create | `heatmap_engagement` table |
+| `supabase/functions/track-engagement/index.ts` | Create | Record user engagement |
+| `supabase/functions/heatmap-tracks/index.ts` | Modify | Use real engagement data for ranking |
+| `src/contexts/AudioPlayerContext.tsx` | Modify | Fire engagement event on play |
+| `src/pages/ThreeStrike.tsx` | Modify | Fire engagement event on save vote |
+| `src/hooks/useHeatmapData.ts` | Minor | Subscribe to realtime engagement updates |
 
-### Key Improvements
+## No Breaking Changes
 
-- Every edge function will be documented with its HTTP method, auth requirement, request body schema, and response format
-- All 30+ database tables will be listed with their purpose and key columns
-- The 36 podcast/live components will be grouped and explained by feature area (battles, gifts, chat, moderation)
-- Route table maps URLs to components so developers know where to find page code
-- Clear separation between auto-generated files (DO NOT EDIT) and editable code
-
-### No Breaking Changes
-
-This is purely documentation -- no functional code changes, no file moves, no refactoring. The app continues to work exactly as it does now.
+- The existing API data (Deezer charts, Audius trending) remains the base
+- Engagement just adds a boost on top -- so charts still look correct even with zero Bario activity
+- As users grow, their activity increasingly shapes the rankings
 
