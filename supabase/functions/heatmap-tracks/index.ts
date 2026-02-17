@@ -811,39 +811,42 @@ serve(async (req) => {
       const normalizedGenre = genreAliasMap[genre.toLowerCase()] || genre;
       console.log(`Genre filter: raw="${genre}" → normalized="${normalizedGenre}"`);
 
-      // Deezer editorial playlist IDs per genre (from Deezer Explore page - curated & accurate)
+      // Verified Deezer editorial playlist IDs per genre (found via Deezer search)
       const genrePlaylistIds: Record<string, number[]> = {
-        'Pop': [1996494362, 1964085082],           // Hot Hits, Feel Good Pop
-        'Rap': [6682665064, 1109890291],            // Fresh Rap, Rap Caviar
-        'Rock': [1306978785, 1282308225],           // Hot New Rock, Rock Hits
-        'R&B': [5014647904, 2021225582],            // Hot R&B, Fresh R&B
-        'Classical': [1500943781, 1739207922],       // New Classical, Classical Essentials
-        'Jazz': [2138566342, 1282333465],            // Jazz Now, Jazz Vibes
-        'Soul & Funk': [1746835762, 4485213484],     // New Funk, Feel Good Soul
-        'Afro': [1257036831, 10567515462],           // New Afro, Feel Good Afro
-        'Indie & Alternative': [1402845615, 1282312585], // New Alternative, Indie Hits
-        'Latin Music': [3482267886, 10759132562],    // Feel Good Latin, Bombón
-        'Dance & EDM': [2249258602, 146819501],      // New Dance, Hyper Rave
-        'Reggaeton': [10759132562, 3482267886],      // Bombón, Feel Good Latin
-        'Electronic': [2249258602, 146819501],       // New Dance, Hyper Rave
-        'Country': [1282316005, 1282316005],         // Country Hits
-        'Metal': [1050179021, 1282320445],           // Metal Radar, Metal Hits
-        'K-Pop': [12244134951, 1282336565],          // Fresh K-Pop, K-Pop Hits
-        'Reggae': [1282324085, 1282324085],          // Reggae Hits
-        'Blues': [1282328565, 1282328565],            // Blues Hits
-        'Folk': [1282340925, 1282340925],             // Folk Hits
-        'Acoustic': [1282344725, 1282344725],         // Acoustic Hits
-        'Caribbean': [1282348565, 1282348565],        // Caribbean Hits
-        'Japanese Music': [1282352525, 1282352525],   // Japanese Music Hits
-        'AnimeVerse': [1282356245, 1282356245],       // AnimeVerse
+        'Pop': [14483443243, 6413064084],             // 2025 Pop (Deezer Editor), Pop Mix 2025 (Filtr)
+        'Rap': [6682665064, 1109890291],              // Fresh Rap, Rap Caviar
+        'Rock': [9150745402, 10487515582],            // ROCK 2025, Rock Nation 2025
+        'R&B': [10955837982, 5792658322],             // R&B Songs 2025, R&B Hits 2025
+        'Classical': [3779719642, 5756071222],        // The Classical Archive, Classical Contemporary
+        'Jazz': [1450192665, 12378944323],            // Jazz Playlist (Filtr), Jazz Music Covers 2025
+        'Soul & Funk': [7090313244, 10797073262],     // 100% James Brown, 100% Rufus
+        'Afro': [1257036831, 10567515462],            // New Afro, Feel Good Afro
+        'Indie & Alternative': [11281695444, 9457259482], // Indie Vibes 2025, Indie Rock 2025
+        'Latin Music': [1336793115, 4021052042],      // Latino Vibes Hits 2025, Reggaeton 2025 Mix
+        'Dance & EDM': [658630195, 7439455924],       // Electronic Mix 2025, Defected 2025
+        'Reggaeton': [1386230735, 4021052042],        // REGGAETON 2025 TOP 50, Reggaeton 2025 Mix
+        'Electronic': [658630195, 7439455924],        // Electronic Mix 2025, Defected 2025
+        'Country': [12982498803, 12471817963],        // Country Hits 2025, Viral Country Hits 2025
+        'Metal': [1616550155, 61217294],              // Best Metal Hits, Metal Hits (Filtr)
+        'K-Pop': [12244134951, 1282336565],           // Fresh K-Pop, K-Pop Hits
+        'Reggae': [8291980982, 12382194183],          // Reggae Roots Mix, REGGAE HITS 2025
+        'Blues': [1600007675, 6126325664],            // Very Best of Blues, Early Blues (Deezer Editor)
+        'Folk': [1607718035],                         // Very Best of Folk
+        'Lofi': [9607960302, 9608648682],             // Low-fi 2025 chill beats, Lofi Hip Hop Beats
+        'Acoustic': [1810085342, 7639777802],         // Hits acoustiques, Acoustic Essentials (Deezer Editor)
+        'Caribbean': [2046959324, 1563095471],        // Dancehall Club, DEMBOW 2025
+        'Japanese Music': [6125730684, 4864894664],   // Japan Love Songs (Deezer Editor), New from Japan
+        'AnimeVerse': [7967291482],                   // ANIME OPENING - OST (Filtr)
       };
 
-      // Fallback search terms for genres without reliable playlists
+      // Fallback search terms for genres without enough playlist tracks
       const genreFallbackSearch: Record<string, string> = {
-        'Lofi': 'lofi beats chill 2025',
+        'Soul & Funk': 'soul funk classics best hits',
         'Trap': 'trap music 2025 hip hop',
         'Amapiano': 'amapiano 2025 trending',
         'Gospel': 'gospel music 2025 worship',
+        'Folk': 'folk music best hits 2025',
+        'Blues': 'blues music best hits classic',
       };
 
       let deezerTracks: any[] = [];
