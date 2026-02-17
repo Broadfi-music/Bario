@@ -1,40 +1,61 @@
 
-# Fix Country Filter: Mix of Real Charts + Local Artists
+
+# Fix Nigeria (and All Countries) to Show Currently Trending Music
 
 ## Problem
-The country filter currently searches ONLY for hardcoded artist names (Tyla, Kabza De Small, etc.) and returns their catalog tracks sorted by Deezer's internal popularity score. This does NOT reflect what's actually trending. The real Deezer South Africa chart shows Taylor Swift, Alex Warren, Benson Boone -- international hits that South Africans stream.
+The current implementation searches for each artist's name on Deezer and sorts by `RANKING`, which returns their **all-time most popular** tracks (e.g., CKay's "love nwantiti" from 2021). This does NOT reflect what is trending right now in Nigeria or on streaming platforms.
+
+## Root Cause
+The Deezer free API does not provide country-specific real-time charts. The `order=RANKING` parameter returns lifetime popularity, not current trends.
 
 ## Solution
-Show BOTH: the real Deezer country chart (what people there are streaming) AND local artist tracks, blended together.
+Modify the search strategy to bias toward **recent and currently active** tracks rather than all-time hits:
 
-### How it will work
-1. Fetch the real Deezer global chart filtered by country editorial playlist (or search "top South Africa 2025" as fallback)
-2. Fetch top tracks from hardcoded local artists (Tyla, Kabza De Small, Oscar Mbo, etc.)
-3. Interleave them: real chart tracks get positions 1-30, local artist tracks fill positions 31-60
-4. Both sections preserve their internal ordering (chart position for real chart, Deezer rank for local artists)
+### 1. Search for recent releases instead of just artist names
+Instead of searching `artist:"Wizkid"`, search for `artist:"Wizkid" 2025` or `artist:"Wizkid" 2026` to bias results toward newer tracks. If no results come back for the latest year, fall back to the previous year.
 
-## Technical Details
+### 2. Use multiple search passes per artist
+- First pass: Search `artist:"ArtistName"` with `order=RANKING` (current approach)
+- Filter results to prefer tracks released in the last 12 months by checking the `release_date` field from the Deezer album data
+- If an artist has no recent tracks, keep their top 1 all-time hit as a fallback
+
+### 3. Supplement with Deezer editorial/genre playlists
+- Search for genre-specific trending content like `"afrobeats 2026"` or `"amapiano new"` to capture currently hot tracks that may not be from the hardcoded artist list
+- This catches rising artists not yet in the curated list
+
+## Technical Changes
 
 ### File: `supabase/functions/heatmap-tracks/index.ts`
 
-**Update `getCountryChart` function (lines 80-123)**:
-- Split into two parallel fetches:
-  - `getCountryChartPlaylist(countryCode)` -- fetches real trending chart using `https://api.deezer.com/search?q=top+hits+{country}+2025&order=RANKING`
-  - `getLocalArtistTracks(countryCode)` -- keeps the existing artist search logic for local artists
-- Merge results: chart tracks first (with high chartBonus), local artist tracks second (with moderate chartBonus)
-- Deduplicate: if a local artist already appears in the chart, skip the duplicate
+**Update `getLocalArtistTracks` function:**
+- For each artist, fetch their top tracks AND check album release dates
+- Prioritize tracks from albums released in the last 12 months
+- Keep max 1 older "classic" hit per artist as fallback
+- Add a supplementary search for `"afrobeats 2026 new"` (for NG), `"amapiano 2026"` (for ZA), etc.
 
-**Update `countryArtists` list for South Africa (line 30)**:
-- Add missing current trending artists: Oscar Mbo, Musa Keys, Tyler ICU, Daliwonga, Kelvin Momo
-- These are the artists actually charting on SA streaming platforms right now
+**Add genre-based trending searches per country:**
+```
+Country genre map:
+- NG: ["afrobeats 2026", "naija new music"]
+- ZA: ["amapiano 2026", "south african music new"]  
+- GH: ["ghana music 2026", "highlife new"]
+- KE: ["kenyan music 2026", "gengetone new"]
+- BR: ["funk brasileiro 2026", "sertanejo new"]
+- KR: ["kpop 2026", "korean pop new"]
+- JP: ["jpop 2026", "japanese music new"]
+- etc.
+```
 
-**No changes needed to**:
-- `formatDeezerTrack` -- already handles chartBonus correctly
-- Frontend code -- the response format stays the same
-- Global chart logic -- already uses the real Deezer global chart endpoint
+**Update deduplication and ranking:**
+- Tracks with recent release dates get a `recencyBonus` added to their `attentionScore`
+- Formula: if released within last 6 months, add 50000 to attentionScore; within 12 months, add 25000
+- This ensures new releases rank above old classics even if the old ones have higher lifetime Deezer rank
 
 ### Result
-When you select "South Africa":
-- Top slots: whatever is actually trending there (could be Taylor Swift, Benson Boone, or local hits)
-- Lower slots: guaranteed South African artists (Tyla, Kabza De Small, Oscar Mbo, etc.)
-- Both sections clearly ranked by real popularity data
+When selecting Nigeria, the chart will show:
+- Top positions: Currently active/new releases from Nigerian artists (e.g., Asake's 2026 singles, Rema's latest, Ayra Starr's newest drops)
+- Middle positions: Genre-trending tracks from the Afrobeats/Naija scene
+- Lower positions: Global chart hits (international trending)
+- Sprinkled in: 1-2 all-time classics per artist as recognizable anchors
+
+This same logic applies to ALL country filters automatically.
