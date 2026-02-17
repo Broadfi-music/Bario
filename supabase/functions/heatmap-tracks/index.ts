@@ -20,7 +20,8 @@ function stableRandom(seed: string): number {
 // Seed changes every minute so rankings shift dynamically
 function todaySeed(): string {
   const now = new Date();
-  return `${now.toISOString().slice(0, 16)}`; // YYYY-MM-DDTHH:MM — changes every minute
+  const halfMin = Math.floor(now.getSeconds() / 30); // changes every 30 seconds
+  return `${now.toISOString().slice(0, 16)}_${halfMin}`;
 }
 
 // Country-specific top artists - this is the PRIMARY source for country charts
