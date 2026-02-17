@@ -76,19 +76,16 @@ async function searchDeezer(query: string, limit: number = 50): Promise<any[]> {
   }
 }
 
-// Fetch real trending chart for a country (what people there are actually streaming)
-async function getCountryChartPlaylist(countryCode: string, limit: number = 30): Promise<any[]> {
-  const name = countryNames[countryCode] || countryCode;
+// Fetch global chart tracks as the "international hits" component for country views
+async function getGlobalChartForCountry(limit: number = 20): Promise<any[]> {
   try {
-    const response = await fetch(
-      `https://api.deezer.com/search?q=${encodeURIComponent('top hits ' + name + ' 2025')}&limit=${limit}&order=RANKING`
-    );
+    const response = await fetch(`https://api.deezer.com/chart/0/tracks?limit=${limit}`);
     const data = await response.json();
     const tracks = data.data || [];
-    console.log(`Country chart playlist for ${countryCode}: Got ${tracks.length} tracks`);
+    console.log(`Global chart for country blend: Got ${tracks.length} tracks`);
     return tracks;
   } catch (e) {
-    console.error(`Country chart playlist error for ${countryCode}:`, e);
+    console.error('Global chart for country blend error:', e);
     return [];
   }
 }
@@ -132,24 +129,24 @@ async function getLocalArtistTracks(countryCode: string, limit: number = 30): Pr
   }
 }
 
-// Blended country chart: real trending + local artists
+// Blended country chart: global trending hits + local artists
 async function getCountryChart(countryCode: string, limit: number = 60): Promise<{ chart: any[]; local: any[] }> {
   const [chartTracks, localTracks] = await Promise.all([
-    getCountryChartPlaylist(countryCode, 30),
-    getLocalArtistTracks(countryCode, 40)
+    getGlobalChartForCountry(20),
+    getLocalArtistTracks(countryCode, 50)
   ]);
 
-  // Deduplicate: remove local tracks that already appear in chart
-  const chartKeys = new Set(
-    chartTracks.map(t => `${(t.title || '').toLowerCase()}_${(t.artist?.name || '').toLowerCase()}`)
+  // Deduplicate: remove chart tracks that already appear in local (local artists take priority)
+  const localKeys = new Set(
+    localTracks.map(t => `${(t.title || '').toLowerCase()}_${(t.artist?.name || '').toLowerCase()}`)
   );
-  const uniqueLocal = localTracks.filter(t => {
+  const uniqueChart = chartTracks.filter(t => {
     const key = `${(t.title || '').toLowerCase()}_${(t.artist?.name || '').toLowerCase()}`;
-    return !chartKeys.has(key);
+    return !localKeys.has(key);
   });
 
-  console.log(`Blended ${countryCode}: ${chartTracks.length} chart + ${uniqueLocal.length} local (deduped from ${localTracks.length})`);
-  return { chart: chartTracks, local: uniqueLocal };
+  console.log(`Blended ${countryCode}: ${localTracks.length} local + ${uniqueChart.length} global chart (deduped from ${chartTracks.length})`);
+  return { chart: uniqueChart, local: localTracks };
 }
 
 // Audius trending
@@ -449,19 +446,19 @@ serve(async (req) => {
       // Country-specific: Blend real trending chart + local artist tracks
       console.log(`Fetching blended chart for: ${country}`);
       
-      const { chart: chartTracks, local: localTracks } = await getCountryChart(country, 60);
+      const { chart: globalChartTracks, local: localTracks } = await getCountryChart(country, 60);
       
-      // Chart tracks get high chartBonus (positions 1-30)
-      const formattedChart = chartTracks.map((t: any, i: number) => formatDeezerTrack(t, i, country, i));
-      // Local artist tracks get moderate chartBonus (positions 31-60)
-      const formattedLocal = localTracks.map((t: any, i: number) => formatDeezerTrack(t, i + formattedChart.length, country, i + 30));
+      // Local artists get high chartBonus (top positions) — they're the primary content
+      const formattedLocal = localTracks.map((t: any, i: number) => formatDeezerTrack(t, i, country, i));
+      // Global chart tracks get lower chartBonus (fill remaining positions)
+      const formattedChart = globalChartTracks.map((t: any, i: number) => formatDeezerTrack(t, i + formattedLocal.length, country, i + 40));
       
-      const allTracks = [...formattedUserUploads, ...formattedChart, ...formattedLocal];
+      const allTracks = [...formattedUserUploads, ...formattedLocal, ...formattedChart];
       tracks = allTracks.filter(t => t.previewUrl);
       
-      const topChart = formattedChart.slice(0, 3).map(t => t.artist).join(', ');
       const topLocal = formattedLocal.slice(0, 3).map(t => t.artist).join(', ');
-      console.log(`Country ${country}: ${formattedChart.length} chart (${topChart}), ${formattedLocal.length} local (${topLocal})`);
+      const topChart = formattedChart.slice(0, 3).map(t => t.artist).join(', ');
+      console.log(`Country ${country}: ${formattedLocal.length} local (${topLocal}), ${formattedChart.length} global (${topChart})`);
       
     } else if (genre && genre !== 'All') {
       const deezerResults = await searchDeezer(`${genre} hits 2024`, 50);
