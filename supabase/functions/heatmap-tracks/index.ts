@@ -549,7 +549,7 @@ const genres = [
   'Afro', 'Indie & Alternative', 'Latin Music', 'Dance & EDM',
   'Reggaeton', 'Electronic', 'Country', 'Metal', 'K-Pop',
   'Reggae', 'Blues', 'Folk', 'Lofi', 'Acoustic',
-  'Caribbean', 'Japanese Music', 'AnimeVerse'
+  'Caribbean', 'Japanese Music', 'AnimeVerse', 'Trap'
 ];
 
 // Deezer genre_id to genre name mapping
@@ -788,23 +788,65 @@ serve(async (req) => {
       console.log(`Country ${country}: ${formattedLocal.length} local (top: ${topLocal}), ${formattedTrending.length} trending, ${formattedChart.length} global`);
       
     } else if (genre && genre !== 'All') {
-      // Use proper Deezer search terms for each genre
-      const genreSearchMap: Record<string, string> = {
-        'Pop': 'pop hits', 'Rap': 'rap hip hop', 'Rock': 'rock hits',
-        'R&B': 'r&b rnb', 'Classical': 'classical music', 'Jazz': 'jazz',
-        'Soul & Funk': 'soul funk', 'Afro': 'afrobeats afro',
-        'Indie & Alternative': 'indie alternative', 'Latin Music': 'latin reggaeton',
-        'Dance & EDM': 'dance edm', 'Reggaeton': 'reggaeton',
-        'Electronic': 'electronic', 'Country': 'country music',
-        'Metal': 'metal heavy', 'K-Pop': 'kpop k-pop',
-        'Reggae': 'reggae dancehall', 'Blues': 'blues',
-        'Folk': 'folk', 'Lofi': 'lofi lo-fi chill',
-        'Acoustic': 'acoustic', 'Caribbean': 'caribbean soca',
-        'Japanese Music': 'jpop japanese music', 'AnimeVerse': 'anime opening soundtrack',
+      // Map genre names to Deezer genre IDs for chart endpoint
+      const genreIdLookup: Record<string, number> = {
+        'Pop': 132, 'Rap': 116, 'Rock': 152, 'R&B': 165,
+        'Classical': 98, 'Jazz': 129, 'Soul & Funk': 169, 'Afro': 2,
+        'Indie & Alternative': 85, 'Latin Music': 197, 'Dance & EDM': 113,
+        'Reggaeton': 122, 'Electronic': 106, 'Country': 84, 'Metal': 464,
+        'K-Pop': 173, 'Reggae': 144, 'Blues': 153, 'Folk': 466,
+        'Acoustic': 95, 'Caribbean': 65, 'Japanese Music': 75,
       };
-      const searchTerm = genreSearchMap[genre] || genre;
-      const deezerResults = await searchDeezer(`${searchTerm} 2025`, 50);
-      const deezerTracks = deezerResults.map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre }));
+
+      // Genres that need search-based approach (no Deezer chart endpoint)
+      const searchOnlyGenres: Record<string, string[]> = {
+        'AnimeVerse': ['anime opening', 'anime ost'],
+        'Trap': ['trap metro boomin', 'trap nation'],
+        'Lofi': ['lofi hip hop', 'lo-fi chill beats'],
+      };
+
+      let deezerTracks: any[] = [];
+
+      if (searchOnlyGenres[genre]) {
+        // Use multi-search for genres without Deezer chart IDs
+        const searchTerms = searchOnlyGenres[genre];
+        const searchPromises = searchTerms.map(term => searchDeezer(term, 30));
+        const allSearchResults = await Promise.all(searchPromises);
+        const seenIds = new Set<string>();
+        const mergedResults: any[] = [];
+        for (const results of allSearchResults) {
+          for (const track of results) {
+            if (!seenIds.has(String(track.id))) {
+              seenIds.add(String(track.id));
+              mergedResults.push(track);
+            }
+          }
+        }
+        deezerTracks = mergedResults.slice(0, 50).map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre }));
+      } else if (genreIdLookup[genre]) {
+        // Use Deezer's editorial/chart endpoint for genres with IDs
+        try {
+          const genreId = genreIdLookup[genre];
+          const [chartRes, searchRes] = await Promise.all([
+            fetch(`https://api.deezer.com/chart/${genreId}/tracks?limit=40`).then(r => r.json()).catch(() => ({ data: [] })),
+            searchDeezer(`${genre} 2025`, 20),
+          ]);
+          const chartData = chartRes.data || chartRes.tracks?.data || [];
+          const seenIds = new Set(chartData.map((t: any) => String(t.id)));
+          const uniqueSearch = searchRes.filter((t: any) => !seenIds.has(String(t.id)));
+          const combined = [...chartData, ...uniqueSearch].slice(0, 50);
+          deezerTracks = combined.map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre }));
+        } catch (e) {
+          console.error(`Genre chart error for ${genre}:`, e);
+          const fallback = await searchDeezer(`${genre} music 2025`, 50);
+          deezerTracks = fallback.map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre }));
+        }
+      } else {
+        // Fallback: search-based
+        const results = await searchDeezer(`${genre} music 2025`, 50);
+        deezerTracks = results.map((t: any, i: number) => ({ ...formatDeezerTrack(t, i, 'GLOBAL'), genre }));
+      }
+
       tracks = [...formattedUserUploads, ...deezerTracks];
       
     } else {
