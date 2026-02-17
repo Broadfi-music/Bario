@@ -50,9 +50,146 @@ const countryNames: Record<string, string> = {
   'IN': 'India', 'AU': 'Australia', 'CA': 'Canada', 'ES': 'Spain', 'IT': 'Italy'
 };
 
+// Official Nigeria Top 100 from Turntable Charts (Jan 30 - Feb 5, 2026)
+// Each entry: [song title, primary artist for Deezer search]
+const nigeriaTurntableTop100: Array<{ title: string; artist: string }> = [
+  { title: 'Jogodo', artist: 'Wizkid Asake' },
+  { title: 'Turbulence', artist: 'Wizkid Asake' },
+  { title: 'MY HEALER', artist: 'Seyi Vibez Omah Lay' },
+  { title: 'Paparazzi', artist: 'Shoday FOLA' },
+  { title: 'Alaye', artist: 'Wizkid Asake' },
+  { title: '2Factor', artist: 'Young Jonn Asake' },
+  { title: 'MONEY CONSTANT', artist: 'DJ Maphorisa Wizkid' },
+  { title: 'ANGELS', artist: 'Lekaa Beats Omah Lay ODUMODUBLVCK' },
+  { title: 'Iskolodo', artist: 'Wizkid Asake' },
+  { title: 'Nakupenda', artist: 'TxC Davido' },
+  { title: 'BADAMINTON', artist: 'CKay' },
+  { title: 'Waist', artist: 'Omah Lay' },
+  { title: 'Raindance', artist: 'Dave Tems' },
+  { title: 'Lalala', artist: 'Young Jonn Rema' },
+  { title: 'Akonuche', artist: 'Priesst' },
+  { title: 'you', artist: 'FOLA' },
+  { title: 'Galorizzy', artist: 'Davido Mavo' },
+  { title: 'Body danz', artist: 'CKay Mavo' },
+  { title: 'HOW FAR', artist: 'NO11 Ayjay bobo' },
+  { title: 'Papaoutai Afro soul', artist: 'mikeeysmind' },
+  { title: 'Intentions', artist: 'FAVE' },
+  { title: 'With You', artist: 'Davido Omah Lay' },
+  { title: 'What You Saying', artist: 'Lil Uzi Vert' },
+  { title: 'Tumo Weto', artist: 'Mavo' },
+  { title: 'FUN', artist: 'Rema' },
+  { title: 'caricature', artist: 'FOLA' },
+  { title: '99', artist: 'Olamide Seyi Vibez Asake' },
+  { title: 'WHY LOVE', artist: 'Asake' },
+  { title: 'FUJI MOTO', artist: 'Seyi Vibez' },
+  { title: 'SNOKONOKO', artist: 'Al Xapo' },
+  { title: 'Shakabulizzy Remix', artist: 'Mavo Davido' },
+  { title: 'Isaka II', artist: 'Ciza Tems Omah Lay' },
+  { title: 'Love', artist: 'Burna Boy' },
+  { title: 'I Just Might', artist: 'Bruno Mars' },
+  { title: 'Getting Paid', artist: 'Sarz Asake Wizkid' },
+  { title: 'Birthday', artist: 'Fredo Burna Boy' },
+  { title: 'EASY WITH ME', artist: 'DJ Tunez Wizkid ODUMODUBLVCK' },
+  { title: 'Everyday', artist: 'Magixx' },
+  { title: 'Remember', artist: 'Asake' },
+  { title: 'One Condition', artist: 'DJ Tunez Wizkid FOLA' },
+  { title: 'CHANEL', artist: 'Tyla' },
+  { title: 'Like That bomboclatt', artist: 'Shallipopi Wizkid' },
+  { title: 'PUSH 2 START', artist: 'Tyla' },
+  { title: 'BADMAN GANGSTA', artist: 'Asake Tiakola' },
+  { title: 'eko', artist: 'FOLA' },
+  { title: 'Love Egbugomo', artist: 'Syemca Chike' },
+  { title: 'Very Soon', artist: 'BNXN FOLA' },
+  { title: 'lost', artist: 'Kold AF' },
+  { title: 'lost', artist: 'FOLA Kizz Daniel' },
+  { title: 'Aperture', artist: 'Harry Styles' },
+  { title: 'Motho Waka', artist: 'LADIPOE Maglera Doe Boy' },
+  { title: "Who's Dat Girl", artist: 'Ayra Starr Rema' },
+  { title: 'Man2Man', artist: 'Dremo' },
+  { title: 'Secondhand', artist: 'Don Toliver Rema' },
+  { title: 'LAPOPIANO', artist: 'Boy Muller' },
+  { title: 'So Easy To Fall In Love', artist: 'Olivia Dean' },
+  { title: 'TENSION', artist: 'Ayo Maff' },
+  { title: 'Allonsy', artist: 'BabyDaiz' },
+  { title: 'The Eagle Has Landed', artist: 'Flavour' },
+  { title: 'GROOVING', artist: 'ODUMODUBLVCK Davido' },
+  { title: 'BIG TIME', artist: 'ODUMODUBLVCK Wizkid' },
+  { title: "Ko'rin Iyin", artist: 'EmmaOMG' },
+  { title: 'Many People', artist: 'Adekunle Gold' },
+  { title: 'Lose My Mind', artist: 'T.I BLAZE' },
+  { title: 'girl get up', artist: 'Doechii SZA' },
+  { title: 'Oh No', artist: 'Oberz FOLA' },
+  { title: 'INDUSTRY MACHINE', artist: 'ODUMODUBLVCK' },
+  { title: 'On A Low', artist: 'Elestee Ayra Starr' },
+  { title: 'Mmmn', artist: 'Naira Marley' },
+  { title: 'HOW ARE YOU', artist: 'Seyi Vibez' },
+  { title: 'AMA', artist: 'Seyi Vibez' },
+  { title: 'Dem Dey', artist: 'Burna Boy' },
+  { title: 'healer', artist: 'FOLA' },
+  { title: 'Richer', artist: 'J Hus Seyi Vibez' },
+  { title: 'Unto The Next', artist: 'Famous PLuto' },
+  { title: 'Do Not Disturb DND', artist: 'Lovn' },
+  { title: 'No', artist: 'Mavo' },
+  { title: 'Wetin Dey', artist: 'Chike' },
+  { title: 'golibe', artist: 'FOLA Victony' },
+  { title: 'Oga Eme', artist: 'Kolaboy' },
+  { title: 'Despacito', artist: 'Blaqbonez FOLA' },
+  { title: 'wgft', artist: 'Gunna Burna Boy' },
+  { title: 'Ask Of Me', artist: 'Phyno' },
+  { title: 'bye bye', artist: 'FOLA' },
+  { title: 'Big Daddy', artist: 'Tems' },
+];
+
+// Fetch Nigeria chart using exact Turntable Charts song+artist searches on Deezer
+async function getNigeriaTurntableChart(): Promise<any[]> {
+  // Search for each song in batches to avoid rate limits
+  const batchSize = 10;
+  const allTracks: any[] = [];
+  const seen = new Set<string>();
+
+  for (let i = 0; i < nigeriaTurntableTop100.length; i += batchSize) {
+    const batch = nigeriaTurntableTop100.slice(i, i + batchSize);
+    const results = await Promise.all(
+      batch.map(async (entry, batchIdx) => {
+        const chartRank = i + batchIdx; // 0-based chart position
+        try {
+          const query = `${entry.title} ${entry.artist}`;
+          const response = await fetch(
+            `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=5&order=RANKING`
+          );
+          const data = await response.json();
+          const results = data.data || [];
+          
+          // Find best match - prefer exact title match
+          const titleLower = entry.title.toLowerCase();
+          const match = results.find((t: any) => 
+            (t.title || '').toLowerCase().includes(titleLower) ||
+            titleLower.includes((t.title || '').toLowerCase())
+          ) || results[0];
+          
+          if (match) {
+            const key = `${(match.title || '').toLowerCase()}_${(match.artist?.name || '').toLowerCase()}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              return { ...match, _chartRank: chartRank, _turntableTitle: entry.title };
+            }
+          }
+          return null;
+        } catch {
+          return null;
+        }
+      })
+    );
+    allTracks.push(...results.filter(Boolean));
+  }
+
+  console.log(`Nigeria Turntable Chart: Found ${allTracks.length} tracks from ${nigeriaTurntableTop100.length} chart entries`);
+  return allTracks;
+}
+
 // Genre-based trending search queries per country to catch current hits
 const countryTrendingQueries: Record<string, string[]> = {
-  'NG': ['Jogodo Wizkid Asake', 'Turbulence Wizkid Asake', 'MONEY CONSTANT DJ Maphorisa Wizkid', 'Nakupenda Davido', 'afrobeats 2025 new'],
+  'NG': ['afrobeats 2025 new naija'],
   'ZA': ['amapiano 2025', 'south african music new 2025'],
   'GH': ['ghana music 2025', 'afrobeats ghana new'],
   'KE': ['kenyan music 2025', 'gengetone new'],
@@ -575,8 +712,34 @@ serve(async (req) => {
       tracks = allTracks.filter(t => t.previewUrl);
       console.log(`Search results: User=${formattedUserUploads.length}, Deezer=${deezerTracks.length}, Audius=${audiusTracks.length}`);
       
+    } else if (country === 'NG') {
+      // Nigeria: Use hardcoded Turntable Charts Top 100 for exact accuracy
+      console.log('Fetching Nigeria chart from Turntable Charts data...');
+      
+      const [turntableTracks, globalChartTracks] = await Promise.all([
+        getNigeriaTurntableChart(),
+        getGlobalChartForCountry(10)
+      ]);
+      
+      // Format turntable tracks with chart position preserved
+      const formattedTurntable = turntableTracks.map((t: any, i: number) => 
+        formatDeezerTrack(t, i, 'NG', t._chartRank ?? i)
+      );
+      
+      // Dedupe global chart against turntable tracks
+      const turntableKeys = new Set(formattedTurntable.map(t => `${t.title.toLowerCase()}_${t.artist.toLowerCase()}`));
+      const uniqueGlobal = globalChartTracks
+        .filter((t: any) => !turntableKeys.has(`${(t.title || '').toLowerCase()}_${(t.artist?.name || '').toLowerCase()}`))
+        .map((t: any, i: number) => formatDeezerTrack(t, i + formattedTurntable.length, 'NG', i + 90));
+      
+      const allTracks = [...formattedUserUploads, ...formattedTurntable, ...uniqueGlobal];
+      tracks = allTracks.filter(t => t.previewUrl);
+      
+      const topTracks = formattedTurntable.slice(0, 5).map(t => `${t.artist} - ${t.title}`).join(', ');
+      console.log(`Nigeria Turntable: ${formattedTurntable.length} chart tracks + ${uniqueGlobal.length} global. Top: ${topTracks}`);
+      
     } else if (country && country !== 'GLOBAL') {
-      // Country-specific: Blend local artists (recency-biased) + genre trending + global chart
+      // Other countries: Blend local artists (recency-biased) + genre trending + global chart
       console.log(`Fetching recency-biased blended chart for: ${country}`);
       
       const { chart: globalChartTracks, local: localTracks, trending: trendingTracks } = await getCountryChart(country, 60);
@@ -591,7 +754,6 @@ serve(async (req) => {
       const allTracks = [...formattedUserUploads, ...formattedLocal, ...formattedTrending, ...formattedChart];
       tracks = allTracks.filter(t => t.previewUrl);
       
-      const recentCount = formattedLocal.filter(t => t.metrics.attentionScore > 90000).length;
       const topLocal = formattedLocal.slice(0, 3).map(t => `${t.artist} - ${t.title}`).join(', ');
       console.log(`Country ${country}: ${formattedLocal.length} local (top: ${topLocal}), ${formattedTrending.length} trending, ${formattedChart.length} global`);
       
