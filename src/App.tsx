@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import GlobalAudioPlayer from "@/components/GlobalAudioPlayer";
 import GlobalBattleNotification from "@/components/podcast/GlobalBattleNotification";
@@ -45,6 +45,16 @@ const queryClient = new QueryClient();
 
 const MobileHomeRedirect = () => {
   const isMobile = useIsMobile();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // On mobile PWA, redirect unauthenticated users to auth page
+    if (isMobile && !user) {
+      navigate('/auth', { replace: true });
+    }
+  }, [isMobile, user, navigate]);
+  
   // On mobile, show Podcasts (Live) as the home screen
   return isMobile ? <Podcasts /> : <GlobalHeatmap />;
 };

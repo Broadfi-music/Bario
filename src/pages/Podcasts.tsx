@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, Mic, Radio, Home, Flame, Swords, Trophy } from 'lucide-react';
+import { ChevronLeft, Mic, Radio, Home, Flame, Swords, Trophy, Tv, Music, User } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import NotificationBell from '@/components/NotificationBell';
 import { Button } from '@/components/ui/button';
@@ -403,7 +403,65 @@ const Podcasts = () => {
         </div>
       )}
 
-      {/* Kick.com Style Header */}
+      {/* Mobile TikTok-Style Top Header - PWA only */}
+      {isMobile && (
+        <header className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-md">
+          {/* Top row: Battle tabs + profile icon */}
+          <div className="flex items-center justify-between h-11 px-3">
+            {/* Left: Host profile avatar */}
+            <button
+              onClick={() => {
+                if (selectedSession) {
+                  // Navigate to host profile
+                  const hostId = selectedSession.host_id;
+                  if (hostId) navigate(`/host/${hostId}`);
+                }
+              }}
+              className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex-shrink-0"
+            >
+              {selectedSession?.host_avatar ? (
+                <img src={selectedSession.host_avatar} alt="" className="w-full h-full object-cover" />
+              ) : null}
+            </button>
+
+            {/* Center: TikTok-style tabs */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => { setActiveTab('battles'); }}
+                className={`flex items-center gap-1 text-xs font-medium transition-colors ${activeTab === 'battles' ? 'text-white' : 'text-white/50'}`}
+              >
+                <Tv className="h-3.5 w-3.5" />
+                Battle
+              </button>
+              <button
+                onClick={() => { setActiveTab('leaderboard'); }}
+                className={`text-xs font-medium transition-colors ${activeTab === 'leaderboard' ? 'text-white' : 'text-white/50'}`}
+              >
+                Leaderboard
+              </button>
+              <button
+                onClick={() => navigate('/bario-music')}
+                className="text-xs font-medium text-white/50 transition-colors hover:text-white"
+              >
+                Bario Music
+              </button>
+            </div>
+
+            {/* Right: Profile/Dashboard icon */}
+            {user ? (
+              <button onClick={() => navigate('/dashboard')} className="flex-shrink-0">
+                <User className="h-5 w-5 text-white/70" />
+              </button>
+            ) : (
+              <button onClick={() => navigate('/auth')} className="flex-shrink-0">
+                <User className="h-5 w-5 text-white/70" />
+              </button>
+            )}
+          </div>
+        </header>
+      )}
+
+      {/* Desktop Header - Kick.com Style */}
       <header className={`fixed left-0 right-0 z-50 bg-[#18181b] border-b border-white/5 ${isMobile ? 'hidden' : ''} ${(hostLiveSession && !showHostStudio) || (hostBattle && !showBattleSession) ? 'top-10' : 'top-0'}`}>
         <div className="flex items-center justify-between h-12 px-2 sm:px-4">
           {/* Left: Logo/Back */}
@@ -419,7 +477,7 @@ const Podcasts = () => {
             </Link>
           </div>
 
-          {/* Center: Tabs - Add Battle and Leaderboard tabs */}
+          {/* Center: Tabs */}
           <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v !== 'live') { setSelectedSession(null); setSearchParams({}); } }} className="w-auto">
             <TabsList className="bg-white/5 h-8">
               <TabsTrigger value="feed" className="text-xs px-2 sm:px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7">
