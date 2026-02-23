@@ -34,14 +34,12 @@ import BarioMusic from "@/pages/BarioMusic";
 import BarioMusicDetail from "@/pages/BarioMusicDetail";
 import Rewards from "@/pages/Rewards";
 import ThreeStrike from "@/pages/ThreeStrike";
+import Install from "@/pages/Install";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Register service worker for push notifications
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
-}
+// Service worker is now handled by vite-plugin-pwa
 
 const App = () => {
   return (
@@ -85,6 +83,7 @@ const App = () => {
                 <Route path="/dashboard/rewards" element={<Rewards />} />
                 <Route path="/three-strike" element={<ThreeStrike />} />
                 <Route path="/pricing" element={<Pricing />} />
+                <Route path="/install" element={<Install />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <GlobalAudioPlayer />
