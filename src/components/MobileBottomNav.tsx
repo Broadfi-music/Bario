@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Radio, Home, Plus, Globe, Sparkles } from 'lucide-react';
+import { Radio, Home, Plus, Globe } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -19,14 +19,12 @@ const MobileBottomNav = () => {
     { id: 'feed', icon: Home, label: 'Feed', path: '/podcasts?tab=feed' },
     { id: 'golive', icon: Plus, label: 'Go Live', path: null },
     { id: 'heatmap', icon: Globe, label: 'Heatmap', path: '/heatmap' },
-    { id: 'remix', icon: Sparkles, label: 'AI Remix', path: '/ai-remix' },
   ];
 
   const isActive = (tab: typeof tabs[0]) => {
     if (tab.id === 'live') return location.pathname === '/podcasts' && !location.search.includes('tab=feed');
     if (tab.id === 'feed') return location.pathname === '/podcasts' && location.search.includes('tab=feed');
     if (tab.id === 'heatmap') return location.pathname === '/' || location.pathname === '/heatmap' || location.pathname === '/global-heatmap';
-    if (tab.id === 'remix') return location.pathname === '/ai-remix';
     return false;
   };
 
@@ -36,7 +34,6 @@ const MobileBottomNav = () => {
         navigate('/auth');
       } else {
         navigate('/podcasts');
-        // Small delay to let navigation complete, then trigger host studio
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('open-host-studio'));
         }, 100);
@@ -67,11 +64,15 @@ const MobileBottomNav = () => {
                 <div className="w-10 h-7 rounded-lg bg-gradient-to-r from-[#ff2d55] to-[#c237eb] flex items-center justify-center -mt-1">
                   <Plus className="h-5 w-5 text-white" strokeWidth={3} />
                 </div>
+              ) : tab.id === 'heatmap' ? (
+                <>
+                  <img src="/bario-logo.png" alt="Bario" className={`h-5 w-5 object-contain ${active ? 'opacity-100' : 'opacity-40'}`} />
+                </>
               ) : (
                 <tab.icon className={`h-5 w-5 ${active ? 'text-white' : ''}`} />
               )}
               <span className={`text-[10px] ${isGoLive ? 'text-white/70' : ''}`}>
-                {tab.label}
+                {tab.id === 'heatmap' ? 'Bario' : tab.label}
               </span>
             </button>
           );

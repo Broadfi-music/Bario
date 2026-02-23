@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
   Search, Star, TrendingUp, TrendingDown, ExternalLink, Filter, Clock,
   Play, Pause, Users, ChevronRight, Sparkles, Zap, ChevronLeft, Volume2, X, Flame, Globe,
-  Mic, Radio, Calendar, Swords
+  Mic, Radio, Calendar, Swords, User
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
@@ -486,28 +486,46 @@ const GlobalHeatmap = () => {
             {/* Dashboard/Login - Always visible */}
             {user ? (
               <Link to="/dashboard">
-                <Button size="sm" className="bg-black text-white hover:bg-black/90 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 rounded-lg font-medium">
-                  Dashboard
-                </Button>
+                {isMobile ? (
+                  <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                ) : (
+                  <Button size="sm" className="bg-black text-white hover:bg-black/90 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 rounded-lg font-medium">
+                    Dashboard
+                  </Button>
+                )}
               </Link>
             ) : (
-              <div className="flex items-center gap-1">
-                <Link to="/auth">
-                  <Button size="sm" variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3">
-                    Sign In
-                  </Button>
-                </Link>
-                <Link to="/auth">
-                  <Button size="sm" className="bg-[#4ade80] text-black hover:bg-[#4ade80]/90 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 rounded-lg font-medium">
-                    Sign Up
-                  </Button>
-                </Link>
-              </div>
+              <>
+                {/* Desktop: show sign in/up buttons. Mobile: show profile icon to go to auth */}
+                {isMobile ? (
+                  <Link to="/auth">
+                    <div className="w-7 h-7 rounded-full overflow-hidden bg-white/10 flex items-center justify-center">
+                      <User className="h-4 w-4 text-white/70" />
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <Link to="/auth">
+                      <Button size="sm" variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3">
+                        Sign In
+                      </Button>
+                    </Link>
+                    <Link to="/auth">
+                      <Button size="sm" className="bg-[#4ade80] text-black hover:bg-[#4ade80]/90 text-[10px] sm:text-xs h-7 sm:h-8 px-2 sm:px-3 rounded-lg font-medium">
+                        Sign Up
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>
 
-        {/* Mobile Navigation Links - Below search */}
+        {/* Mobile Navigation Links - Below search (hidden on PWA mobile) */}
+        {!isMobile && (
         <div className="sm:hidden border-t border-white/5 px-3 py-2 flex items-center gap-3 overflow-x-auto">
           <Link to="/ai-remix" className="text-[9px] text-white/70 hover:text-cyan-400 whitespace-nowrap">
             AI Remix
@@ -538,6 +556,7 @@ const GlobalHeatmap = () => {
             <TrendingUp className="absolute right-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-green-400 pointer-events-none" />
           </div>
         </div>
+        )}
 
         {/* Global Stats Bar */}
         <div className="border-t border-white/5 px-3 sm:px-6 py-2">
@@ -614,7 +633,7 @@ const GlobalHeatmap = () => {
         </section>
 
         {/* 🔴 LIVE NOW - Live Sessions & Battles - Always show with at least demo */}
-        <section className="mb-6 animate-fade-in">
+        <section className={`mb-6 animate-fade-in ${isMobile ? 'hidden' : ''}`}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Radio className="h-4 w-4 text-red-500 animate-pulse" />
