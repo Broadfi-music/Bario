@@ -3,15 +3,17 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
+import { AnimatePresence } from "framer-motion";
 import GlobalAudioPlayer from "@/components/GlobalAudioPlayer";
 import GlobalBattleNotification from "@/components/podcast/GlobalBattleNotification";
 import GlobalJoinRequestNotification from "@/components/podcast/GlobalJoinRequestNotification";
 import PushSubscriptionManager from "@/components/PushSubscriptionManager";
 import SplashScreen from "@/components/SplashScreen";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import PageTransition from "@/components/PageTransition";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 import GlobalHeatmap from "@/pages/GlobalHeatmap";
@@ -49,14 +51,58 @@ const MobileHomeRedirect = () => {
   const navigate = useNavigate();
   
   useEffect(() => {
-    // On mobile PWA, redirect unauthenticated users to auth page
     if (isMobile && !user) {
       navigate('/auth', { replace: true });
     }
   }, [isMobile, user, navigate]);
   
-  // On mobile, show Podcasts (Live) as the home screen
   return isMobile ? <Podcasts /> : <GlobalHeatmap />;
+};
+
+const AnimatedRoutes = ({ showSplash }: { showSplash: boolean }) => {
+  const location = useLocation();
+  const isMobile = useIsMobile();
+
+  if (showSplash) return null;
+
+  return (
+    <AnimatePresence mode="wait">
+      <PageTransition keyProp={isMobile ? location.pathname + location.search : 'desktop'}>
+        <Routes location={location}>
+          <Route path="/" element={<MobileHomeRedirect />} />
+          <Route path="/ai-remix" element={<AIRemix />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/advanced" element={<Advanced />} />
+          <Route path="/heatmap" element={<GlobalHeatmap />} />
+          <Route path="/global-heatmap" element={<GlobalHeatmap />} />
+          <Route path="/global-heatmap/:id" element={<HeatmapDetail />} />
+          <Route path="/heatmap/:id" element={<HeatmapDetail />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/settings" element={<DashboardSettings />} />
+          <Route path="/dashboard/profile" element={<DashboardProfile />} />
+          <Route path="/dashboard/new-remix" element={<NewRemix />} />
+          <Route path="/dashboard/create" element={<Create />} />
+          <Route path="/dashboard/library" element={<Library />} />
+          <Route path="/dashboard/analytics" element={<Analytics />} />
+          <Route path="/dashboard/upload" element={<Upload />} />
+          <Route path="/dashboard/creator/:id" element={<CreatorProfile />} />
+          <Route path="/dashboard/artist/:id" element={<ArtistProfile />} />
+          <Route path="/dashboard/music-result" element={<MusicResultPage />} />
+          <Route path="/music-result" element={<MusicResultPage />} />
+          <Route path="/podcasts" element={<Podcasts />} />
+          <Route path="/podcast-host/:hostId" element={<PodcastHost />} />
+          <Route path="/host/:hostId" element={<HostProfile />} />
+          <Route path="/bario-music" element={<BarioMusic />} />
+          <Route path="/bario-music/:id" element={<BarioMusicDetail />} />
+          <Route path="/dashboard/rewards" element={<Rewards />} />
+          <Route path="/three-strike" element={<ThreeStrike />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/install" element={<Install />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </PageTransition>
+    </AnimatePresence>
+  );
 };
 
 const App = () => {
@@ -81,38 +127,7 @@ const App = () => {
               <GlobalBattleNotification />
               <GlobalJoinRequestNotification />
               <PushSubscriptionManager />
-              <Routes>
-                <Route path="/" element={<MobileHomeRedirect />} />
-                <Route path="/ai-remix" element={<AIRemix />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/advanced" element={<Advanced />} />
-                <Route path="/heatmap" element={<GlobalHeatmap />} />
-                <Route path="/global-heatmap" element={<GlobalHeatmap />} />
-                <Route path="/global-heatmap/:id" element={<HeatmapDetail />} />
-                <Route path="/heatmap/:id" element={<HeatmapDetail />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/dashboard/settings" element={<DashboardSettings />} />
-                <Route path="/dashboard/profile" element={<DashboardProfile />} />
-                <Route path="/dashboard/new-remix" element={<NewRemix />} />
-                <Route path="/dashboard/create" element={<Create />} />
-                <Route path="/dashboard/library" element={<Library />} />
-                <Route path="/dashboard/analytics" element={<Analytics />} />
-                <Route path="/dashboard/upload" element={<Upload />} />
-                <Route path="/dashboard/creator/:id" element={<CreatorProfile />} />
-                <Route path="/dashboard/artist/:id" element={<ArtistProfile />} />
-                <Route path="/dashboard/music-result" element={<MusicResultPage />} />
-                <Route path="/music-result" element={<MusicResultPage />} />
-                <Route path="/podcasts" element={<Podcasts />} />
-                <Route path="/podcast-host/:hostId" element={<PodcastHost />} />
-                <Route path="/host/:hostId" element={<HostProfile />} />
-                <Route path="/bario-music" element={<BarioMusic />} />
-                <Route path="/bario-music/:id" element={<BarioMusicDetail />} />
-                <Route path="/dashboard/rewards" element={<Rewards />} />
-                <Route path="/three-strike" element={<ThreeStrike />} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/install" element={<Install />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <AnimatedRoutes showSplash={showSplash} />
               <MobileBottomNav />
               <GlobalAudioPlayer />
             </BrowserRouter>
