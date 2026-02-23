@@ -351,18 +351,23 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
   };
 
   const leaveSession = async () => {
-    if (!user || !myParticipation) return;
+    if (!user) return;
 
+    // Disconnect audio first
     await disconnectAudio();
     
-    await supabase
-      .from('podcast_participants')
-      .delete()
-      .eq('id', myParticipation.id);
+    // Remove from participants if we have a participation record
+    if (myParticipation) {
+      await supabase
+        .from('podcast_participants')
+        .delete()
+        .eq('id', myParticipation.id);
+    }
     
     setMyParticipation(null);
     toast.success('Left the space');
     onLeave?.();
+    navigate('/podcasts');
   };
 
   const kickParticipant = async (participantId: string, participantUserId: string) => {
@@ -521,13 +526,15 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
   const handleToggleMute = async () => {
     if (!myParticipation) return;
     
-    if (myParticipation.role === 'listener' && isMuted) {
+    // Allow mute/unmute for speakers, co-hosts, and hosts
+    if (myParticipation.role === 'listener') {
       toast.error('Request to speak first');
       return;
     }
 
     await toggleMute();
 
+    // Sync mute state to DB
     await supabase
       .from('podcast_participants')
       .update({ is_muted: !isMuted })
@@ -694,7 +701,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
                         sideOffset={8}
                       >
                         <div className="flex flex-col gap-1">
-                          {myParticipation && myParticipation.role !== 'listener' && (
+                          {myParticipation && (myParticipation.role === 'host' || myParticipation.role === 'co_host' || myParticipation.role === 'speaker') && (
                             <button
                               onClick={handleToggleMute}
                               disabled={!isAudioConnected}

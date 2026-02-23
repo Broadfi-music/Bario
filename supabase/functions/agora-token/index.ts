@@ -314,12 +314,31 @@ serve(async (req) => {
     console.log("App ID:", AGORA_APP_ID.substring(0, 8) + "...");
     console.log("Certificate length:", AGORA_APP_CERTIFICATE.length);
 
-    // FIXED: Only give publisher rights to hosts/participants (speakers)
-    // Listeners should be subscribers only - no microphone needed
-    // This prevents listeners from being asked for microphone permission
-    const canPublish = isHost; // Only hosts/participants (isHost=true) can publish
+    // Check the user's actual role in DB to determine publish rights
+    // Hosts always can publish. Speakers/co-hosts get publisher rights too.
+    let canPublish = isHost;
+    
+    if (!canPublish) {
+      // Check if user is a speaker/co_host in podcast_participants
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const sb = createClient(supabaseUrl, supabaseKey);
+      
+      const { data: participant } = await sb
+        .from('podcast_participants')
+        .select('role')
+        .eq('session_id', sessionId)
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (participant && (participant.role === 'speaker' || participant.role === 'co_host' || participant.role === 'host')) {
+        canPublish = true;
+        console.log("User has speaker/co_host/host role in DB - granting publisher rights");
+      }
+    }
+    
     const speakerSlotsFull = false;
-    const MAX_SPEAKERS = 100; // No practical limit now
+    const MAX_SPEAKERS = 100;
 
     // Generate channel name and UID (include sessionId for uniqueness)
     const channelName = `podcast-${sessionId}`;
