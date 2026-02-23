@@ -309,13 +309,23 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
         return;
       }
 
+      // Fetch user profile for cover image
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('avatar_url, cover_image_url')
+        .eq('user_id', user.id)
+        .single();
+
+      const coverImage = profileData?.cover_image_url || profileData?.avatar_url || `https://api.dicebear.com/9.x/shapes/svg?seed=${user.id}&size=400&backgroundColor=0a0a0a,1a1a2e,16213e`;
+
       const { data, error } = await supabase
         .from('podcast_sessions')
         .insert({
           host_id: user.id,
           title: title.trim(),
           status: 'live',
-          started_at: new Date().toISOString()
+          started_at: new Date().toISOString(),
+          cover_image_url: coverImage
         })
         .select()
         .single();

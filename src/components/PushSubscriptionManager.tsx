@@ -1,8 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -17,14 +15,24 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 
 const PushSubscriptionManager = () => {
   const { user } = useAuth();
+  const vapidKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    if (!VAPID_PUBLIC_KEY) return;
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
 
     const register = async () => {
       try {
+        // Fetch VAPID public key from backend if not cached
+        if (!vapidKeyRef.current) {
+          const { data, error } = await supabase.functions.invoke('get-vapid-key');
+          if (error || !data?.vapidPublicKey) {
+            console.log('Push: VAPID key not available');
+            return;
+          }
+          vapidKeyRef.current = data.vapidPublicKey;
+        }
+
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') return;
 
@@ -34,7 +42,7 @@ const PushSubscriptionManager = () => {
         const pushManager = (registration as any).pushManager;
         const subscription = await pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+          applicationServerKey: urlBase64ToUint8Array(vapidKeyRef.current!),
         });
 
         const subJson = subscription.toJSON();
