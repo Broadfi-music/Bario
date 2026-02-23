@@ -21,7 +21,7 @@ const GlobalJoinRequestNotification = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Check if this user is a host of any active session
+    // Only show requests for sessions where this user is the host
     const checkAndSubscribe = async () => {
       // Get sessions where this user is the host
       const { data: sessions } = await supabase
@@ -31,9 +31,39 @@ const GlobalJoinRequestNotification = () => {
         .eq('status', 'live');
 
       const hostSessionIds = sessions?.map(s => s.id) || [];
+      
+      if (hostSessionIds.length === 0) {
+        // User is not hosting any live session, no need to listen
+        return () => {};
+      }
 
-      // Also check demo sessions - if user has created any content as host
-      // For now, subscribe to ALL pending join requests and filter client-side
+      const showRequest = (request: JoinRequest) => {
+        if (request.user_id === user.id) return;
+        if (shownIds.has(request.id)) return;
+        // Only show if the request is for one of the user's hosted sessions
+        if (!hostSessionIds.includes(request.session_id)) return;
+
+        setShownIds(prev => new Set(prev).add(request.id));
+
+        const userName = request.user_name || 'A listener';
+        
+        toast(
+          `${userName} wants to join your space`,
+          {
+            icon: <UserPlus className="h-4 w-4 text-green-400" />,
+            duration: 30000,
+            action: {
+              label: 'Accept',
+              onClick: () => handleAccept(request.id, request.session_id, request.user_id),
+            },
+            style: {
+              background: '#1a1a1a',
+              border: '1px solid rgba(34, 197, 94, 0.3)',
+              color: 'white',
+            },
+          }
+        );
+      };
 
       // Subscribe to new join requests in real-time
       const channel = supabase
@@ -48,68 +78,22 @@ const GlobalJoinRequestNotification = () => {
           },
           (payload) => {
             const request = payload.new as JoinRequest;
-            // Don't notify for own requests
-            if (request.user_id === user.id) return;
-            // Don't show duplicate notifications
-            if (shownIds.has(request.id)) return;
-
-            setShownIds(prev => new Set(prev).add(request.id));
-
-            const userName = request.user_name || 'A listener';
-            
-            toast(
-              `${userName} wants to join your space`,
-              {
-                icon: <UserPlus className="h-4 w-4 text-green-400" />,
-                duration: 15000,
-                action: {
-                  label: 'Accept',
-                  onClick: () => handleAccept(request.id),
-                },
-                style: {
-                  background: '#1a1a1a',
-                  border: '1px solid rgba(34, 197, 94, 0.3)',
-                  color: 'white',
-                },
-              }
-            );
+            showRequest(request);
           }
         )
         .subscribe();
 
       // Also fetch any existing pending requests on mount
-      const { data: pendingRequests } = await supabase
-        .from('space_join_requests')
-        .select('*')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false })
-        .limit(10);
+      for (const sid of hostSessionIds) {
+        const { data: pendingRequests } = await supabase
+          .from('space_join_requests')
+          .select('*')
+          .eq('session_id', sid)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(10);
 
-      if (pendingRequests && pendingRequests.length > 0) {
-        pendingRequests.forEach((request: any) => {
-          if (request.user_id === user.id) return;
-          if (shownIds.has(request.id)) return;
-
-          setShownIds(prev => new Set(prev).add(request.id));
-
-          const userName = request.user_name || 'A listener';
-          toast(
-            `${userName} wants to join your space`,
-            {
-              icon: <UserPlus className="h-4 w-4 text-green-400" />,
-              duration: 15000,
-              action: {
-                label: 'Accept',
-                onClick: () => handleAccept(request.id),
-              },
-              style: {
-                background: '#1a1a1a',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
-                color: 'white',
-              },
-            }
-          );
-        });
+        pendingRequests?.forEach((request: any) => showRequest(request));
       }
 
       return () => {
@@ -123,7 +107,8 @@ const GlobalJoinRequestNotification = () => {
     };
   }, [user]);
 
-  const handleAccept = async (requestId: string) => {
+  const handleAccept = async (requestId: string, sessionId: string, requestUserId: string) => {
+    // 1. Update request status
     const { error } = await supabase
       .from('space_join_requests')
       .update({ status: 'accepted', responded_at: new Date().toISOString() })
@@ -131,9 +116,35 @@ const GlobalJoinRequestNotification = () => {
 
     if (error) {
       toast.error('Failed to accept request');
-    } else {
-      toast.success('Listener accepted! They can now speak.');
+      return;
     }
+
+    // 2. Promote user to speaker in podcast_participants
+    // First check if they're already a participant
+    const { data: existing } = await supabase
+      .from('podcast_participants')
+      .select('id, role')
+      .eq('session_id', sessionId)
+      .eq('user_id', requestUserId)
+      .maybeSingle();
+
+    if (existing) {
+      // Update their role to speaker
+      await supabase
+        .from('podcast_participants')
+        .update({ role: 'speaker', is_muted: false })
+        .eq('id', existing.id);
+    } else {
+      // Insert them as a speaker
+      await supabase.from('podcast_participants').insert({
+        session_id: sessionId,
+        user_id: requestUserId,
+        role: 'speaker',
+        is_muted: false,
+      });
+    }
+
+    toast.success('Speaker accepted! Their mic is now live.');
   };
 
   return null; // This component only renders toasts
