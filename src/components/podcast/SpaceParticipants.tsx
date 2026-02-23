@@ -2,13 +2,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mic, MicOff, Hand, Volume2, Loader2, LogOut, Ban, Plus } from 'lucide-react';
+import { Mic, MicOff, Hand, Volume2, Loader2, LogOut, Ban, Plus, Users, Trophy, Music } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useAgoraAudio } from '@/hooks/useAgoraAudio';
 import AuthPromptModal from './AuthPromptModal';
-import { getFreshSession, isDemoSession } from '@/lib/authUtils';
+import TopEngagementModal from './TopEngagementModal';
+import DailyRankingModal from './DailyRankingModal';
+import { getFreshSession, isDemoSession, isValidUUID } from '@/lib/authUtils';
 
 // Audio waveform animation component
 const AudioWaveform = ({ isActive }: { isActive: boolean }) => {
@@ -64,10 +66,9 @@ const getAvatarColor = (id: string) => {
   return colors[index];
 };
 
-const getDisplayName = (userId: string) => {
-  const names = ['TNTR', 'Raymond', 'Teresa', 'Susana', 'Steven', 'Benny', 'Sheldon', 'Billy', 'Dan', 'CW', 'Ron', 'JD', 'Okie', 'STARR', 'John', 'Lonnie'];
-  const index = userId.charCodeAt(0) % names.length;
-  return names[index];
+// Fallback display name - only used if profile fetch fails
+const getFallbackName = (userId: string) => {
+  return userId.slice(0, 6);
 };
 
 const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAvatar, onLeave, onSwitchSession }: SpaceParticipantsProps) => {
@@ -79,6 +80,13 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
   const [previousSessionId, setPreviousSessionId] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [showEngagementModal, setShowEngagementModal] = useState(false);
+  const [showDailyRanking, setShowDailyRanking] = useState(false);
+  const [showGiftModal, setShowGiftModal] = useState(false);
+  const [engagementCount, setEngagementCount] = useState(0);
+  const [listenerCountState, setListenerCountState] = useState(0);
+  const [profileMap, setProfileMap] = useState<Map<string, { full_name: string | null; username: string | null; avatar_url: string | null }>>(new Map());
   const previousRoleRef = useRef<string | null>(null);
 
   // Agora Audio Hook - Reliable audio rooms
@@ -290,6 +298,21 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     };
   }, [sessionId, user]);
 
+  // Check follow status for host
+  useEffect(() => {
+    if (!user || !hostId || isDemoSession(sessionId) || !isValidUUID(hostId)) return;
+    const checkFollow = async () => {
+      const { data } = await supabase
+        .from('follows')
+        .select('id')
+        .eq('follower_id', user.id)
+        .eq('following_id', hostId)
+        .maybeSingle();
+      setIsFollowing(!!data);
+    };
+    checkFollow();
+  }, [user, hostId, sessionId]);
+
   // Check if user was promoted to speaker and enable mic
 
   const fetchParticipants = async () => {
@@ -307,6 +330,23 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
         const myP = data.find(p => p.user_id === user.id);
         setMyParticipation(myP as Participant || null);
       }
+      
+      // Fetch profiles for all participants
+      const userIds = data.map(p => p.user_id).filter(isValidUUID);
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, username, avatar_url')
+          .in('user_id', userIds);
+        
+        if (profiles) {
+          const newMap = new Map(profiles.map(p => [p.user_id, p]));
+          setProfileMap(newMap);
+        }
+      }
+      
+      setListenerCountState(data.length);
+      setEngagementCount(data.length + Math.floor(Math.random() * 5));
     }
   };
 
@@ -508,29 +548,96 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     ? [{ id: 'host-placeholder', user_id: hostId, role: 'host', is_muted: false, hand_raised: false, joined_at: '' }]
     : participants;
 
-  const listenerCount = displayParticipants.filter(p => p.role === 'listener').length;
+  // listenerCount is tracked via listenerCountState
 
   return (
     <div className="flex flex-col h-full bg-black px-3 py-2">
-      {/* Title */}
-      <div className="mb-2">
-        <div className="flex items-center gap-2">
-          <h1 className="text-base font-bold text-white line-clamp-2 flex-1">
-            {title || 'Live Podcast Session'}
-          </h1>
-          {isAudioConnected && (
-            <span className="text-[8px] px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded-full shrink-0 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-              Live Audio
-            </span>
-          )}
-          {isAudioConnecting && (
-            <span className="text-[8px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full shrink-0 flex items-center gap-1">
-              <Loader2 className="w-3 h-3 animate-spin" /> Connecting...
-            </span>
-          )}
+      {/* Session Header - like DemoLiveSpace */}
+      <div className="pb-2 border-b border-white/5 mb-2">
+        <div className="flex items-start gap-2">
+          {/* Host avatar + name */}
+          <button
+            onClick={() => navigate(`/podcast-host/${hostId}`)}
+            className="flex flex-col items-center shrink-0 hover:opacity-80 transition-opacity"
+          >
+            <div className="w-6 h-6 rounded-full overflow-hidden">
+              {hostAvatar ? (
+                <img src={hostAvatar} alt={hostName} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500" />
+              )}
+            </div>
+            <span className="text-[8px] text-white/60 font-medium mt-0.5 truncate max-w-[50px]">{hostName || 'Host'}</span>
+          </button>
+
+          {/* Title + engagement row */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <h1 className="text-white font-semibold text-sm truncate">
+                {title || 'Live Session'}
+              </h1>
+              <div className="flex items-center gap-1 text-white/60 shrink-0 ml-2">
+                <Users className="h-3.5 w-3.5" />
+                <span className="text-xs">{listenerCountState}</span>
+              </div>
+            </div>
+
+            {/* Engagement, D1, Follow */}
+            <div className="flex items-center gap-2 mt-1">
+              {/* Top Engagement */}
+              <button onClick={() => setShowEngagementModal(true)} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+                <span className="text-[10px] text-white/50 font-medium">{engagementCount} engaged</span>
+              </button>
+
+              {/* D1 Ranking */}
+              <button onClick={() => setShowDailyRanking(true)} className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-yellow-500/20 hover:bg-yellow-500/30 transition-colors">
+                <Trophy className="w-3 h-3 text-yellow-400" />
+                <span className="text-[10px] text-yellow-400 font-semibold">D1</span>
+              </button>
+
+              {/* Follow Button */}
+              <button
+                onClick={async () => {
+                  if (!user) {
+                    toast.error('Please log in to follow');
+                    return;
+                  }
+                  if (isFollowing) {
+                    await supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', hostId);
+                    setIsFollowing(false);
+                    toast.success('Unfollowed');
+                  } else {
+                    await supabase.from('follows').insert({ follower_id: user.id, following_id: hostId });
+                    setIsFollowing(true);
+                    toast.success('Following!');
+                  }
+                }}
+                className={`h-5 px-2 rounded text-[10px] font-semibold transition-colors ${
+                  isFollowing
+                    ? 'bg-white/10 text-white hover:bg-white/20'
+                    : 'bg-white/10 text-white hover:bg-white/20 border border-white/20'
+                }`}
+              >
+                {isFollowing ? 'Following' : 'Follow'}
+              </button>
+            </div>
+
+            {/* Audio connection status */}
+            <div className="flex items-center gap-2 mt-1">
+              {isAudioConnected && (
+                <span className="text-[8px] px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded-full flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                  Live Audio
+                </span>
+              )}
+              {isAudioConnecting && (
+                <span className="text-[8px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded-full flex items-center gap-1">
+                  <Loader2 className="w-3 h-3 animate-spin" /> Connecting...
+                </span>
+              )}
+            </div>
+          </div>
         </div>
-        <p className="text-xs text-white/40">{listenerCount} listeners</p>
       </div>
 
       {/* Participants Grid */}
@@ -540,9 +647,10 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
             const isHostRole = p.role === 'host';
             const isCoHost = p.role === 'co_host';
             const isSpeaker = p.role === 'speaker';
-            const name = isHostRole && hostName ? hostName : getDisplayName(p.user_id);
+            const profile = profileMap.get(p.user_id);
+            const name = isHostRole && hostName ? hostName : (profile?.full_name || profile?.username || getFallbackName(p.user_id));
             const avatarColor = getAvatarColor(p.user_id);
-            const avatarUrl = isHostRole && hostAvatar ? hostAvatar : null;
+            const avatarUrl = isHostRole && hostAvatar ? hostAvatar : (profile?.avatar_url || null);
             
             const audioState = getParticipantAudioState(p.user_id);
             const isSpeaking = audioState?.isSpeaking || false;
@@ -747,6 +855,20 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
       <AuthPromptModal 
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)} 
+      />
+
+      <TopEngagementModal
+        isOpen={showEngagementModal}
+        onClose={() => setShowEngagementModal(false)}
+        sessionId={sessionId}
+        onSendGift={() => { setShowEngagementModal(false); setShowGiftModal(true); }}
+      />
+
+      <DailyRankingModal
+        isOpen={showDailyRanking}
+        onClose={() => setShowDailyRanking(false)}
+        sessionId={sessionId}
+        onSendGift={() => { setShowDailyRanking(false); setShowGiftModal(true); }}
       />
     </div>
   );
