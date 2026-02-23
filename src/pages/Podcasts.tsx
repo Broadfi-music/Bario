@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, Mic, Radio, Home, Flame, Swords, Trophy } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import NotificationBell from '@/components/NotificationBell';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -42,10 +43,13 @@ interface HostBattle {
 const Podcasts = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showHostStudio, setShowHostStudio] = useState(false);
-  const [activeTab, setActiveTab] = useState('feed');
+  // Default to 'live' tab on mobile, 'feed' on desktop; respect URL param
+  const tabFromUrl = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(tabFromUrl || (isMobile ? 'live' : 'feed'));
   const [liveSessions, setLiveSessions] = useState<PodcastSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<PodcastSession | null>(null);
   const [hostLiveSession, setHostLiveSession] = useState<HostLiveSession | null>(null);
@@ -347,8 +351,15 @@ const Podcasts = () => {
     setSearchParams({});
   };
 
+  // Listen for open-host-studio event from MobileBottomNav
+  useEffect(() => {
+    const handler = () => setShowHostStudio(true);
+    window.addEventListener('open-host-studio', handler);
+    return () => window.removeEventListener('open-host-studio', handler);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[#0e0e10] text-white">
+    <div className={`min-h-screen bg-[#0e0e10] text-white ${isMobile ? 'pb-20' : ''}`}>
       {/* Battle Session Banner - shown when user is in an active battle */}
       {hostBattle && !showBattleSession && (
         <div className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-pink-600 via-purple-600 to-cyan-600 py-2 px-4">
@@ -393,7 +404,7 @@ const Podcasts = () => {
       )}
 
       {/* Kick.com Style Header */}
-      <header className={`fixed left-0 right-0 z-50 bg-[#18181b] border-b border-white/5 ${(hostLiveSession && !showHostStudio) || (hostBattle && !showBattleSession) ? 'top-10' : 'top-0'}`}>
+      <header className={`fixed left-0 right-0 z-50 bg-[#18181b] border-b border-white/5 ${isMobile ? 'hidden' : ''} ${(hostLiveSession && !showHostStudio) || (hostBattle && !showBattleSession) ? 'top-10' : 'top-0'}`}>
         <div className="flex items-center justify-between h-12 px-2 sm:px-4">
           {/* Left: Logo/Back */}
           <div className="flex items-center gap-2">

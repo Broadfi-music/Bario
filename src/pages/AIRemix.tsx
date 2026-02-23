@@ -1,4 +1,5 @@
 import { Navbar } from '@/components/Navbar';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Hero } from '@/components/Hero';
 import { Play, Pause, TrendingUp, ExternalLink, Users, Calendar, ChevronRight } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
@@ -21,6 +22,7 @@ import exploreInspire from '@/assets/explore-inspire.gif';
 
 const AIRemix = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [playingTrack, setPlayingTrack] = useState<number | null>(null);
   const audioRefs = useRef<{
     [key: number]: HTMLAudioElement | null;
@@ -120,7 +122,7 @@ const AIRemix = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+    <div className={`min-h-screen bg-background text-foreground overflow-x-hidden ${isMobile ? 'pb-20' : ''}`}>
       <Navbar />
       <Hero />
       

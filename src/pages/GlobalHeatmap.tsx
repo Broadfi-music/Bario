@@ -5,6 +5,7 @@ import {
   Play, Pause, Users, ChevronRight, Sparkles, Zap, ChevronLeft, Volume2, X, Flame, Globe,
   Mic, Radio, Calendar, Swords
 } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -79,6 +80,7 @@ const timeFilters = ['Now', '24H', '7D', '30D'];
 
 const GlobalHeatmap = () => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const { playTrack: globalPlayTrack, pauseTrack: globalPauseTrack, currentTrack: globalCurrentTrack, isPlaying: globalIsPlaying } = useAudioPlayer();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -395,7 +397,7 @@ const GlobalHeatmap = () => {
   // No loading screen - show content immediately
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className={`min-h-screen bg-black text-white ${isMobile ? 'pb-20' : ''}`}>
       
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-sm border-b border-white/5">

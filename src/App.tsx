@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +10,9 @@ import GlobalAudioPlayer from "@/components/GlobalAudioPlayer";
 import GlobalBattleNotification from "@/components/podcast/GlobalBattleNotification";
 import GlobalJoinRequestNotification from "@/components/podcast/GlobalJoinRequestNotification";
 import PushSubscriptionManager from "@/components/PushSubscriptionManager";
+import SplashScreen from "@/components/SplashScreen";
+import MobileBottomNav from "@/components/MobileBottomNav";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import GlobalHeatmap from "@/pages/GlobalHeatmap";
 import AIRemix from "@/pages/AIRemix";
@@ -39,9 +43,20 @@ import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Service worker is now handled by vite-plugin-pwa
+const MobileHomeRedirect = () => {
+  const isMobile = useIsMobile();
+  // On mobile, show Podcasts (Live) as the home screen
+  return isMobile ? <Podcasts /> : <GlobalHeatmap />;
+};
 
 const App = () => {
+  const [showSplash, setShowSplash] = useState(() => {
+    // Only show splash once per session
+    if (sessionStorage.getItem('bario-splash-shown')) return false;
+    sessionStorage.setItem('bario-splash-shown', 'true');
+    return true;
+  });
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -49,13 +64,15 @@ const App = () => {
           <TooltipProvider>
             <Toaster />
             <Sonner />
+            {showSplash && (
+              <SplashScreen onComplete={() => setShowSplash(false)} />
+            )}
             <BrowserRouter>
               <GlobalBattleNotification />
               <GlobalJoinRequestNotification />
               <PushSubscriptionManager />
               <Routes>
-                {/* Heatmap is the new homepage */}
-                <Route path="/" element={<GlobalHeatmap />} />
+                <Route path="/" element={<MobileHomeRedirect />} />
                 <Route path="/ai-remix" element={<AIRemix />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/advanced" element={<Advanced />} />
@@ -86,6 +103,7 @@ const App = () => {
                 <Route path="/install" element={<Install />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              <MobileBottomNav />
               <GlobalAudioPlayer />
             </BrowserRouter>
           </TooltipProvider>
