@@ -49,7 +49,14 @@ const Podcasts = () => {
   const [showHostStudio, setShowHostStudio] = useState(false);
   // Default to 'live' tab on mobile, 'feed' on desktop; respect URL param
   const tabFromUrl = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState(tabFromUrl || (isMobile ? 'live' : 'feed'));
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'live');
+
+  // Fix: useIsMobile returns false initially, so correct the tab once we know
+  useEffect(() => {
+    if (!tabFromUrl) {
+      setActiveTab(isMobile ? 'live' : 'feed');
+    }
+  }, [isMobile, tabFromUrl]);
   const [liveSessions, setLiveSessions] = useState<PodcastSession[]>([]);
   const [selectedSession, setSelectedSession] = useState<PodcastSession | null>(null);
   const [hostLiveSession, setHostLiveSession] = useState<HostLiveSession | null>(null);
