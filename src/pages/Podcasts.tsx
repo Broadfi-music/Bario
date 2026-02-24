@@ -521,37 +521,42 @@ const Podcasts = () => {
         </div>
       </header>
 
-      {activeTab === 'live' ? (
-        <KickStyleLive
-          sessions={liveSessions}
-          currentIndex={currentIndex}
-          onIndexChange={setCurrentIndex}
-    selectedSession={selectedSession || getDemoPodcastSession()}
-    onSessionSelect={setSelectedSession}
-          hostLiveSession={hostLiveSession}
-        />
-      ) : activeTab === 'battles' ? (
-        <div className="pt-16">
-          <BattleReelScroller onClose={() => setActiveTab('feed')} />
-        </div>
-      ) : activeTab === 'leaderboard' ? (
-        <div className="pt-20 pb-24 px-4 flex items-center justify-center min-h-screen">
-          <div className="text-center space-y-4">
-            <div className="w-20 h-20 mx-auto bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center">
-              <Trophy className="h-10 w-10 text-white" />
+      {/* Hide content when HostStudio is open on mobile (Go Live = full screen) */}
+      {!(isMobile && showHostStudio) && (
+        <>
+          {activeTab === 'live' ? (
+            <KickStyleLive
+              sessions={liveSessions}
+              currentIndex={currentIndex}
+              onIndexChange={setCurrentIndex}
+              selectedSession={selectedSession || getDemoPodcastSession()}
+              onSessionSelect={setSelectedSession}
+              hostLiveSession={hostLiveSession}
+            />
+          ) : activeTab === 'battles' ? (
+            <div className="pt-16">
+              <BattleReelScroller onClose={() => setActiveTab('feed')} />
             </div>
-            <h2 className="text-2xl font-bold text-white">Leaderboard</h2>
-            <p className="text-white/60 text-sm max-w-xs mx-auto">
-              We're building something exciting! The leaderboard will showcase top creators, battle winners, and rising stars.
-            </p>
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500/20 border border-yellow-500/30 rounded-full">
-              <span className="animate-pulse w-2 h-2 bg-yellow-500 rounded-full"></span>
-              <span className="text-yellow-400 text-sm font-medium">In Development</span>
+          ) : activeTab === 'leaderboard' ? (
+            <div className="pt-20 pb-24 px-4 flex items-center justify-center min-h-screen">
+              <div className="text-center space-y-4">
+                <div className="w-20 h-20 mx-auto bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center">
+                  <Trophy className="h-10 w-10 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">Leaderboard</h2>
+                <p className="text-white/60 text-sm max-w-xs mx-auto">
+                  We're building something exciting! The leaderboard will showcase top creators, battle winners, and rising stars.
+                </p>
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500/20 border border-yellow-500/30 rounded-full">
+                  <span className="animate-pulse w-2 h-2 bg-yellow-500 rounded-full"></span>
+                  <span className="text-yellow-400 text-sm font-medium">In Development</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      ) : (
-        <PodcastFeed />
+          ) : (
+            <PodcastFeed />
+          )}
+        </>
       )}
 
       {/* Host Studio */}

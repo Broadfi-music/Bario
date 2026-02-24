@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import MysteryMusicDrop from './MysteryMusicDrop';
 import { useAuth } from '@/contexts/AuthContext';
 import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 import { 
@@ -766,6 +767,19 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
               )}
 
             </>
+          )}
+
+          {/* Mystery Music Drop - visible to host so they can hear and control it */}
+          {isLive && sessionId && (
+            <div className="relative mt-2">
+              <MysteryMusicDrop
+                isDemo={false}
+                sessionId={sessionId}
+                enabled={true}
+                isHost={true}
+                onSkip={() => {}}
+              />
+            </div>
           )}
         </div>
 
