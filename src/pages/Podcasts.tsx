@@ -407,56 +407,43 @@ const Podcasts = () => {
       {isMobile && (
         <header className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-md">
           {/* Top row: Battle tabs + profile icon */}
-          <div className="flex items-center justify-between h-11 px-3">
-            {/* Left: Host profile avatar */}
-            <button
-              onClick={() => {
-                if (selectedSession) {
-                  // Navigate to host profile
-                  const hostId = selectedSession.host_id;
-                  if (hostId) navigate(`/host/${hostId}`);
-                }
-              }}
-              className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 flex-shrink-0"
-            >
-              {selectedSession?.host_avatar ? (
-                <img src={selectedSession.host_avatar} alt="" className="w-full h-full object-cover" />
-              ) : null}
-            </button>
-
+          <div className="flex items-center justify-center h-11 px-3 relative">
             {/* Center: TikTok-style tabs */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-5 mx-auto">
               <button
                 onClick={() => { setActiveTab('battles'); }}
-                className={`flex items-center gap-1 text-xs font-medium transition-colors ${activeTab === 'battles' ? 'text-white' : 'text-white/50'}`}
+                className={`flex items-center gap-1 text-sm font-semibold transition-colors ${activeTab === 'battles' ? 'text-white border-b-2 border-white pb-0.5' : 'text-white/50'}`}
               >
                 <Tv className="h-3.5 w-3.5" />
                 Battle
               </button>
               <button
                 onClick={() => { setActiveTab('leaderboard'); }}
-                className={`text-xs font-medium transition-colors ${activeTab === 'leaderboard' ? 'text-white' : 'text-white/50'}`}
+                className={`flex items-center gap-1 text-sm font-semibold transition-colors ${activeTab === 'leaderboard' ? 'text-white border-b-2 border-white pb-0.5' : 'text-white/50'}`}
               >
-                Leaderboard
+                <Swords className="h-3.5 w-3.5" />
+                Start Battle
               </button>
               <button
                 onClick={() => navigate('/bario-music')}
-                className="text-xs font-medium text-white/50 transition-colors hover:text-white"
+                className="text-sm font-semibold text-white/50 transition-colors hover:text-white"
               >
                 Bario Music
               </button>
             </div>
 
             {/* Right: Profile/Dashboard icon */}
-            {user ? (
-              <button onClick={() => navigate('/dashboard')} className="flex-shrink-0">
-                <User className="h-5 w-5 text-white/70" />
-              </button>
-            ) : (
-              <button onClick={() => navigate('/auth')} className="flex-shrink-0">
-                <User className="h-5 w-5 text-white/70" />
-              </button>
-            )}
+            <div className="absolute right-3">
+              {user ? (
+                <button onClick={() => navigate('/dashboard')}>
+                  <User className="h-5 w-5 text-white/70" />
+                </button>
+              ) : (
+                <button onClick={() => navigate('/auth')}>
+                  <User className="h-5 w-5 text-white/70" />
+                </button>
+              )}
+            </div>
           </div>
         </header>
       )}

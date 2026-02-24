@@ -72,7 +72,7 @@ const MobileBottomNav = () => {
                 <tab.icon className={`h-5 w-5 ${active ? 'text-white' : ''}`} />
               )}
               <span className={`text-[10px] ${isGoLive ? 'text-white/70' : ''}`}>
-                {tab.id === 'heatmap' ? 'Bario' : tab.label}
+                {tab.label}
               </span>
             </button>
           );
