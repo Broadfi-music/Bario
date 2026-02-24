@@ -18,7 +18,7 @@ const MobileBottomNav = () => {
     { id: 'live', icon: Radio, label: 'Live', path: '/podcasts' },
     { id: 'feed', icon: Home, label: 'Feed', path: '/podcasts?tab=feed' },
     { id: 'golive', icon: Plus, label: 'Go Live', path: null },
-    { id: 'heatmap', icon: Globe, label: 'Heatmap', path: '/heatmap' },
+    { id: 'heatmap', icon: Globe, label: 'Heatmap', path: '/' },
   ];
 
   const isActive = (tab: typeof tabs[0]) => {
@@ -64,10 +64,6 @@ const MobileBottomNav = () => {
                 <div className="w-10 h-7 rounded-lg bg-gradient-to-r from-[#ff2d55] to-[#c237eb] flex items-center justify-center -mt-1">
                   <Plus className="h-5 w-5 text-white" strokeWidth={3} />
                 </div>
-              ) : tab.id === 'heatmap' ? (
-                <>
-                  <img src="/bario-logo.png" alt="Bario" className={`h-5 w-5 object-contain ${active ? 'opacity-100' : 'opacity-40'}`} />
-                </>
               ) : (
                 <tab.icon className={`h-5 w-5 ${active ? 'text-white' : ''}`} />
               )}

@@ -432,18 +432,6 @@ const Podcasts = () => {
               </button>
             </div>
 
-            {/* Right: Profile/Dashboard icon */}
-            <div className="absolute right-3">
-              {user ? (
-                <button onClick={() => navigate('/dashboard')}>
-                  <User className="h-5 w-5 text-white/70" />
-                </button>
-              ) : (
-                <button onClick={() => navigate('/auth')}>
-                  <User className="h-5 w-5 text-white/70" />
-                </button>
-              )}
-            </div>
           </div>
         </header>
       )}
@@ -540,16 +528,16 @@ const Podcasts = () => {
           ) : activeTab === 'leaderboard' ? (
             <div className="pt-20 pb-24 px-4 flex items-center justify-center min-h-screen">
               <div className="text-center space-y-4">
-                <div className="w-20 h-20 mx-auto bg-gradient-to-br from-yellow-500 to-orange-500 rounded-full flex items-center justify-center">
-                  <Trophy className="h-10 w-10 text-white" />
+                <div className="w-20 h-20 mx-auto bg-gradient-to-br from-pink-500 to-purple-500 rounded-full flex items-center justify-center">
+                  <Swords className="h-10 w-10 text-white" />
                 </div>
-                <h2 className="text-2xl font-bold text-white">Leaderboard</h2>
+                <h2 className="text-2xl font-bold text-white">Start Battle</h2>
                 <p className="text-white/60 text-sm max-w-xs mx-auto">
-                  We're building something exciting! The leaderboard will showcase top creators, battle winners, and rising stars.
+                  Challenge other creators to a live battle! Invite opponents and let the audience vote for the winner.
                 </p>
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500/20 border border-yellow-500/30 rounded-full">
-                  <span className="animate-pulse w-2 h-2 bg-yellow-500 rounded-full"></span>
-                  <span className="text-yellow-400 text-sm font-medium">In Development</span>
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-pink-500/20 border border-pink-500/30 rounded-full">
+                  <span className="animate-pulse w-2 h-2 bg-pink-500 rounded-full"></span>
+                  <span className="text-pink-400 text-sm font-medium">Coming Soon</span>
                 </div>
               </div>
             </div>
