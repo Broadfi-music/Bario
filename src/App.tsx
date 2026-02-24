@@ -107,7 +107,10 @@ const AnimatedRoutes = ({ showSplash }: { showSplash: boolean }) => {
 
 const App = () => {
   const [showSplash, setShowSplash] = useState(() => {
-    // Only show splash once per session
+    // Only show splash on PWA (standalone mode), not regular browser
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches
+      || (window.navigator as any).standalone === true;
+    if (!isPWA) return false;
     if (sessionStorage.getItem('bario-splash-shown')) return false;
     sessionStorage.setItem('bario-splash-shown', 'true');
     return true;
