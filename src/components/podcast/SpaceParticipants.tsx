@@ -808,7 +808,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
             );
           })}
 
-          {/* Invite Slots - Click to join session automatically */}
+          {/* Invite Slots - Click to send join request */}
           {Array.from({ length: Math.max(0, MAX_SPEAKERS - currentSpeakers) }).map((_, i) => (
             <div key={`invite-slot-${i}`} className="flex flex-col items-center gap-0.5">
               <button
@@ -817,17 +817,53 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
                     setShowAuthModal(true);
                     return;
                   }
-                  // If already joined, request to speak
-                  if (myParticipation) {
-                    if (myParticipation.hand_raised) {
-                      toast.info('Request already sent!');
-                      return;
-                    }
-                    toggleHandRaise();
-                    return;
+
+                  // If not joined yet, join first as listener
+                  if (!myParticipation) {
+                    await joinSession();
                   }
-                  // Auto-join session as listener
-                  await joinSession();
+
+                  // Send a join request via space_join_requests so host sees notification
+                  try {
+                    // Get user profile for name/avatar
+                    const { data: profile } = await supabase
+                      .from('profiles')
+                      .select('full_name, username, avatar_url')
+                      .eq('user_id', user.id)
+                      .single();
+
+                    const { error } = await supabase
+                      .from('space_join_requests')
+                      .insert({
+                        session_id: sessionId,
+                        user_id: user.id,
+                        user_name: profile?.full_name || profile?.username || user.email?.split('@')[0] || 'Listener',
+                        user_avatar: profile?.avatar_url || null,
+                        status: 'pending',
+                      });
+
+                    if (error) {
+                      if (error.code === '23505') {
+                        toast.info('You already sent a request to join!');
+                      } else {
+                        console.error('Join request error:', error);
+                        toast.error('Failed to send join request');
+                      }
+                    } else {
+                      toast.success('Request to join sent! Waiting for host to accept...');
+                      // Also raise hand so HostStudio sees it
+                      if (myParticipation && !myParticipation.hand_raised) {
+                        await supabase
+                          .from('podcast_participants')
+                          .update({ hand_raised: true })
+                          .eq('session_id', sessionId)
+                          .eq('user_id', user.id);
+                      }
+                    }
+                  } catch (err) {
+                    console.error('Join request error:', err);
+                    toast.error('Failed to send join request');
+                  }
                 }}
                 disabled={isJoining || isAudioConnecting}
                 className={`w-11 h-11 rounded-full border-2 border-dashed flex items-center justify-center transition-colors ${
