@@ -193,10 +193,13 @@ const Auth = () => {
                       if (!signInEmail) {
                         toast.error('Please enter your email address first');
                         return;
-                      }
-                      try {
+                       }
+                       try {
+                        const siteUrl = window.location.hostname.includes('lovableproject.com') 
+                          ? 'https://era-remix-studio.lovable.app' 
+                          : window.location.origin;
                         const { error } = await supabase.auth.resetPasswordForEmail(signInEmail, {
-                          redirectTo: `${window.location.origin}/reset-password`,
+                          redirectTo: `${siteUrl}/reset-password`,
                         });
                         if (error) {
                           toast.error(error.message);
