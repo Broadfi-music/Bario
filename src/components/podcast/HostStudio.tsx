@@ -254,19 +254,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     prevRaisedHandsRef.current = raisedHands.map(h => h.id);
   }, [raisedHands, isLive]);
 
-  // Host mute a participant
-  const muteParticipant = async (participantId: string, shouldMute: boolean) => {
-    const authSession = await getFreshSession();
-    if (!authSession) return;
-
-    await supabase
-      .from('podcast_participants')
-      .update({ is_muted: shouldMute })
-      .eq('id', participantId);
-    
-    toast.success(shouldMute ? 'Participant muted' : 'Participant unmuted');
-    fetchRaisedHands();
-  };
+  // Mute removed - mic always on for all speakers
 
   const startSession = async () => {
     if (!user) {
@@ -718,16 +706,10 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
                       >
                         {p.hand_raised && <HandMetal className="h-3 w-3 text-yellow-400" />}
                         <span className="text-white">User {p.user_id.slice(0, 4)}</span>
-                        <button
-                          onClick={() => muteParticipant(p.id, !p.is_muted)}
-                          className={`p-1 rounded-full ${p.is_muted ? 'bg-red-500/20' : 'bg-green-500/20'}`}
-                        >
-                          {p.is_muted ? (
-                            <VolumeX className="h-3 w-3 text-red-400" />
-                          ) : (
-                            <Volume2 className="h-3 w-3 text-green-400" />
-                          )}
-                        </button>
+                        <span className="text-white flex items-center gap-1">
+                          User {p.user_id.slice(0, 4)}
+                          <Volume2 className="h-3 w-3 text-green-400" />
+                        </span>
                       </div>
                     ))}
                   </div>

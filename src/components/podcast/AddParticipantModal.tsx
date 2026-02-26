@@ -90,18 +90,7 @@ const AddParticipantModal = ({ isOpen, onClose, sessionId, isHost }: AddParticip
     setLoading(false);
   };
 
-  const toggleMute = async (participantId: string, currentMuted: boolean) => {
-    const { error } = await supabase
-      .from('podcast_participants')
-      .update({ is_muted: !currentMuted })
-      .eq('id', participantId);
-    
-    if (error) {
-      toast.error('Failed to update mute status');
-    } else {
-      fetchParticipants();
-    }
-  };
+  // Mute removed - mic always on
 
   const removeParticipant = async (participantId: string) => {
     const { error } = await supabase
@@ -176,14 +165,7 @@ const AddParticipantModal = ({ isOpen, onClose, sessionId, isHost }: AddParticip
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Button
-                      onClick={() => toggleMute(p.id, p.is_muted)}
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8"
-                    >
-                      {p.is_muted ? <MicOff className="h-4 w-4 text-red-400" /> : <Mic className="h-4 w-4 text-green-400" />}
-                    </Button>
+                    <Mic className="h-4 w-4 text-green-400 mr-1" />
                     {isHost && p.role !== 'host' && (
                       <Button
                         onClick={() => demoteToListener(p.id)}
