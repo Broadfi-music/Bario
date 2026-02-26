@@ -186,7 +186,7 @@ const Auth = () => {
                 >
                   {isLoading ? "Signing In..." : "Sign In"}
                 </Button>
-                <div className="text-center">
+                <div className="text-center mt-2">
                   <button
                     type="button"
                     onClick={async () => {
@@ -207,7 +207,7 @@ const Auth = () => {
                         toast.error('Failed to send reset email');
                       }
                     }}
-                    className="text-sm text-muted-foreground hover:text-accent transition-colors underline"
+                    className="text-sm text-primary font-medium hover:text-accent transition-colors underline underline-offset-4"
                   >
                     Forgot your password?
                   </button>

@@ -86,6 +86,7 @@ const KickStyleLive = ({
   const [showEngagementModal, setShowEngagementModal] = useState(false);
   const [showDailyRanking, setShowDailyRanking] = useState(false);
   const [engagementCount, setEngagementCount] = useState(13);
+  const [mysteryDropEnabled, setMysteryDropEnabled] = useState(true);
 
   // Build a combined list of all scrollable sessions (demo + real)
   const allSessions = useMemo(() => {
@@ -610,10 +611,33 @@ const KickStyleLive = ({
                     hostAvatar={currentSession.host_avatar}
                   />
                   {/* Engagement Overlays for real sessions */}
-                  <MysteryMusicDrop isDemo={false} sessionId={currentSession.id} />
+                  <MysteryMusicDrop 
+                    isDemo={false} 
+                    sessionId={currentSession.id} 
+                    enabled={mysteryDropEnabled}
+                    isHost={user?.id === currentSession.host_id}
+                    onSkip={() => {}}
+                    roomCategory={currentSession.category}
+                    roomTitle={currentSession.title}
+                  />
                   <SpotlightRoulette isDemo={false} sessionId={currentSession.id} />
                   <ComboGiftTracker isDemo={false} sessionId={currentSession.id} />
                   <AchievementToast isDemo={false} />
+                  
+                  {/* Mystery Drop Toggle for hosts/listeners */}
+                  <div className="absolute top-2 left-2 z-40">
+                    <button
+                      onClick={() => setMysteryDropEnabled(prev => !prev)}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold transition-all ${
+                        mysteryDropEnabled 
+                          ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
+                          : 'bg-white/10 text-white/40 border border-white/10'
+                      }`}
+                    >
+                      <Headphones className="w-3 h-3" />
+                      {mysteryDropEnabled ? 'Drop On' : 'Drop Off'}
+                    </button>
+                  </div>
                   
                   <VibeCheck isDemo={false} />
                 </div>
