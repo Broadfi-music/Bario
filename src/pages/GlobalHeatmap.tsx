@@ -524,8 +524,8 @@ const GlobalHeatmap = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation Links - Below search (hidden on PWA mobile) */}
-        {!isMobile && (
+        {/* Mobile Navigation Links - Below search (hidden on PWA standalone only) */}
+        {!(isMobile && (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true)) && (
         <div className="sm:hidden border-t border-white/5 px-3 py-2 flex items-center gap-3 overflow-x-auto">
           <Link to="/ai-remix" className="text-[9px] text-white/70 hover:text-cyan-400 whitespace-nowrap">
             AI Remix
@@ -633,7 +633,7 @@ const GlobalHeatmap = () => {
         </section>
 
         {/* 🔴 LIVE NOW - Live Sessions & Battles - Always show with at least demo */}
-        <section className={`mb-6 animate-fade-in ${isMobile ? 'hidden' : ''}`}>
+        <section className={`mb-6 animate-fade-in ${isMobile && (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true) ? 'hidden' : ''}`}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Radio className="h-4 w-4 text-red-500 animate-pulse" />
