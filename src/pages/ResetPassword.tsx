@@ -24,9 +24,20 @@ const ResetPassword = () => {
       }
     });
 
-    // Also check hash for recovery type (fallback)
+    // Check hash for recovery type (fallback)
     const hash = window.location.hash;
     if (hash.includes('type=recovery')) {
+      setIsRecovery(true);
+    }
+
+    // Check URL search params (some flows use query params instead of hash)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('type') === 'recovery') {
+      setIsRecovery(true);
+    }
+
+    // If there's any access_token in hash, try to set session
+    if (hash.includes('access_token')) {
       setIsRecovery(true);
     }
 

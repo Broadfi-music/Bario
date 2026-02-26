@@ -195,8 +195,10 @@ const Auth = () => {
                         return;
                        }
                        try {
-                        const siteUrl = window.location.hostname.includes('lovableproject.com') || window.location.hostname.includes('lovable.app')
-                          ? 'https://bario.icu' 
+                        const siteUrl = window.location.hostname === 'bario.icu'
+                          ? 'https://bario.icu'
+                          : window.location.hostname.includes('lovableproject.com') || window.location.hostname.includes('lovable.app')
+                          ? 'https://era-remix-studio.lovable.app' 
                           : window.location.origin;
                         const { error } = await supabase.auth.resetPasswordForEmail(signInEmail, {
                           redirectTo: `${siteUrl}/reset-password`,
