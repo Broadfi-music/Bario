@@ -412,9 +412,9 @@ const Podcasts = () => {
         </div>
       )}
 
-      {/* Mobile TikTok-Style Top Header - PWA only */}
+      {/* Mobile TikTok-Style Top Header */}
       {isMobile && (
-        <header className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-md">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-md pt-[env(safe-area-inset-top)]">
           {/* Top row: Battle tabs + profile icon */}
           <div className="flex items-center justify-center h-11 px-3 relative">
             {/* Center: TikTok-style tabs */}
