@@ -48,8 +48,11 @@ const queryClient = new QueryClient();
 
 const MobileHomeRedirect = () => {
   const isMobile = useIsMobile();
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches
+    || (window.navigator as any).standalone === true;
   
-  return isMobile ? <Podcasts /> : <GlobalHeatmap />;
+  // Only PWA gets Podcasts as home. Mobile web always gets GlobalHeatmap.
+  return (isMobile && isPWA) ? <Podcasts /> : <GlobalHeatmap />;
 };
 
 const AnimatedRoutes = ({ showSplash }: { showSplash: boolean }) => {
