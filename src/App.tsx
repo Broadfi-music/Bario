@@ -48,14 +48,6 @@ const queryClient = new QueryClient();
 
 const MobileHomeRedirect = () => {
   const isMobile = useIsMobile();
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  
-  useEffect(() => {
-    if (isMobile && !user) {
-      navigate('/auth', { replace: true });
-    }
-  }, [isMobile, user, navigate]);
   
   return isMobile ? <Podcasts /> : <GlobalHeatmap />;
 };
