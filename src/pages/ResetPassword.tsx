@@ -13,35 +13,50 @@ const ResetPassword = () => {
   const [confirm, setConfirm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRecovery, setIsRecovery] = useState(false);
+  const [checking, setChecking] = useState(true);
   const [done, setDone] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
+    let resolved = false;
+    const markRecovery = () => {
+      if (!resolved) {
+        resolved = true;
+        setIsRecovery(true);
+        setChecking(false);
+      }
+    };
+
     // Listen for the PASSWORD_RECOVERY event from the auth state
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
-        setIsRecovery(true);
+        markRecovery();
       }
     });
 
     // Check hash for recovery type (fallback)
     const hash = window.location.hash;
-    if (hash.includes('type=recovery')) {
-      setIsRecovery(true);
+    if (hash.includes('type=recovery') || hash.includes('access_token')) {
+      markRecovery();
     }
 
     // Check URL search params (some flows use query params instead of hash)
     const params = new URLSearchParams(window.location.search);
     if (params.get('type') === 'recovery') {
-      setIsRecovery(true);
+      markRecovery();
     }
 
-    // If there's any access_token in hash, try to set session
-    if (hash.includes('access_token')) {
-      setIsRecovery(true);
-    }
+    // Give Supabase up to 3 seconds to fire the PASSWORD_RECOVERY event
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        setChecking(false);
+      }
+    }, 3000);
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const handleReset = async (e: React.FormEvent) => {
@@ -72,6 +87,17 @@ const ResetPassword = () => {
       setIsLoading(false);
     }
   };
+
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6 bg-background">
+        <div className="text-center space-y-3">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-muted-foreground">Verifying reset link…</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isRecovery && !done) {
     return (
