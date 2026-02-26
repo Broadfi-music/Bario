@@ -164,14 +164,42 @@ export const useAgoraAudio = ({
     console.log('📊 Participants updated:', mapped.length);
   }, [userId, userName]);
 
-  // Start volume level monitoring
+  // Start volume level monitoring AND periodic remote audio subscription check
   const startVolumeMonitoring = useCallback(() => {
     if (volumeIntervalRef.current) {
       clearInterval(volumeIntervalRef.current);
     }
 
-    volumeIntervalRef.current = setInterval(() => {
+    volumeIntervalRef.current = setInterval(async () => {
       if (!clientRef.current) return;
+
+      // CRITICAL: Periodically check for remote users with audio that we haven't subscribed to
+      // This catches missed 'user-published' events
+      const client = clientRef.current;
+      for (const remoteUser of client.remoteUsers) {
+        if (remoteUser.hasAudio && !remoteUser.audioTrack) {
+          try {
+            console.log('🔄 Auto-subscribing to missed remote audio:', remoteUser.uid);
+            await client.subscribe(remoteUser, 'audio');
+            if (remoteUser.audioTrack) {
+              remoteUser.audioTrack.setVolume(100);
+              remoteUser.audioTrack.play();
+              console.log('🔊 Now playing missed audio from:', remoteUser.uid);
+            }
+          } catch (e) {
+            // Ignore - might already be subscribing
+          }
+        }
+        // Also ensure any subscribed audio track is actually playing
+        if (remoteUser.audioTrack) {
+          try {
+            // Ensure volume is always max
+            remoteUser.audioTrack.setVolume(100);
+          } catch (e) {
+            // Ignore
+          }
+        }
+      }
 
       setParticipants(prev => prev.map(p => {
         let audioLevel = 0;
@@ -182,7 +210,7 @@ export const useAgoraAudio = ({
           isSpeaking = audioLevel > 5;
         } else {
           // For remote users, check their audio track
-          const remoteUser = clientRef.current?.remoteUsers.find(
+          const remoteUser = client.remoteUsers.find(
             u => String(u.uid) === p.id
           );
           if (remoteUser?.audioTrack) {
@@ -193,7 +221,7 @@ export const useAgoraAudio = ({
 
         return { ...p, audioLevel, isSpeaking };
       }));
-    }, 100);
+    }, 500); // Check every 500ms instead of 100ms to reduce overhead
   }, []);
 
   // Connect to Agora channel
