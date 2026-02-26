@@ -48,14 +48,16 @@ const Podcasts = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showHostStudio, setShowHostStudio] = useState(false);
-  // Default to 'live' tab on mobile, 'feed' on desktop; respect URL param
+  // Default to 'live' tab only on PWA mobile, 'feed' everywhere else; respect URL param
   const tabFromUrl = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState(tabFromUrl || 'live');
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches
+    || (window.navigator as any).standalone === true;
+  const [activeTab, setActiveTab] = useState(tabFromUrl || (isMobile && isPWA ? 'live' : 'feed'));
 
   // Fix: useIsMobile returns false initially, so correct the tab once we know
   useEffect(() => {
     if (!tabFromUrl) {
-      setActiveTab(isMobile ? 'live' : 'feed');
+      setActiveTab((isMobile && isPWA) ? 'live' : 'feed');
     }
   }, [isMobile, tabFromUrl]);
   const [liveSessions, setLiveSessions] = useState<PodcastSession[]>([]);
