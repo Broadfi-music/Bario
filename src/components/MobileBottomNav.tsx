@@ -9,7 +9,11 @@ const MobileBottomNav = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  if (!isMobile) return null;
+  // Only show in PWA standalone mode, not regular mobile browser
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches
+    || (window.navigator as any).standalone === true;
+
+  if (!isMobile || !isPWA) return null;
 
   // Hide on auth page
   if (location.pathname === '/auth') return null;

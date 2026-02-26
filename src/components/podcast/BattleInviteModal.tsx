@@ -51,55 +51,18 @@ const BattleInviteModal = ({ isOpen, onClose, sessionId, onBattleStart }: Battle
       const liveHostIds = new Set(liveSessions?.map(s => s.host_id) || []);
       const sessionMap = new Map(liveSessions?.map(s => [s.host_id, s.id]) || []);
 
-      // Get users the current user follows
-      const { data: follows } = await supabase
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', user.id);
+      // Fetch ALL creators on Bario
 
-      const followingIds = follows?.map(f => f.following_id) || [];
-
-      // Also get recently active users (profiles updated in last hour)
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      const { data: recentProfiles } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .gte('updated_at', oneHourAgo)
-        .neq('user_id', user.id)
-        .limit(20);
-      
-      const recentUserIds = recentProfiles?.map(p => p.user_id) || [];
-
-      // Combine and get profiles
-      const allUserIds = [...new Set([...liveHostIds, ...followingIds, ...recentUserIds])];
-      
-      if (allUserIds.length === 0) {
-        // Fallback: get any profiles
-        const { data: anyProfiles } = await supabase
-          .from('profiles')
-          .select('user_id, full_name, username, avatar_url')
-          .neq('user_id', user.id)
-          .limit(20);
-        
-        if (anyProfiles) {
-          setCreators(anyProfiles.map(p => ({
-            user_id: p.user_id,
-            full_name: p.full_name,
-            username: p.username,
-            avatar_url: p.avatar_url,
-            is_live: false
-          })));
-        }
-        return;
-      }
-
-      const { data: profiles } = await supabase
+      // Fetch ALL creators on Bario, not just followed/recent
+      const { data: allProfiles } = await supabase
         .from('profiles')
         .select('user_id, full_name, username, avatar_url')
-        .in('user_id', allUserIds);
+        .neq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(200);
 
-      if (profiles) {
-        const creatorList: OnlineCreator[] = profiles.map(p => ({
+      if (allProfiles) {
+        const creatorList: OnlineCreator[] = allProfiles.map(p => ({
           user_id: p.user_id,
           full_name: p.full_name,
           username: p.username,
@@ -259,7 +222,7 @@ const BattleInviteModal = ({ isOpen, onClose, sessionId, onBattleStart }: Battle
             </div>
 
             {/* Creator List */}
-            <div className="space-y-1 max-h-[250px] overflow-y-auto">
+            <div className="space-y-1 max-h-[350px] overflow-y-auto">
               {filteredCreators.length === 0 ? (
                 <div className="text-center py-8 text-white/40">
                   <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
