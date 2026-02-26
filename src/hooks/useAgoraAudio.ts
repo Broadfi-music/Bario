@@ -352,11 +352,19 @@ export const useAgoraAudio = ({
         console.log('🎵 User published:', user.uid, mediaType);
         
         if (mediaType === 'audio') {
-          await client.subscribe(user, mediaType);
-          console.log('🔊 Subscribed to audio from:', user.uid);
-          
-          // Play the audio
-          user.audioTrack?.play();
+          try {
+            await client.subscribe(user, mediaType);
+            console.log('🔊 Subscribed to audio from:', user.uid);
+            
+            // Play remote audio - set volume to max and play
+            if (user.audioTrack) {
+              user.audioTrack.setVolume(100);
+              user.audioTrack.play();
+              console.log('🔊 Playing remote audio from:', user.uid);
+            }
+          } catch (subErr) {
+            console.error('❌ Failed to subscribe to user audio:', user.uid, subErr);
+          }
           updateParticipants();
         }
       });
@@ -380,6 +388,29 @@ export const useAgoraAudio = ({
       );
 
       console.log('✅ Joined Agora channel!');
+
+      // CRITICAL: Subscribe to any already-published remote users
+      // This handles the case where remote users published before we joined
+      for (const remoteUser of client.remoteUsers) {
+        if (remoteUser.hasAudio && !remoteUser.audioTrack) {
+          try {
+            console.log('🔊 Subscribing to already-published user:', remoteUser.uid);
+            await client.subscribe(remoteUser, 'audio');
+            if (remoteUser.audioTrack) {
+              remoteUser.audioTrack.setVolume(100);
+              remoteUser.audioTrack.play();
+              console.log('🔊 Playing already-published audio from:', remoteUser.uid);
+            }
+          } catch (subErr) {
+            console.error('❌ Failed to subscribe to existing user:', remoteUser.uid, subErr);
+          }
+        } else if (remoteUser.audioTrack) {
+          // Already subscribed but maybe not playing
+          remoteUser.audioTrack.setVolume(100);
+          remoteUser.audioTrack.play();
+          console.log('🔊 Ensuring playback for existing user:', remoteUser.uid);
+        }
+      }
 
       // Create and publish audio track if user can publish
       if (credentials.canPublish) {
