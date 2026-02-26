@@ -41,6 +41,7 @@ import BarioMusicDetail from "@/pages/BarioMusicDetail";
 import Rewards from "@/pages/Rewards";
 import ThreeStrike from "@/pages/ThreeStrike";
 import Install from "@/pages/Install";
+import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -98,6 +99,7 @@ const AnimatedRoutes = ({ showSplash }: { showSplash: boolean }) => {
           <Route path="/three-strike" element={<ThreeStrike />} />
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/install" element={<Install />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </PageTransition>
