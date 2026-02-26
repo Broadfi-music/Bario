@@ -29,17 +29,21 @@ const Auth = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    const { error } = await signIn(signInEmail, signInPassword);
-    
-    if (error) {
-      toast.error(error.message || 'Failed to sign in');
-    } else {
-      toast.success('Signed in successfully!');
-      navigate('/dashboard');
+    try {
+      const { error } = await signIn(signInEmail, signInPassword);
+      
+      if (error) {
+        toast.error(error.message || 'Failed to sign in');
+      } else {
+        toast.success('Signed in successfully!');
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      console.error('Sign-in error:', err);
+      toast.error('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -56,21 +60,25 @@ const Auth = () => {
     }
     
     setIsLoading(true);
-    
-    const { error } = await signUp(signUpEmail, signUpPassword, signUpName);
-    
-    if (error) {
-      if (error.message.includes('already registered')) {
-        toast.error('This email is already registered. Please sign in instead.');
+    try {
+      const { error } = await signUp(signUpEmail, signUpPassword, signUpName);
+      
+      if (error) {
+        if (error.message.includes('already registered')) {
+          toast.error('This email is already registered. Please sign in instead.');
+        } else {
+          toast.error(error.message || 'Failed to sign up');
+        }
       } else {
-        toast.error(error.message || 'Failed to sign up');
+        toast.success('Account created successfully!');
+        navigate('/dashboard');
       }
-    } else {
-      toast.success('Account created successfully!');
-      navigate('/dashboard');
+    } catch (err) {
+      console.error('Sign-up error:', err);
+      toast.error('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   const handleGoogleSignIn = async () => {

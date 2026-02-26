@@ -18,13 +18,13 @@ const MobileBottomNav = () => {
     { id: 'live', icon: Radio, label: 'Live', path: '/podcasts' },
     { id: 'feed', icon: Home, label: 'Feed', path: '/podcasts?tab=feed' },
     { id: 'golive', icon: Plus, label: 'Go Live', path: null },
-    { id: 'heatmap', icon: Globe, label: 'Heatmap', path: '/' },
+    { id: 'heatmap', icon: Globe, label: 'Heatmap', path: '/heatmap' },
   ];
 
   const isActive = (tab: typeof tabs[0]) => {
     if (tab.id === 'live') return location.pathname === '/podcasts' && !location.search.includes('tab=feed');
     if (tab.id === 'feed') return location.pathname === '/podcasts' && location.search.includes('tab=feed');
-    if (tab.id === 'heatmap') return location.pathname === '/' || location.pathname === '/heatmap' || location.pathname === '/global-heatmap';
+    if (tab.id === 'heatmap') return location.pathname === '/heatmap' || location.pathname === '/global-heatmap';
     return false;
   };
 

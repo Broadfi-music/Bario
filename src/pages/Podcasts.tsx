@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, Mic, Radio, Home, Flame, Swords, Trophy, Tv, Music, User } from 'lucide-react';
+import BattleInviteModal from '@/components/podcast/BattleInviteModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import NotificationBell from '@/components/NotificationBell';
 import { Button } from '@/components/ui/button';
@@ -62,6 +63,7 @@ const Podcasts = () => {
   const [hostLiveSession, setHostLiveSession] = useState<HostLiveSession | null>(null);
   const [hostBattle, setHostBattle] = useState<HostBattle | null>(null);
   const [showBattleSession, setShowBattleSession] = useState(false);
+  const [showBattleInviteModal, setShowBattleInviteModal] = useState(false);
 
   // Check if current user has a live session or active battle running
   useEffect(() => {
@@ -425,8 +427,8 @@ const Podcasts = () => {
                 Battle
               </button>
               <button
-                onClick={() => { setActiveTab('leaderboard'); }}
-                className={`flex items-center gap-1 text-sm font-semibold transition-colors ${activeTab === 'leaderboard' ? 'text-white border-b-2 border-white pb-0.5' : 'text-white/50'}`}
+                onClick={() => { setShowBattleInviteModal(true); }}
+                className="flex items-center gap-1 text-sm font-semibold text-white/50 transition-colors hover:text-white"
               >
                 <Swords className="h-3.5 w-3.5" />
                 Start Battle
@@ -532,27 +534,17 @@ const Podcasts = () => {
             <div className="pt-16">
               <BattleReelScroller onClose={() => setActiveTab('feed')} />
             </div>
-          ) : activeTab === 'leaderboard' ? (
-            <div className="pt-20 pb-24 px-4 flex items-center justify-center min-h-screen">
-              <div className="text-center space-y-4">
-                <div className="w-20 h-20 mx-auto bg-gradient-to-br from-pink-500 to-purple-500 rounded-full flex items-center justify-center">
-                  <Swords className="h-10 w-10 text-white" />
-                </div>
-                <h2 className="text-2xl font-bold text-white">Start Battle</h2>
-                <p className="text-white/60 text-sm max-w-xs mx-auto">
-                  Challenge other creators to a live battle! Invite opponents and let the audience vote for the winner.
-                </p>
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-pink-500/20 border border-pink-500/30 rounded-full">
-                  <span className="animate-pulse w-2 h-2 bg-pink-500 rounded-full"></span>
-                  <span className="text-pink-400 text-sm font-medium">Coming Soon</span>
-                </div>
-              </div>
-            </div>
           ) : (
             <PodcastFeed />
           )}
         </>
       )}
+
+      {/* Battle Invite Modal */}
+      <BattleInviteModal
+        isOpen={showBattleInviteModal}
+        onClose={() => setShowBattleInviteModal(false)}
+      />
 
       {/* Host Studio */}
       <HostStudio
