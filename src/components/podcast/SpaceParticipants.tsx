@@ -523,23 +523,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
     }
   };
 
-  const handleToggleMute = async () => {
-    if (!myParticipation) return;
-    
-    // Allow mute/unmute for speakers, co-hosts, and hosts
-    if (myParticipation.role === 'listener') {
-      toast.error('Request to speak first');
-      return;
-    }
-
-    await toggleMute();
-
-    // Sync mute state to DB
-    await supabase
-      .from('podcast_participants')
-      .update({ is_muted: !isMuted })
-      .eq('id', myParticipation.id);
-  };
+  // Mute removed - mic always on for speakers
 
   const goToHostProfile = () => {
     navigate(`/podcast-host/${hostId}`);
@@ -661,7 +645,7 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
             
             const audioState = getParticipantAudioState(p.user_id);
             const isSpeaking = audioState?.isSpeaking || false;
-            const isParticipantMuted = audioState ? audioState.isMuted : p.is_muted;
+            const isParticipantMuted = false; // Mute removed - always unmuted
             
             const canKick = isHost && !isHostRole && p.user_id !== user?.id;
             const isMe = p.user_id === user?.id;
@@ -701,25 +685,6 @@ const SpaceParticipants = ({ sessionId, hostId, isHost, title, hostName, hostAva
                         sideOffset={8}
                       >
                         <div className="flex flex-col gap-1">
-                          {myParticipation && (myParticipation.role === 'host' || myParticipation.role === 'co_host' || myParticipation.role === 'speaker') && (
-                            <button
-                              onClick={handleToggleMute}
-                              disabled={!isAudioConnected}
-                              className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-xs font-medium text-white hover:bg-white/10 transition-colors"
-                            >
-                              {isMuted ? (
-                                <>
-                                  <MicOff className="w-3.5 h-3.5 text-red-400" />
-                                  <span>Unmute Mic</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Mic className="w-3.5 h-3.5 text-green-400" />
-                                  <span>Mute Mic</span>
-                                </>
-                              )}
-                            </button>
-                          )}
                           <button
                             onClick={leaveSession}
                             className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"

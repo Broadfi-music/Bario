@@ -45,7 +45,7 @@ export const useAgoraAudio = ({
 }: UseAgoraAudioProps) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isMuted, setIsMuted] = useState(false); // Start unmuted for speakers
+  const isMuted = false; // Mute completely removed - mic always on
   const [isRecording, setIsRecording] = useState(false);
   const [participants, setParticipants] = useState<AudioParticipant[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -410,8 +410,7 @@ export const useAgoraAudio = ({
           await client.publish(audioTrack);
           console.log('🎤 Audio track published successfully!');
           
-          // Start unmuted for speakers
-          setIsMuted(false);
+          // Mic always on
           toast.success('Microphone is live!');
         } catch (audioErr) {
           // Log error but don't show toast to hide Agora details from users
@@ -422,7 +421,6 @@ export const useAgoraAudio = ({
         // SUBSCRIBER MODE - no microphone needed
         // Listeners just hear published audio without needing mic permission
         console.log('📻 Joining as listener (subscriber mode - no mic needed)');
-        setIsMuted(true); // Permanently muted since can't publish
         // Don't create or publish any audio track
         // Just listen to remote users' audio
         toast.info('Listening to stream...');
@@ -520,12 +518,12 @@ export const useAgoraAudio = ({
     await cleanup();
   }, [cleanup]);
 
-  // Toggle mute - create audio track if needed
+  // Toggle mute - DISABLED, mic always on
   const toggleMute = useCallback(async () => {
+    console.log('🎤 Mute disabled - mic always on');
     // If no audio track exists but we have publish rights, create one
     if (!localAudioTrackRef.current && canPublish && clientRef.current) {
       try {
-        console.log('🎤 Creating microphone track on unmute with echo cancellation...');
         const audioTrack = await AgoraRTC.createMicrophoneAudioTrack({
           encoderConfig: 'speech_standard',
           AEC: true,
@@ -533,37 +531,14 @@ export const useAgoraAudio = ({
           ANS: true,
         });
         localAudioTrackRef.current = audioTrack;
-        
         await clientRef.current.publish(audioTrack);
         console.log('🎤 Audio track published!');
-        setIsMuted(false);
         updateParticipants();
-        return;
       } catch (err) {
         console.error('Error creating audio track:', err);
-        // Don't show error toast to hide Agora internals
-        return;
       }
     }
-
-    if (!localAudioTrackRef.current) {
-      console.warn('No local audio track for toggle mute');
-      // Don't show error toast to hide internal state
-      return;
-    }
-
-    try {
-      const newMuteState = !isMuted;
-      await localAudioTrackRef.current.setEnabled(!newMuteState);
-      setIsMuted(newMuteState);
-      console.log('Mute toggled to:', newMuteState);
-      toast(newMuteState ? 'Microphone muted' : 'Microphone unmuted');
-      updateParticipants();
-    } catch (err) {
-      console.error('Error toggling mute:', err);
-      toast.error('Failed to toggle microphone');
-    }
-  }, [isMuted, canPublish, updateParticipants]);
+  }, [canPublish, updateParticipants]);
 
   // Enable microphone - create track if needed
   const enableMicrophone = useCallback(async () => {
@@ -586,7 +561,6 @@ export const useAgoraAudio = ({
         
         await clientRef.current.publish(audioTrack);
         console.log('🎤 Audio track published!');
-        setIsMuted(false);
         toast.success('Microphone enabled!');
         updateParticipants();
         return;
@@ -599,7 +573,6 @@ export const useAgoraAudio = ({
 
     try {
       await localAudioTrackRef.current.setEnabled(true);
-      setIsMuted(false);
       console.log('Microphone enabled');
       updateParticipants();
     } catch (err) {
