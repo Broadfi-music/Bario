@@ -414,12 +414,10 @@ const Podcasts = () => {
         </div>
       )}
 
-      {/* Mobile TikTok-Style Top Header */}
-      {isMobile && (
+      {/* Mobile TikTok-Style Top Header - PWA ONLY */}
+      {isMobile && isPWA && (
         <header className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-md pt-[env(safe-area-inset-top)]">
-          {/* Top row: Battle tabs + profile icon */}
           <div className="flex items-center justify-center h-11 px-3 relative">
-            {/* Center: TikTok-style tabs */}
             <div className="flex items-center gap-5 mx-auto">
               <button
                 onClick={() => { setActiveTab('battles'); }}
@@ -442,7 +440,41 @@ const Podcasts = () => {
                 Bario Music
               </button>
             </div>
+          </div>
+        </header>
+      )}
 
+      {/* Mobile Webapp Header - standard tabs with Go Live */}
+      {isMobile && !isPWA && (
+        <header className="fixed top-0 left-0 right-0 z-50 bg-[#18181b] border-b border-white/5">
+          <div className="flex items-center justify-between h-12 px-3">
+            <button onClick={() => navigate('/')} className="text-white/60 hover:text-white">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v !== 'live') { setSelectedSession(null); setSearchParams({}); } }} className="w-auto">
+              <TabsList className="bg-white/5 h-8">
+                <TabsTrigger value="feed" className="text-xs px-2 data-[state=active]:bg-black data-[state=active]:text-white h-7">Feed</TabsTrigger>
+                <TabsTrigger value="live" className="text-xs px-2 data-[state=active]:bg-black data-[state=active]:text-white h-7">Live</TabsTrigger>
+                <TabsTrigger value="battles" className="text-xs px-2 data-[state=active]:bg-black data-[state=active]:text-white h-7">Battles</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <div className="flex items-center gap-2">
+              {user && (
+                <Button onClick={() => setShowHostStudio(true)} size="sm" className="bg-black hover:bg-black/90 text-white text-xs h-8 px-3 font-semibold">
+                  <Mic className="h-3 w-3 mr-1" />
+                  Go Live
+                </Button>
+              )}
+              {user ? (
+                <Link to="/dashboard">
+                  <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500" />
+                </Link>
+              ) : (
+                <Link to="/auth">
+                  <Button size="sm" className="bg-black text-white hover:bg-black/90 text-xs h-8 px-2 font-semibold">Log In</Button>
+                </Link>
+              )}
+            </div>
           </div>
         </header>
       )}
