@@ -82,7 +82,7 @@ const GlobalHeatmap = () => {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const { playTrack: globalPlayTrack, pauseTrack: globalPauseTrack, currentTrack: globalCurrentTrack, isPlaying: globalIsPlaying } = useAudioPlayer();
+  const { playTrack: globalPlayTrack, pauseTrack: globalPauseTrack, currentTrack: globalCurrentTrack, isPlaying: globalIsPlaying, setPlaylist } = useAudioPlayer();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [timeWindow, setTimeWindow] = useState('24H');
   const [watchlist, setWatchlist] = useState<string[]>([]);
@@ -331,6 +331,19 @@ const GlobalHeatmap = () => {
       toast.success(watchlist.includes(id) ? 'Removed from watchlist' : 'Added to watchlist');
     });
   };
+
+  // Build playlist from all playable tracks whenever tracks change
+  useEffect(() => {
+    const playableTracks = tracks.filter(t => t.previewUrl).map(t => ({
+      id: t.id,
+      title: t.title,
+      artist: t.artist,
+      audioUrl: t.previewUrl!,
+      coverUrl: t.artwork,
+      type: 'music' as const,
+    }));
+    setPlaylist(playableTracks);
+  }, [tracks, setPlaylist]);
 
   // Use global audio player for consistent playback across pages
   const playTrack = (track: HeatmapTrack, e: React.MouseEvent) => {
