@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react';
 
 interface AudioTrack {
   id: string;
@@ -23,6 +23,9 @@ interface AudioPlayerContextType {
   setVolume: (volume: number) => void;
   seekTo: (time: number) => void;
   stopTrack: () => void;
+  setPlaylist: (tracks: AudioTrack[]) => void;
+  playNext: () => void;
+  playPrevious: () => void;
 }
 
 const AudioPlayerContext = createContext<AudioPlayerContextType | undefined>(undefined);
@@ -34,6 +37,8 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playlistRef = useRef<AudioTrack[]>([]);
+  const currentIndexRef = useRef<number>(-1);
 
   useEffect(() => {
     audioRef.current = new Audio();
@@ -50,6 +55,22 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     };
 
     const handleEnded = () => {
+      // Auto-play next track if playlist exists
+      if (playlistRef.current.length > 0 && currentIndexRef.current >= 0) {
+        const nextIndex = currentIndexRef.current + 1;
+        if (nextIndex < playlistRef.current.length) {
+          const nextTrack = playlistRef.current[nextIndex];
+          currentIndexRef.current = nextIndex;
+          setCurrentTrack(nextTrack);
+          if (audioRef.current) {
+            audioRef.current.src = nextTrack.audioUrl;
+            audioRef.current.play().catch(() => {});
+          }
+          setIsPlaying(true);
+          fireEngagement(nextTrack, 'play');
+          return;
+        }
+      }
       setIsPlaying(false);
     };
 
@@ -67,7 +88,6 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const fireEngagement = (track: AudioTrack, action: 'play' | 'save' | 'vote') => {
     if (!track.isHeatmapTrack) return;
-    // Fire-and-forget: don't block UI
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/track-engagement`;
     fetch(url, {
       method: 'POST',
@@ -80,11 +100,24 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         country_code: track.countryCode || 'GLOBAL',
         action,
       }),
-    }).catch(() => {}); // Silent fail
+    }).catch(() => {});
   };
+
+  const setPlaylist = useCallback((tracks: AudioTrack[]) => {
+    playlistRef.current = tracks;
+  }, []);
 
   const playTrack = (track: AudioTrack) => {
     if (audioRef.current) {
+      // Find track index in playlist
+      const idx = playlistRef.current.findIndex(t => t.id === track.id);
+      if (idx >= 0) {
+        currentIndexRef.current = idx;
+      } else {
+        // Track not in playlist - add surrounding context or just set index to -1
+        currentIndexRef.current = -1;
+      }
+
       if (currentTrack?.id === track.id) {
         audioRef.current.play();
       } else {
@@ -93,7 +126,6 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       }
       setCurrentTrack(track);
       setIsPlaying(true);
-      // Track engagement for heatmap tracks
       fireEngagement(track, 'play');
     }
   };
@@ -126,6 +158,38 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
 
+  const playNext = useCallback(() => {
+    if (playlistRef.current.length > 0 && currentIndexRef.current >= 0) {
+      const nextIndex = currentIndexRef.current + 1;
+      if (nextIndex < playlistRef.current.length) {
+        const nextTrack = playlistRef.current[nextIndex];
+        currentIndexRef.current = nextIndex;
+        setCurrentTrack(nextTrack);
+        if (audioRef.current) {
+          audioRef.current.src = nextTrack.audioUrl;
+          audioRef.current.play().catch(() => {});
+        }
+        setIsPlaying(true);
+        fireEngagement(nextTrack, 'play');
+      }
+    }
+  }, []);
+
+  const playPrevious = useCallback(() => {
+    if (playlistRef.current.length > 0 && currentIndexRef.current > 0) {
+      const prevIndex = currentIndexRef.current - 1;
+      const prevTrack = playlistRef.current[prevIndex];
+      currentIndexRef.current = prevIndex;
+      setCurrentTrack(prevTrack);
+      if (audioRef.current) {
+        audioRef.current.src = prevTrack.audioUrl;
+        audioRef.current.play().catch(() => {});
+      }
+      setIsPlaying(true);
+      fireEngagement(prevTrack, 'play');
+    }
+  }, []);
+
   const stopTrack = () => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -150,6 +214,9 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
         setVolume,
         seekTo,
         stopTrack,
+        setPlaylist,
+        playNext,
+        playPrevious,
       }}
     >
       {children}
