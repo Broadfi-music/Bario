@@ -141,10 +141,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
-    const result = await lovable.auth.signInWithOAuth('google', {
-      redirect_uri: window.location.origin,
-    });
-    return { error: result.error ? (result.error as Error) : null };
+    const isCustomDomain = !window.location.hostname.includes('lovable.app') && 
+                           !window.location.hostname.includes('lovableproject.com');
+    
+    if (isCustomDomain) {
+      // Bypass auth-bridge for custom domains
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+          skipBrowserRedirect: true,
+        },
+      });
+      if (error) return { error: error as Error };
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+      return { error: null };
+    } else {
+      const result = await lovable.auth.signInWithOAuth('google', {
+        redirect_uri: window.location.origin,
+      });
+      return { error: result.error ? (result.error as Error) : null };
+    }
   };
 
   const signInWithApple = async () => {
