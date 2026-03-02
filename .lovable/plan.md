@@ -1,106 +1,41 @@
-# Bario PWA Mobile App - Splash Screen + Mobile Interface
-
-## Overview
-
-Build a native-feeling PWA experience with a splash screen on launch and a TikTok-inspired mobile interface where the Live Session is the main screen, with a bottom navigation bar.
-
----
-
-## Part 1: Splash Screen
-
-**What it does:** When users open the PWA (or visit on mobile), they see a full-screen splash for ~3 seconds before the main app loads.
-
-**Design:**
-
-- Full black background with the uploaded video playing as a looping background (subtle, darkened overlay)
-- Bario logo centered in the middle (using existing `/bario-logo.png`)
-- Caption text **"Connect. Create. Elevate."** below the logo in clean white text
-- Fades out after 3 seconds and transitions to the main app
-
-**New file:** `src/components/SplashScreen.tsx`
-
-- Plays the uploaded MP4 video as background
-- Shows logo + tagline centered
-- Auto-dismisses after 3 seconds with a fade-out animation
-- Stores a session flag so it only shows once per visit
-
-**Video asset:** Copy the uploaded video to `public/splash-video.mp4`
-
----
-
-## Part 2: PWA Mobile Layout
-
-**What changes:** Create a new mobile-specific layout wrapper that replaces the current desktop-style navigation with a TikTok-inspired interface on mobile devices.
-
-### Bottom Navigation Bar
-
-Five tabs at the bottom (only visible on mobile, using `useIsMobile` hook):
 
 
-| Tab      | Icon                              | Destination                               |
-| -------- | --------------------------------- | ----------------------------------------- |
-| Live     | Radio icon                        | `/podcasts` (Live sessions - main screen) |
-| Feed     | Home icon                         | `/podcasts?tab=feed` (Podcast feed)       |
-| Go Live  | Plus icon (highlighted, centered) | Opens Host Studio (requires auth)         |
-| Heatmap  | Globe icon                        | `/` (Global Heatmap)                      |
-| AI Remix | Sparkles icon                     | `/ai-remix`                               |
+## Google OAuth Fix for bario.icu
 
+### The Problem
+The managed OAuth bridge (`lovable.auth.signInWithOAuth`) routes through `oauth.lovable.app/callback` and `era-remix-studio.lovable.app/~oauth/callback`. On your custom domain `bario.icu`, this causes `redirect_uri_mismatch` errors because Google doesn't recognize those callback URLs unless they're added to your Google Cloud Console.
 
-- The "Go Live" button will be styled like TikTok's center "+" button (larger, with accent color)
-- If user is not logged in and taps "Go Live", redirect to `/auth`
+### What You Should Do
 
-**New file:** `src/components/MobileBottomNav.tsx`
+**You have two options:**
 
-### Main Screen = Live Session
+#### Option A: Use the Managed Bridge (easiest)
+Keep the current code as-is and add **all three** redirect URIs to your Google Cloud Console OAuth client:
+- `https://oauth.lovable.app/callback`
+- `https://era-remix-studio.lovable.app/~oauth/callback`  
+- `https://bario.icu/~oauth/callback`
 
-- When opening the PWA on mobile, the default landing is the Live sessions view (currently at `/podcasts` with the `live` tab)
-- The existing `KickStyleLive` / `DemoLiveSpace` components serve as the main content
-- Hide the current top header/tabs on mobile since the bottom nav replaces them
+Then check all three in Cloud Auth Settings. **No code changes needed.**
 
-### Auth Gate
+#### Option B: Bypass the Bridge on Custom Domain (recommended for full control)
+Update `signInWithGoogle` and `signInWithApple` to detect when running on `bario.icu` and call Supabase directly with `skipBrowserRedirect: true`, while keeping the managed bridge for Lovable preview/published domains.
 
-- If user is not logged in and tries to "Go Live", they get redirected to `/auth`
-- The auth page already exists at `src/pages/Auth.tsx` with sign in / sign up
+This way, on `bario.icu` the redirect goes straight to Google → back to `bario.icu/dashboard`, and you only need `https://bario.icu/**` in your Google Cloud Console.
 
----
+### Recommended: Option B
 
-## Part 3: App Entry Flow
+**Changes:**
+1. **`src/contexts/AuthContext.tsx`** — Update `signInWithGoogle` and `signInWithApple`:
+   - Detect custom domain (`!hostname.includes('lovable.app') && !hostname.includes('lovableproject.com')`)
+   - On custom domain: use `supabase.auth.signInWithOAuth` with `skipBrowserRedirect: true` and manually redirect
+   - On Lovable domains: keep using `lovable.auth.signInWithOAuth` as currently implemented
 
-The flow when a user opens the PWA:
+2. **Google Cloud Console** — You only need to add:
+   - `https://bario.icu` as Authorized JavaScript Origin
+   - `https://sufbohhsxlrefkoubmed.supabase.co/auth/v1/callback` as Authorized Redirect URI
 
-```text
-Open App --> Splash Screen (3s) --> Live Sessions (main screen)
-                                      |
-                                 Bottom Nav visible
-                                      |
-                    [Live] [Feed] [+ Go Live] [Heatmap] [AI Remix]
-```
+3. **Backend config** — Ensure `https://bario.icu` is set as Site URL and `https://bario.icu/**` is in Redirect URLs
 
----
+### Technical Detail
+The PWA already has `navigateFallbackDenylist: [/^\/~oauth/]` configured, so OAuth callbacks won't be intercepted by the service worker.
 
-## Technical Details
-
-### Files to Create
-
-1. `**src/components/SplashScreen.tsx**` - Full-screen splash with video background, logo, and tagline
-2. `**src/components/MobileBottomNav.tsx**` - Bottom tab navigation bar (5 tabs)
-3. `**public/splash-video.mp4**` - Copy of uploaded video
-
-### Files to Modify
-
-1. `**src/App.tsx**`
-  - Wrap the app with the SplashScreen component
-  - Add MobileBottomNav inside the BrowserRouter (rendered on all routes on mobile)
-  - Change the default `/` route to point to the Podcasts/Live page on mobile
-2. `**src/pages/Podcasts.tsx**`
-  - Hide the existing top header bar on mobile (since bottom nav replaces it)
-  - Default to `live` tab instead of `feed` when accessed as PWA home
-  - Add bottom padding to avoid content being hidden behind bottom nav
-3. `**src/pages/GlobalHeatmap.tsx**` - Add bottom padding for mobile nav
-4. `**src/pages/AIRemix.tsx**` - Add bottom padding for mobile nav
-
-### No sidebar changes
-
-As requested, the sidebar icon will be left as-is for now.  
-  
-dont make any change on the webapp, just the pwa app that all
