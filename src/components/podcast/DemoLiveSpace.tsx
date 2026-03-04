@@ -287,8 +287,8 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
       
       <VibeCheck isDemo />
 
-      {/* Session Header */}
-      <div className="px-4 pt-3 pb-2 sm:py-3 border-b border-white/5 bg-black shrink-0">
+      {/* Session Header - extra top padding for PWA header */}
+      <div className="px-4 pt-14 pb-2 sm:py-3 border-b border-white/5 bg-black shrink-0">
         <div className="flex items-center gap-2">
           {/* Host avatar */}
           <button
