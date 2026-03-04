@@ -25,6 +25,17 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           transition={{ duration: 0.6, ease: 'easeInOut' }}
           className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black overflow-hidden"
         >
+          {/* Video Background */}
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover opacity-40"
+          >
+            <source src="/splash-video.mp4" type="video/mp4" />
+          </video>
+
           {/* Logo + Tagline */}
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
