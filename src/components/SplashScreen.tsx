@@ -11,7 +11,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setVisible(false);
-    }, 8500);
+    }, 5000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -25,20 +25,6 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
           transition={{ duration: 0.6, ease: 'easeInOut' }}
           className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black overflow-hidden"
         >
-          {/* Video Background */}
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover opacity-30"
-          >
-            <source src="/splash-video.mp4" type="video/mp4" />
-          </video>
-
-          {/* Dark overlay */}
-          <div className="absolute inset-0 bg-black/50" />
-
           {/* Logo + Tagline */}
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -49,7 +35,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
             <img
               src="/bario-logo.png"
               alt="Bario"
-              className="h-20 w-auto object-contain"
+              className="h-24 w-auto object-contain"
             />
             <motion.p
               initial={{ opacity: 0, y: 10 }}

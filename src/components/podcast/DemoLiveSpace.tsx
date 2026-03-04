@@ -278,7 +278,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-black relative overflow-hidden">
+    <div className="h-full flex flex-col bg-black relative">
       {/* Engagement Overlays */}
       <MysteryMusicDrop isDemo roomCategory={activeDemo.category} roomTitle={activeDemo.title} enabled={mysteryDropEnabled} isHost onSkip={() => {}} />
       <SpotlightRoulette isDemo />
@@ -288,12 +288,12 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
       <VibeCheck isDemo />
 
       {/* Session Header */}
-      <div className="px-4 pt-2 pb-2 sm:py-3 border-b border-white/5 bg-black">
-        <div className="flex items-start gap-2">
-          {/* Host avatar + name */}
+      <div className="px-4 pt-3 pb-2 sm:py-3 border-b border-white/5 bg-black shrink-0">
+        <div className="flex items-center gap-2">
+          {/* Host avatar */}
           <button
             onClick={() => navigate(`/host/${activeDemo.speakers[0]?.id}?from=${activeDemo.id}`)}
-            className="flex flex-col items-center shrink-0 hover:opacity-80 transition-opacity"
+            className="shrink-0 hover:opacity-80 transition-opacity"
           >
             <div className="w-6 h-6 rounded-full overflow-hidden">
               {activeDemo.speakers[0]?.avatarUrl ? (
@@ -302,21 +302,12 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
                 <div className={`w-full h-full bg-gradient-to-br ${activeDemo.speakers[0]?.avatarGradient}`} />
               )}
             </div>
-            <span className="text-[8px] text-white/60 font-medium mt-0.5 truncate max-w-[50px]">{activeDemo.hostName}</span>
           </button>
-
-          {/* Title + engagement row underneath */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between">
-              <h1 className="text-white font-semibold text-sm sm:text-base truncate">
-                {activeDemo.title}
-              </h1>
-              {/* Listener Count */}
-              <div className="flex items-center gap-1 text-white/60 shrink-0 ml-2">
-                <Users className="h-3.5 w-3.5" />
-                <span className="text-xs">{listenerCount}</span>
-              </div>
-            </div>
+            <p className="text-[10px] text-white/50">{activeDemo.hostName} · <Users className="inline h-3 w-3" /> {listenerCount}</p>
+          </div>
+        </div>
+        <p className="text-white font-bold text-sm mt-1.5">{activeDemo.title}</p>
 
             {/* Engagement, D1, Follow under title */}
             <div className="flex items-center gap-2 mt-1">
@@ -367,8 +358,6 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
                 {localFollowing ? 'Following' : 'Follow'}
               </button>
             </div>
-          </div>
-        </div>
       </div>
 
       {/* Speakers Area - Horizontal Row */}

@@ -439,6 +439,18 @@ const Podcasts = () => {
               >
                 Bario Music
               </button>
+              <button
+                onClick={() => {
+                  if (user) {
+                    navigate('/dashboard');
+                  } else {
+                    navigate('/auth');
+                  }
+                }}
+                className="text-white/50 transition-colors hover:text-white ml-1"
+              >
+                <User className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </header>
