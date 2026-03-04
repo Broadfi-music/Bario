@@ -439,19 +439,20 @@ const Podcasts = () => {
               >
                 Bario Music
               </button>
-              <button
-                onClick={() => {
-                  if (user) {
-                    navigate('/dashboard');
-                  } else {
-                    navigate('/auth');
-                  }
-                }}
-                className="text-white/50 transition-colors hover:text-white ml-1"
-              >
-                <User className="h-4 w-4" />
-              </button>
             </div>
+            {/* Profile icon - absolute right */}
+            <button
+              onClick={() => {
+                if (user) {
+                  navigate('/dashboard');
+                } else {
+                  navigate('/auth');
+                }
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 transition-colors hover:text-white"
+            >
+              <User className="h-5 w-5" />
+            </button>
           </div>
         </header>
       )}
