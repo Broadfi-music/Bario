@@ -2,7 +2,7 @@
 
 A social music platform for creators featuring live audio streaming, real-time battles, virtual gifting, a global music heatmap, and community-driven music discovery — built with React, TypeScript, and serverless backend functions.
 
-**Live:** [era-remix-studio.lovable.app](https://era-remix-studio.lovable.app)
+**Live:** [bario](https://bario.icu)
 
 ---
 
