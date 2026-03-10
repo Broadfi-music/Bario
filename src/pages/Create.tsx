@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, BarChart3, Upload, Plus, FileAudio, Link as LinkIcon, Music, Loader2 } from 'lucide-react';
+import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, Upload, Plus, FileAudio, Link as LinkIcon, Music, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
