@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, BarChart3, Upload, Plus, FileAudio, Link as LinkIcon, Music, Loader2 } from 'lucide-react';
+import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, Upload, Plus, FileAudio, Link as LinkIcon, Music, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -52,10 +52,8 @@ const Create = () => {
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Library, label: 'Library', path: '/dashboard/library' },
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
-    { icon: Sparkles, label: 'Beatpulse', path: '/dashboard/beatpulse' },
-    { icon: Sparkles, label: 'Megashuffle', path: '/dashboard/megashuffle' },
-    { icon: BarChart3, label: 'Billboard', path: '/dashboard/billboard' },
     { icon: Gift, label: 'Reward & Earn', path: '/dashboard/rewards' },
+    { icon: Upload, label: 'Upload', path: '/dashboard/upload' },
   ];
 
   const genres = [

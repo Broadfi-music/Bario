@@ -348,10 +348,10 @@ const Dashboard = () => {
               <Button onClick={() => setSearchOpen(true)} variant="ghost" size="icon" className="h-8 w-8">
                 <Search className="h-4 w-4" />
               </Button>
-              <Link to="/dashboard/new-remix" className="hidden sm:block">
-                <Button className="bg-black text-white hover:bg-black/90 text-xs px-3 h-8">
-                  <Plus className="h-4 w-4 mr-1" />
-                  New Remix
+              <Link to="/dashboard/new-remix">
+                <Button className="bg-black text-white hover:bg-black/90 text-xs px-2 sm:px-3 h-8">
+                  <Plus className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">New Remix</span>
                 </Button>
               </Link>
               {topNavItems.map((item) => (
