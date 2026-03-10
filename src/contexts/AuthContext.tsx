@@ -141,60 +141,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
-    const isCustomDomain = !window.location.hostname.includes('lovable.app')
-      && !window.location.hostname.includes('lovableproject.com');
-
-    if (isCustomDomain) {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/dashboard`,
-          skipBrowserRedirect: true,
-        },
-      });
-
-      if (error) return { error: error as Error };
-
-      if (!data?.url) {
-        return { error: new Error('Could not start Google sign-in') };
-      }
-
-      const oauthUrl = new URL(data.url);
-      const isAllowedHost = oauthUrl.hostname.endsWith('.supabase.co') || oauthUrl.hostname === 'accounts.google.com';
-      if (!isAllowedHost) {
-        return { error: new Error('Invalid OAuth redirect URL') };
-      }
-
-      window.location.href = data.url;
-      return { error: null };
-    }
-
     const result = await lovable.auth.signInWithOAuth('google', {
-      redirect_uri: `${window.location.origin}/dashboard`,
-      extraParams: { prompt: 'select_account' },
+      redirect_uri: window.location.origin,
     });
     return { error: result.error ? (result.error as Error) : null };
   };
 
   const signInWithApple = async () => {
-    const isCustomDomain = !window.location.hostname.includes('lovable.app')
-      && !window.location.hostname.includes('lovableproject.com');
-
-    if (isCustomDomain) {
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'apple',
-        options: {
-          redirectTo: `${window.location.origin}/`,
-          skipBrowserRedirect: true,
-        },
-      });
-      if (error) return { error: error as Error };
-      if (data?.url) {
-        window.location.href = data.url;
-      }
-      return { error: null };
-    }
-
     const result = await lovable.auth.signInWithOAuth('apple', {
       redirect_uri: window.location.origin,
     });
