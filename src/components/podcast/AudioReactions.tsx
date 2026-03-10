@@ -63,7 +63,7 @@ interface AudioReactionsProps {
 const AudioReactions = ({ isDemo = true }: AudioReactionsProps) => {
   const [floatingReactions, setFloatingReactions] = useState<Reaction[]>([]);
   const [cooldown, setCooldown] = useState(false);
-  const cooldownTimer = useRef<NodeJS.Timeout | null>(null);
+  const cooldownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const addReaction = useCallback((emoji: string) => {
     const id = `${Date.now()}-${Math.random()}`;

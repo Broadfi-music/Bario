@@ -11,7 +11,7 @@ interface ComboGiftTrackerProps {
 const ComboGiftTracker = ({ isDemo = true, sessionId }: ComboGiftTrackerProps) => {
   const [comboCount, setComboCount] = useState(0);
   const [showCombo, setShowCombo] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const addGiftToCombo = () => {
     setComboCount(prev => prev + 1);

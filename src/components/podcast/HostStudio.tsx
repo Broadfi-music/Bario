@@ -47,7 +47,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
   const [isMicTesting, setIsMicTesting] = useState(false);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
   const [remainingTime, setRemainingTime] = useState(MAX_SESSION_DURATION_SECONDS);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Agora Audio Hook - Reliable audio rooms
   const {

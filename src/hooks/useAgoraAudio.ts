@@ -53,7 +53,7 @@ export const useAgoraAudio = ({
 
   const clientRef = useRef<IAgoraRTCClient | null>(null);
   const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null);
-  const volumeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const volumeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentSessionRef = useRef<string | null>(null);
   const isCleaningUp = useRef(false);
   const connectionAttemptId = useRef(0);

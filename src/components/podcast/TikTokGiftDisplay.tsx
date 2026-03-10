@@ -37,7 +37,7 @@ const TikTokGiftDisplay = ({ sessionId }: TikTokGiftDisplayProps) => {
   const giftQueueRef = useRef<GiftEvent[]>([]);
   const processingRef = useRef(false);
   const channelRef = useRef<any>(null);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const processedGiftIdsRef = useRef<Set<string>>(new Set());
   const lastPollTimeRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
