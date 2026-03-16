@@ -1,0 +1,16 @@
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON public.notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_podcast_comments_session_id ON public.podcast_comments(session_id);
+CREATE INDEX IF NOT EXISTS idx_podcast_gifts_session_id ON public.podcast_gifts(session_id);
+CREATE INDEX IF NOT EXISTS idx_podcast_gifts_recipient_id ON public.podcast_gifts(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_battle_invites_to_user ON public.battle_invites(to_user_id);
+CREATE INDEX IF NOT EXISTS idx_coin_transactions_user_id ON public.coin_transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_podcast_sessions_status ON public.podcast_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_follows_following_id ON public.follows(following_id);
+CREATE INDEX IF NOT EXISTS idx_space_join_requests_session ON public.space_join_requests(session_id);
+CREATE INDEX IF NOT EXISTS idx_podcast_episodes_host ON public.podcast_episodes(host_id);
+CREATE INDEX IF NOT EXISTS idx_heatmap_engagement_track ON public.heatmap_engagement(track_id);
+CREATE INDEX IF NOT EXISTS idx_heatmap_track_metrics_track ON public.heatmap_track_metrics(track_id);
+CREATE INDEX IF NOT EXISTS idx_podcast_participants_session ON public.podcast_participants(session_id);
+CREATE INDEX IF NOT EXISTS idx_user_favorites_user ON public.user_favorites(user_id);
+CREATE INDEX IF NOT EXISTS idx_strike_votes_track ON public.strike_votes(track_id);
