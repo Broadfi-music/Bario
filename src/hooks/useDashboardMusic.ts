@@ -102,11 +102,11 @@ export function useDashboardMusic() {
     fetchLikedTracks();
   }, [user]);
 
-  // Real-time updates for trending songs and remixes every 30 seconds
+  // Gentle client-side shuffle every 5 minutes, only when tab is visible
   useEffect(() => {
     const interval = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
       setData(prev => {
-        // Shuffle and update trending songs
         const shuffledTrending = [...prev.trendingSongs]
           .sort(() => Math.random() - 0.5)
           .map((song, i) => ({
@@ -115,19 +115,16 @@ export function useDashboardMusic() {
             plays: `${(parseFloat(song.plays.replace(/[KM]/g, '')) * (1 + (Math.random() - 0.3) * 0.1)).toFixed(1)}${song.plays.includes('M') ? 'M' : 'K'}`,
           }));
         
-        // Shuffle and update trending remixes
         const shuffledRemixes = [...prev.trendingRemixes]
           .sort(() => Math.random() - 0.5)
-          .map((remix, i) => ({
+          .map((remix) => ({
             ...remix,
             plays: `${(parseFloat(remix.plays.replace(/[KM]/g, '')) * (1 + (Math.random() - 0.3) * 0.1)).toFixed(1)}${remix.plays.includes('M') ? 'M' : 'K'}`,
           }));
         
-        // Shuffle recent remixes
         const shuffledRecentRemixes = [...prev.recentRemixes]
           .sort(() => Math.random() - 0.5);
         
-        // Shuffle new songs
         const shuffledNewSongs = [...prev.newSongs]
           .sort(() => Math.random() - 0.5);
         
@@ -139,7 +136,7 @@ export function useDashboardMusic() {
           newSongs: shuffledNewSongs,
         };
       });
-    }, 30000); // Update every 30 seconds
+    }, 300000); // Every 5 minutes
 
     return () => clearInterval(interval);
   }, []);

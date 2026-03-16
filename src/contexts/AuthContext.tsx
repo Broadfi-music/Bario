@@ -30,12 +30,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(session?.user ?? null);
         setLoading(false);
         
-        // Handle token refresh events
+        if (event === 'SIGNED_IN') {
+          console.log('User signed in successfully');
+        }
+        
         if (event === 'TOKEN_REFRESHED') {
           console.log('Token refreshed successfully');
         }
         
-        // Handle refresh failure - sign out user
         if (event === 'SIGNED_OUT') {
           setSession(null);
           setUser(null);
@@ -67,29 +69,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     initSession();
 
-    // Set up automatic token refresh interval - check every 30 seconds
-    const refreshInterval = setInterval(async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          // Check if token expires soon (within 2 minutes)
-          const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
-          const now = Date.now();
-          const twoMinutes = 2 * 60 * 1000;
-          
-          if (expiresAt - now < twoMinutes) {
-            console.log('Token expiring soon, refreshing...');
-            await supabase.auth.refreshSession();
-          }
-        }
-      } catch (err) {
-        console.error('Token refresh interval error:', err);
-      }
-    }, 30000); // Check every 30 seconds
+    // Removed aggressive 30-second polling interval.
+    // autoRefreshToken: true on the Supabase client handles token refresh automatically.
 
     return () => {
       subscription.unsubscribe();
-      clearInterval(refreshInterval);
     };
   }, []);
 
@@ -109,7 +93,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     // Auto-create profile if user was created successfully
     if (data?.user && !error) {
-      // Use setTimeout to defer the profile creation (avoid auth deadlock)
       setTimeout(async () => {
         const randomAvatar = getRandomAvatarUrl(data.user!.id);
         const randomCover = getRandomCoverUrl(data.user!.id);
@@ -142,19 +125,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithGoogle = async () => {
     const redirectUri = window.location.origin;
-    console.log('[Auth] Google sign-in start', {
-      hostname: window.location.hostname,
-      origin: window.location.origin,
-      redirectUri,
-    });
 
     const result = await lovable.auth.signInWithOAuth('google', {
       redirect_uri: redirectUri,
-    });
-
-    console.log('[Auth] Google sign-in result', {
-      redirected: (result as { redirected?: boolean }).redirected,
-      error: result.error ? String(result.error) : null,
+      extraParams: {
+        prompt: 'select_account',
+      },
     });
 
     return { error: result.error ? (result.error as Error) : null };
@@ -166,8 +142,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
     return { error: result.error ? (result.error as Error) : null };
   };
-
-  // Push subscription is now handled by PushSubscriptionManager component
 
   const signOut = async () => {
     await supabase.auth.signOut();

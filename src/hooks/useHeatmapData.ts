@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface HeatmapTrack {
@@ -113,21 +113,24 @@ export function useHeatmapTracks(limit = 99) {
   const [error, setError] = useState<string | null>(null);
   const [currentCountry, setCurrentCountry] = useState('GLOBAL');
   const [currentGenre, setCurrentGenre] = useState<string | undefined>(undefined);
+  const fetchInProgress = useRef(false);
 
   const fetchTracks = useCallback(async (search?: string, genre?: string, country?: string) => {
+    // Prevent duplicate concurrent fetches
+    if (fetchInProgress.current) return;
+    fetchInProgress.current = true;
+
     try {
       setLoading(true);
       setError(null);
       
-      // Build query parameters - CRITICAL: pass country to the edge function
       const params = new URLSearchParams({ 
         limit: limit.toString(),
-        _t: Date.now().toString() // Cache buster
+        _t: Date.now().toString()
       });
       if (search) params.append('search', search);
       if (genre) params.append('genre', genre);
       
-      // Use country from parameter or current state
       const countryToUse = country || currentCountry;
       params.append('country', countryToUse);
       
@@ -137,7 +140,6 @@ export function useHeatmapTracks(limit = 99) {
       
       console.log(`Fetching heatmap tracks for country: ${countryToUse}`);
       
-      // Direct fetch to edge function with query params - more reliable
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/heatmap-tracks?${params}`,
         {
@@ -156,13 +158,10 @@ export function useHeatmapTracks(limit = 99) {
       const data = await response.json();
       
       if (data?.tracks) {
-        // Don't shuffle on initial load - keep the ranked order
-        // Only add slight variety on subsequent fetches
         const processedTracks = data.tracks;
         setTracks(processedTracks);
         setSummary(data.summary || summary);
         
-        // Use official genre list from API if available, otherwise extract from tracks
         if (data.genres && data.genres.length > 0) {
           setGenres(data.genres.filter((g: string) => g !== 'All'));
         } else {
@@ -177,6 +176,7 @@ export function useHeatmapTracks(limit = 99) {
       setError(err instanceof Error ? err.message : 'Failed to fetch tracks');
     } finally {
       setLoading(false);
+      fetchInProgress.current = false;
     }
   }, [limit, currentCountry]);
 
@@ -192,7 +192,7 @@ export function useHeatmapTracks(limit = 99) {
 
   const filterByCountry = useCallback((country: string) => {
     setCurrentCountry(country);
-    setCurrentGenre(undefined); // Reset genre when changing country
+    setCurrentGenre(undefined);
     setTracks([]);
     fetchTracks(undefined, undefined, country);
   }, [fetchTracks]);
@@ -201,23 +201,22 @@ export function useHeatmapTracks(limit = 99) {
     fetchTracks(undefined, currentGenre, currentCountry);
   }, [fetchTracks, currentGenre, currentCountry]);
 
-  // Initial fetch when country/genre changes
+  // Single initial fetch
   useEffect(() => {
     fetchTracks(undefined, currentGenre, currentCountry);
-  }, [currentGenre, currentCountry]);
+  }, []); // Only on mount
 
-  // Realtime simulation for UI updates - DISABLED to prevent glitches
-
-  // Auto-refresh tracks every 2 minutes for fresh music - very gentle refresh
-  // Auto-refresh every 30 seconds — rankings shift as streaming engagement changes
+  // Auto-refresh every 2 minutes, only when tab is visible
   useEffect(() => {
     const refreshInterval = setInterval(() => {
-      console.log('Auto-refreshing heatmap tracks (30s)...');
-      fetchTracks(undefined, currentGenre, currentCountry);
-    }, 30000);
+      if (document.visibilityState === 'visible') {
+        console.log('Auto-refreshing heatmap tracks (120s)...');
+        fetchTracks(undefined, currentGenre, currentCountry);
+      }
+    }, 120000);
 
     return () => clearInterval(refreshInterval);
-  }, [currentCountry, currentGenre]);
+  }, [currentCountry, currentGenre, fetchTracks]);
 
   return { tracks, genres, summary, loading, error, refetch, searchTracks, filterByGenre, filterByCountry };
 }
@@ -234,7 +233,6 @@ export function useTrackDetail(trackId: string | undefined) {
       setLoading(true);
       setError(null);
       
-      // Encode track ID for URL safety - handles both numeric IDs and search-result IDs
       const encodedId = encodeURIComponent(trackId);
       
       const response = await fetch(
@@ -266,9 +264,6 @@ export function useTrackDetail(trackId: string | undefined) {
   useEffect(() => {
     fetchTrack();
   }, [fetchTrack]);
-
-  // Realtime metric simulation disabled for stability
-  // Metrics are now deterministic from the edge function
 
   return { track, loading, error, refetch: fetchTrack };
 }
