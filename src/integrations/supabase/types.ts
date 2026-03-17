@@ -1172,30 +1172,6 @@ export type Database = {
         }
         Relationships: []
       }
-      strike_votes: {
-        Row: {
-          created_at: string | null
-          id: string
-          track_id: string
-          user_id: string
-          vote_type: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          track_id: string
-          user_id: string
-          vote_type: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          track_id?: string
-          user_id?: string
-          vote_type?: string
-        }
-        Relationships: []
-      }
       tracks: {
         Row: {
           created_at: string
