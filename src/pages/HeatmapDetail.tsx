@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeft, Star, TrendingUp, TrendingDown, ExternalLink, Share2, Play, Pause,
-  Users, Clock, Zap, ChevronDown, Copy, Music, ChevronLeft, ChevronRight, Volume2
+  Users, Clock, ChevronDown, Copy, Music, ChevronLeft, ChevronRight, Volume2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -55,7 +55,7 @@ const HeatmapDetail = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('charts');
   const [timeRange, setTimeRange] = useState('7D');
-  const [showAllListeners, setShowAllListeners] = useState(false);
+  
   
   const { track, loading, error } = useTrackDetail(id);
   const { playTrack: globalPlayTrack, pauseTrack: globalPauseTrack, currentTrack, isPlaying: globalIsPlaying } = useAudioPlayer();
@@ -183,15 +183,6 @@ const HeatmapDetail = () => {
           </button>
           
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => navigate('/pass-the-plug')}
-              className="text-[9px] h-7 px-2 border-[#4ade80]/30 bg-[#4ade80]/10 text-[#4ade80] hover:bg-[#4ade80]/20"
-            >
-              <Zap className="h-3 w-3 mr-1" />
-              Pass the Plug
-            </Button>
             {user ? (
               <Link to="/dashboard">
                 <Button size="sm" className="bg-white text-black hover:bg-white/90 text-[10px] sm:text-xs h-7 sm:h-8 px-3 rounded-lg font-medium">
@@ -280,11 +271,6 @@ const HeatmapDetail = () => {
                       <div className="h-full bg-[#4ade80] rounded-full" style={{ width: '87%' }} />
                     </div>
                     <span className="text-[9px] text-[#4ade80]">87%</span>
-                  </div>
-                  <div className="flex -space-x-1 mt-2">
-                    {track.topListeners.slice(0, 6).map((listener, i) => (
-                      <img key={i} src={listener.avatar} alt="" className="w-5 h-5 rounded-full border-2 border-black" />
-                    ))}
                   </div>
                 </div>
 
@@ -432,29 +418,6 @@ const HeatmapDetail = () => {
                 </div>
               </Card>
 
-              {/* Smart Feed */}
-              <Card className="bg-white/[0.02] border-white/5 p-4">
-                <h3 className="text-[11px] font-medium text-white mb-3">Smart Feed</h3>
-                <div className="space-y-3">
-                  {track.smartFeed.map((event) => (
-                    <div key={event.id} className="flex gap-3 p-2 bg-white/[0.02] rounded-lg">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${
-                        event.type === 'milestone' ? 'bg-[#4ade80]/20 text-[#4ade80]' :
-                        event.type === 'playlist' ? 'bg-blue-500/20 text-blue-400' :
-                        'bg-purple-500/20 text-purple-400'
-                      }`}>
-                        {event.type === 'milestone' ? '🎉' : event.type === 'playlist' ? '📋' : '🔥'}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[10px] font-medium text-white">{event.title}</p>
-                        <p className="text-[9px] text-white/50">{event.description}</p>
-                        <p className="text-[8px] text-white/30 mt-1">{event.source} • {new Date(event.timestamp).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
               {/* Artist Profile */}
               <Card className="bg-white/[0.02] border-white/5 p-4">
                 <h3 className="text-[11px] font-medium text-white mb-3">About Artist</h3>
@@ -489,35 +452,8 @@ const HeatmapDetail = () => {
               </Card>
             </div>
 
-            {/* Right Sidebar - Top Listeners */}
+            {/* Right Sidebar - Related Tracks */}
             <div className="lg:col-span-3 space-y-4">
-              <Card className="bg-white/[0.02] border-white/5 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-[10px] font-medium text-white">Top Listeners</h3>
-                  <button
-                    onClick={() => setShowAllListeners(!showAllListeners)}
-                    className="text-[8px] text-[#4ade80] hover:underline"
-                  >
-                    {showAllListeners ? 'Show less' : 'View all'}
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {track.topListeners.slice(0, showAllListeners ? 20 : 8).map((listener, i) => (
-                    <div key={listener.id} className="flex items-center gap-2 p-2 hover:bg-white/5 rounded-lg">
-                      <span className="text-[8px] text-white/40 w-4">{i + 1}</span>
-                      <img src={listener.avatar} alt="" className="w-7 h-7 rounded-full" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          <p className="text-[9px] text-white truncate">{listener.name}</p>
-                          {listener.isVerified && <span className="text-[8px] text-[#4ade80]">✓</span>}
-                        </div>
-                        <p className="text-[8px] text-white/40">{listener.playsCount} plays</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
               {/* Related Tracks */}
               <Card className="bg-white/[0.02] border-white/5 p-4">
                 <h3 className="text-[10px] font-medium text-white mb-3">Related Tracks</h3>

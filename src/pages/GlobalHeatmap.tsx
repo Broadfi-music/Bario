@@ -488,9 +488,6 @@ const GlobalHeatmap = () => {
               <Link to="/podcasts" className="text-white/70 hover:text-purple-400 transition-colors">
                 Space
               </Link>
-              <Link to="/three-strike" className="text-white/70 hover:text-orange-400 transition-colors">
-                Three Strike
-              </Link>
               <Link to="/bario-music" className="text-white/70 hover:text-green-400 transition-colors">
                 Bario Music
               </Link>
@@ -548,9 +545,6 @@ const GlobalHeatmap = () => {
           </Link>
           <Link to="/podcasts" className="text-[9px] text-white/70 hover:text-purple-400 whitespace-nowrap">
             Space
-          </Link>
-          <Link to="/three-strike" className="text-[9px] text-white/70 hover:text-orange-400 whitespace-nowrap">
-            Three Strike
           </Link>
           
           {/* Top Chart Dropdown */}
