@@ -55,7 +55,7 @@ const HeatmapDetail = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('charts');
   const [timeRange, setTimeRange] = useState('7D');
-  const [showAllListeners, setShowAllListeners] = useState(false);
+  
   
   const { track, loading, error } = useTrackDetail(id);
   const { playTrack: globalPlayTrack, pauseTrack: globalPauseTrack, currentTrack, isPlaying: globalIsPlaying } = useAudioPlayer();
