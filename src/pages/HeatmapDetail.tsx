@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { 
   ArrowLeft, Star, TrendingUp, TrendingDown, ExternalLink, Share2, Play, Pause,
-  Users, Clock, Zap, ChevronDown, Copy, Music, ChevronLeft, ChevronRight, Volume2
+  Users, Clock, ChevronDown, Copy, Music, ChevronLeft, ChevronRight, Volume2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
