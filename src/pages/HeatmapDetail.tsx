@@ -418,29 +418,6 @@ const HeatmapDetail = () => {
                 </div>
               </Card>
 
-              {/* Smart Feed */}
-              <Card className="bg-white/[0.02] border-white/5 p-4">
-                <h3 className="text-[11px] font-medium text-white mb-3">Smart Feed</h3>
-                <div className="space-y-3">
-                  {track.smartFeed.map((event) => (
-                    <div key={event.id} className="flex gap-3 p-2 bg-white/[0.02] rounded-lg">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${
-                        event.type === 'milestone' ? 'bg-[#4ade80]/20 text-[#4ade80]' :
-                        event.type === 'playlist' ? 'bg-blue-500/20 text-blue-400' :
-                        'bg-purple-500/20 text-purple-400'
-                      }`}>
-                        {event.type === 'milestone' ? '🎉' : event.type === 'playlist' ? '📋' : '🔥'}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[10px] font-medium text-white">{event.title}</p>
-                        <p className="text-[9px] text-white/50">{event.description}</p>
-                        <p className="text-[8px] text-white/30 mt-1">{event.source} • {new Date(event.timestamp).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
               {/* Artist Profile */}
               <Card className="bg-white/[0.02] border-white/5 p-4">
                 <h3 className="text-[11px] font-medium text-white mb-3">About Artist</h3>
