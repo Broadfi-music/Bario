@@ -546,9 +546,6 @@ const GlobalHeatmap = () => {
           <Link to="/podcasts" className="text-[9px] text-white/70 hover:text-purple-400 whitespace-nowrap">
             Space
           </Link>
-          <Link to="/three-strike" className="text-[9px] text-white/70 hover:text-orange-400 whitespace-nowrap">
-            Three Strike
-          </Link>
           
           {/* Top Chart Dropdown */}
           <div className="relative flex-1">

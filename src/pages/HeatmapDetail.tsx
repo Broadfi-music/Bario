@@ -452,35 +452,8 @@ const HeatmapDetail = () => {
               </Card>
             </div>
 
-            {/* Right Sidebar - Top Listeners */}
+            {/* Right Sidebar - Related Tracks */}
             <div className="lg:col-span-3 space-y-4">
-              <Card className="bg-white/[0.02] border-white/5 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-[10px] font-medium text-white">Top Listeners</h3>
-                  <button
-                    onClick={() => setShowAllListeners(!showAllListeners)}
-                    className="text-[8px] text-[#4ade80] hover:underline"
-                  >
-                    {showAllListeners ? 'Show less' : 'View all'}
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {track.topListeners.slice(0, showAllListeners ? 20 : 8).map((listener, i) => (
-                    <div key={listener.id} className="flex items-center gap-2 p-2 hover:bg-white/5 rounded-lg">
-                      <span className="text-[8px] text-white/40 w-4">{i + 1}</span>
-                      <img src={listener.avatar} alt="" className="w-7 h-7 rounded-full" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          <p className="text-[9px] text-white truncate">{listener.name}</p>
-                          {listener.isVerified && <span className="text-[8px] text-[#4ade80]">✓</span>}
-                        </div>
-                        <p className="text-[8px] text-white/40">{listener.playsCount} plays</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
               {/* Related Tracks */}
               <Card className="bg-white/[0.02] border-white/5 p-4">
                 <h3 className="text-[10px] font-medium text-white mb-3">Related Tracks</h3>

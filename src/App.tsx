@@ -97,7 +97,7 @@ const AnimatedRoutes = ({ showSplash }: { showSplash: boolean }) => {
           <Route path="/bario-music" element={<BarioMusic />} />
           <Route path="/bario-music/:id" element={<BarioMusicDetail />} />
           <Route path="/dashboard/rewards" element={<Rewards />} />
-          <Route path="/three-strike" element={<ThreeStrike />} />
+          
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/install" element={<Install />} />
           <Route path="/reset-password" element={<ResetPassword />} />
