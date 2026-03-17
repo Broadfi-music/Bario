@@ -1,33 +1,39 @@
 
 
-## PWABuilder and Standalone PWA
+## Plan: Remove Non-Functional Features
 
-**Short answer:** Yes, PWABuilder uses your custom domain (`https://bario.icu`) and it **will** produce the standalone PWA experience, not the webapp design.
+### What gets removed
 
-Here's why: PWABuilder reads your `manifest.json`, which has `"display": "standalone"`. When it wraps your site in a TWA (Trusted Web Activity) for the Play Store, the Android system launches your app in **standalone mode** — meaning `window.matchMedia('(display-mode: standalone)')` returns `true`. This triggers all your PWA-specific code:
+| Feature | Location | Reason |
+|---------|----------|--------|
+| **Three Strike** | Entire page + route + nav links | No functional purpose in the product |
+| **Pass the Plug** button | HeatmapDetail header | Links to non-existent route |
+| **Top Listeners** sidebar | HeatmapDetail right column | Dummy data, no real tracking |
+| **Smart Feed** section | HeatmapDetail main content | No real user comments/activity |
 
-- Bottom nav bar (Live, Feed, Go Live, Heatmap)
-- Splash screen video
-- TikTok-style header with Battle/Start Battle/Bario Music tabs
-- Profile icon navigation
-- No browser chrome
+### Changes by file
 
-So the `.aab` from PWABuilder will behave exactly like your installed PWA, not the browser webapp.
+**1. `src/pages/ThreeStrike.tsx`** — Delete entire file
 
-**Steps:**
-1. Go to [pwabuilder.com](https://pwabuilder.com)
-2. Enter `https://bario.icu`
-3. It audits your manifest and service worker
-4. Generate the Android package — the TWA runs in standalone mode automatically
+**2. `src/App.tsx`**
+- Remove ThreeStrike import (line 42)
+- Remove `/three-strike` route (line 100)
 
----
+**3. `src/pages/GlobalHeatmap.tsx`**
+- Remove "Three Strike" navigation links (around lines 491 and 552)
 
-## Build Error Fix
+**4. `src/pages/HeatmapDetail.tsx`**
+- Remove "Pass the Plug" button (lines 186-194) and the `Zap` icon import
+- Remove "Smart Feed" card section (lines 435-456)
+- Remove "Top Listeners" sidebar card (lines 492-519), the `showAllListeners` state, and the top listener avatars in the track header (around line 285)
+- Remove related dummy data references (`topListeners`, `smartFeed`) from the track data object if generated in this file
 
-The `send-push-notification` edge function has two TypeScript errors that need fixing:
+**5. Cleanup**
+- Remove `showAllListeners` state variable from HeatmapDetail
+- Verify no other files reference these removed features
 
-1. **Line 44** — `Uint8Array` buffer type incompatibility with `crypto.subtle.importKey`. Fix: cast `keyData.buffer` to `ArrayBuffer`.
-2. **Line 172** — `error` is `unknown`. Fix: cast to `Error` or use string fallback.
-
-Both are simple type-safety fixes with no logic changes.
+### What stays untouched
+- Related Tracks sidebar (real data, useful)
+- Artist Profile section (real data)
+- All other heatmap functionality
 
