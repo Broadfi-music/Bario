@@ -32,6 +32,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (event === 'SIGNED_IN') {
           console.log('User signed in successfully');
+          // After OAuth sign-in, redirect to dashboard if user landed on root
+          if (session?.user) {
+            const currentPath = window.location.pathname;
+            // Only redirect if on root or auth page (OAuth redirect landing pages)
+            if (currentPath === '/' || currentPath === '/auth') {
+              // Use setTimeout to avoid state update conflicts
+              setTimeout(() => {
+                window.location.href = '/dashboard';
+              }, 100);
+            }
+          }
         }
         
         if (event === 'TOKEN_REFRESHED') {
@@ -124,10 +135,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
-    const redirectUri = window.location.origin;
+    const isCustomDomain = !window.location.hostname.includes('lovable.app') 
+      && !window.location.hostname.includes('lovableproject.com')
+      && window.location.hostname !== 'localhost';
 
+    if (isCustomDomain) {
+      // On custom domains, bypass auth-bridge to avoid redirect issues
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+          skipBrowserRedirect: true,
+          queryParams: {
+            prompt: 'select_account',
+          },
+        },
+      });
+
+      if (error) return { error: error as Error };
+
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+
+      return { error: null };
+    }
+
+    // For Lovable domains, use managed OAuth bridge
     const result = await lovable.auth.signInWithOAuth('google', {
-      redirect_uri: redirectUri,
+      redirect_uri: window.location.origin,
       extraParams: {
         prompt: 'select_account',
       },
