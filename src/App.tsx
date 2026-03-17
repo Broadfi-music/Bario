@@ -39,7 +39,7 @@ import HostProfile from "@/pages/HostProfile";
 import BarioMusic from "@/pages/BarioMusic";
 import BarioMusicDetail from "@/pages/BarioMusicDetail";
 import Rewards from "@/pages/Rewards";
-import ThreeStrike from "@/pages/ThreeStrike";
+
 import Install from "@/pages/Install";
 import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
