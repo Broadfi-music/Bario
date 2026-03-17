@@ -272,11 +272,6 @@ const HeatmapDetail = () => {
                     </div>
                     <span className="text-[9px] text-[#4ade80]">87%</span>
                   </div>
-                  <div className="flex -space-x-1 mt-2">
-                    {track.topListeners.slice(0, 6).map((listener, i) => (
-                      <img key={i} src={listener.avatar} alt="" className="w-5 h-5 rounded-full border-2 border-black" />
-                    ))}
-                  </div>
                 </div>
 
                 {/* Stats */}
