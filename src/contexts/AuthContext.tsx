@@ -60,15 +60,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const initSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+
+        let activeSession = session;
+
         if (error) {
           console.log('Session error, attempting refresh...');
           const { data: refreshData } = await supabase.auth.refreshSession();
-          setSession(refreshData.session);
-          setUser(refreshData.session?.user ?? null);
-        } else {
-          setSession(session);
-          setUser(session?.user ?? null);
+          activeSession = refreshData.session;
+        }
+
+        setSession(activeSession);
+        setUser(activeSession?.user ?? null);
+
+        // Fallback for OAuth callback cases where SIGNED_IN event is missed
+        if (activeSession?.user) {
+          const currentPath = window.location.pathname;
+          const searchParams = new URLSearchParams(window.location.search);
+          const hash = window.location.hash;
+          const referrer = document.referrer;
+
+          const isOAuthCallback =
+            searchParams.has('code') ||
+            searchParams.has('state') ||
+            hash.includes('access_token') ||
+            referrer.includes('accounts.google.com') ||
+            referrer.includes('/~oauth') ||
+            referrer.includes('oauth.lovable.app');
+
+          if (currentPath === '/auth' || (currentPath === '/' && isOAuthCallback)) {
+            window.location.replace('/dashboard');
+          }
         }
       } catch (err) {
         console.error('Failed to initialize session:', err);
@@ -135,6 +156,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
+    const dashboardRedirect = `${window.location.origin}/dashboard`;
     const isCustomDomain = !window.location.hostname.includes('lovable.app') 
       && !window.location.hostname.includes('lovableproject.com')
       && window.location.hostname !== 'localhost';
@@ -144,7 +166,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: dashboardRedirect,
           skipBrowserRedirect: true,
           queryParams: {
             prompt: 'select_account',
@@ -163,7 +185,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // For Lovable domains, use managed OAuth bridge
     const result = await lovable.auth.signInWithOAuth('google', {
-      redirect_uri: window.location.origin,
+      redirect_uri: dashboardRedirect,
       extraParams: {
         prompt: 'select_account',
       },
