@@ -32,6 +32,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (event === 'SIGNED_IN') {
           console.log('User signed in successfully');
+          // After OAuth sign-in, redirect to dashboard if user landed on root
+          if (session?.user) {
+            const currentPath = window.location.pathname;
+            // Only redirect if on root or auth page (OAuth redirect landing pages)
+            if (currentPath === '/' || currentPath === '/auth') {
+              // Use setTimeout to avoid state update conflicts
+              setTimeout(() => {
+                window.location.href = '/dashboard';
+              }, 100);
+            }
+          }
         }
         
         if (event === 'TOKEN_REFRESHED') {
