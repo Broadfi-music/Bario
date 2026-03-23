@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, Plus, Trophy, Mic, MicOff, LogOut, Music } from 'lucide-react';
+import { Users, Plus, Trophy, Mic, MicOff, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import AuthPromptModal from './AuthPromptModal';
 import TopEngagementModal from './TopEngagementModal';
 import DailyRankingModal from './DailyRankingModal';
-import MysteryMusicDrop from './MysteryMusicDrop';
+
 import SpotlightRoulette from './SpotlightRoulette';
 import ComboGiftTracker from './ComboGiftTracker';
 import AchievementToast from './AchievementToast';
@@ -62,7 +62,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   const [showDailyRanking, setShowDailyRanking] = useState(false);
   const [showGiftModal, setShowGiftModal] = useState(false);
   const [mutedSpeakers, setMutedSpeakers] = useState<Record<string, boolean>>({});
-  const [mysteryDropEnabled, setMysteryDropEnabled] = useState(true);
+  
 
   // Initialize and auto-play audio
   useEffect(() => {
@@ -280,7 +280,6 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   return (
     <div className="h-full flex flex-col bg-black relative">
       {/* Engagement Overlays */}
-      <MysteryMusicDrop isDemo roomCategory={activeDemo.category} roomTitle={activeDemo.title} enabled={mysteryDropEnabled} isHost onSkip={() => {}} />
       <SpotlightRoulette isDemo />
       <ComboGiftTracker isDemo />
       <AchievementToast isDemo />
@@ -333,18 +332,6 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
                 <span className="text-[10px] text-yellow-400 font-semibold">D1</span>
               </button>
 
-              {/* Mystery Drop Toggle */}
-              <button
-                onClick={() => setMysteryDropEnabled(prev => !prev)}
-                className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full transition-colors ${
-                  mysteryDropEnabled ? 'bg-purple-500/20 hover:bg-purple-500/30' : 'bg-white/10 hover:bg-white/20'
-                }`}
-              >
-                <Music className={`w-3 h-3 ${mysteryDropEnabled ? 'text-purple-400' : 'text-white/40'}`} />
-                <span className={`text-[10px] font-semibold ${mysteryDropEnabled ? 'text-purple-400' : 'text-white/40'}`}>
-                  {mysteryDropEnabled ? 'Drop' : 'Off'}
-                </span>
-              </button>
 
               {/* Follow Button */}
               <button
