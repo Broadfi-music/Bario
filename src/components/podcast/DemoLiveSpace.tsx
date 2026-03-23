@@ -11,11 +11,6 @@ import AuthPromptModal from './AuthPromptModal';
 import TopEngagementModal from './TopEngagementModal';
 import DailyRankingModal from './DailyRankingModal';
 
-import SpotlightRoulette from './SpotlightRoulette';
-import ComboGiftTracker from './ComboGiftTracker';
-import AchievementToast from './AchievementToast';
-
-import VibeCheck from './VibeCheck';
 import { getRandomAvatarUrl } from '@/lib/randomAvatars';
 
 // Audio waveform animation component
