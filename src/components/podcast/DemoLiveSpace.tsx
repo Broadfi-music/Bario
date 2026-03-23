@@ -62,7 +62,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   const [showDailyRanking, setShowDailyRanking] = useState(false);
   const [showGiftModal, setShowGiftModal] = useState(false);
   const [mutedSpeakers, setMutedSpeakers] = useState<Record<string, boolean>>({});
-  const [mysteryDropEnabled, setMysteryDropEnabled] = useState(true);
+  
 
   // Initialize and auto-play audio
   useEffect(() => {
