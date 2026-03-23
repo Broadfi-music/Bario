@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
-  Users, Heart, Gift, Share2, UserPlus, Headphones,
+  Users, Heart, Gift, Share2, UserPlus,
   ChevronUp, ChevronDown, Crown, MessageSquare, Trophy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
