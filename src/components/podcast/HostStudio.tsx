@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import MysteryMusicDrop from './MysteryMusicDrop';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 import { 
