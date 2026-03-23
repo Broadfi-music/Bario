@@ -10,7 +10,7 @@ import ShareModal from './ShareModal';
 import AddParticipantModal from './AddParticipantModal';
 import AuthPromptModal from './AuthPromptModal';
 import AudioReactions from './AudioReactions';
-import LoyaltyStreak from './LoyaltyStreak';
+
 import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 import { getDemoAvatar } from '@/lib/randomAvatars';
 
@@ -64,12 +64,6 @@ const getUserColor = (userId: string) => {
   return colors[index];
 };
 
-// Demo loyalty streaks - random streaks for demo users
-const getDemoStreak = (userName: string): number => {
-  const hash = userName.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  const streaks = [0, 0, 2, 3, 5, 7, 10, 14, 0, 3, 0, 1, 8, 4, 0];
-  return streaks[hash % streaks.length];
-};
 
 type PickerTab = 'emotes' | 'stickers' | 'gifs';
 
@@ -513,9 +507,6 @@ return (
                   >
                     {comment.user_name || userProfiles.get(comment.user_id)?.name || 'Listener'}
                   </span>
-                  {comment.user_id.startsWith('demo-user-') && comment.user_name && (
-                    <LoyaltyStreak streak={getDemoStreak(comment.user_name)} />
-                  )}
                   <span className="text-xs text-white/60 mx-0.5">:</span>
                   <span className="text-xs text-white ml-1.5 break-words">
                     {comment.content}

@@ -11,11 +11,6 @@ import AuthPromptModal from './AuthPromptModal';
 import TopEngagementModal from './TopEngagementModal';
 import DailyRankingModal from './DailyRankingModal';
 
-import SpotlightRoulette from './SpotlightRoulette';
-import ComboGiftTracker from './ComboGiftTracker';
-import AchievementToast from './AchievementToast';
-
-import VibeCheck from './VibeCheck';
 import { getRandomAvatarUrl } from '@/lib/randomAvatars';
 
 // Audio waveform animation component
@@ -279,12 +274,6 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
 
   return (
     <div className="h-full flex flex-col bg-black relative">
-      {/* Engagement Overlays */}
-      <SpotlightRoulette isDemo />
-      <ComboGiftTracker isDemo />
-      <AchievementToast isDemo />
-      
-      <VibeCheck isDemo />
 
       {/* Session Header - extra top padding for PWA header */}
       <div className="px-4 pt-14 pb-2 sm:py-3 border-b border-white/5 bg-black shrink-0">
