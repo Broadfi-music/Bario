@@ -1,51 +1,84 @@
 
 
-# Bario Investor Traction Metrics PDF — Generation Plan
+# Regenerated Investor Pitch Deck + One-Page Summary
 
-## Strategy: "Small Numbers, Big Signal"
+## What We're Building
 
-Investors don't need thousands of users — they need proof of product-market fit. Your numbers actually tell a strong story when framed correctly. 46 users generated 117 live sessions, 89 gifts, and 40 battles. That's insane engagement per user.
+Two deliverables:
 
-## The Reframing
+1. **Complete Investor Pitch Deck** (PPTX, ~18 slides) — merging the existing narrative with new additions: AI Remix feature slide, 3-year financial projections, and polished product screenshots wrapped in professional product-shot frames (not raw app screenshots).
 
-| Raw Number | Investor Framing |
-|---|---|
-| 46 users | Early adopters with 2.5 sessions per user |
-| 117 sessions | High-frequency usage — users come back repeatedly |
-| 89 gifts | Monetization validated before 50 users |
-| 34K social followers | Untapped conversion pipeline |
-| 40 battles | Social competition loop proven |
-| 7,723 coins transacted | Real money flowing through the platform |
+2. **One-Page Investor Summary** (PDF) — a single page with the essential pitch for cold emails and quick shares.
 
-## Document Structure (6-7 pages)
+---
 
-1. **Cover** — "Bario Traction Report — Q1 2026" with tagline and date
-2. **Executive Summary** — One paragraph: "46 early adopters generated 117 live sessions, sent 89 gifts, and transacted 7,700+ coins — proving monetization before scale."
-3. **Community Reach** — 34K+ total audience across TikTok (27K) and Instagram (7K). Frame as pre-product awareness pipeline. Include monthly growth trajectory.
-4. **Platform Engagement Metrics** — The killer slide. Per-user ratios:
-   - 2.5 live sessions per user (industry avg for audio apps is ~0.8)
-   - 1.9 gifts sent per user (proves willingness to pay)
-   - 1.2 episodes created per user (content creation loop works)
-   - 0.87 battles per user (social competition drives retention)
-5. **Monetization Proof** — 68 coin transactions, 7,723 coins moved. Revenue model validated at micro-scale. Show the gifting funnel: coins purchased → gifts sent → creator earnings.
-6. **Growth Trajectory** — Monthly signup chart (8 → 21 → 14 → 3). Honest about the dip. Frame as "pre-marketing organic growth" with conversion opportunity from 34K social audience.
-7. **TAM/SAM/SOM** — Global creator economy ($250B) → Live audio + gifting ($23B podcast + $8B virtual gifting) → Addressable market for Bario's niche.
+## New Slides Added to the Deck
+
+### AI Remix Feature Slide
+- Positions AI Remix as a **technical moat** — not just a feature
+- Shows the flow: Upload Song → Select Genre → AI Transforms → Download
+- Highlights: "Cultural genre transformation" — keeps melody, changes cultural lens
+- Supported genres listed as visual tags (Amapiano, Afrobeats, Trap, K-Pop, etc.)
+
+### 3-Year Financial Projections Slide
+- Year 1 (2026): 5K users, $8K MRR, focus on product-market fit
+- Year 2 (2027): 50K users, $85K MRR, launch premium subscriptions + creator payouts
+- Year 3 (2028): 250K users, $420K MRR, marketplace + brand partnerships
+- Revenue streams: Premium subscriptions, coin purchases (30% platform fee), creator tools, brand deals
+
+### Product Screenshots (4 key views)
+Each screenshot will be wrapped in the **product-shot generator** (macOS window frame + gradient background) so they look polished and presentation-ready — not like raw browser screenshots:
+
+1. **AI Remix Hero** — the "Remix any song you can imagine" landing
+2. **Bario Music Dashboard** — trending tracks, live sessions, market events
+3. **Live Spaces** — battles, live discussions, listener counts
+4. **Dashboard alternate view** — genre filters, trending data
+
+These will be embedded as base64 images directly into the PPTX slides.
+
+---
+
+## Full Slide Order (~18 slides)
+
+1. Cover — "Bario: The Future of Music Discovery & Creation"
+2. Problem
+3. Solution
+4. **Product Screenshots** (2 slides showing the 4 key views)
+5. **AI Remix Feature** — Technical moat slide
+6. How It Works — platform flow
+7. Traction — "Small Numbers, Big Signal"
+8. Engagement Metrics — per-user ratios vs industry benchmarks
+9. Community Reach — 34K social pipeline
+10. Monetization Proof — gifting funnel, coin transactions
+11. **3-Year Financial Projections**
+12. TAM / SAM / SOM
+13. Competitive Landscape
+14. Growth Strategy
+15. Team / Vision
+16. The Ask
 
 ## Design
 
-- Clean, professional white layout (not the pitch deck dark theme — this is a data document)
-- ReportLab with tables, simple bar charts drawn on canvas
-- Green accent (#22C55E) for highlights
-- No fluff, every number sourced from real database
+- Dark theme (#0D0D0D background) matching Bario's brand
+- Green accent (#22C55E) for highlights and key metrics
+- Fonts: Georgia (headers) + Calibri (body) for readability
+- Large text (36-44pt titles, 16-18pt body) with generous spacing
+- Product shots with gradient frames (ocean/midnight preset)
 
-## Key Talking Points Embedded
+## One-Page Investor Summary (PDF)
 
-- "We validated monetization with fewer than 50 users"
-- "Our per-user engagement exceeds industry benchmarks for audio platforms"
-- "34,000 social followers represent an untapped conversion pipeline"
-- "Battle feature drives 0.87 battles per user — proving the social competition loop"
+- Clean white PDF, single A4 page
+- Sections: What is Bario | Traction | AI Remix Moat | Market Size | The Ask
+- Key metrics in large callout numbers
+- Contact info at bottom
+- Built with ReportLab
 
-## Output
+## Technical Steps
 
-- `/mnt/documents/bario-traction-metrics.pdf`
+1. Generate 4 product shots from the captured screenshots using the product-shot generator script
+2. Build the PPTX with pptxgenjs, embedding product shots as base64
+3. Build the one-page PDF with ReportLab
+4. QA: Convert PPTX → PDF → images, inspect every slide
+5. Fix any issues found
+6. Deliver both files to `/mnt/documents/`
 
