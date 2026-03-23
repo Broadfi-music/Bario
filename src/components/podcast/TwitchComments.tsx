@@ -10,7 +10,7 @@ import ShareModal from './ShareModal';
 import AddParticipantModal from './AddParticipantModal';
 import AuthPromptModal from './AuthPromptModal';
 import AudioReactions from './AudioReactions';
-import LoyaltyStreak from './LoyaltyStreak';
+
 import { getFreshSession, isDemoSession } from '@/lib/authUtils';
 import { getDemoAvatar } from '@/lib/randomAvatars';
 
