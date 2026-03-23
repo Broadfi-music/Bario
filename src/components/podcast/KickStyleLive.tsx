@@ -86,7 +86,7 @@ const KickStyleLive = ({
   const [showEngagementModal, setShowEngagementModal] = useState(false);
   const [showDailyRanking, setShowDailyRanking] = useState(false);
   const [engagementCount, setEngagementCount] = useState(13);
-  const [mysteryDropEnabled, setMysteryDropEnabled] = useState(true);
+  
 
   // Build a combined list of all scrollable sessions (demo + real)
   const allSessions = useMemo(() => {
