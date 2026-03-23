@@ -274,12 +274,6 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
 
   return (
     <div className="h-full flex flex-col bg-black relative">
-      {/* Engagement Overlays */}
-      <SpotlightRoulette isDemo />
-      <ComboGiftTracker isDemo />
-      <AchievementToast isDemo />
-      
-      <VibeCheck isDemo />
 
       {/* Session Header - extra top padding for PWA header */}
       <div className="px-4 pt-14 pb-2 sm:py-3 border-b border-white/5 bg-black shrink-0">

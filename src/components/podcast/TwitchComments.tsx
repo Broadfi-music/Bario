@@ -513,9 +513,6 @@ return (
                   >
                     {comment.user_name || userProfiles.get(comment.user_id)?.name || 'Listener'}
                   </span>
-                  {comment.user_id.startsWith('demo-user-') && comment.user_name && (
-                    <LoyaltyStreak streak={getDemoStreak(comment.user_name)} />
-                  )}
                   <span className="text-xs text-white/60 mx-0.5">:</span>
                   <span className="text-xs text-white ml-1.5 break-words">
                     {comment.content}

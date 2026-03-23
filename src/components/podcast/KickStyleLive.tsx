@@ -605,12 +605,6 @@ const KickStyleLive = ({
                     hostName={currentSession.host_name}
                     hostAvatar={currentSession.host_avatar}
                   />
-                   {/* Engagement Overlays for real sessions */}
-                   <SpotlightRoulette isDemo={false} sessionId={currentSession.id} />
-                   <ComboGiftTracker isDemo={false} sessionId={currentSession.id} />
-                   <AchievementToast isDemo={false} />
-                  
-                  <VibeCheck isDemo={false} />
                 </div>
               )}
             </div>
