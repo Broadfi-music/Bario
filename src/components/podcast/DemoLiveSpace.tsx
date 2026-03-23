@@ -332,18 +332,6 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
                 <span className="text-[10px] text-yellow-400 font-semibold">D1</span>
               </button>
 
-              {/* Mystery Drop Toggle */}
-              <button
-                onClick={() => setMysteryDropEnabled(prev => !prev)}
-                className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full transition-colors ${
-                  mysteryDropEnabled ? 'bg-purple-500/20 hover:bg-purple-500/30' : 'bg-white/10 hover:bg-white/20'
-                }`}
-              >
-                <Music className={`w-3 h-3 ${mysteryDropEnabled ? 'text-purple-400' : 'text-white/40'}`} />
-                <span className={`text-[10px] font-semibold ${mysteryDropEnabled ? 'text-purple-400' : 'text-white/40'}`}>
-                  {mysteryDropEnabled ? 'Drop' : 'Off'}
-                </span>
-              </button>
 
               {/* Follow Button */}
               <button

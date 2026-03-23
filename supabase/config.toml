@@ -48,8 +48,6 @@ verify_jwt = false
 [functions.gift-transaction]
 verify_jwt = false
 
-[functions.mystery-music]
-verify_jwt = false
 
 [functions.create-notification]
 verify_jwt = false

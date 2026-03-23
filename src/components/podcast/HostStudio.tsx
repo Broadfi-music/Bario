@@ -751,18 +751,6 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
             </>
           )}
 
-          {/* Mystery Music Drop - visible to host so they can hear and control it */}
-          {isLive && sessionId && (
-            <div className="relative mt-2">
-              <MysteryMusicDrop
-                isDemo={false}
-                sessionId={sessionId}
-                enabled={true}
-                isHost={true}
-                onSkip={() => {}}
-              />
-            </div>
-          )}
         </div>
 
       </DialogContent>
