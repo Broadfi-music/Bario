@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import AuthPromptModal from './AuthPromptModal';
 import TopEngagementModal from './TopEngagementModal';
 import DailyRankingModal from './DailyRankingModal';
-import MysteryMusicDrop from './MysteryMusicDrop';
+
 import SpotlightRoulette from './SpotlightRoulette';
 import ComboGiftTracker from './ComboGiftTracker';
 import AchievementToast from './AchievementToast';
