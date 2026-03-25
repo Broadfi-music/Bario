@@ -93,6 +93,7 @@ const PodcastFeed = () => {
   const [heroIndex, setHeroIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarTab, setSidebarTab] = useState<'recommended' | 'followed'>('recommended');
+  const [showTopBanner, setShowTopBanner] = useState(true);
 
   const [currentEpisode, setCurrentEpisode] = useState<EpisodeItem | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -110,11 +111,10 @@ const PodcastFeed = () => {
       )
     : liveHosts;
 
-  // Fetch active battles — strict: only truly active, not ended, started within 2 hours
+  // Fetch active battles
   const fetchActiveBattles = async () => {
     try {
       const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
-
       const { data: battles, error } = await supabase
         .from('podcast_battles')
         .select('*')
@@ -128,26 +128,19 @@ const PodcastFeed = () => {
         return;
       }
 
-      // Additional client-side filter: skip battles where started_at is > 30 min ago
       const thirtyMinAgo = Date.now() - 30 * 60 * 1000;
       const freshBattles = battles.filter(b => {
-        if (b.started_at) {
-          return new Date(b.started_at).getTime() > thirtyMinAgo;
-        }
+        if (b.started_at) return new Date(b.started_at).getTime() > thirtyMinAgo;
         return true;
       });
 
-      if (freshBattles.length === 0) {
-        setActiveBattles([]);
-        return;
-      }
+      if (freshBattles.length === 0) { setActiveBattles([]); return; }
 
       const userIds = [...new Set(freshBattles.flatMap(b => [b.host_id, b.opponent_id]))];
       const { data: profiles } = await supabase
         .from('profiles')
         .select('user_id, full_name, username, avatar_url')
         .in('user_id', userIds);
-
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
       setActiveBattles(freshBattles.map(b => ({
@@ -335,32 +328,65 @@ const PodcastFeed = () => {
     return () => { audio.removeEventListener('ended', handleEnded); audio.pause(); };
   }, []);
 
+  // Calculate top offset for banner
+  const topBannerVisible = !user && showTopBanner;
+  const bannerHeight = topBannerVisible ? 'pt-[88px]' : 'pt-14';
+
   return (
-    <div className="min-h-screen bg-black text-white pb-16 lg:pb-0">
-      {/* Sidebar — Desktop Only */}
-      <aside className="hidden lg:flex fixed left-0 top-12 bottom-0 w-[240px] flex-col bg-[#0e0e0e] border-r border-white/5 overflow-y-auto z-40">
+    <div className="min-h-screen bg-black text-white pb-16 md:pb-0">
+      {/* Twitch-style Top Banner — for non-authenticated users */}
+      {topBannerVisible && (
+        <div className="fixed top-12 left-0 right-0 z-40 bg-white py-2 px-4">
+          <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center flex-shrink-0">
+                <Radio className="w-3 h-3 text-white" />
+              </div>
+              <p className="text-xs text-black">
+                <span className="font-bold">Join the Bario community!</span>
+                {' '}Discover the best live audio streams anywhere.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => navigate('/auth')}
+                size="sm"
+                className="bg-black text-white hover:bg-black/80 text-[11px] h-7 px-4 font-semibold rounded"
+              >
+                Sign Up
+              </Button>
+              <button onClick={() => setShowTopBanner(false)} className="text-black/40 hover:text-black ml-1">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sidebar — Desktop & Tablet (md+) */}
+      <aside className={`hidden md:flex fixed left-0 bottom-0 w-[200px] lg:w-[220px] flex-col bg-[#0e0e0e] border-r border-white/5 overflow-y-auto z-40 ${topBannerVisible ? 'top-[88px]' : 'top-12'}`}>
         {/* Navigation Links */}
-        <div className="p-3 space-y-0.5">
+        <div className="p-2.5 space-y-0.5">
           <button
             onClick={() => navigate('/podcasts?tab=feed')}
-            className="flex items-center gap-2.5 w-full p-2 rounded hover:bg-white/5 transition-colors text-white/70 hover:text-white"
+            className="flex items-center gap-2 w-full p-1.5 rounded hover:bg-white/5 transition-colors text-white/70 hover:text-white"
           >
-            <Radio className="h-4 w-4" />
-            <span className="text-xs font-medium">Live</span>
+            <Radio className="h-3.5 w-3.5" />
+            <span className="text-[11px] font-medium">Live</span>
           </button>
           <button
             onClick={() => setShowBattleInviteModal(true)}
-            className="flex items-center gap-2.5 w-full p-2 rounded hover:bg-white/5 transition-colors text-white/70 hover:text-white"
+            className="flex items-center gap-2 w-full p-1.5 rounded hover:bg-white/5 transition-colors text-white/70 hover:text-white"
           >
-            <Swords className="h-4 w-4" />
-            <span className="text-xs font-medium">Battle</span>
+            <Swords className="h-3.5 w-3.5" />
+            <span className="text-[11px] font-medium">Battle</span>
           </button>
           <button
             onClick={() => navigate('/global-heatmap')}
-            className="flex items-center gap-2.5 w-full p-2 rounded hover:bg-white/5 transition-colors text-white/70 hover:text-white"
+            className="flex items-center gap-2 w-full p-1.5 rounded hover:bg-white/5 transition-colors text-white/70 hover:text-white"
           >
-            <Globe className="h-4 w-4" />
-            <span className="text-xs font-medium">Heatmap</span>
+            <Globe className="h-3.5 w-3.5" />
+            <span className="text-[11px] font-medium">Heatmap</span>
           </button>
           {user && (
             <button
@@ -368,33 +394,33 @@ const PodcastFeed = () => {
                 navigate('/podcasts');
                 setTimeout(() => window.dispatchEvent(new CustomEvent('open-host-studio')), 100);
               }}
-              className="flex items-center gap-2.5 w-full p-2 rounded bg-white text-black hover:bg-white/90 transition-colors mt-1"
+              className="flex items-center gap-2 w-full p-1.5 rounded bg-white text-black hover:bg-white/90 transition-colors mt-1"
             >
-              <Mic className="h-4 w-4" />
-              <span className="text-xs font-semibold">Go Live</span>
+              <Mic className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-semibold">Go Live</span>
             </button>
           )}
         </div>
 
-        <div className="border-t border-white/5 mx-3" />
+        <div className="border-t border-white/5 mx-2.5" />
 
-        {/* Live Audio Channels */}
-        <div className="p-3">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">
+        {/* Recommended Channels */}
+        <div className="p-2.5">
+          <div className="mb-1.5">
+            <h3 className="text-[9px] font-semibold text-white/40 uppercase tracking-wider">
               {sidebarTab === 'recommended' ? 'Recommended Channels' : 'Followed Channels'}
             </h3>
           </div>
-          <div className="flex gap-1 mb-3">
+          <div className="flex gap-1 mb-2">
             <button
               onClick={() => setSidebarTab('recommended')}
-              className={`text-[10px] px-2 py-0.5 rounded ${sidebarTab === 'recommended' ? 'bg-white text-black' : 'text-white/40 hover:text-white/60'}`}
+              className={`text-[9px] px-1.5 py-0.5 rounded ${sidebarTab === 'recommended' ? 'bg-white text-black' : 'text-white/40 hover:text-white/60'}`}
             >
               For You
             </button>
             <button
               onClick={() => setSidebarTab('followed')}
-              className={`text-[10px] px-2 py-0.5 rounded ${sidebarTab === 'followed' ? 'bg-white text-black' : 'text-white/40 hover:text-white/60'}`}
+              className={`text-[9px] px-1.5 py-0.5 rounded ${sidebarTab === 'followed' ? 'bg-white text-black' : 'text-white/40 hover:text-white/60'}`}
             >
               Following
             </button>
@@ -404,24 +430,24 @@ const PodcastFeed = () => {
               <Link
                 key={`sidebar-${host.id}`}
                 to={`/podcasts?session=${host.id}`}
-                className="flex items-center gap-2 p-1.5 rounded hover:bg-white/5 transition-colors group"
+                className="flex items-center gap-1.5 p-1 rounded hover:bg-white/5 transition-colors group"
               >
                 <div className="relative flex-shrink-0">
-                  <div className="w-7 h-7 rounded-full overflow-hidden bg-white/10">
+                  <div className="w-5 h-5 rounded-full overflow-hidden bg-white/10">
                     {host.host_avatar ? (
                       <img src={host.host_avatar} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-white/20" />
                     )}
                   </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-white rounded-full border border-black" />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 bg-white rounded-full border border-black" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-medium text-white/80 truncate group-hover:text-white">{host.host_name}</p>
-                  <p className="text-[10px] text-white/30 truncate">{host.category}</p>
+                  <p className="text-[10px] font-medium text-white/80 truncate group-hover:text-white">{host.host_name}</p>
+                  <p className="text-[9px] text-white/30 truncate">{host.category}</p>
                 </div>
-                <div className="flex items-center gap-1 text-[10px] text-white/30">
-                  <span className="w-1.5 h-1.5 bg-white/60 rounded-full" />
+                <div className="flex items-center gap-0.5 text-[9px] text-white/30">
+                  <span className="w-1 h-1 bg-white/60 rounded-full" />
                   {formatViewers(host.listener_count)}
                 </div>
               </Link>
@@ -430,14 +456,14 @@ const PodcastFeed = () => {
             {user && (
               <div
                 onClick={() => navigate(`/host/${user.id}`)}
-                className="flex items-center gap-2 p-1.5 rounded hover:bg-white/5 transition-colors group cursor-pointer mt-2 border-t border-white/5 pt-2"
+                className="flex items-center gap-1.5 p-1 rounded hover:bg-white/5 transition-colors group cursor-pointer mt-1.5 border-t border-white/5 pt-1.5"
               >
-                <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center flex-shrink-0">
-                  <User className="w-3.5 h-3.5 text-black" />
+                <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center flex-shrink-0">
+                  <User className="w-2.5 h-2.5 text-black" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-medium text-white/80 group-hover:text-white">My Page</p>
-                  <p className="text-[10px] text-white/30">Your host profile</p>
+                  <p className="text-[10px] font-medium text-white/80 group-hover:text-white">My Page</p>
+                  <p className="text-[9px] text-white/30">Your host profile</p>
                 </div>
               </div>
             )}
@@ -445,35 +471,35 @@ const PodcastFeed = () => {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="lg:ml-[240px] pt-14 pb-8 px-0">
-        {/* Hero Carousel — Twitch-style large featured card */}
+      {/* Main Content — offset for sidebar on md+ */}
+      <main className={`md:ml-[200px] lg:ml-[220px] ${bannerHeight} pb-8 px-0`}>
+        {/* Hero Carousel */}
         {currentHero && (
-          <div className="relative px-3 lg:px-5 mb-5">
+          <div className="relative px-2 md:px-3 lg:px-4 mb-4">
             <Link
               to={`/podcasts?session=${currentHero.id}`}
-              className="relative block rounded-lg overflow-hidden bg-[#0e0e0e] group"
+              className="relative block rounded-md overflow-hidden bg-[#0e0e0e] group"
             >
-              <div className="flex flex-col lg:flex-row">
-                {/* Thumbnail */}
-                <div className="relative w-full lg:w-[55%] aspect-video bg-black/50">
+              <div className="flex flex-col md:flex-row">
+                {/* Thumbnail — smaller aspect ratio */}
+                <div className="relative w-full md:w-[55%] aspect-[16/8] bg-black/50">
                   {currentHero.cover_image_url ? (
                     <img src={currentHero.cover_image_url} alt="" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full bg-white/5" />
                   )}
-                  <div className="absolute top-2 left-2 bg-white text-black text-[9px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse" />
+                  <div className="absolute top-1.5 left-1.5 bg-white text-black text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                    <span className="w-1 h-1 bg-black rounded-full animate-pulse" />
                     LIVE
                   </div>
-                  <div className="absolute bottom-2 left-2 bg-black/70 text-white text-[9px] px-2 py-0.5 rounded">
+                  <div className="absolute bottom-1.5 left-1.5 bg-black/70 text-white text-[8px] px-1.5 py-0.5 rounded">
                     {formatViewers(currentHero.listener_count)} listening
                   </div>
                 </div>
                 {/* Info panel */}
-                <div className="flex-1 p-4 lg:p-5 flex flex-col justify-center">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
+                <div className="flex-1 p-3 md:p-4 flex flex-col justify-center">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <div className="w-6 h-6 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
                       {currentHero.host_avatar ? (
                         <img src={currentHero.host_avatar} alt="" className="w-full h-full object-cover" />
                       ) : (
@@ -481,23 +507,23 @@ const PodcastFeed = () => {
                       )}
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-white">{currentHero.host_name}</p>
-                      <p className="text-[10px] text-white/40">{currentHero.category}</p>
+                      <p className="text-[10px] font-semibold text-white">{currentHero.host_name}</p>
+                      <p className="text-[9px] text-white/40">{currentHero.category}</p>
                     </div>
                   </div>
-                  <h2 className="text-sm lg:text-base font-bold text-white mb-1 line-clamp-2">{currentHero.title}</h2>
-                  <p className="text-[11px] text-white/40 line-clamp-2">{currentHero.description}</p>
-                  <div className="mt-3 flex items-center gap-2">
-                    <span className="text-[10px] bg-white/10 text-white/60 px-2 py-0.5 rounded">{currentHero.category}</span>
+                  <h2 className="text-xs md:text-sm font-bold text-white mb-0.5 line-clamp-2">{currentHero.title}</h2>
+                  <p className="text-[10px] text-white/40 line-clamp-2">{currentHero.description}</p>
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <span className="text-[9px] bg-white/10 text-white/60 px-1.5 py-0.5 rounded">{currentHero.category}</span>
                   </div>
                 </div>
               </div>
             </Link>
 
-            {/* Carousel dots */}
+            {/* Carousel navigation */}
             {heroHosts.length > 1 && (
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
-                <button onClick={prevHero} className="p-1 rounded-full bg-black/60 hover:bg-black/80 border border-white/10">
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-10">
+                <button onClick={prevHero} className="p-0.5 rounded-full bg-black/60 hover:bg-black/80 border border-white/10">
                   <ChevronLeft className="h-3 w-3 text-white" />
                 </button>
                 <div className="flex gap-1">
@@ -509,7 +535,7 @@ const PodcastFeed = () => {
                     />
                   ))}
                 </div>
-                <button onClick={nextHero} className="p-1 rounded-full bg-black/60 hover:bg-black/80 border border-white/10">
+                <button onClick={nextHero} className="p-0.5 rounded-full bg-black/60 hover:bg-black/80 border border-white/10">
                   <ChevronRight className="h-3 w-3 text-white" />
                 </button>
               </div>
@@ -518,14 +544,14 @@ const PodcastFeed = () => {
         )}
 
         {/* Category tabs */}
-        <div className="px-3 lg:px-5 mb-4 flex items-center gap-2 overflow-x-auto scrollbar-hide">
+        <div className="px-2 md:px-3 lg:px-4 mb-3 flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
           {['Live Channels', 'Battles', 'Trending', 'Just Chatting', 'Music', 'Podcast'].map((cat, i) => (
             <button
               key={cat}
               onClick={() => {
                 if (cat === 'Battles') setShowBattleInviteModal(true);
               }}
-              className={`flex-shrink-0 text-[11px] font-medium px-3 py-1.5 rounded-md transition-colors ${
+              className={`flex-shrink-0 text-[10px] font-medium px-2.5 py-1 rounded transition-colors ${
                 i === 0 ? 'bg-white text-black' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
               }`}
             >
@@ -536,89 +562,86 @@ const PodcastFeed = () => {
 
         {/* Live Battles Section */}
         {activeBattles.length > 0 && (
-          <section className="px-3 lg:px-5 mb-5">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xs font-bold flex items-center gap-1.5 text-white/80">
-                <Swords className="h-3.5 w-3.5 text-white/50" />
+          <section className="px-2 md:px-3 lg:px-4 mb-4">
+            <div className="flex items-center justify-between mb-1.5">
+              <h2 className="text-[11px] font-bold flex items-center gap-1 text-white/80">
+                <Swords className="h-3 w-3 text-white/50" />
                 Live Battles
               </h2>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 lg:gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1.5 md:gap-2">
               {activeBattles.map((battle) => (
                 <div
                   key={battle.id}
                   onClick={() => navigate(`/podcasts?battle=${battle.id}`)}
                   className="group block cursor-pointer"
                 >
-                  <div className="relative aspect-video rounded-md overflow-hidden bg-white/5 mb-1">
+                  <div className="relative aspect-video rounded overflow-hidden bg-white/5 mb-0.5">
                     <div className="absolute inset-0 flex">
                       <div className="flex-1 flex items-center justify-center border-r border-white/10">
-                        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30">
+                        <div className="w-7 h-7 rounded-full overflow-hidden border border-white/30">
                           {battle.host_avatar ? (
                             <img src={battle.host_avatar} alt="" className="w-full h-full object-cover" />
                           ) : <div className="w-full h-full bg-white/20" />}
                         </div>
                       </div>
                       <div className="flex-1 flex items-center justify-center">
-                        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/30">
+                        <div className="w-7 h-7 rounded-full overflow-hidden border border-white/30">
                           {battle.opponent_avatar ? (
                             <img src={battle.opponent_avatar} alt="" className="w-full h-full object-cover" />
                           ) : <div className="w-full h-full bg-white/20" />}
                         </div>
                       </div>
                     </div>
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white text-black text-[9px] font-bold px-1.5 py-0.5 rounded-full">
-                      VS
-                    </div>
-                    <div className="absolute top-1 left-1 bg-white text-black text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white text-black text-[8px] font-bold px-1 py-0.5 rounded-full">VS</div>
+                    <div className="absolute top-0.5 left-0.5 bg-white text-black text-[7px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5">
                       <Swords className="w-2 h-2" />
                       BATTLE
                     </div>
                   </div>
-                  <h3 className="text-[10px] font-medium text-white/80 truncate group-hover:text-white">{battle.host_name} vs {battle.opponent_name}</h3>
-                  <p className="text-[9px] text-white/30">{Math.floor(battle.duration_seconds / 60)} min</p>
+                  <h3 className="text-[9px] font-medium text-white/80 truncate group-hover:text-white">{battle.host_name} vs {battle.opponent_name}</h3>
                 </div>
               ))}
             </div>
           </section>
         )}
 
-        {/* Live Channels Grid — Twitch-style */}
-        <section className="px-3 lg:px-5 mb-5">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-xs font-bold text-white/80 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+        {/* Live Channels Grid */}
+        <section className="px-2 md:px-3 lg:px-4 mb-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <h2 className="text-[11px] font-bold text-white/80 flex items-center gap-1">
+              <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
               Live channels we think you'll like
             </h2>
           </div>
           {liveHosts.length > 0 ? (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 lg:gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1.5 md:gap-2">
               {liveHosts.map((host) => (
                 <Link
                   key={host.id}
                   to={`/podcasts?session=${host.id}`}
                   className="group block"
                 >
-                  <div className="relative aspect-video rounded-md overflow-hidden bg-white/5 mb-1">
+                  <div className="relative aspect-video rounded overflow-hidden bg-white/5 mb-0.5">
                     {host.cover_image_url ? (
                       <img src={host.cover_image_url} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-white/10" />
                     )}
-                    <div className="absolute top-1 left-1 bg-white text-black text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                    <div className="absolute top-0.5 left-0.5 bg-white text-black text-[7px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5">
                       <span className="w-1 h-1 bg-black rounded-full animate-pulse" />
                       LIVE
                     </div>
-                    <div className="absolute bottom-1 left-1 bg-black/70 text-white text-[8px] px-1.5 py-0.5 rounded">
+                    <div className="absolute bottom-0.5 left-0.5 bg-black/70 text-white text-[7px] px-1 py-0.5 rounded">
                       {formatViewers(host.listener_count)} listeners
                     </div>
-                    <div className="hidden lg:flex absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity items-center justify-center">
-                      <Play className="h-8 w-8 text-white" fill="white" />
+                    <div className="hidden md:flex absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity items-center justify-center">
+                      <Play className="h-6 w-6 text-white" fill="white" />
                     </div>
                   </div>
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-1">
                     <div
-                      className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0 bg-white/10 mt-0.5"
+                      className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0 bg-white/10 mt-0.5"
                       onClick={(e) => { e.preventDefault(); navigate(`/host/${host.host_id}`); }}
                     >
                       {host.host_avatar ? (
@@ -626,21 +649,21 @@ const PodcastFeed = () => {
                       ) : <div className="w-full h-full bg-white/20" />}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-[11px] font-medium text-white/90 truncate group-hover:text-white">{host.title}</h3>
-                      <p className="text-[10px] text-white/40 truncate">{host.host_name}</p>
-                      <p className="text-[9px] text-white/30">{host.category}</p>
+                      <h3 className="text-[10px] font-medium text-white/90 truncate group-hover:text-white">{host.title}</h3>
+                      <p className="text-[9px] text-white/40 truncate">{host.host_name}</p>
+                      <p className="text-[8px] text-white/30">{host.category}</p>
                     </div>
                   </div>
                 </Link>
               ))}
             </div>
           ) : (
-            <div className="bg-white/5 rounded-lg p-8 text-center">
-              <Headphones className="w-8 h-8 text-white/20 mx-auto mb-3" />
-              <h3 className="text-sm font-medium mb-1 text-white/60">No Live Sessions</h3>
-              <p className="text-[11px] text-white/30 mb-3">Be the first to go live</p>
+            <div className="bg-white/5 rounded-md p-6 text-center">
+              <Headphones className="w-6 h-6 text-white/20 mx-auto mb-2" />
+              <h3 className="text-[11px] font-medium mb-0.5 text-white/60">No Live Sessions</h3>
+              <p className="text-[10px] text-white/30 mb-2">Be the first to go live</p>
               {user && (
-                <Button onClick={() => navigate('/podcasts')} size="sm" className="bg-white text-black hover:bg-white/90 text-[11px] h-7 px-3 font-semibold">
+                <Button onClick={() => navigate('/podcasts')} size="sm" className="bg-white text-black hover:bg-white/90 text-[10px] h-6 px-3 font-semibold">
                   Go Live
                 </Button>
               )}
@@ -650,30 +673,30 @@ const PodcastFeed = () => {
 
         {/* Upcoming Schedules */}
         {schedules.length > 0 && (
-          <section className="px-3 lg:px-5 mb-5">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xs font-bold text-white/80 flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5 text-white/50" />
+          <section className="px-2 md:px-3 lg:px-4 mb-4">
+            <div className="flex items-center justify-between mb-1.5">
+              <h2 className="text-[11px] font-bold text-white/80 flex items-center gap-1">
+                <Calendar className="h-3 w-3 text-white/50" />
                 Upcoming
               </h2>
             </div>
-            <div className="flex lg:grid lg:grid-cols-4 gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-3 px-3 lg:mx-0 lg:px-0 lg:overflow-visible">
+            <div className="flex md:grid md:grid-cols-3 lg:grid-cols-4 gap-1.5 overflow-x-auto scrollbar-hide pb-1 -mx-2 px-2 md:mx-0 md:px-0 md:overflow-visible">
               {schedules.map((schedule) => (
                 <div
                   key={schedule.id}
-                  className="flex-shrink-0 w-56 lg:w-auto bg-white/5 rounded-md p-2.5 hover:bg-white/10 transition-colors cursor-pointer"
+                  className="flex-shrink-0 w-48 md:w-auto bg-white/5 rounded p-2 hover:bg-white/10 transition-colors cursor-pointer"
                   onClick={() => navigate(`/host/${schedule.host_id}`)}
                 >
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="w-6 h-6 rounded-full overflow-hidden bg-white/10">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <div className="w-5 h-5 rounded-full overflow-hidden bg-white/10">
                       <img src={schedule.host_avatar} alt="" className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-medium truncate text-white/80">{schedule.host_name}</p>
-                      <p className="text-[9px] text-white/40">{formatScheduleTime(schedule.scheduled_at)}</p>
+                      <p className="text-[9px] font-medium truncate text-white/80">{schedule.host_name}</p>
+                      <p className="text-[8px] text-white/40">{formatScheduleTime(schedule.scheduled_at)}</p>
                     </div>
                   </div>
-                  <h3 className="text-[11px] font-medium line-clamp-1 text-white/70">{schedule.title}</h3>
+                  <h3 className="text-[10px] font-medium line-clamp-1 text-white/70">{schedule.title}</h3>
                 </div>
               ))}
             </div>
@@ -682,14 +705,14 @@ const PodcastFeed = () => {
 
         {/* Episodes */}
         {episodes.length > 0 && (
-          <section className="px-3 lg:px-5 mb-8">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xs font-bold text-white/80 flex items-center gap-1.5">
-                <Headphones className="h-3.5 w-3.5 text-white/50" />
+          <section className="px-2 md:px-3 lg:px-4 mb-6">
+            <div className="flex items-center justify-between mb-1.5">
+              <h2 className="text-[11px] font-bold text-white/80 flex items-center gap-1">
+                <Headphones className="h-3 w-3 text-white/50" />
                 Episodes
               </h2>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5">
               {episodes.slice(0, 6).map((episode) => (
                 <div
                   key={episode.id}
@@ -699,62 +722,96 @@ const PodcastFeed = () => {
                     else if (episode.isRealUser) navigate(`/host/${episode.host_id}`);
                   }}
                 >
-                  <div className="relative aspect-square rounded-md overflow-hidden bg-white/5 mb-1.5">
+                  <div className="relative aspect-square rounded overflow-hidden bg-white/5 mb-1">
                     {episode.cover_image_url ? (
                       <img src={episode.cover_image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     ) : <div className="w-full h-full bg-white/10" />}
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       {currentEpisode?.id === episode.id && isPlaying ? (
-                        <Pause className="h-6 w-6 text-white" fill="white" />
+                        <Pause className="h-5 w-5 text-white" fill="white" />
                       ) : (
-                        <Play className="h-6 w-6 text-white" fill="white" />
+                        <Play className="h-5 w-5 text-white" fill="white" />
                       )}
                     </div>
                     {currentEpisode?.id === episode.id && isPlaying && (
-                      <div className="absolute top-1 left-1 bg-white text-black text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                      <div className="absolute top-0.5 left-0.5 bg-white text-black text-[7px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5">
                         <span className="w-1 h-1 bg-black rounded-full animate-pulse" />
                         PLAYING
                       </div>
                     )}
                     {episode.duration_ms > 0 && (
-                      <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[8px] px-1 py-0.5 rounded">
+                      <div className="absolute bottom-0.5 right-0.5 bg-black/70 text-white text-[7px] px-1 py-0.5 rounded">
                         {formatDuration(episode.duration_ms)}
                       </div>
                     )}
                   </div>
-                  <h3 className="text-[10px] font-medium line-clamp-2 text-white/80 group-hover:text-white">{episode.title}</h3>
-                  <p className="text-[9px] text-white/40 truncate">{episode.host_name}</p>
+                  <h3 className="text-[9px] font-medium line-clamp-2 text-white/80 group-hover:text-white">{episode.title}</h3>
+                  <p className="text-[8px] text-white/40 truncate">{episode.host_name}</p>
                 </div>
               ))}
             </div>
           </section>
         )}
 
+        {/* Footer CTA — "Join the Bario Community" for non-authenticated users */}
+        {!user && (
+          <footer className="px-2 md:px-3 lg:px-4 mb-6">
+            <div className="bg-white rounded-md p-4 md:p-5 flex flex-col md:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center flex-shrink-0">
+                  <Radio className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-black">Join the Bario Community</h3>
+                  <p className="text-[11px] text-black/60">Discover live audio streams, join battles, and connect with creators worldwide.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => navigate('/auth')}
+                  size="sm"
+                  className="bg-black text-white hover:bg-black/80 text-[11px] h-8 px-5 font-semibold rounded"
+                >
+                  Sign Up
+                </Button>
+                <Button
+                  onClick={() => navigate('/auth')}
+                  variant="outline"
+                  size="sm"
+                  className="border-black text-black hover:bg-black/5 text-[11px] h-8 px-4 font-semibold rounded"
+                >
+                  Log In
+                </Button>
+              </div>
+            </div>
+          </footer>
+        )}
+
         {/* Floating Audio Player */}
         {currentEpisode && (
-          <div className="fixed bottom-16 lg:bottom-4 left-0 right-0 lg:left-[240px] z-50 px-3 lg:px-5">
-            <div className="bg-[#111] border border-white/10 rounded-lg p-2.5 flex items-center gap-2.5 shadow-2xl">
-              <div className="w-10 h-10 rounded-md overflow-hidden flex-shrink-0">
+          <div className="fixed bottom-16 md:bottom-4 left-0 right-0 md:left-[200px] lg:left-[220px] z-50 px-2 md:px-3 lg:px-4">
+            <div className="bg-[#111] border border-white/10 rounded-md p-2 flex items-center gap-2 shadow-2xl">
+              <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0">
                 {currentEpisode.cover_image_url ? (
                   <img src={currentEpisode.cover_image_url} alt="" className="w-full h-full object-cover" />
                 ) : <div className="w-full h-full bg-white/10" />}
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-[11px] font-medium truncate text-white">{currentEpisode.title}</h4>
-                <p className="text-[10px] text-white/40 truncate">{currentEpisode.host_name}</p>
+                <h4 className="text-[10px] font-medium truncate text-white">{currentEpisode.title}</h4>
+                <p className="text-[9px] text-white/40 truncate">{currentEpisode.host_name}</p>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <button
                   onClick={() => playEpisode(currentEpisode)}
-                  className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center hover:bg-white/80 transition-colors"
+                  className="w-7 h-7 rounded-full bg-white text-black flex items-center justify-center hover:bg-white/80 transition-colors"
                 >
-                  {isPlaying ? <Pause className="h-4 w-4" fill="currentColor" /> : <Play className="h-4 w-4" fill="currentColor" />}
+                  {isPlaying ? <Pause className="h-3 w-3" fill="currentColor" /> : <Play className="h-3 w-3" fill="currentColor" />}
                 </button>
                 <button
                   onClick={stopAudio}
-                  className="w-7 h-7 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors"
+                  className="w-6 h-6 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-2.5 w-2.5" />
                 </button>
               </div>
             </div>
