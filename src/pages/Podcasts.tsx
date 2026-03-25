@@ -493,7 +493,7 @@ const Podcasts = () => {
       )}
 
       {/* Desktop Header - Kick.com Style */}
-      <header className={`fixed left-0 right-0 z-50 bg-black border-b border-white/10 ${isMobile ? 'hidden' : ''} ${(hostLiveSession && !showHostStudio) || (hostBattle && !showBattleSession) ? 'top-10' : 'top-0'}`}>
+      <header className={`fixed left-0 right-0 z-50 bg-black border-b border-white/10 hidden md:block ${(hostLiveSession && !showHostStudio) || (hostBattle && !showBattleSession) ? 'top-10' : 'top-0'}`}>
         <div className="flex items-center justify-between h-12 px-2 sm:px-4">
           <div className="flex items-center gap-3">
             <button 
