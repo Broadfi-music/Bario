@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, Mic, Radio, Home, Flame, Swords, Trophy, Tv, Music, User } from 'lucide-react';
+import { ChevronLeft, Mic, Radio, Home, Flame, Swords, Tv, Music, User } from 'lucide-react';
 import BattleInviteModal from '@/components/podcast/BattleInviteModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import NotificationBell from '@/components/NotificationBell';
@@ -370,22 +370,22 @@ const Podcasts = () => {
   }, []);
 
   return (
-    <div className={`min-h-screen bg-[#0e0e10] text-white ${isMobile ? 'pb-20' : ''}`}>
+    <div className={`min-h-screen bg-black text-white ${isMobile ? 'pb-20' : ''}`}>
       {/* Battle Session Banner - shown when user is in an active battle */}
       {hostBattle && !showBattleSession && (
-        <div className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-pink-600 via-purple-600 to-cyan-600 py-2 px-4">
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-white py-2 px-4">
           <div className="flex items-center justify-center gap-3 max-w-screen-xl mx-auto">
             <div className="flex items-center gap-2">
-              <span className="animate-pulse w-2 h-2 bg-yellow-400 rounded-full"></span>
-              <span className="text-xs font-semibold text-white">BATTLE</span>
+              <span className="animate-pulse w-2 h-2 bg-black rounded-full"></span>
+              <span className="text-xs font-semibold text-black">BATTLE</span>
             </div>
-            <span className="text-xs text-white/90 truncate max-w-[120px] sm:max-w-xs">
+            <span className="text-xs text-black/70 truncate max-w-[120px] sm:max-w-xs">
               {hostBattle.host_name} vs {hostBattle.opponent_name}
             </span>
             <Button
               onClick={() => setShowBattleSession(true)}
               size="sm"
-              className="bg-white/20 hover:bg-white/30 text-white text-xs h-6 px-2"
+              className="bg-black hover:bg-black/80 text-white text-xs h-6 px-2"
             >
               Return to Session
             </Button>
@@ -395,18 +395,18 @@ const Podcasts = () => {
 
       {/* Live Session Banner - shown when host has an active session */}
       {hostLiveSession && !showHostStudio && !hostBattle && (
-        <div className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-red-600 to-pink-600 py-2 px-4">
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-white py-2 px-4">
           <div className="flex items-center justify-center gap-3 max-w-screen-xl mx-auto">
             <div className="flex items-center gap-2">
-              <span className="animate-pulse w-2 h-2 bg-white rounded-full"></span>
-              <span className="text-xs font-semibold text-white">LIVE</span>
+              <span className="animate-pulse w-2 h-2 bg-black rounded-full"></span>
+              <span className="text-xs font-semibold text-black">LIVE</span>
             </div>
-            <span className="text-xs text-white/90 truncate max-w-[120px] sm:max-w-xs">{hostLiveSession.title}</span>
-            <span className="text-xs text-white/70">{hostLiveSession.listener_count} listeners</span>
+            <span className="text-xs text-black/70 truncate max-w-[120px] sm:max-w-xs">{hostLiveSession.title}</span>
+            <span className="text-xs text-black/50">{hostLiveSession.listener_count} listeners</span>
             <Button
               onClick={() => setShowHostStudio(true)}
               size="sm"
-              className="bg-white/20 hover:bg-white/30 text-white text-xs h-6 px-2"
+              className="bg-black hover:bg-black/80 text-white text-xs h-6 px-2"
             >
               Return to Studio
             </Button>
@@ -459,32 +459,32 @@ const Podcasts = () => {
 
       {/* Mobile Webapp Header - standard tabs with Go Live */}
       {isMobile && !isPWA && (
-        <header className="fixed top-0 left-0 right-0 z-50 bg-[#18181b] border-b border-white/5">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-black border-b border-white/10">
           <div className="flex items-center justify-between h-12 px-3">
             <button onClick={() => navigate('/')} className="text-white/60 hover:text-white">
               <ChevronLeft className="h-5 w-5" />
             </button>
             <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v !== 'live') { setSelectedSession(null); setSearchParams({}); } }} className="w-auto">
-              <TabsList className="bg-white/5 h-8">
-                <TabsTrigger value="feed" className="text-xs px-2 data-[state=active]:bg-black data-[state=active]:text-white h-7">Feed</TabsTrigger>
-                <TabsTrigger value="live" className="text-xs px-2 data-[state=active]:bg-black data-[state=active]:text-white h-7">Live</TabsTrigger>
-                <TabsTrigger value="battles" className="text-xs px-2 data-[state=active]:bg-black data-[state=active]:text-white h-7">Battles</TabsTrigger>
+              <TabsList className="bg-white/5 h-7">
+                <TabsTrigger value="feed" className="text-[11px] px-2 data-[state=active]:bg-white data-[state=active]:text-black h-6">Feed</TabsTrigger>
+                <TabsTrigger value="live" className="text-[11px] px-2 data-[state=active]:bg-white data-[state=active]:text-black h-6">Live</TabsTrigger>
+                <TabsTrigger value="battles" className="text-[11px] px-2 data-[state=active]:bg-white data-[state=active]:text-black h-6">Battles</TabsTrigger>
               </TabsList>
             </Tabs>
             <div className="flex items-center gap-2">
               {user && (
-                <Button onClick={() => setShowHostStudio(true)} size="sm" className="bg-black hover:bg-black/90 text-white text-xs h-8 px-3 font-semibold">
+                <Button onClick={() => setShowHostStudio(true)} size="sm" className="bg-white hover:bg-white/90 text-black text-[11px] h-7 px-3 font-semibold">
                   <Mic className="h-3 w-3 mr-1" />
                   Go Live
                 </Button>
               )}
               {user ? (
                 <Link to="/dashboard">
-                  <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500" />
+                  <div className="w-7 h-7 rounded-full overflow-hidden bg-white/20" />
                 </Link>
               ) : (
                 <Link to="/auth">
-                  <Button size="sm" className="bg-black text-white hover:bg-black/90 text-xs h-8 px-2 font-semibold">Log In</Button>
+                  <Button size="sm" className="bg-white text-black hover:bg-white/90 text-[11px] h-7 px-2 font-semibold">Log In</Button>
                 </Link>
               )}
             </div>
@@ -493,10 +493,9 @@ const Podcasts = () => {
       )}
 
       {/* Desktop Header - Kick.com Style */}
-      <header className={`fixed left-0 right-0 z-50 bg-[#18181b] border-b border-white/5 ${isMobile ? 'hidden' : ''} ${(hostLiveSession && !showHostStudio) || (hostBattle && !showBattleSession) ? 'top-10' : 'top-0'}`}>
+      <header className={`fixed left-0 right-0 z-50 bg-black border-b border-white/10 ${isMobile ? 'hidden' : ''} ${(hostLiveSession && !showHostStudio) || (hostBattle && !showBattleSession) ? 'top-10' : 'top-0'}`}>
         <div className="flex items-center justify-between h-12 px-2 sm:px-4">
-          {/* Left: Logo/Back */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button 
               onClick={() => activeTab === 'live' && selectedSession ? handleBackToFeed() : navigate('/')} 
               className="flex items-center gap-1 text-white/60 hover:text-white lg:hidden"
@@ -504,59 +503,30 @@ const Podcasts = () => {
               <ChevronLeft className="h-5 w-5" />
             </button>
             <Link to="/" className="hidden lg:flex items-center">
-              <span className="text-white font-bold text-xl">BARIO</span>
+              <span className="text-white font-bold text-lg tracking-tight">BARIO</span>
             </Link>
           </div>
 
-          {/* Center: Tabs */}
           <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v !== 'live') { setSelectedSession(null); setSearchParams({}); } }} className="w-auto">
-            <TabsList className="bg-white/5 h-8">
-              <TabsTrigger value="feed" className="text-xs px-2 sm:px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7">
-                Feed
-              </TabsTrigger>
-              <TabsTrigger value="live" className="text-xs px-2 sm:px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7">
-                Live
-              </TabsTrigger>
-              <TabsTrigger value="battles" className="text-xs px-2 sm:px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7 flex items-center gap-1">
+            <TabsList className="bg-white/5 h-7">
+              <TabsTrigger value="feed" className="text-[11px] px-2 sm:px-3 data-[state=active]:bg-white data-[state=active]:text-black h-6">Feed</TabsTrigger>
+              <TabsTrigger value="live" className="text-[11px] px-2 sm:px-3 data-[state=active]:bg-white data-[state=active]:text-black h-6">Live</TabsTrigger>
+              <TabsTrigger value="battles" className="text-[11px] px-2 sm:px-3 data-[state=active]:bg-white data-[state=active]:text-black h-6 flex items-center gap-1">
                 <Swords className="h-3 w-3" />
                 <span className="hidden sm:inline">Battles</span>
-              </TabsTrigger>
-              <TabsTrigger value="leaderboard" className="text-xs px-2 sm:px-3 data-[state=active]:bg-black data-[state=active]:text-white h-7 flex items-center gap-1">
-                <Trophy className="h-3 w-3" />
-                <span className="hidden sm:inline">Leaderboard</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
 
-          {/* Additional nav links */}
-          <div className="flex items-center gap-1 ml-2">
-            <Link to="/">
-              <Button variant="ghost" size="sm" className="text-white/60 hover:text-white h-8 px-2 text-xs">
-                Heatmap
-              </Button>
-            </Link>
-          </div>
-
-          {/* Right: Actions */}
           <div className="flex items-center gap-2">
             <NotificationBell />
-            {user && (
-              <Button
-                onClick={() => setShowHostStudio(true)}
-                size="sm"
-                className="bg-black hover:bg-black/90 text-white text-xs h-8 px-3 font-semibold"
-              >
-                <Mic className="h-3 w-3 mr-1.5" />
-                <span className="hidden sm:inline text-white">Go Live</span>
-              </Button>
-            )}
             {user ? (
               <Link to="/dashboard">
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500" />
+                <div className="w-7 h-7 rounded-full overflow-hidden bg-white/20" />
               </Link>
             ) : (
               <Link to="/auth">
-                <Button size="sm" className="bg-black text-white hover:bg-black/90 text-xs h-8 px-3 font-semibold">
+                <Button size="sm" className="bg-white text-black hover:bg-white/90 text-[11px] h-7 px-3 font-semibold">
                   Log In
                 </Button>
               </Link>
