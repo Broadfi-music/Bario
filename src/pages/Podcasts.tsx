@@ -376,16 +376,16 @@ const Podcasts = () => {
         <div className="fixed top-0 left-0 right-0 z-[60] bg-white py-2 px-4">
           <div className="flex items-center justify-center gap-3 max-w-screen-xl mx-auto">
             <div className="flex items-center gap-2">
-              <span className="animate-pulse w-2 h-2 bg-yellow-400 rounded-full"></span>
-              <span className="text-xs font-semibold text-white">BATTLE</span>
+              <span className="animate-pulse w-2 h-2 bg-black rounded-full"></span>
+              <span className="text-xs font-semibold text-black">BATTLE</span>
             </div>
-            <span className="text-xs text-white/90 truncate max-w-[120px] sm:max-w-xs">
+            <span className="text-xs text-black/70 truncate max-w-[120px] sm:max-w-xs">
               {hostBattle.host_name} vs {hostBattle.opponent_name}
             </span>
             <Button
               onClick={() => setShowBattleSession(true)}
               size="sm"
-              className="bg-white/20 hover:bg-white/30 text-white text-xs h-6 px-2"
+              className="bg-black hover:bg-black/80 text-white text-xs h-6 px-2"
             >
               Return to Session
             </Button>
@@ -398,15 +398,15 @@ const Podcasts = () => {
         <div className="fixed top-0 left-0 right-0 z-[60] bg-white py-2 px-4">
           <div className="flex items-center justify-center gap-3 max-w-screen-xl mx-auto">
             <div className="flex items-center gap-2">
-              <span className="animate-pulse w-2 h-2 bg-white rounded-full"></span>
-              <span className="text-xs font-semibold text-white">LIVE</span>
+              <span className="animate-pulse w-2 h-2 bg-black rounded-full"></span>
+              <span className="text-xs font-semibold text-black">LIVE</span>
             </div>
-            <span className="text-xs text-white/90 truncate max-w-[120px] sm:max-w-xs">{hostLiveSession.title}</span>
-            <span className="text-xs text-white/70">{hostLiveSession.listener_count} listeners</span>
+            <span className="text-xs text-black/70 truncate max-w-[120px] sm:max-w-xs">{hostLiveSession.title}</span>
+            <span className="text-xs text-black/50">{hostLiveSession.listener_count} listeners</span>
             <Button
               onClick={() => setShowHostStudio(true)}
               size="sm"
-              className="bg-white/20 hover:bg-white/30 text-white text-xs h-6 px-2"
+              className="bg-black hover:bg-black/80 text-white text-xs h-6 px-2"
             >
               Return to Studio
             </Button>
