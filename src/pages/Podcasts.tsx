@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, Mic, Radio, Home, Flame, Swords, Trophy, Tv, Music, User } from 'lucide-react';
+import { ChevronLeft, Mic, Radio, Home, Flame, Swords, Tv, Music, User } from 'lucide-react';
 import BattleInviteModal from '@/components/podcast/BattleInviteModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import NotificationBell from '@/components/NotificationBell';
