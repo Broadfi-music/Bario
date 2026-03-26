@@ -297,7 +297,7 @@ const PodcastFeed = () => {
       .from('profiles')
       .select('user_id, full_name, username, avatar_url')
       .order('created_at', { ascending: false })
-      .limit(12);
+      .limit(10);
     if (data) setSidebarCreators(data);
   };
 
