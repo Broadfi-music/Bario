@@ -425,7 +425,7 @@ const PodcastFeed = () => {
                       <div className="w-full h-full bg-white/20" />
                     )}
                   </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 bg-white rounded-full border border-black" />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-black" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-medium text-white/80 truncate group-hover:text-white">{host.host_name}</p>
