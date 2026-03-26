@@ -1,9 +1,11 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { registerSW } from "virtual:pwa-register";
 import App from "./App";
 import "./index.css";
 
 const root = document.getElementById("root");
+const PREVIEW_CACHE_RESET_KEY = "bario-preview-cache-reset-v2";
 
 const isPreviewContext = (() => {
   const isPreviewHost =
@@ -36,6 +38,19 @@ const clearPreviewServiceWorkersAndCaches = async () => {
   }
 };
 
+const ensureFreshPreviewBuild = async (): Promise<boolean> => {
+  await clearPreviewServiceWorkersAndCaches();
+
+  const hasReset = sessionStorage.getItem(PREVIEW_CACHE_RESET_KEY) === "1";
+  if (hasReset) return true;
+
+  sessionStorage.setItem(PREVIEW_CACHE_RESET_KEY, "1");
+  const url = new URL(window.location.href);
+  url.searchParams.set("_preview_refresh", Date.now().toString());
+  window.location.replace(url.toString());
+  return false;
+};
+
 const mountApp = () => {
   if (!root) return;
 
@@ -48,8 +63,11 @@ const mountApp = () => {
 
 if (root) {
   if (isPreviewContext) {
-    clearPreviewServiceWorkersAndCaches().finally(mountApp);
+    ensureFreshPreviewBuild().then((canMount) => {
+      if (canMount) mountApp();
+    });
   } else {
+    registerSW({ immediate: true });
     mountApp();
   }
 }
