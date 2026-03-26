@@ -333,33 +333,7 @@ const PodcastFeed = () => {
   return (
     <div className="min-h-screen bg-black text-white pb-16 md:pb-0">
       {/* Twitch-style Top Banner — for non-authenticated users */}
-      {topBannerVisible && (
-        <div className="fixed top-12 left-0 right-0 z-40 bg-white py-1.5 px-4">
-          <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-black flex items-center justify-center flex-shrink-0">
-                <Radio className="w-2.5 h-2.5 text-white" />
-              </div>
-              <p className="text-[11px] text-black">
-                <span className="font-bold">Join the Bario community!</span>
-                {' '}Discover the best live audio streams anywhere.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => navigate('/auth')}
-                size="sm"
-                className="bg-black text-white hover:bg-black/80 text-[10px] h-6 px-3 font-semibold rounded"
-              >
-                Sign Up
-              </Button>
-              <button onClick={() => setShowTopBanner(false)} className="text-black/30 hover:text-black ml-0.5">
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Top banner removed — join community now in sidebar and footer only */}
 
         {/* Sidebar — Desktop & Tablet (md+) */}
       <aside className={`hidden md:flex fixed left-0 bottom-0 w-[200px] lg:w-[220px] flex-col bg-[#0e0e0e] border-r border-white/5 overflow-y-auto z-40 ${topBannerVisible ? 'top-[88px]' : 'top-12'}`}>
