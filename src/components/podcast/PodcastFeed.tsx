@@ -336,7 +336,7 @@ const PodcastFeed = () => {
       {/* Top banner removed — join community now in sidebar and footer only */}
 
         {/* Sidebar — Desktop & Tablet (md+) */}
-      <aside className={`hidden md:flex fixed left-0 bottom-0 w-[200px] lg:w-[220px] flex-col bg-[#0e0e0e] border-r border-white/5 overflow-y-auto z-40 ${topBannerVisible ? 'top-[88px]' : 'top-12'}`}>
+      <aside className="hidden md:flex fixed left-0 bottom-0 w-[200px] lg:w-[220px] flex-col bg-[#0e0e0e] border-r border-white/5 overflow-y-auto z-40 top-12">
         {/* Navigation Links */}
         <div className="p-2.5 space-y-0.5">
           <button
