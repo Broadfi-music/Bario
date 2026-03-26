@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronLeft, ChevronRight, Users, Play, Pause, Calendar, Headphones, Search, User, X, Swords, Radio, Flame, Globe, Mic, Music } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, Play, Pause, Calendar, Headphones, Search, User, X, Swords, Radio, Flame, Mic, Music, Plus } from 'lucide-react';
+import DiscoverCreatorsModal from './DiscoverCreatorsModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -102,6 +103,8 @@ const PodcastFeed = () => {
   const [showBattleInviteModal, setShowBattleInviteModal] = useState(false);
   const [activeBattle, setActiveBattle] = useState<any>(null);
   const [activeBattles, setActiveBattles] = useState<BattleSession[]>([]);
+  const [showDiscoverCreators, setShowDiscoverCreators] = useState(false);
+  const [sidebarCreators, setSidebarCreators] = useState<{user_id: string; full_name: string | null; username: string | null; avatar_url: string | null}[]>([]);
 
   const filteredHosts = searchQuery.trim()
     ? liveHosts.filter(h =>
@@ -160,6 +163,7 @@ const PodcastFeed = () => {
     fetchSchedules();
     fetchEpisodes();
     fetchActiveBattles();
+    fetchSidebarCreators();
 
     const channel = supabase
       .channel('podcast-feed-live')
@@ -286,6 +290,15 @@ const PodcastFeed = () => {
     } catch {
       setLiveHosts([getDemoLiveHost(), getDemoLiveHost2(), getDemoLiveHost3()]);
     }
+  };
+
+  const fetchSidebarCreators = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('user_id, full_name, username, avatar_url')
+      .order('created_at', { ascending: false })
+      .limit(12);
+    if (data) setSidebarCreators(data);
   };
 
   const heroHosts = liveHosts.slice(0, 5);
