@@ -1,37 +1,61 @@
 
 
-# Generate Remaining Demo Room Audio with New API Key
+# Interactive Animated Room Banners + 2 New Hindi Audio
 
-## Step 1: Update ElevenLabs Connection
-Use the ElevenLabs connector reconnect flow so the new API key replaces the current one in the project secrets.
+## Part 1: Generate 2 New Hindi Audio Files
+Use the ElevenLabs edge function to generate 2 unique Hindi audio files for rooms 7 (IPL debate) and 9 (Meditation), replacing the reused room-6 audio. Each ~1,100 characters to stay within API limits.
 
-## Step 2: Generate Audio for 7 Remaining Rooms
-Call the `generate-demo-audio` edge function for each room with compact ~1,100 character scripts (2 minutes each).
+- **Room 7** — IPL heated argument with 5+ speakers, high energy
+- **Room 9** — Calm meditation/spiritual discussion, 2-3 speakers
 
-Already done: Rooms 1, 4, 6
-Need to generate: Rooms 2, 3, 5, 7, 9, 10, 13
+## Part 2: Replace Static Images with Animated Canvas Components
 
-| # | Room | Lang | Topic | ~Chars |
-|---|------|------|-------|--------|
-| 1 | 2 | EN | Relationship Red Flags | 1,100 |
-| 2 | 3 | EN | Bitcoin $200K | 1,100 |
-| 3 | 5 | EN | Healing After Heartbreak | 1,000 |
-| 4 | 7 | HI | IPL Best Team | 1,100 |
-| 5 | 9 | HI | Meditation Talk | 900 |
-| 6 | 10 | ES | Messi vs Ronaldo | 1,100 |
-| 7 | 13 | AR | Tech in MENA | 1,100 |
+Remove all static `cover_image_url` references and replace them with a new React component `RoomVisualization` that renders unique animated visuals per room based on the room's energy/category.
 
-**Total new characters: ~7,400** — fits within 10K free tier.
+### Component: `src/components/podcast/RoomVisualization.tsx`
+A canvas-based animated component that renders different visual patterns based on room metadata:
 
-Generate one room at a time with 2-second delays between rooms to avoid rate limiting.
+| Room | Category | Animation Style |
+|------|----------|----------------|
+| AI Debate | Technology | Pulsing neural network nodes with connecting lines, blue/cyan palette |
+| Red Flags | Lifestyle | Floating hearts that crack/shatter, pink/red gradient waves |
+| Bitcoin | Finance | Rising/falling chart lines with particle trails, gold/green |
+| Comedy | Entertainment | Bouncing emoji-like shapes, confetti bursts, warm yellows |
+| Heartbreak | Wellness | Gentle ripple waves, calming blue/purple aurora |
+| Bollywood | Entertainment | Rotating film reel shapes, orange/gold sparkles |
+| IPL | Sports | Cricket stumps/ball trajectories, blue/orange energy |
+| Meditation | Spirituality | Slow breathing circle, mandala pattern, warm amber |
+| Messi vs Ronaldo | Sports | Two opposing energy orbs colliding, green/white |
+| MENA Tech | Technology | Geometric Islamic patterns morphing, teal/gold |
 
-## Step 3: Update `demoSessions.ts`
-- Set all `audioUrl` fields to point to Supabase storage bucket URLs
-- Trim config to exactly 10 rooms (remove rooms 8, 11, 12, 14, 15)
+Each animation:
+- Uses `requestAnimationFrame` for smooth 60fps rendering
+- Responds to room energy level (calm rooms = slow, debate rooms = fast)
+- Has unique color palette matching room theme
+- Works as both card thumbnail and hero banner (responsive)
+
+### Changes to existing files:
+
+1. **`src/config/demoSessions.ts`**
+   - Remove `coverImageUrl` field from sessions (or set to empty)
+   - Add `energy: 'calm' | 'moderate' | 'heated' | 'intense'` and `visualTheme` fields
+   - Update rooms 7 and 9 `audioUrl` to new storage URLs
+
+2. **`src/components/podcast/PodcastFeed.tsx`**
+   - Replace `<img src={cover_image_url}>` with `<RoomVisualization>` component for demo sessions
+   - Both in hero carousel and live grid cards
+
+3. **`src/components/podcast/KickStyleLive.tsx`**
+   - Replace cover image rendering with `<RoomVisualization>` for demo sessions
+
+## Files Created
+- `src/components/podcast/RoomVisualization.tsx` — animated canvas component
 
 ## Files Modified
-- `src/config/demoSessions.ts` — update audio URLs, trim to 10 rooms
+- `src/config/demoSessions.ts` — add energy/theme fields, update audio URLs
+- `src/components/podcast/PodcastFeed.tsx` — use RoomVisualization for demo rooms
+- `src/components/podcast/KickStyleLive.tsx` — use RoomVisualization for demo rooms
 
-## Security Note
-After generation is complete, rotate the API key you shared in chat since it's now visible in conversation history.
+## Result
+Every demo room gets a unique, eye-catching animated banner that matches its topic energy. No more repeated static images. 2 Hindi rooms get their own unique audio.
 
