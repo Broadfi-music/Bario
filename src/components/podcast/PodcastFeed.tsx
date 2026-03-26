@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronLeft, ChevronRight, Users, Play, Pause, Calendar, Headphones, Search, User, X, Swords, Radio, Flame, Globe, Mic } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, Play, Pause, Calendar, Headphones, Search, User, X, Swords, Radio, Flame, Globe, Mic, Music } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
