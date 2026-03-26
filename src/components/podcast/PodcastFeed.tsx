@@ -432,7 +432,7 @@ const PodcastFeed = () => {
                   <p className="text-[9px] text-white/30 truncate">{host.category}</p>
                 </div>
                 <div className="flex items-center gap-0.5 text-[9px] text-white/30">
-                  <span className="w-1 h-1 bg-white/60 rounded-full" />
+                  <span className="w-1 h-1 bg-red-500 rounded-full" />
                   {formatViewers(host.listener_count)}
                 </div>
               </Link>
@@ -615,7 +615,7 @@ const PodcastFeed = () => {
         <section className="px-2 md:px-3 lg:px-4 mb-4">
           <div className="flex items-center justify-between mb-1.5">
             <h2 className="text-[11px] font-bold text-white/80 flex items-center gap-1">
-              <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
+              <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
               Live channels we think you'll like
             </h2>
           </div>
