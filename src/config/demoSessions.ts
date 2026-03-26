@@ -9,6 +9,20 @@ export interface DemoSpeaker {
   avatarUrl?: string;
 }
 
+export type VisualTheme = 
+  | 'neural-network' 
+  | 'heartbeat-waves' 
+  | 'crypto-charts' 
+  | 'confetti-burst' 
+  | 'aurora-ripple' 
+  | 'bollywood-sparkle' 
+  | 'cricket-energy' 
+  | 'mandala-breath' 
+  | 'dual-orbs' 
+  | 'geometric-mosaic';
+
+export type EnergyLevel = 'calm' | 'moderate' | 'heated' | 'intense';
+
 export interface DemoSession {
   id: string;
   hostId: string;
@@ -22,6 +36,8 @@ export interface DemoSession {
   language: string;
   baseListenerCount: number;
   speakers: DemoSpeaker[];
+  visualTheme: VisualTheme;
+  energy: EnergyLevel;
 }
 
 const STORAGE_BASE = 'https://sufbohhsxlrefkoubmed.supabase.co/storage/v1/object/public/demo-audio';
