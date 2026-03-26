@@ -110,7 +110,6 @@ const AnimatedRoutes = ({ showSplash }: { showSplash: boolean }) => {
 
 const App = () => {
   const [showSplash, setShowSplash] = useState(() => {
-    // Only show splash on PWA (standalone mode), not regular browser
     const isPWA = window.matchMedia('(display-mode: standalone)').matches
       || (window.navigator as any).standalone === true;
     if (!isPWA) return false;
@@ -118,6 +117,15 @@ const App = () => {
     sessionStorage.setItem('bario-splash-shown', 'true');
     return true;
   });
+
+  // Force reload when a new service worker activates (fixes stale cache)
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        window.location.reload();
+      });
+    }
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
