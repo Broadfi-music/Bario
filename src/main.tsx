@@ -5,7 +5,8 @@ import App from "./App";
 import "./index.css";
 
 const root = document.getElementById("root");
-const PREVIEW_CACHE_RESET_KEY = "bario-preview-cache-reset-v2";
+const BUILD_TIMESTAMP = "__BUILD_TS_" + Date.now();
+const PREVIEW_CACHE_RESET_KEY = "bario-preview-cache-reset-v3";
 
 const isPreviewContext = (() => {
   const isPreviewHost =
