@@ -19,7 +19,7 @@ import DailyRankingModal from './DailyRankingModal';
 
 import { toast } from 'sonner';
 import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
-import { getDemoPodcastSession, getDemoPodcastSession2, getDemoPodcastSession3, getDemoSessionById, DEMO_SESSION_ID, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3, isDemoSessionId } from '@/config/demoSpace';
+import { getAllDemoPodcastSessions, getDemoSessionById, isDemoSessionId, getDemoChatMessages } from '@/config/demoSessions';
 import { getRandomAvatarUrl } from '@/lib/randomAvatars';
 
 interface PodcastSession {
@@ -85,7 +85,7 @@ const KickStyleLive = ({
 
   // Build a combined list of all scrollable sessions (demo + real)
   const allSessions = useMemo(() => {
-    const demoSessions = [getDemoPodcastSession(), getDemoPodcastSession2(), getDemoPodcastSession3()];
+    const demoSessions = getAllDemoPodcastSessions();
     const realIds = new Set(sessions.map(s => s.id));
     const demoIds = new Set(demoSessions.map(s => s.id));
     // Combine: demos first, then real sessions not already included
@@ -279,7 +279,7 @@ const KickStyleLive = ({
   useEffect(() => {
     const fetchRecommended = async () => {
       // Build demo sessions list (excluding current)
-      const demoRecommended = [getDemoPodcastSession(), getDemoPodcastSession2(), getDemoPodcastSession3()]
+      const demoRecommended = getAllDemoPodcastSessions()
         .filter(s => s.id !== currentSession?.id);
 
       // Fetch real live sessions
@@ -476,7 +476,7 @@ const KickStyleLive = ({
 
   if (!currentSession) {
     // If no session, try to show demo session as fallback
-    const demoSession = getDemoPodcastSession();
+    const demoSession = getAllDemoPodcastSessions()[0];
     if (demoSession) {
       // Render with demo session instead of showing empty state
       return (

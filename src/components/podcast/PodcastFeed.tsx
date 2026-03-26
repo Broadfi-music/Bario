@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import BattleInviteModal from './BattleInviteModal';
 import BattleNotification from './BattleNotification';
 import BattleReelScroller from './BattleReelScroller';
-import { getDemoLiveHost, getDemoLiveHost2, getDemoLiveHost3, DEMO_SESSION_ID, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3 } from '@/config/demoSpace';
+import { getAllDemoLiveHosts, isDemoSessionId } from '@/config/demoSessions';
 
 interface LiveHost {
   id: string;
@@ -247,12 +247,12 @@ const PodcastFeed = () => {
           await supabase.auth.refreshSession();
           return fetchLiveSessions(retryCount + 1);
         }
-        setLiveHosts([getDemoLiveHost(), getDemoLiveHost2(), getDemoLiveHost3()]);
+        setLiveHosts(getAllDemoLiveHosts());
         return;
       }
 
       if (!sessions || sessions.length === 0) {
-        setLiveHosts([getDemoLiveHost(), getDemoLiveHost2(), getDemoLiveHost3()]);
+        setLiveHosts(getAllDemoLiveHosts());
         return;
       }
 
@@ -280,15 +280,13 @@ const PodcastFeed = () => {
           };
         });
 
-      const demoHost = getDemoLiveHost();
-      const demoHost2 = getDemoLiveHost2();
-      const demoHost3 = getDemoLiveHost3();
-      const demosToAdd = [demoHost, demoHost2, demoHost3].filter(d =>
+      const allDemos = getAllDemoLiveHosts();
+      const demosToAdd = allDemos.filter(d =>
         !realSessions.some(s => s.id === d.id)
       );
       setLiveHosts([...demosToAdd, ...realSessions]);
     } catch {
-      setLiveHosts([getDemoLiveHost(), getDemoLiveHost2(), getDemoLiveHost3()]);
+      setLiveHosts(getAllDemoLiveHosts());
     }
   };
 

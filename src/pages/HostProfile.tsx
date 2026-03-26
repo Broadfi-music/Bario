@@ -43,7 +43,7 @@ interface Schedule {
 }
 
 import { getDemoAvatar } from '@/lib/randomAvatars';
-import { DEMO_HOST_ID, DEMO_HOST_ID_2, DEMO_HOST_ID_3 } from '@/config/demoSpace';
+import { ALL_DEMO_SESSIONS } from '@/config/demoSessions';
 
 // Demo host data
 const DEMO_HOSTS: Record<string, HostData> = {
@@ -102,40 +102,23 @@ const DEMO_HOSTS: Record<string, HostData> = {
     is_live: true,
     current_session_id: 'demo-5'
   },
-  // Demo live space hosts
-  [DEMO_HOST_ID]: {
-    id: DEMO_HOST_ID,
-    user_id: DEMO_HOST_ID,
-    full_name: 'Solomon Harvey',
-    username: 'solomonharvey',
-    avatar_url: getDemoAvatar('Solomon Harvey'),
-    bio: 'Author, philosopher, and thought leader. Hosting live discussions on self-mastery and the power of the mind.',
-    follower_count: 45200,
-    is_live: true,
-    current_session_id: 'demo-live-session'
-  },
-  [DEMO_HOST_ID_2]: {
-    id: DEMO_HOST_ID_2,
-    user_id: DEMO_HOST_ID_2,
-    full_name: 'Teri Beckman',
-    username: 'teribeckman',
-    avatar_url: getDemoAvatar('Teri Beckman'),
-    bio: 'Business strategist and CEO advisor. Helping leaders scale without burning out.',
-    follower_count: 28700,
-    is_live: true,
-    current_session_id: 'demo-live-session-2'
-  },
-  [DEMO_HOST_ID_3]: {
-    id: DEMO_HOST_ID_3,
-    user_id: DEMO_HOST_ID_3,
-    full_name: 'Marcus Cole',
-    username: 'marcuscole',
-    avatar_url: getDemoAvatar('Marcus Cole'),
-    bio: 'Finance educator and entrepreneur. Teaching innovative ways to build wealth.',
-    follower_count: 33100,
-    is_live: true,
-    current_session_id: 'demo-live-session-3'
-  },
+  // Dynamically add all demo session hosts
+  ...Object.fromEntries(
+    ALL_DEMO_SESSIONS.map(s => [
+      s.hostId,
+      {
+        id: s.hostId,
+        user_id: s.hostId,
+        full_name: s.hostName,
+        username: s.hostName.toLowerCase().replace(/[\s.]+/g, ''),
+        avatar_url: s.hostAvatar || getDemoAvatar(s.hostName),
+        bio: `${s.category} host on Bario. ${s.description}`,
+        follower_count: s.baseListenerCount * 100 + Math.floor(Math.random() * 5000),
+        is_live: true,
+        current_session_id: s.id,
+      } as HostData,
+    ])
+  ),
   'demo-speaker-1': {
     id: 'demo-speaker-1',
     user_id: 'demo-speaker-1',

@@ -5,7 +5,7 @@ import { Users, Plus, Trophy, Mic, MicOff, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { demoSession, demoSession2, demoSession3, DemoSpeaker, DemoSession, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3 } from '@/config/demoSpace';
+import { getDemoSessionById, ALL_DEMO_SESSIONS, DemoSession, DemoSpeaker } from '@/config/demoSessions';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import AuthPromptModal from './AuthPromptModal';
 import TopEngagementModal from './TopEngagementModal';
@@ -44,7 +44,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   const navigate = useNavigate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   // Pick the right demo session
-  const activeDemo: DemoSession = sessionId === DEMO_SESSION_ID_3 ? demoSession3 : sessionId === DEMO_SESSION_ID_2 ? demoSession2 : demoSession;
+  const activeDemo: DemoSession = getDemoSessionById(sessionId || '') || ALL_DEMO_SESSIONS[0];
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);

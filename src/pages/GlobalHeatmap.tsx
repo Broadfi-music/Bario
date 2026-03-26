@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { useHeatmapTracks, useSyncHeatmap, HeatmapTrack } from '@/hooks/useHeatmapData';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { getDemoLiveSession, getDemoLiveSession2, getDemoLiveSession3, DEMO_SESSION_ID, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3 } from '@/config/demoSpace';
+import { getAllDemoLiveSessions, isDemoSessionId } from '@/config/demoSessions';
 
 // Live session interface
 interface LiveSession {
@@ -112,10 +112,7 @@ const GlobalHeatmap = () => {
         .limit(4);
 
       // Start with all demo sessions
-      const demoSession = getDemoLiveSession();
-      const demoSession2 = getDemoLiveSession2();
-      const demoSession3 = getDemoLiveSession3();
-      const formattedSessions: LiveSession[] = [demoSession, demoSession2, demoSession3];
+      const formattedSessions: LiveSession[] = getAllDemoLiveSessions();
 
       if (!sessions || sessions.length === 0) {
         setLiveSessions(formattedSessions);
@@ -154,7 +151,7 @@ const GlobalHeatmap = () => {
 
       sessions.forEach(session => {
         // Skip if this is the demo session ID (shouldn't happen but just in case)
-        if (session.id === DEMO_SESSION_ID || session.id === DEMO_SESSION_ID_2 || session.id === DEMO_SESSION_ID_3) return;
+        if (isDemoSessionId(session.id)) return;
         
         const host = profileMap.get(session.host_id);
         const battle = battleMap.get(session.id);
@@ -178,7 +175,7 @@ const GlobalHeatmap = () => {
     } catch (error) {
       console.error('Error fetching live sessions:', error);
       // Still show demo on error
-      setLiveSessions([getDemoLiveSession(), getDemoLiveSession2(), getDemoLiveSession3()]);
+      setLiveSessions(getAllDemoLiveSessions());
     } finally {
       setLoadingLive(false);
     }

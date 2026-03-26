@@ -13,7 +13,7 @@ import PodcastFeed from '@/components/podcast/PodcastFeed';
 import KickStyleLive from '@/components/podcast/KickStyleLive';
 import BattleReelScroller from '@/components/podcast/BattleReelScroller';
 import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
-import { getDemoPodcastSession, getDemoPodcastSession2, getDemoPodcastSession3, DEMO_SESSION_ID, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3, getDemoSessionById } from '@/config/demoSpace';
+import { getAllDemoPodcastSessions, getDemoSessionById, isDemoSessionId } from '@/config/demoSessions';
 
 interface PodcastSession {
   id: string;
@@ -163,13 +163,10 @@ const Podcasts = () => {
     const sessionId = searchParams.get('session');
     if (sessionId) {
       if (isDemoLiveSession(sessionId)) {
-        if (sessionId === DEMO_SESSION_ID_3) {
-          setSelectedSession(getDemoPodcastSession3());
-        } else if (sessionId === DEMO_SESSION_ID_2) {
-          setSelectedSession(getDemoPodcastSession2());
-        } else {
-          setSelectedSession(getDemoPodcastSession());
-        }
+        const allDemos = getAllDemoPodcastSessions();
+        const found = allDemos.find(d => d.id === sessionId);
+        if (found) setSelectedSession(found);
+        else setSelectedSession(allDemos[0]);
         setActiveTab('live');
         return;
       }
@@ -563,7 +560,7 @@ const Podcasts = () => {
               sessions={liveSessions}
               currentIndex={currentIndex}
               onIndexChange={setCurrentIndex}
-              selectedSession={selectedSession || getDemoPodcastSession()}
+              selectedSession={selectedSession || getAllDemoPodcastSessions()[0]}
               onSessionSelect={setSelectedSession}
               hostLiveSession={hostLiveSession}
             />
