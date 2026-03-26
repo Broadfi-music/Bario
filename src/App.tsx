@@ -16,6 +16,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import PageTransition from "@/components/PageTransition";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+import Podcasts from "@/pages/Podcasts";
 import GlobalHeatmap from "@/pages/GlobalHeatmap";
 import AIRemix from "@/pages/AIRemix";
 import Auth from "@/pages/Auth";

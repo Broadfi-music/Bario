@@ -53,6 +53,7 @@ const Podcasts = () => {
   const isPWA = window.matchMedia('(display-mode: standalone)').matches
     || (window.navigator as any).standalone === true;
   const [activeTab, setActiveTab] = useState(tabFromUrl || (isMobile && isPWA ? 'live' : 'feed'));
+  const [feedSearch, setFeedSearch] = useState('');
 
   // Fix: useIsMobile returns false initially, so correct the tab once we know
   useEffect(() => {
