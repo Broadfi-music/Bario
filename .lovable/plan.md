@@ -1,45 +1,37 @@
 
 
-# Generate 10 Demo Rooms × 2 Minutes Each
+# Generate Remaining Demo Room Audio with New API Key
 
-## Budget
-- 2 min per room ≈ 300 words ≈ 1,800 characters per room
-- 10 rooms × 1,800 chars = ~18,000 characters total
-- Free tier = 10,000 chars → we'll need to be efficient (~1,000-1,200 chars per room with shorter turns)
-- Already have rooms 1, 4, 6 generated — so we need 7 more new rooms + can keep those 3
+## Step 1: Update ElevenLabs Connection
+Use the ElevenLabs connector reconnect flow so the new API key replaces the current one in the project secrets.
 
-## Revised Plan: 10 Rooms Total
+## Step 2: Generate Audio for 7 Remaining Rooms
+Call the `generate-demo-audio` edge function for each room with compact ~1,100 character scripts (2 minutes each).
 
-Keep the 3 already-generated rooms (1, 4, 6) and generate 7 new ones. Trim all scripts to ~1,000-1,200 chars each (shorter lines, fewer turns) to fit within 10K char budget.
+Already done: Rooms 1, 4, 6
+Need to generate: Rooms 2, 3, 5, 7, 9, 10, 13
 
-| Room | Lang | Topic | Speakers | ~Chars |
-|------|------|-------|----------|--------|
-| 1 ✅ | EN | AI vs Creative Jobs | Marcus, Priya, Jake | Done |
-| 4 ✅ | EN | Comedy Hour | DJ Smooth, Carmen, Big Mike | Done |
-| 6 ✅ | HI | Bollywood vs Hollywood | Raj, Ananya, Vikram | Done |
-| 2 | EN | Relationship Red Flags | Tasha, Devon, Nina | ~1,100 |
-| 3 | EN | Bitcoin $200K | Alex, Sam | ~1,100 |
-| 5 | EN | Healing After Heartbreak | Maya, Jordan | ~1,000 |
-| 7 | HI | IPL Best Team | Sunil, Ritu, Amit | ~1,100 |
-| 9 | HI | Meditation Talk | Swami, Meera | ~900 |
-| 10 | ES | Messi vs Ronaldo | Carlos, Isabella, Diego | ~1,100 |
-| 13 | AR | Tech in MENA | Omar, Layla | ~1,100 |
+| # | Room | Lang | Topic | ~Chars |
+|---|------|------|-------|--------|
+| 1 | 2 | EN | Relationship Red Flags | 1,100 |
+| 2 | 3 | EN | Bitcoin $200K | 1,100 |
+| 3 | 5 | EN | Healing After Heartbreak | 1,000 |
+| 4 | 7 | HI | IPL Best Team | 1,100 |
+| 5 | 9 | HI | Meditation Talk | 900 |
+| 6 | 10 | ES | Messi vs Ronaldo | 1,100 |
+| 7 | 13 | AR | Tech in MENA | 1,100 |
 
-**Total new chars: ~7,400** — fits within 10K free tier.
+**Total new characters: ~7,400** — fits within 10K free tier.
 
-## Implementation Steps
+Generate one room at a time with 2-second delays between rooms to avoid rate limiting.
 
-1. **Call `generate-demo-audio` edge function** for each of the 7 remaining rooms with compact 2-minute scripts (~10-12 turns per room)
-2. **Update `demoSessions.ts`**:
-   - Reduce from 15 to 10 rooms
-   - Update `audioUrl` to point to Supabase storage URLs for rooms with generated audio
-   - Keep existing speaker configs
-3. **Remove rooms 8, 11, 12, 14, 15** (the ones we won't generate audio for)
-
-## Voice Assignment (same as before)
-- Roger, Sarah, George, Lily, Daniel, Charlie, Liam, Alice, Matilda, Jessica, Eric, Chris, Brian, Bill
+## Step 3: Update `demoSessions.ts`
+- Set all `audioUrl` fields to point to Supabase storage bucket URLs
+- Trim config to exactly 10 rooms (remove rooms 8, 11, 12, 14, 15)
 
 ## Files Modified
-- `src/config/demoSessions.ts` — trim to 10 rooms, update audio URLs
-- Edge function calls via `curl_edge_functions` to generate 7 new room audios
+- `src/config/demoSessions.ts` — update audio URLs, trim to 10 rooms
+
+## Security Note
+After generation is complete, rotate the API key you shared in chat since it's now visible in conversation history.
 
