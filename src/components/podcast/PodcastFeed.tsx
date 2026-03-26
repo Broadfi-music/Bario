@@ -93,7 +93,7 @@ const PodcastFeed = () => {
   const [heroIndex, setHeroIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarTab, setSidebarTab] = useState<'recommended' | 'followed'>('recommended');
-  const [showTopBanner, setShowTopBanner] = useState(true);
+  
 
   const [currentEpisode, setCurrentEpisode] = useState<EpisodeItem | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
