@@ -497,9 +497,7 @@ const Podcasts = () => {
         <div className="flex items-center justify-between h-12 px-2 sm:px-4">
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-1.5">
-              <div className="w-6 h-6 rounded bg-white flex items-center justify-center">
-                <Radio className="w-3.5 h-3.5 text-black" />
-              </div>
+              <img src="/bario-logo.png" alt="Bario" className="h-6 w-6 object-contain" />
               <span className="text-white font-bold text-lg tracking-tight">BARIO</span>
             </Link>
           </div>
