@@ -93,7 +93,7 @@ const PodcastFeed = () => {
   const [heroIndex, setHeroIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarTab, setSidebarTab] = useState<'recommended' | 'followed'>('recommended');
-  const [showTopBanner, setShowTopBanner] = useState(true);
+  
 
   const [currentEpisode, setCurrentEpisode] = useState<EpisodeItem | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -328,43 +328,15 @@ const PodcastFeed = () => {
     return () => { audio.removeEventListener('ended', handleEnded); audio.pause(); };
   }, []);
 
-  // Calculate top offset for banner
-  const topBannerVisible = !user && showTopBanner;
-  const bannerHeight = topBannerVisible ? 'pt-[88px]' : 'pt-14';
+  const bannerHeight = 'pt-14';
 
   return (
     <div className="min-h-screen bg-black text-white pb-16 md:pb-0">
       {/* Twitch-style Top Banner — for non-authenticated users */}
-      {topBannerVisible && (
-        <div className="fixed top-12 left-0 right-0 z-40 bg-white py-1.5 px-4">
-          <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-black flex items-center justify-center flex-shrink-0">
-                <Radio className="w-2.5 h-2.5 text-white" />
-              </div>
-              <p className="text-[11px] text-black">
-                <span className="font-bold">Join the Bario community!</span>
-                {' '}Discover the best live audio streams anywhere.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => navigate('/auth')}
-                size="sm"
-                className="bg-black text-white hover:bg-black/80 text-[10px] h-6 px-3 font-semibold rounded"
-              >
-                Sign Up
-              </Button>
-              <button onClick={() => setShowTopBanner(false)} className="text-black/30 hover:text-black ml-0.5">
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Top banner removed — join community now in sidebar and footer only */}
 
         {/* Sidebar — Desktop & Tablet (md+) */}
-      <aside className={`hidden md:flex fixed left-0 bottom-0 w-[200px] lg:w-[220px] flex-col bg-[#0e0e0e] border-r border-white/5 overflow-y-auto z-40 ${topBannerVisible ? 'top-[88px]' : 'top-12'}`}>
+      <aside className="hidden md:flex fixed left-0 bottom-0 w-[200px] lg:w-[220px] flex-col bg-[#0e0e0e] border-r border-white/5 overflow-y-auto z-40 top-12">
         {/* Navigation Links */}
         <div className="p-2.5 space-y-0.5">
           <button
@@ -476,122 +448,117 @@ const PodcastFeed = () => {
             )}
           </div>
         </div>
+
+        {/* Sidebar Join Community — for non-authenticated users */}
+        {!user && (
+          <div className="mt-auto p-2.5 border-t border-white/5">
+            <div className="bg-white/5 rounded p-2">
+              <p className="text-[9px] font-bold text-white/80 mb-1">Join the Bario community!</p>
+              <p className="text-[8px] text-white/40 mb-2">Discover live audio streams and connect with creators.</p>
+              <Button
+                onClick={() => navigate('/auth')}
+                size="sm"
+                className="w-full bg-white text-black hover:bg-white/90 text-[9px] h-6 font-semibold rounded"
+              >
+                Sign Up
+              </Button>
+              <button
+                onClick={() => navigate('/auth')}
+                className="w-full text-[9px] text-white/50 hover:text-white/80 mt-1 py-0.5"
+              >
+                Log In
+              </button>
+            </div>
+          </div>
+        )}
       </aside>
 
       {/* Main Content — offset for sidebar on md+ */}
       <main className={`md:ml-[200px] lg:ml-[220px] ${bannerHeight} pb-8 px-0`}>
-        {/* Hero Carousel — Twitch-style with side previews */}
+        {/* Hero Carousel — Twitch-style */}
         {heroHosts.length > 0 && (
           <div className="relative px-2 md:px-3 lg:px-4 mb-4">
-            <div className="relative overflow-hidden rounded-md">
-              {/* Side preview - previous */}
-              {heroHosts.length > 1 && (
-                <div
-                  className="absolute left-0 top-0 bottom-0 w-[60px] md:w-[80px] z-10 cursor-pointer hidden md:block"
-                  onClick={prevHero}
-                >
-                  <div className="h-full bg-black/60 backdrop-blur-sm flex items-center justify-center hover:bg-black/40 transition-colors">
-                    <ChevronLeft className="h-5 w-5 text-white/80" />
-                  </div>
-                </div>
-              )}
-
-              {/* Main hero content */}
+            <div className="relative overflow-hidden rounded-md bg-[#0e0e0e]">
               <Link
                 to={`/podcasts?session=${currentHero?.id}`}
-                className="relative block bg-[#0e0e0e] group"
+                className="relative block group"
               >
-                <div className="flex flex-col md:flex-row">
-                  {/* Large thumbnail */}
-                  <div className="relative w-full md:w-[60%] aspect-[16/9] md:aspect-[16/8] bg-black/50">
+                <div className="flex flex-col md:flex-row h-[180px] md:h-[200px] lg:h-[220px]">
+                  {/* Thumbnail — contained, not cropped */}
+                  <div className="relative w-full md:w-[55%] h-full bg-black flex items-center justify-center overflow-hidden">
                     {currentHero?.cover_image_url ? (
-                      <img src={currentHero.cover_image_url} alt="" className="w-full h-full object-cover" />
+                      <img src={currentHero.cover_image_url} alt="" className="w-full h-full object-contain" />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-white/5 to-white/10 flex items-center justify-center">
-                        <Radio className="w-12 h-12 text-white/10" />
+                        <Radio className="w-8 h-8 text-white/10" />
                       </div>
                     )}
-                    <div className="absolute top-2 left-2 bg-white text-black text-[9px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                    <div className="absolute top-1.5 left-1.5 bg-white text-black text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
                       <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse" />
                       LIVE
                     </div>
-                    {/* Play/volume controls overlay */}
-                    <div className="absolute bottom-2 left-2 flex items-center gap-2">
-                      <button className="w-7 h-7 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center border border-white/10">
-                        <Play className="h-3 w-3 text-white" fill="white" />
-                      </button>
-                    </div>
-                    <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
-                      <button className="w-6 h-6 rounded bg-black/60 hover:bg-black/80 flex items-center justify-center border border-white/10">
-                        <span className="text-[8px] text-white/70">⚙</span>
-                      </button>
-                      <button className="w-6 h-6 rounded bg-black/60 hover:bg-black/80 flex items-center justify-center border border-white/10">
-                        <span className="text-[8px] text-white/70">⛶</span>
+                    <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1.5">
+                      <button className="w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center border border-white/10">
+                        <Play className="h-2.5 w-2.5 text-white" fill="white" />
                       </button>
                     </div>
                   </div>
-                  {/* Info panel — right side */}
-                  <div className="flex-1 p-3 md:p-4 flex flex-col justify-center bg-[#0e0e0e]">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10 flex-shrink-0 border border-white/10">
+                  {/* Info panel */}
+                  <div className="hidden md:flex flex-1 p-3 flex-col justify-center bg-[#0e0e0e]">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <div className="w-6 h-6 rounded-full overflow-hidden bg-white/10 flex-shrink-0 border border-white/10">
                         {currentHero?.host_avatar ? (
                           <img src={currentHero.host_avatar} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full bg-white/20 flex items-center justify-center">
-                            <User className="w-4 h-4 text-white/40" />
+                            <User className="w-3 h-3 text-white/40" />
                           </div>
                         )}
                       </div>
                       <div>
-                        <p className="text-[11px] font-semibold text-white">{currentHero?.host_name}</p>
-                        <p className="text-[9px] text-white/40">{formatViewers(currentHero?.listener_count || 0)} listeners</p>
+                        <p className="text-[10px] font-semibold text-white">{currentHero?.host_name}</p>
+                        <p className="text-[8px] text-white/40">{formatViewers(currentHero?.listener_count || 0)} listeners</p>
                       </div>
                     </div>
-                    <h2 className="text-sm md:text-base font-bold text-white mb-1 line-clamp-2">{currentHero?.title}</h2>
-                    <p className="text-[10px] text-white/40 line-clamp-2 mb-2">{currentHero?.description}</p>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[9px] bg-white/10 text-white/60 px-2 py-0.5 rounded">{currentHero?.category}</span>
-                      <span className="text-[9px] bg-white/10 text-white/60 px-2 py-0.5 rounded">Audio</span>
+                    <h2 className="text-xs font-bold text-white mb-0.5 line-clamp-2">{currentHero?.title}</h2>
+                    <p className="text-[9px] text-white/40 line-clamp-2 mb-1.5">{currentHero?.description}</p>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <span className="text-[8px] bg-white/10 text-white/60 px-1.5 py-0.5 rounded">{currentHero?.category}</span>
+                      <span className="text-[8px] bg-white/10 text-white/60 px-1.5 py-0.5 rounded">Audio</span>
                     </div>
                   </div>
                 </div>
               </Link>
 
-              {/* Side preview - next */}
+              {/* Navigation arrows */}
               {heroHosts.length > 1 && (
-                <div
-                  className="absolute right-0 top-0 bottom-0 w-[60px] md:w-[80px] z-10 cursor-pointer hidden md:block"
-                  onClick={nextHero}
-                >
-                  <div className="h-full bg-black/60 backdrop-blur-sm flex items-center justify-center hover:bg-black/40 transition-colors">
-                    <ChevronRight className="h-5 w-5 text-white/80" />
-                  </div>
-                </div>
+                <>
+                  <button
+                    onClick={prevHero}
+                    className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-black/60 hover:bg-black/80 border border-white/10"
+                  >
+                    <ChevronLeft className="h-4 w-4 text-white" />
+                  </button>
+                  <button
+                    onClick={nextHero}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-black/60 hover:bg-black/80 border border-white/10"
+                  >
+                    <ChevronRight className="h-4 w-4 text-white" />
+                  </button>
+                </>
               )}
             </div>
 
             {/* Dot indicators */}
             {heroHosts.length > 1 && (
-              <div className="flex justify-center gap-1.5 mt-2">
+              <div className="flex justify-center gap-1.5 mt-1.5">
                 {heroHosts.map((_, i) => (
                   <button
                     key={i}
                     onClick={() => setHeroIndex(i)}
-                    className={`w-2 h-2 rounded-full transition-colors ${i === heroIndex ? 'bg-white' : 'bg-white/20 hover:bg-white/40'}`}
+                    className={`w-1.5 h-1.5 rounded-full transition-colors ${i === heroIndex ? 'bg-white' : 'bg-white/20 hover:bg-white/40'}`}
                   />
                 ))}
-              </div>
-            )}
-
-            {/* Mobile swipe arrows */}
-            {heroHosts.length > 1 && (
-              <div className="flex md:hidden absolute top-1/2 -translate-y-1/2 left-0 right-0 justify-between px-1 pointer-events-none">
-                <button onClick={prevHero} className="pointer-events-auto p-1 rounded-full bg-black/60 border border-white/10">
-                  <ChevronLeft className="h-4 w-4 text-white" />
-                </button>
-                <button onClick={nextHero} className="pointer-events-auto p-1 rounded-full bg-black/60 border border-white/10">
-                  <ChevronRight className="h-4 w-4 text-white" />
-                </button>
               </div>
             )}
           </div>
