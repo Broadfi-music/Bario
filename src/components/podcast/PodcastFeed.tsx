@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import BattleInviteModal from './BattleInviteModal';
 import BattleNotification from './BattleNotification';
 import BattleReelScroller from './BattleReelScroller';
-import { getAllDemoLiveHosts, isDemoSessionId } from '@/config/demoSessions';
+import { getAllDemoLiveHosts, isDemoSessionId, getDemoSessionById } from '@/config/demoSessions';
+import RoomVisualization from './RoomVisualization';
 
 interface LiveHost {
   id: string;
@@ -467,14 +468,21 @@ const PodcastFeed = () => {
               >
                 <div className="flex flex-col md:flex-row h-[200px] md:h-[260px] lg:h-[300px]">
                   {/* Thumbnail — contained, not cropped */}
-                  <div className="relative w-full md:w-[55%] h-full bg-black flex items-center justify-center overflow-hidden">
-                    {currentHero?.cover_image_url ? (
-                      <img src={currentHero.cover_image_url} alt="" className="w-full h-full object-contain" />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-white/5 to-white/10 flex items-center justify-center">
-                        <Radio className="w-8 h-8 text-white/10" />
-                      </div>
-                    )}
+                   <div className="relative w-full md:w-[55%] h-full bg-black flex items-center justify-center overflow-hidden">
+                     {currentHero && isDemoSessionId(currentHero.id) ? (
+                       (() => {
+                         const demoData = getDemoSessionById(currentHero.id);
+                         return demoData ? (
+                           <RoomVisualization theme={demoData.visualTheme} energy={demoData.energy} />
+                         ) : <div className="w-full h-full bg-white/10" />;
+                       })()
+                     ) : currentHero?.cover_image_url ? (
+                       <img src={currentHero.cover_image_url} alt="" className="w-full h-full object-contain" />
+                     ) : (
+                       <div className="w-full h-full bg-gradient-to-br from-white/5 to-white/10 flex items-center justify-center">
+                         <Radio className="w-8 h-8 text-white/10" />
+                       </div>
+                     )}
                     <div className="absolute top-1.5 left-1.5 bg-white text-black text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
                       <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
                       LIVE
@@ -664,12 +672,19 @@ const PodcastFeed = () => {
                   to={`/podcasts?session=${host.id}`}
                   className="group block"
                 >
-                  <div className="relative aspect-video rounded overflow-hidden bg-white/5 mb-0.5">
-                    {host.cover_image_url ? (
-                      <img src={host.cover_image_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-white/10" />
-                    )}
+                   <div className="relative aspect-video rounded overflow-hidden bg-white/5 mb-0.5">
+                     {isDemoSessionId(host.id) ? (
+                       (() => {
+                         const demoData = getDemoSessionById(host.id);
+                         return demoData ? (
+                           <RoomVisualization theme={demoData.visualTheme} energy={demoData.energy} />
+                         ) : <div className="w-full h-full bg-white/10" />;
+                       })()
+                     ) : host.cover_image_url ? (
+                       <img src={host.cover_image_url} alt="" className="w-full h-full object-cover" />
+                     ) : (
+                       <div className="w-full h-full bg-white/10" />
+                     )}
                     <div className="absolute top-0.5 left-0.5 bg-white text-black text-[7px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5">
                       <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
                       LIVE

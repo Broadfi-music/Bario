@@ -9,6 +9,20 @@ export interface DemoSpeaker {
   avatarUrl?: string;
 }
 
+export type VisualTheme = 
+  | 'neural-network' 
+  | 'heartbeat-waves' 
+  | 'crypto-charts' 
+  | 'confetti-burst' 
+  | 'aurora-ripple' 
+  | 'bollywood-sparkle' 
+  | 'cricket-energy' 
+  | 'mandala-breath' 
+  | 'dual-orbs' 
+  | 'geometric-mosaic';
+
+export type EnergyLevel = 'calm' | 'moderate' | 'heated' | 'intense';
+
 export interface DemoSession {
   id: string;
   hostId: string;
@@ -22,6 +36,8 @@ export interface DemoSession {
   language: string;
   baseListenerCount: number;
   speakers: DemoSpeaker[];
+  visualTheme: VisualTheme;
+  energy: EnergyLevel;
 }
 
 const STORAGE_BASE = 'https://sufbohhsxlrefkoubmed.supabase.co/storage/v1/object/public/demo-audio';
@@ -46,6 +62,7 @@ const sessions: DemoSession[] = [
     audioUrl: AUDIO.room1,
     hostName: 'Marcus Chen', hostAvatar: getDemoAvatar('Marcus Chen'),
     category: 'Technology', language: 'en', baseListenerCount: 312,
+    visualTheme: 'neural-network', energy: 'heated',
     speakers: [
       { id: 'demo-host-marcus-chen', name: 'Marcus Chen', role: 'host', avatarGradient: 'from-blue-500 to-indigo-500', avatarUrl: getDemoAvatar('Marcus Chen') },
       { id: 'demo-sp-priya', name: 'Priya Sharma', role: 'co_host', avatarGradient: 'from-pink-500 to-rose-500', avatarUrl: getDemoAvatar('Priya Sharma') },
@@ -60,6 +77,7 @@ const sessions: DemoSession[] = [
     audioUrl: AUDIO.room2,
     hostName: 'Tasha Moore', hostAvatar: getDemoAvatar('Tasha Moore'),
     category: 'Lifestyle', language: 'en', baseListenerCount: 487,
+    visualTheme: 'heartbeat-waves', energy: 'intense',
     speakers: [
       { id: 'demo-host-tasha', name: 'Tasha Moore', role: 'host', avatarGradient: 'from-purple-500 to-pink-500', avatarUrl: getDemoAvatar('Tasha Moore') },
       { id: 'demo-sp-devon', name: 'Devon Brooks', role: 'co_host', avatarGradient: 'from-amber-500 to-orange-500', avatarUrl: getDemoAvatar('Devon Brooks') },
@@ -75,6 +93,7 @@ const sessions: DemoSession[] = [
     audioUrl: AUDIO.room3,
     hostName: 'Alex Rivera', hostAvatar: getDemoAvatar('Alex Rivera'),
     category: 'Finance', language: 'en', baseListenerCount: 256,
+    visualTheme: 'crypto-charts', energy: 'moderate',
     speakers: [
       { id: 'demo-host-alex-r', name: 'Alex Rivera', role: 'host', avatarGradient: 'from-yellow-500 to-amber-500', avatarUrl: getDemoAvatar('Alex Rivera') },
       { id: 'demo-sp-sam', name: 'Sam Turner', role: 'co_host', avatarGradient: 'from-indigo-500 to-blue-500', avatarUrl: getDemoAvatar('Sam Turner') },
@@ -89,6 +108,7 @@ const sessions: DemoSession[] = [
     audioUrl: AUDIO.room4,
     hostName: 'DJ Smooth', hostAvatar: getDemoAvatar('DJ Smooth'),
     category: 'Entertainment', language: 'en', baseListenerCount: 534,
+    visualTheme: 'confetti-burst', energy: 'intense',
     speakers: [
       { id: 'demo-host-dj-smooth', name: 'DJ Smooth', role: 'host', avatarGradient: 'from-red-500 to-orange-500', avatarUrl: getDemoAvatar('DJ Smooth') },
       { id: 'demo-sp-carmen', name: 'Carmen Lee', role: 'co_host', avatarGradient: 'from-violet-500 to-purple-500', avatarUrl: getDemoAvatar('Carmen Lee') },
@@ -103,6 +123,7 @@ const sessions: DemoSession[] = [
     audioUrl: AUDIO.room1, // Reuse room 1 audio
     hostName: 'Dr. Maya Ross', hostAvatar: getDemoAvatar('Dr. Maya Ross'),
     category: 'Wellness', language: 'en', baseListenerCount: 189,
+    visualTheme: 'aurora-ripple', energy: 'calm',
     speakers: [
       { id: 'demo-host-maya', name: 'Dr. Maya Ross', role: 'host', avatarGradient: 'from-sky-500 to-blue-500', avatarUrl: getDemoAvatar('Dr. Maya Ross') },
       { id: 'demo-sp-jordan', name: 'Jordan Ellis', role: 'co_host', avatarGradient: 'from-slate-500 to-gray-500', avatarUrl: getDemoAvatar('Jordan Ellis') },
@@ -117,6 +138,7 @@ const sessions: DemoSession[] = [
     audioUrl: AUDIO.room6,
     hostName: 'Raj Malhotra', hostAvatar: getDemoAvatar('Raj Malhotra'),
     category: 'Entertainment', language: 'hi', baseListenerCount: 423,
+    visualTheme: 'bollywood-sparkle', energy: 'heated',
     speakers: [
       { id: 'demo-host-raj', name: 'Raj Malhotra', role: 'host', avatarGradient: 'from-orange-500 to-red-500', avatarUrl: getDemoAvatar('Raj Malhotra') },
       { id: 'demo-sp-ananya', name: 'Ananya Gupta', role: 'co_host', avatarGradient: 'from-pink-500 to-fuchsia-500', avatarUrl: getDemoAvatar('Ananya Gupta') },
@@ -131,6 +153,7 @@ const sessions: DemoSession[] = [
     audioUrl: AUDIO.room6, // Reuse Hindi audio
     hostName: 'Sunil Verma', hostAvatar: getDemoAvatar('Sunil Verma'),
     category: 'Sports', language: 'hi', baseListenerCount: 567,
+    visualTheme: 'cricket-energy', energy: 'intense',
     speakers: [
       { id: 'demo-host-sunil', name: 'Sunil Verma', role: 'host', avatarGradient: 'from-blue-600 to-indigo-600', avatarUrl: getDemoAvatar('Sunil Verma') },
       { id: 'demo-sp-ritu', name: 'Ritu Sharma', role: 'co_host', avatarGradient: 'from-red-500 to-pink-500', avatarUrl: getDemoAvatar('Ritu Sharma') },
@@ -145,6 +168,7 @@ const sessions: DemoSession[] = [
     audioUrl: AUDIO.room6, // Reuse Hindi audio
     hostName: 'Swami Ananda', hostAvatar: getDemoAvatar('Swami Ananda'),
     category: 'Spirituality', language: 'hi', baseListenerCount: 145,
+    visualTheme: 'mandala-breath', energy: 'calm',
     speakers: [
       { id: 'demo-host-swami', name: 'Swami Ananda', role: 'host', avatarGradient: 'from-amber-400 to-yellow-500', avatarUrl: getDemoAvatar('Swami Ananda') },
       { id: 'demo-sp-meera', name: 'Meera Devi', role: 'co_host', avatarGradient: 'from-rose-400 to-pink-500', avatarUrl: getDemoAvatar('Meera Devi') },
@@ -159,6 +183,7 @@ const sessions: DemoSession[] = [
     audioUrl: AUDIO.room4, // Reuse comedy audio (energetic)
     hostName: 'Carlos Mendoza', hostAvatar: getDemoAvatar('Carlos Mendoza'),
     category: 'Sports', language: 'es', baseListenerCount: 389,
+    visualTheme: 'dual-orbs', energy: 'heated',
     speakers: [
       { id: 'demo-host-carlos', name: 'Carlos Mendoza', role: 'host', avatarGradient: 'from-green-500 to-emerald-500', avatarUrl: getDemoAvatar('Carlos Mendoza') },
       { id: 'demo-sp-isabella', name: 'Isabella Torres', role: 'co_host', avatarGradient: 'from-red-500 to-rose-500', avatarUrl: getDemoAvatar('Isabella Torres') },
@@ -174,6 +199,7 @@ const sessions: DemoSession[] = [
     audioUrl: AUDIO.room3, // Reuse analysis audio
     hostName: 'Omar Hassan', hostAvatar: getDemoAvatar('Omar Hassan'),
     category: 'Technology', language: 'ar', baseListenerCount: 234,
+    visualTheme: 'geometric-mosaic', energy: 'moderate',
     speakers: [
       { id: 'demo-host-omar', name: 'Omar Hassan', role: 'host', avatarGradient: 'from-teal-500 to-emerald-500', avatarUrl: getDemoAvatar('Omar Hassan') },
       { id: 'demo-sp-layla', name: 'Layla Khalid', role: 'co_host', avatarGradient: 'from-rose-500 to-red-500', avatarUrl: getDemoAvatar('Layla Khalid') },
