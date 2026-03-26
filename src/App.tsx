@@ -57,8 +57,8 @@ const MobileHomeRedirect = () => {
   // Always send authenticated users to dashboard after OAuth/login callbacks.
   if (user) return <Navigate to="/dashboard" replace />;
   
-  // Only PWA gets Podcasts as home. Mobile web always gets GlobalHeatmap.
-  return (isMobile && isPWA) ? <Podcasts /> : <GlobalHeatmap />;
+  // Feed page is the main homepage for all users
+  return <Podcasts />;
 };
 
 const AnimatedRoutes = ({ showSplash }: { showSplash: boolean }) => {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, Mic, Radio, Home, Flame, Swords, Tv, Music, User } from 'lucide-react';
+import { ChevronLeft, Mic, Radio, Home, Flame, Swords, Tv, Music, User, Search } from 'lucide-react';
 import BattleInviteModal from '@/components/podcast/BattleInviteModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import NotificationBell from '@/components/NotificationBell';
@@ -53,6 +53,7 @@ const Podcasts = () => {
   const isPWA = window.matchMedia('(display-mode: standalone)').matches
     || (window.navigator as any).standalone === true;
   const [activeTab, setActiveTab] = useState(tabFromUrl || (isMobile && isPWA ? 'live' : 'feed'));
+  const [feedSearch, setFeedSearch] = useState('');
 
   // Fix: useIsMobile returns false initially, so correct the tab once we know
   useEffect(() => {
@@ -503,6 +504,29 @@ const Podcasts = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Twitch-style search */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search"
+                value={feedSearch}
+                onChange={(e) => setFeedSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && feedSearch.trim()) {
+                    navigate(`/podcasts?search=${encodeURIComponent(feedSearch.trim())}`);
+                  }
+                }}
+                className="bg-white/5 border border-white/10 rounded text-[11px] text-white placeholder:text-white/30 h-8 w-[180px] lg:w-[240px] pl-2.5 pr-7 focus:outline-none focus:border-white/30"
+              />
+              <button
+                onClick={() => {
+                  if (feedSearch.trim()) navigate(`/podcasts?search=${encodeURIComponent(feedSearch.trim())}`);
+                }}
+                className="absolute right-0 top-0 h-8 w-7 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-r border-l border-white/10"
+              >
+                <Search className="h-3 w-3 text-white/60" />
+              </button>
+            </div>
             <NotificationBell />
             {user ? (
               <Link to="/dashboard">
