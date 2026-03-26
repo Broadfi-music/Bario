@@ -44,7 +44,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   const navigate = useNavigate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   // Pick the right demo session
-  const activeDemo: DemoSession = sessionId === DEMO_SESSION_ID_3 ? demoSession3 : sessionId === DEMO_SESSION_ID_2 ? demoSession2 : demoSession;
+  const activeDemo: DemoSession = getDemoSessionById(sessionId || '') || ALL_DEMO_SESSIONS[0];
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
