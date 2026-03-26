@@ -43,7 +43,7 @@ interface Schedule {
 }
 
 import { getDemoAvatar } from '@/lib/randomAvatars';
-import { DEMO_HOST_ID, DEMO_HOST_ID_2, DEMO_HOST_ID_3 } from '@/config/demoSpace';
+import { ALL_DEMO_SESSIONS } from '@/config/demoSessions';
 
 // Demo host data
 const DEMO_HOSTS: Record<string, HostData> = {

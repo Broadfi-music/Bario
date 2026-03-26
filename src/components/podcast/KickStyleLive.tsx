@@ -19,7 +19,7 @@ import DailyRankingModal from './DailyRankingModal';
 
 import { toast } from 'sonner';
 import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
-import { getDemoPodcastSession, getDemoPodcastSession2, getDemoPodcastSession3, getDemoSessionById, DEMO_SESSION_ID, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3, isDemoSessionId } from '@/config/demoSpace';
+import { getAllDemoPodcastSessions, getDemoSessionById, isDemoSessionId, getDemoChatMessages } from '@/config/demoSessions';
 import { getRandomAvatarUrl } from '@/lib/randomAvatars';
 
 interface PodcastSession {

@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { useHeatmapTracks, useSyncHeatmap, HeatmapTrack } from '@/hooks/useHeatmapData';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { getDemoLiveSession, getDemoLiveSession2, getDemoLiveSession3, DEMO_SESSION_ID, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3 } from '@/config/demoSpace';
+import { getAllDemoLiveSessions, isDemoSessionId } from '@/config/demoSessions';
 
 // Live session interface
 interface LiveSession {

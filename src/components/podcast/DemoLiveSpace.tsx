@@ -5,7 +5,7 @@ import { Users, Plus, Trophy, Mic, MicOff, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { demoSession, demoSession2, demoSession3, DemoSpeaker, DemoSession, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3 } from '@/config/demoSpace';
+import { getDemoSessionById, ALL_DEMO_SESSIONS, DemoSession, DemoSpeaker } from '@/config/demoSessions';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import AuthPromptModal from './AuthPromptModal';
 import TopEngagementModal from './TopEngagementModal';

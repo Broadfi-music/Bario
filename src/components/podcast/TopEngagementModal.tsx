@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Crown, Gift } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { isValidUUID } from '@/lib/authUtils';
-import { isDemoSessionId } from '@/config/demoSpace';
+import { isDemoSessionId } from '@/config/demoSessions';
 import { getRandomAvatarUrl } from '@/lib/randomAvatars';
 
 interface Engager {
