@@ -448,6 +448,29 @@ const PodcastFeed = () => {
             )}
           </div>
         </div>
+
+        {/* Sidebar Join Community — for non-authenticated users */}
+        {!user && (
+          <div className="mt-auto p-2.5 border-t border-white/5">
+            <div className="bg-white/5 rounded p-2">
+              <p className="text-[9px] font-bold text-white/80 mb-1">Join the Bario community!</p>
+              <p className="text-[8px] text-white/40 mb-2">Discover live audio streams and connect with creators.</p>
+              <Button
+                onClick={() => navigate('/auth')}
+                size="sm"
+                className="w-full bg-white text-black hover:bg-white/90 text-[9px] h-6 font-semibold rounded"
+              >
+                Sign Up
+              </Button>
+              <button
+                onClick={() => navigate('/auth')}
+                className="w-full text-[9px] text-white/50 hover:text-white/80 mt-1 py-0.5"
+              >
+                Log In
+              </button>
+            </div>
+          </div>
+        )}
       </aside>
 
       {/* Main Content — offset for sidebar on md+ */}
