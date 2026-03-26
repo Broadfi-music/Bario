@@ -328,9 +328,7 @@ const PodcastFeed = () => {
     return () => { audio.removeEventListener('ended', handleEnded); audio.pause(); };
   }, []);
 
-  // Calculate top offset for banner
-  const topBannerVisible = !user && showTopBanner;
-  const bannerHeight = topBannerVisible ? 'pt-[88px]' : 'pt-14';
+  const bannerHeight = 'pt-14';
 
   return (
     <div className="min-h-screen bg-black text-white pb-16 md:pb-0">
