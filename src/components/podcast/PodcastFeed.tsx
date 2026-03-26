@@ -807,34 +807,28 @@ const PodcastFeed = () => {
           </section>
         )}
 
-        {/* Footer CTA — "Join the Bario Community" for non-authenticated users */}
+        {/* Footer CTA — Twitch-style "Join the Bario Community" banner */}
         {!user && (
           <footer className="px-2 md:px-3 lg:px-4 mb-6">
-            <div className="bg-white rounded-md p-4 md:p-5 flex flex-col md:flex-row items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center flex-shrink-0">
-                  <Radio className="w-4 h-4 text-white" />
+            <div className="bg-white rounded-md overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center flex-shrink-0">
+                    <Radio className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-black">
+                      <span className="font-bold">Join the Bario community!</span>
+                      {' '}Discover the best live audio streams anywhere.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-bold text-black">Join the Bario Community</h3>
-                  <p className="text-[11px] text-black/60">Discover live audio streams, join battles, and connect with creators worldwide.</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
                 <Button
                   onClick={() => navigate('/auth')}
                   size="sm"
-                  className="bg-black text-white hover:bg-black/80 text-[11px] h-8 px-5 font-semibold rounded"
+                  className="bg-black text-white hover:bg-black/80 text-[11px] h-8 px-5 font-semibold rounded border border-black"
                 >
                   Sign Up
-                </Button>
-                <Button
-                  onClick={() => navigate('/auth')}
-                  variant="outline"
-                  size="sm"
-                  className="border-black text-black hover:bg-black/5 text-[11px] h-8 px-4 font-semibold rounded"
-                >
-                  Log In
                 </Button>
               </div>
             </div>
