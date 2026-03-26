@@ -363,7 +363,7 @@ const PodcastFeed = () => {
         </div>
       )}
 
-      {/* Sidebar — Desktop & Tablet (md+) */}
+        {/* Sidebar — Desktop & Tablet (md+) */}
       <aside className={`hidden md:flex fixed left-0 bottom-0 w-[200px] lg:w-[220px] flex-col bg-[#0e0e0e] border-r border-white/5 overflow-y-auto z-40 ${topBannerVisible ? 'top-[88px]' : 'top-12'}`}>
         {/* Navigation Links */}
         <div className="p-2.5 space-y-0.5">
@@ -380,6 +380,13 @@ const PodcastFeed = () => {
           >
             <Swords className="h-3.5 w-3.5" />
             <span className="text-[11px] font-medium">Battle</span>
+          </button>
+          <button
+            onClick={() => navigate('/ai-remix')}
+            className="flex items-center gap-2 w-full p-1.5 rounded hover:bg-white/5 transition-colors text-white/70 hover:text-white"
+          >
+            <Music className="h-3.5 w-3.5" />
+            <span className="text-[11px] font-medium">AI Remix</span>
           </button>
           <button
             onClick={() => navigate('/global-heatmap')}
