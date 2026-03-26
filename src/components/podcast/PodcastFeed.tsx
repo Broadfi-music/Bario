@@ -758,32 +758,67 @@ const PodcastFeed = () => {
           </section>
         )}
 
-        {/* Footer CTA — Twitch-style "Join the Bario Community" banner */}
-        {!user && (
-          <footer className="px-2 md:px-3 lg:px-4 mb-6">
-            <div className="bg-white rounded-md overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center flex-shrink-0">
-                    <Radio className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-black">
-                      <span className="font-bold">Join the Bario community!</span>
-                      {' '}Discover the best live audio streams anywhere.
-                    </p>
-                  </div>
+        {/* Creators You Might Like — Weverse-style horizontal scroll */}
+        <section className="px-2 md:px-3 lg:px-4 mb-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <h2 className="text-[11px] font-bold text-white/80">Creators</h2>
+          </div>
+          <div className="bg-[#111] rounded-lg p-3">
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
+              {/* Plus button to discover more */}
+              <button
+                onClick={() => setShowDiscoverCreators(true)}
+                className="flex-shrink-0 flex flex-col items-center gap-1"
+              >
+                <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors">
+                  <Plus className="h-4 w-4 text-white/50" />
                 </div>
-                <Button
-                  onClick={() => navigate('/auth')}
-                  size="sm"
-                  className="bg-black text-white hover:bg-black/80 text-[11px] h-8 px-5 font-semibold rounded border border-black"
+                <span className="text-[8px] text-white/40 w-14 text-center truncate">Discover</span>
+              </button>
+              {sidebarCreators.slice(0, 10).map(creator => (
+                <button
+                  key={creator.user_id}
+                  onClick={() => navigate(`/host/${creator.user_id}`)}
+                  className="flex-shrink-0 flex flex-col items-center gap-1"
                 >
-                  Sign Up
-                </Button>
-              </div>
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-white/10 border border-white/10">
+                    {creator.avatar_url ? (
+                      <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-white/20" />
+                    )}
+                  </div>
+                  <span className="text-[8px] text-white/60 w-14 text-center truncate">
+                    {creator.full_name || creator.username || 'Creator'}
+                  </span>
+                </button>
+              ))}
             </div>
-          </footer>
+          </div>
+        </section>
+
+        {/* Footer Banner — Twitch-style fixed bottom bar for guests */}
+        {!user && (
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0e0e0e] border-t border-white/5 md:left-[200px] lg:left-[220px]">
+            <div className="flex items-center justify-between px-4 py-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded bg-white flex items-center justify-center flex-shrink-0">
+                  <Radio className="w-3.5 h-3.5 text-black" />
+                </div>
+                <p className="text-[11px] text-white/70">
+                  <span className="font-semibold text-white">Join the Bario community!</span>
+                  {' '}Discover the best live audio streams anywhere.
+                </p>
+              </div>
+              <Button
+                onClick={() => navigate('/auth')}
+                size="sm"
+                className="bg-white text-black hover:bg-white/90 text-[10px] h-7 px-4 font-semibold rounded flex-shrink-0"
+              >
+                Sign Up
+              </Button>
+            </div>
+          </div>
         )}
 
         {/* Floating Audio Player */}
