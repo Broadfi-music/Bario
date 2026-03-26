@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronLeft, ChevronRight, Users, Play, Pause, Calendar, Headphones, Search, User, X, Swords, Radio, Flame, Globe, Mic, Music } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, Play, Pause, Calendar, Headphones, Search, User, X, Swords, Radio, Flame, Mic, Music, Plus } from 'lucide-react';
+import DiscoverCreatorsModal from './DiscoverCreatorsModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -102,6 +103,8 @@ const PodcastFeed = () => {
   const [showBattleInviteModal, setShowBattleInviteModal] = useState(false);
   const [activeBattle, setActiveBattle] = useState<any>(null);
   const [activeBattles, setActiveBattles] = useState<BattleSession[]>([]);
+  const [showDiscoverCreators, setShowDiscoverCreators] = useState(false);
+  const [sidebarCreators, setSidebarCreators] = useState<{user_id: string; full_name: string | null; username: string | null; avatar_url: string | null}[]>([]);
 
   const filteredHosts = searchQuery.trim()
     ? liveHosts.filter(h =>
@@ -160,6 +163,7 @@ const PodcastFeed = () => {
     fetchSchedules();
     fetchEpisodes();
     fetchActiveBattles();
+    fetchSidebarCreators();
 
     const channel = supabase
       .channel('podcast-feed-live')
@@ -288,6 +292,15 @@ const PodcastFeed = () => {
     }
   };
 
+  const fetchSidebarCreators = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('user_id, full_name, username, avatar_url')
+      .order('created_at', { ascending: false })
+      .limit(12);
+    if (data) setSidebarCreators(data);
+  };
+
   const heroHosts = liveHosts.slice(0, 5);
   const currentHero = heroHosts[heroIndex];
   const nextHero = () => setHeroIndex((prev) => (prev + 1) % heroHosts.length);
@@ -360,13 +373,6 @@ const PodcastFeed = () => {
             <Music className="h-3.5 w-3.5" />
             <span className="text-[11px] font-medium">AI Remix</span>
           </button>
-          <button
-            onClick={() => navigate('/global-heatmap')}
-            className="flex items-center gap-2 w-full p-1.5 rounded hover:bg-white/5 transition-colors text-white/70 hover:text-white"
-          >
-            <Globe className="h-3.5 w-3.5" />
-            <span className="text-[11px] font-medium">Heatmap</span>
-          </button>
           {user && (
             <button
               onClick={() => {
@@ -419,14 +425,14 @@ const PodcastFeed = () => {
                       <div className="w-full h-full bg-white/20" />
                     )}
                   </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 bg-white rounded-full border border-black" />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-black" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-medium text-white/80 truncate group-hover:text-white">{host.host_name}</p>
                   <p className="text-[9px] text-white/30 truncate">{host.category}</p>
                 </div>
                 <div className="flex items-center gap-0.5 text-[9px] text-white/30">
-                  <span className="w-1 h-1 bg-white/60 rounded-full" />
+                  <span className="w-1 h-1 bg-red-500 rounded-full" />
                   {formatViewers(host.listener_count)}
                 </div>
               </Link>
@@ -449,28 +455,6 @@ const PodcastFeed = () => {
           </div>
         </div>
 
-        {/* Sidebar Join Community — for non-authenticated users */}
-        {!user && (
-          <div className="mt-auto p-2.5 border-t border-white/5">
-            <div className="bg-white/5 rounded p-2">
-              <p className="text-[9px] font-bold text-white/80 mb-1">Join the Bario community!</p>
-              <p className="text-[8px] text-white/40 mb-2">Discover live audio streams and connect with creators.</p>
-              <Button
-                onClick={() => navigate('/auth')}
-                size="sm"
-                className="w-full bg-white text-black hover:bg-white/90 text-[9px] h-6 font-semibold rounded"
-              >
-                Sign Up
-              </Button>
-              <button
-                onClick={() => navigate('/auth')}
-                className="w-full text-[9px] text-white/50 hover:text-white/80 mt-1 py-0.5"
-              >
-                Log In
-              </button>
-            </div>
-          </div>
-        )}
       </aside>
 
       {/* Main Content — offset for sidebar on md+ */}
@@ -494,7 +478,7 @@ const PodcastFeed = () => {
                       </div>
                     )}
                     <div className="absolute top-1.5 left-1.5 bg-white text-black text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse" />
+                      <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
                       LIVE
                     </div>
                     <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1.5">
@@ -631,7 +615,7 @@ const PodcastFeed = () => {
         <section className="px-2 md:px-3 lg:px-4 mb-4">
           <div className="flex items-center justify-between mb-1.5">
             <h2 className="text-[11px] font-bold text-white/80 flex items-center gap-1">
-              <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
+              <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
               Live channels we think you'll like
             </h2>
           </div>
@@ -650,7 +634,7 @@ const PodcastFeed = () => {
                       <div className="w-full h-full bg-white/10" />
                     )}
                     <div className="absolute top-0.5 left-0.5 bg-white text-black text-[7px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5">
-                      <span className="w-1 h-1 bg-black rounded-full animate-pulse" />
+                      <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
                       LIVE
                     </div>
                     <div className="absolute bottom-0.5 left-0.5 bg-black/70 text-white text-[7px] px-1 py-0.5 rounded">
@@ -756,7 +740,7 @@ const PodcastFeed = () => {
                     </div>
                     {currentEpisode?.id === episode.id && isPlaying && (
                       <div className="absolute top-0.5 left-0.5 bg-white text-black text-[7px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5">
-                        <span className="w-1 h-1 bg-black rounded-full animate-pulse" />
+                        <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
                         PLAYING
                       </div>
                     )}
@@ -774,32 +758,67 @@ const PodcastFeed = () => {
           </section>
         )}
 
-        {/* Footer CTA — Twitch-style "Join the Bario Community" banner */}
-        {!user && (
-          <footer className="px-2 md:px-3 lg:px-4 mb-6">
-            <div className="bg-white rounded-md overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center flex-shrink-0">
-                    <Radio className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-black">
-                      <span className="font-bold">Join the Bario community!</span>
-                      {' '}Discover the best live audio streams anywhere.
-                    </p>
-                  </div>
+        {/* Creators You Might Like — Weverse-style horizontal scroll */}
+        <section className="px-2 md:px-3 lg:px-4 mb-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <h2 className="text-[11px] font-bold text-white/80">Creators</h2>
+          </div>
+          <div className="bg-[#111] rounded-lg p-3">
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
+              {/* Plus button to discover more */}
+              <button
+                onClick={() => setShowDiscoverCreators(true)}
+                className="flex-shrink-0 flex flex-col items-center gap-1"
+              >
+                <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors">
+                  <Plus className="h-4 w-4 text-white/50" />
                 </div>
-                <Button
-                  onClick={() => navigate('/auth')}
-                  size="sm"
-                  className="bg-black text-white hover:bg-black/80 text-[11px] h-8 px-5 font-semibold rounded border border-black"
+                <span className="text-[8px] text-white/40 w-14 text-center truncate">Discover</span>
+              </button>
+              {sidebarCreators.slice(0, 10).map(creator => (
+                <button
+                  key={creator.user_id}
+                  onClick={() => navigate(`/host/${creator.user_id}`)}
+                  className="flex-shrink-0 flex flex-col items-center gap-1"
                 >
-                  Sign Up
-                </Button>
-              </div>
+                  <div className="w-12 h-12 rounded-full overflow-hidden bg-white/10 border border-white/10">
+                    {creator.avatar_url ? (
+                      <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-white/20" />
+                    )}
+                  </div>
+                  <span className="text-[8px] text-white/60 w-14 text-center truncate">
+                    {creator.full_name || creator.username || 'Creator'}
+                  </span>
+                </button>
+              ))}
             </div>
-          </footer>
+          </div>
+        </section>
+
+        {/* Footer Banner — Twitch-style fixed bottom bar for guests */}
+        {!user && (
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0e0e0e] border-t border-white/5 md:left-[200px] lg:left-[220px]">
+            <div className="flex items-center justify-between px-4 py-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded bg-white flex items-center justify-center flex-shrink-0">
+                  <Radio className="w-3.5 h-3.5 text-black" />
+                </div>
+                <p className="text-[11px] text-white/70">
+                  <span className="font-semibold text-white">Join the Bario community!</span>
+                  {' '}Discover the best live audio streams anywhere.
+                </p>
+              </div>
+              <Button
+                onClick={() => navigate('/auth')}
+                size="sm"
+                className="bg-white text-black hover:bg-white/90 text-[10px] h-7 px-4 font-semibold rounded flex-shrink-0"
+              >
+                Sign Up
+              </Button>
+            </div>
+          </div>
         )}
 
         {/* Floating Audio Player */}
@@ -848,6 +867,12 @@ const PodcastFeed = () => {
           </div>
         )}
       </main>
+
+      {/* Discover Creators Modal */}
+      <DiscoverCreatorsModal
+        isOpen={showDiscoverCreators}
+        onClose={() => setShowDiscoverCreators(false)}
+      />
     </div>
   );
 
