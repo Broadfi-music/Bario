@@ -495,17 +495,18 @@ const Podcasts = () => {
 
       {/* Desktop Header */}
       <header className={`fixed left-0 right-0 z-50 bg-black border-b border-white/10 hidden md:block ${(hostLiveSession && !showHostStudio) || (hostBattle && !showBattleSession) ? 'top-10' : 'top-0'}`}>
-        <div className="flex items-center justify-between h-12 px-2 sm:px-4">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center h-12 px-2 sm:px-4">
+          {/* Left — Logo */}
+          <div className="flex items-center gap-3 flex-shrink-0">
             <Link to="/" className="flex items-center gap-1.5">
               <img src="/bario-logo.png" alt="Bario" className="h-6 w-6 object-contain" />
               <span className="text-white font-bold text-lg tracking-tight">BARIO</span>
             </Link>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Twitch-style search */}
-            <div className="relative">
+          {/* Center — Search */}
+          <div className="flex-1 flex justify-center px-4">
+            <div className="relative w-full max-w-[360px]">
               <input
                 type="text"
                 placeholder="Search"
@@ -516,28 +517,39 @@ const Podcasts = () => {
                     navigate(`/podcasts?search=${encodeURIComponent(feedSearch.trim())}`);
                   }
                 }}
-                className="bg-white/5 border border-white/10 rounded text-[11px] text-white placeholder:text-white/30 h-8 w-[180px] lg:w-[240px] pl-2.5 pr-7 focus:outline-none focus:border-white/30"
+                className="bg-white/5 border border-white/10 rounded-l text-[11px] text-white placeholder:text-white/30 h-8 w-full pl-2.5 pr-2 focus:outline-none focus:border-white/30"
               />
               <button
                 onClick={() => {
                   if (feedSearch.trim()) navigate(`/podcasts?search=${encodeURIComponent(feedSearch.trim())}`);
                 }}
-                className="absolute right-0 top-0 h-8 w-7 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-r border-l border-white/10"
+                className="absolute right-0 top-0 h-8 w-9 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-r border border-white/10"
               >
-                <Search className="h-3 w-3 text-white/60" />
+                <Search className="h-3.5 w-3.5 text-white/60" />
               </button>
             </div>
+          </div>
+
+          {/* Right — Actions */}
+          <div className="flex items-center gap-2 flex-shrink-0">
             <NotificationBell />
             {user ? (
               <Link to="/dashboard">
                 <div className="w-7 h-7 rounded-full overflow-hidden bg-white/20" />
               </Link>
             ) : (
-              <Link to="/auth">
-                <Button size="sm" className="bg-white text-black hover:bg-white/90 text-[11px] h-7 px-3 font-semibold">
-                  Log In
-                </Button>
-              </Link>
+              <>
+                <Link to="/auth">
+                  <Button size="sm" variant="ghost" className="text-white/70 hover:text-white hover:bg-white/5 text-[11px] h-7 px-3 font-semibold">
+                    Log In
+                  </Button>
+                </Link>
+                <Link to="/auth">
+                  <Button size="sm" className="bg-white text-black hover:bg-white/90 text-[11px] h-7 px-3 font-semibold">
+                    Sign Up
+                  </Button>
+                </Link>
+              </>
             )}
           </div>
         </div>
