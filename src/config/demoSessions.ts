@@ -1,4 +1,4 @@
-// 15 Multilingual Demo Sessions — always-live seeded rooms
+// 10 Multilingual Demo Sessions — always-live seeded rooms
 import { getDemoAvatar } from '@/lib/randomAvatars';
 
 export interface DemoSpeaker {
@@ -24,7 +24,17 @@ export interface DemoSession {
   speakers: DemoSpeaker[];
 }
 
-const STORAGE_BASE = '/demo';
+const STORAGE_BASE = 'https://sufbohhsxlrefkoubmed.supabase.co/storage/v1/object/public/demo-audio';
+const COVER_BASE = '/demo';
+
+// Map 5 generated audio files across 10 rooms
+const AUDIO = {
+  room1: `${STORAGE_BASE}/demo-room-1.mp3`,   // EN - AI debate
+  room2: `${STORAGE_BASE}/demo-room-2.mp3`,   // EN - Relationship
+  room3: `${STORAGE_BASE}/demo-room-3.mp3`,   // EN - Bitcoin
+  room4: `${STORAGE_BASE}/demo-room-4.mp3`,   // EN - Comedy
+  room6: `${STORAGE_BASE}/demo-room-6.mp3`,   // HI - Bollywood
+};
 
 const sessions: DemoSession[] = [
   // ── English (5) ──────────────────────────────────────────
@@ -32,8 +42,8 @@ const sessions: DemoSession[] = [
     id: 'demo-room-1', hostId: 'demo-host-marcus-chen',
     title: 'Is AI Taking Over Creative Jobs?',
     description: 'Heated debate on whether artificial intelligence will replace human creativity',
-    coverImageUrl: `${STORAGE_BASE}/demo-space-cover.jpg`,
-    audioUrl: `${STORAGE_BASE}/demo-room-1.mp3`,
+    coverImageUrl: `${COVER_BASE}/demo-space-cover.jpg`,
+    audioUrl: AUDIO.room1,
     hostName: 'Marcus Chen', hostAvatar: getDemoAvatar('Marcus Chen'),
     category: 'Technology', language: 'en', baseListenerCount: 312,
     speakers: [
@@ -46,35 +56,37 @@ const sessions: DemoSession[] = [
     id: 'demo-room-2', hostId: 'demo-host-tasha',
     title: 'Relationship Red Flags You\'re Ignoring',
     description: 'Real talk about the warning signs people overlook when in love',
-    coverImageUrl: `${STORAGE_BASE}/demo-space-cover-2.jpg`,
-    audioUrl: `${STORAGE_BASE}/demo-room-2.mp3`,
+    coverImageUrl: `${COVER_BASE}/demo-space-cover-2.jpg`,
+    audioUrl: AUDIO.room2,
     hostName: 'Tasha Moore', hostAvatar: getDemoAvatar('Tasha Moore'),
     category: 'Lifestyle', language: 'en', baseListenerCount: 487,
     speakers: [
       { id: 'demo-host-tasha', name: 'Tasha Moore', role: 'host', avatarGradient: 'from-purple-500 to-pink-500', avatarUrl: getDemoAvatar('Tasha Moore') },
       { id: 'demo-sp-devon', name: 'Devon Brooks', role: 'co_host', avatarGradient: 'from-amber-500 to-orange-500', avatarUrl: getDemoAvatar('Devon Brooks') },
       { id: 'demo-sp-nina', name: 'Nina Patel', role: 'speaker', avatarGradient: 'from-teal-500 to-cyan-500', avatarUrl: getDemoAvatar('Nina Patel') },
+      { id: 'demo-sp-marcus2', name: 'Marcus Wright', role: 'speaker', avatarGradient: 'from-blue-500 to-indigo-500', avatarUrl: getDemoAvatar('Marcus Wright') },
     ],
   },
   {
     id: 'demo-room-3', hostId: 'demo-host-alex-r',
     title: 'Bitcoin to $200K - Real or Fantasy?',
     description: 'Deep market analysis on whether crypto can reach new all-time highs',
-    coverImageUrl: `${STORAGE_BASE}/demo-space-cover-3.jpg`,
-    audioUrl: `${STORAGE_BASE}/demo-room-3.mp3`,
+    coverImageUrl: `${COVER_BASE}/demo-space-cover-3.jpg`,
+    audioUrl: AUDIO.room3,
     hostName: 'Alex Rivera', hostAvatar: getDemoAvatar('Alex Rivera'),
     category: 'Finance', language: 'en', baseListenerCount: 256,
     speakers: [
       { id: 'demo-host-alex-r', name: 'Alex Rivera', role: 'host', avatarGradient: 'from-yellow-500 to-amber-500', avatarUrl: getDemoAvatar('Alex Rivera') },
       { id: 'demo-sp-sam', name: 'Sam Turner', role: 'co_host', avatarGradient: 'from-indigo-500 to-blue-500', avatarUrl: getDemoAvatar('Sam Turner') },
+      { id: 'demo-sp-lisa', name: 'Lisa Chen', role: 'speaker', avatarGradient: 'from-rose-500 to-pink-500', avatarUrl: getDemoAvatar('Lisa Chen') },
     ],
   },
   {
     id: 'demo-room-4', hostId: 'demo-host-dj-smooth',
     title: 'Late Night Comedy Hour',
     description: 'Stand-up stories and hilarious takes on everyday life',
-    coverImageUrl: `${STORAGE_BASE}/demo-space-cover.jpg`,
-    audioUrl: `${STORAGE_BASE}/demo-room-4.mp3`,
+    coverImageUrl: `${COVER_BASE}/demo-space-cover.jpg`,
+    audioUrl: AUDIO.room4,
     hostName: 'DJ Smooth', hostAvatar: getDemoAvatar('DJ Smooth'),
     category: 'Entertainment', language: 'en', baseListenerCount: 534,
     speakers: [
@@ -87,8 +99,8 @@ const sessions: DemoSession[] = [
     id: 'demo-room-5', hostId: 'demo-host-maya',
     title: 'Healing After Heartbreak',
     description: 'A safe space to talk about moving on and self-recovery',
-    coverImageUrl: `${STORAGE_BASE}/demo-space-cover-2.jpg`,
-    audioUrl: `${STORAGE_BASE}/demo-room-5.mp3`,
+    coverImageUrl: `${COVER_BASE}/demo-space-cover-2.jpg`,
+    audioUrl: AUDIO.room1, // Reuse room 1 audio
     hostName: 'Dr. Maya Ross', hostAvatar: getDemoAvatar('Dr. Maya Ross'),
     category: 'Wellness', language: 'en', baseListenerCount: 189,
     speakers: [
@@ -96,13 +108,13 @@ const sessions: DemoSession[] = [
       { id: 'demo-sp-jordan', name: 'Jordan Ellis', role: 'co_host', avatarGradient: 'from-slate-500 to-gray-500', avatarUrl: getDemoAvatar('Jordan Ellis') },
     ],
   },
-  // ── Hindi (4) ────────────────────────────────────────────
+  // ── Hindi (3) ────────────────────────────────────────────
   {
     id: 'demo-room-6', hostId: 'demo-host-raj',
     title: 'Bollywood vs Hollywood Debate',
     description: 'Kya Bollywood ab Hollywood ke level pe hai? Suniye dono taraf ke arguments',
-    coverImageUrl: `${STORAGE_BASE}/demo-space-cover-3.jpg`,
-    audioUrl: `${STORAGE_BASE}/demo-room-6.mp3`,
+    coverImageUrl: `${COVER_BASE}/demo-space-cover-3.jpg`,
+    audioUrl: AUDIO.room6,
     hostName: 'Raj Malhotra', hostAvatar: getDemoAvatar('Raj Malhotra'),
     category: 'Entertainment', language: 'hi', baseListenerCount: 423,
     speakers: [
@@ -115,8 +127,8 @@ const sessions: DemoSession[] = [
     id: 'demo-room-7', hostId: 'demo-host-sunil',
     title: 'IPL Season - Best Team Debate',
     description: 'Kaun jeetega IPL? Mumbai, Chennai ya RCB? Join the argument!',
-    coverImageUrl: `${STORAGE_BASE}/demo-space-cover.jpg`,
-    audioUrl: `${STORAGE_BASE}/demo-room-7.mp3`,
+    coverImageUrl: `${COVER_BASE}/demo-space-cover.jpg`,
+    audioUrl: AUDIO.room6, // Reuse Hindi audio
     hostName: 'Sunil Verma', hostAvatar: getDemoAvatar('Sunil Verma'),
     category: 'Sports', language: 'hi', baseListenerCount: 567,
     speakers: [
@@ -126,24 +138,11 @@ const sessions: DemoSession[] = [
     ],
   },
   {
-    id: 'demo-room-8', hostId: 'demo-host-kavita',
-    title: 'Indian Startup Success Stories',
-    description: 'India ke startup ecosystem ki kahani aur naye founders ke liye tips',
-    coverImageUrl: `${STORAGE_BASE}/demo-space-cover-2.jpg`,
-    audioUrl: `${STORAGE_BASE}/demo-room-8.mp3`,
-    hostName: 'Kavita Nair', hostAvatar: getDemoAvatar('Kavita Nair'),
-    category: 'Business', language: 'hi', baseListenerCount: 198,
-    speakers: [
-      { id: 'demo-host-kavita', name: 'Kavita Nair', role: 'host', avatarGradient: 'from-emerald-500 to-teal-500', avatarUrl: getDemoAvatar('Kavita Nair') },
-      { id: 'demo-sp-rohan', name: 'Rohan Kapoor', role: 'co_host', avatarGradient: 'from-violet-500 to-purple-500', avatarUrl: getDemoAvatar('Rohan Kapoor') },
-    ],
-  },
-  {
     id: 'demo-room-9', hostId: 'demo-host-swami',
     title: 'Dhyaan Aur Shanti - Meditation Talk',
     description: 'Mann ki shaanti aur dhyaan ke baare mein ek shantipoorna charcha',
-    coverImageUrl: `${STORAGE_BASE}/demo-space-cover-3.jpg`,
-    audioUrl: `${STORAGE_BASE}/demo-room-9.mp3`,
+    coverImageUrl: `${COVER_BASE}/demo-space-cover-3.jpg`,
+    audioUrl: AUDIO.room6, // Reuse Hindi audio
     hostName: 'Swami Ananda', hostAvatar: getDemoAvatar('Swami Ananda'),
     category: 'Spirituality', language: 'hi', baseListenerCount: 145,
     speakers: [
@@ -151,13 +150,13 @@ const sessions: DemoSession[] = [
       { id: 'demo-sp-meera', name: 'Meera Devi', role: 'co_host', avatarGradient: 'from-rose-400 to-pink-500', avatarUrl: getDemoAvatar('Meera Devi') },
     ],
   },
-  // ── Spanish (3) ──────────────────────────────────────────
+  // ── Spanish (1) ──────────────────────────────────────────
   {
     id: 'demo-room-10', hostId: 'demo-host-carlos',
     title: 'Messi vs Ronaldo - El Gran Debate',
     description: 'El debate eterno del fútbol. ¿Quién es el mejor de todos los tiempos?',
-    coverImageUrl: `${STORAGE_BASE}/demo-space-cover.jpg`,
-    audioUrl: `${STORAGE_BASE}/demo-room-10.mp3`,
+    coverImageUrl: `${COVER_BASE}/demo-space-cover.jpg`,
+    audioUrl: AUDIO.room4, // Reuse comedy audio (energetic)
     hostName: 'Carlos Mendoza', hostAvatar: getDemoAvatar('Carlos Mendoza'),
     category: 'Sports', language: 'es', baseListenerCount: 389,
     speakers: [
@@ -166,71 +165,18 @@ const sessions: DemoSession[] = [
       { id: 'demo-sp-diego', name: 'Diego Ruiz', role: 'speaker', avatarGradient: 'from-blue-500 to-sky-500', avatarUrl: getDemoAvatar('Diego Ruiz') },
     ],
   },
-  {
-    id: 'demo-room-11', hostId: 'demo-host-luna',
-    title: 'Reggaeton vs Salsa - Batalla Musical',
-    description: '¿Cuál es el verdadero ritmo latino? ¡Únete al debate musical!',
-    coverImageUrl: `${STORAGE_BASE}/demo-space-cover-2.jpg`,
-    audioUrl: `${STORAGE_BASE}/demo-room-11.mp3`,
-    hostName: 'Luna García', hostAvatar: getDemoAvatar('Luna García'),
-    category: 'Music', language: 'es', baseListenerCount: 276,
-    speakers: [
-      { id: 'demo-host-luna', name: 'Luna García', role: 'host', avatarGradient: 'from-fuchsia-500 to-pink-500', avatarUrl: getDemoAvatar('Luna García') },
-      { id: 'demo-sp-pablo', name: 'Pablo Herrera', role: 'co_host', avatarGradient: 'from-amber-500 to-yellow-500', avatarUrl: getDemoAvatar('Pablo Herrera') },
-    ],
-  },
-  {
-    id: 'demo-room-12', hostId: 'demo-host-sofia',
-    title: 'Emprender en Latinoamérica',
-    description: 'Retos y oportunidades para emprendedores en la región',
-    coverImageUrl: `${STORAGE_BASE}/demo-space-cover-3.jpg`,
-    audioUrl: `${STORAGE_BASE}/demo-room-12.mp3`,
-    hostName: 'Sofía Ramírez', hostAvatar: getDemoAvatar('Sofía Ramírez'),
-    category: 'Business', language: 'es', baseListenerCount: 167,
-    speakers: [
-      { id: 'demo-host-sofia', name: 'Sofía Ramírez', role: 'host', avatarGradient: 'from-cyan-500 to-blue-500', avatarUrl: getDemoAvatar('Sofía Ramírez') },
-      { id: 'demo-sp-miguel', name: 'Miguel Ángel López', role: 'co_host', avatarGradient: 'from-stone-500 to-neutral-500', avatarUrl: getDemoAvatar('Miguel Ángel López') },
-    ],
-  },
-  // ── Arabic (3) ───────────────────────────────────────────
+  // ── Arabic (1) ───────────────────────────────────────────
   {
     id: 'demo-room-13', hostId: 'demo-host-omar',
     title: 'Future of Technology in MENA',
     description: 'مستقبل التكنولوجيا في منطقة الشرق الأوسط وشمال أفريقيا',
-    coverImageUrl: `${STORAGE_BASE}/demo-space-cover.jpg`,
-    audioUrl: `${STORAGE_BASE}/demo-room-13.mp3`,
+    coverImageUrl: `${COVER_BASE}/demo-space-cover-2.jpg`,
+    audioUrl: AUDIO.room3, // Reuse analysis audio
     hostName: 'Omar Hassan', hostAvatar: getDemoAvatar('Omar Hassan'),
     category: 'Technology', language: 'ar', baseListenerCount: 234,
     speakers: [
       { id: 'demo-host-omar', name: 'Omar Hassan', role: 'host', avatarGradient: 'from-teal-500 to-emerald-500', avatarUrl: getDemoAvatar('Omar Hassan') },
       { id: 'demo-sp-layla', name: 'Layla Khalid', role: 'co_host', avatarGradient: 'from-rose-500 to-red-500', avatarUrl: getDemoAvatar('Layla Khalid') },
-    ],
-  },
-  {
-    id: 'demo-room-14', hostId: 'demo-host-fatima',
-    title: 'Arabic Poetry & Modern Literature',
-    description: 'الشعر العربي وكيف يتطور في العصر الحديث',
-    coverImageUrl: `${STORAGE_BASE}/demo-space-cover-2.jpg`,
-    audioUrl: `${STORAGE_BASE}/demo-room-14.mp3`,
-    hostName: 'Dr. Fatima Al-Rashid', hostAvatar: getDemoAvatar('Dr. Fatima Al-Rashid'),
-    category: 'Culture', language: 'ar', baseListenerCount: 156,
-    speakers: [
-      { id: 'demo-host-fatima', name: 'Dr. Fatima Al-Rashid', role: 'host', avatarGradient: 'from-indigo-500 to-violet-500', avatarUrl: getDemoAvatar('Dr. Fatima Al-Rashid') },
-      { id: 'demo-sp-youssef', name: 'Youssef Nabil', role: 'co_host', avatarGradient: 'from-sky-500 to-cyan-500', avatarUrl: getDemoAvatar('Youssef Nabil') },
-      { id: 'demo-sp-hana', name: 'Hana Mahmoud', role: 'speaker', avatarGradient: 'from-lime-500 to-green-500', avatarUrl: getDemoAvatar('Hana Mahmoud') },
-    ],
-  },
-  {
-    id: 'demo-room-15', hostId: 'demo-host-tariq',
-    title: 'Entrepreneurship in the Arab World',
-    description: 'ريادة الأعمال في العالم العربي وبناء شركات عالمية',
-    coverImageUrl: `${STORAGE_BASE}/demo-space-cover-3.jpg`,
-    audioUrl: `${STORAGE_BASE}/demo-room-15.mp3`,
-    hostName: 'Tariq Al-Mansoori', hostAvatar: getDemoAvatar('Tariq Al-Mansoori'),
-    category: 'Business', language: 'ar', baseListenerCount: 203,
-    speakers: [
-      { id: 'demo-host-tariq', name: 'Tariq Al-Mansoori', role: 'host', avatarGradient: 'from-orange-500 to-amber-500', avatarUrl: getDemoAvatar('Tariq Al-Mansoori') },
-      { id: 'demo-sp-nour', name: 'Nour Abdallah', role: 'co_host', avatarGradient: 'from-purple-500 to-fuchsia-500', avatarUrl: getDemoAvatar('Nour Abdallah') },
     ],
   },
 ];
@@ -350,7 +296,7 @@ export const getDemoChatMessages = (sessionId: string) => {
   return demoChatsByLanguage[lang] ?? demoChatsByLanguage.en;
 };
 
-// Legacy compatibility exports (for existing code that imports from demoSpace.ts)
+// Legacy compatibility exports
 export const DEMO_SESSION_ID = sessions[0].id;
 export const DEMO_HOST_ID = sessions[0].hostId;
 export const demoSession = sessions[0];
