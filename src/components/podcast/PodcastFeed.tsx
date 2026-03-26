@@ -392,7 +392,7 @@ const PodcastFeed = () => {
         {/* Recommended Channels */}
         <div className="p-2.5">
           <div className="mb-1.5">
-            <h3 className="text-[9px] font-semibold text-white/40 uppercase tracking-wider">
+            <h3 className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">
               {sidebarTab === 'recommended' ? 'Recommended Channels' : 'Followed Channels'}
             </h3>
           </div>
@@ -415,24 +415,24 @@ const PodcastFeed = () => {
               <Link
                 key={`sidebar-${host.id}`}
                 to={`/podcasts?session=${host.id}`}
-                className="flex items-center gap-1.5 p-1 rounded hover:bg-white/5 transition-colors group"
+                className="flex items-center gap-2 p-1.5 rounded hover:bg-white/5 transition-colors group"
               >
                 <div className="relative flex-shrink-0">
-                  <div className="w-5 h-5 rounded-full overflow-hidden bg-white/10">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10">
                     {host.host_avatar ? (
                       <img src={host.host_avatar} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-white/20" />
                     )}
                   </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 bg-red-500 rounded-full border border-black" />
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-black" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-medium text-white/80 truncate group-hover:text-white">{host.host_name}</p>
-                  <p className="text-[9px] text-white/30 truncate">{host.category}</p>
+                  <p className="text-xs font-medium text-white/80 truncate group-hover:text-white">{host.host_name}</p>
+                  <p className="text-[10px] text-white/30 truncate">{host.category}</p>
                 </div>
-                <div className="flex items-center gap-0.5 text-[9px] text-white/30">
-                  <span className="w-1 h-1 bg-red-500 rounded-full" />
+                <div className="flex items-center gap-0.5 text-[10px] text-white/30">
+                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full" />
                   {formatViewers(host.listener_count)}
                 </div>
               </Link>
@@ -443,8 +443,8 @@ const PodcastFeed = () => {
                 onClick={() => navigate(`/host/${user.id}`)}
                 className="flex items-center gap-1.5 p-1 rounded hover:bg-white/5 transition-colors group cursor-pointer mt-1.5 border-t border-white/5 pt-1.5"
               >
-                <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center flex-shrink-0">
-                  <User className="w-2.5 h-2.5 text-black" />
+                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center flex-shrink-0">
+                  <User className="w-3.5 h-3.5 text-black" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-medium text-white/80 group-hover:text-white">My Page</p>
@@ -467,7 +467,7 @@ const PodcastFeed = () => {
                 to={`/podcasts?session=${currentHero?.id}`}
                 className="relative block group"
               >
-                <div className="flex flex-col md:flex-row h-[180px] md:h-[200px] lg:h-[220px]">
+                <div className="flex flex-col md:flex-row h-[200px] md:h-[260px] lg:h-[300px]">
                   {/* Thumbnail — contained, not cropped */}
                   <div className="relative w-full md:w-[55%] h-full bg-black flex items-center justify-center overflow-hidden">
                     {currentHero?.cover_image_url ? (
@@ -504,8 +504,8 @@ const PodcastFeed = () => {
                         <p className="text-[8px] text-white/40">{formatViewers(currentHero?.listener_count || 0)} listeners</p>
                       </div>
                     </div>
-                    <h2 className="text-xs font-bold text-white mb-0.5 line-clamp-2">{currentHero?.title}</h2>
-                    <p className="text-[9px] text-white/40 line-clamp-2 mb-1.5">{currentHero?.description}</p>
+                    <h2 className="text-base font-bold text-white mb-1 line-clamp-2">{currentHero?.title}</h2>
+                    <p className="text-xs text-white/40 line-clamp-2 mb-2">{currentHero?.description}</p>
                     <div className="flex items-center gap-1 flex-wrap">
                       <span className="text-[8px] bg-white/10 text-white/60 px-1.5 py-0.5 rounded">{currentHero?.category}</span>
                       <span className="text-[8px] bg-white/10 text-white/60 px-1.5 py-0.5 rounded">Audio</span>
@@ -556,7 +556,7 @@ const PodcastFeed = () => {
               onClick={() => {
                 if (cat === 'Battles') setShowBattleInviteModal(true);
               }}
-              className={`flex-shrink-0 text-[10px] font-medium px-2.5 py-1 rounded transition-colors ${
+              className={`flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded transition-colors ${
                 i === 0 ? 'bg-white text-black' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
               }`}
             >
@@ -568,34 +568,34 @@ const PodcastFeed = () => {
         {/* Creators — Weverse-style horizontal scroll (BEFORE live channels) */}
         <section className="px-2 md:px-3 lg:px-4 mb-4">
           <div className="flex items-center justify-between mb-1.5">
-            <h2 className="text-[11px] font-bold text-white/80">Creators</h2>
+            <h2 className="text-sm font-bold text-white/80">Creators</h2>
           </div>
-          <div className="bg-[#111] rounded-lg p-3">
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
+          <div className="bg-[#111] rounded-lg p-4">
+            <div className="flex gap-5 overflow-x-auto scrollbar-hide pb-1">
               {/* Plus button to discover more */}
               <button
                 onClick={() => setShowDiscoverCreators(true)}
-                className="flex-shrink-0 flex flex-col items-center gap-1"
+                className="flex-shrink-0 flex flex-col items-center gap-1.5"
               >
-                <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors">
-                  <Plus className="h-4 w-4 text-white/50" />
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors">
+                  <Plus className="h-5 w-5 text-white/50" />
                 </div>
-                <span className="text-[8px] text-white/40 w-14 text-center truncate">Discover</span>
+                <span className="text-[11px] text-white/40 w-16 md:w-20 text-center truncate">Discover</span>
               </button>
               {sidebarCreators.slice(0, 10).map(creator => (
                 <button
                   key={creator.user_id}
                   onClick={() => navigate(`/host/${creator.user_id}`)}
-                  className="flex-shrink-0 flex flex-col items-center gap-1"
+                  className="flex-shrink-0 flex flex-col items-center gap-1.5"
                 >
-                  <div className="w-12 h-12 rounded-full overflow-hidden bg-white/10 border border-white/10">
+                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-white/10 border border-white/10">
                     {creator.avatar_url ? (
                       <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-white/20" />
                     )}
                   </div>
-                  <span className="text-[8px] text-white/60 w-14 text-center truncate">
+                  <span className="text-[11px] text-white/60 w-16 md:w-20 text-center truncate">
                     {creator.full_name || creator.username || 'Creator'}
                   </span>
                 </button>
@@ -608,12 +608,12 @@ const PodcastFeed = () => {
         {activeBattles.length > 0 && (
           <section className="px-2 md:px-3 lg:px-4 mb-4">
             <div className="flex items-center justify-between mb-1.5">
-              <h2 className="text-[11px] font-bold flex items-center gap-1 text-white/80">
-                <Swords className="h-3 w-3 text-white/50" />
+              <h2 className="text-sm font-bold flex items-center gap-1.5 text-white/80">
+                <Swords className="h-3.5 w-3.5 text-white/50" />
                 Live Battles
               </h2>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1.5 md:gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3">
               {activeBattles.map((battle) => (
                 <div
                   key={battle.id}
@@ -623,14 +623,14 @@ const PodcastFeed = () => {
                   <div className="relative aspect-video rounded overflow-hidden bg-white/5 mb-0.5">
                     <div className="absolute inset-0 flex">
                       <div className="flex-1 flex items-center justify-center border-r border-white/10">
-                        <div className="w-7 h-7 rounded-full overflow-hidden border border-white/30">
+                        <div className="w-10 h-10 rounded-full overflow-hidden border border-white/30">
                           {battle.host_avatar ? (
                             <img src={battle.host_avatar} alt="" className="w-full h-full object-cover" />
                           ) : <div className="w-full h-full bg-white/20" />}
                         </div>
                       </div>
                       <div className="flex-1 flex items-center justify-center">
-                        <div className="w-7 h-7 rounded-full overflow-hidden border border-white/30">
+                        <div className="w-10 h-10 rounded-full overflow-hidden border border-white/30">
                           {battle.opponent_avatar ? (
                             <img src={battle.opponent_avatar} alt="" className="w-full h-full object-cover" />
                           ) : <div className="w-full h-full bg-white/20" />}
@@ -643,7 +643,7 @@ const PodcastFeed = () => {
                       BATTLE
                     </div>
                   </div>
-                  <h3 className="text-[9px] font-medium text-white/80 truncate group-hover:text-white">{battle.host_name} vs {battle.opponent_name}</h3>
+                  <h3 className="text-xs font-medium text-white/80 truncate group-hover:text-white">{battle.host_name} vs {battle.opponent_name}</h3>
                 </div>
               ))}
             </div>
@@ -653,13 +653,13 @@ const PodcastFeed = () => {
         {/* Live Channels Grid */}
         <section className="px-2 md:px-3 lg:px-4 mb-4">
           <div className="flex items-center justify-between mb-1.5">
-            <h2 className="text-[11px] font-bold text-white/80 flex items-center gap-1">
-              <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
+            <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
               Live channels
             </h2>
           </div>
           {liveHosts.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1.5 md:gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3">
               {liveHosts.map((host) => (
                 <Link
                   key={host.id}
@@ -683,9 +683,9 @@ const PodcastFeed = () => {
                       <Play className="h-6 w-6 text-white" fill="white" />
                     </div>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-2 mt-1">
                     <div
-                      className="w-5 h-5 rounded-full overflow-hidden flex-shrink-0 bg-white/10 mt-0.5"
+                      className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-white/10"
                       onClick={(e) => { e.preventDefault(); navigate(`/host/${host.host_id}`); }}
                     >
                       {host.host_avatar ? (
@@ -693,9 +693,9 @@ const PodcastFeed = () => {
                       ) : <div className="w-full h-full bg-white/20" />}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-[10px] font-medium text-white/90 truncate group-hover:text-white">{host.title}</h3>
-                      <p className="text-[9px] text-white/40 truncate">{host.host_name}</p>
-                      <p className="text-[8px] text-white/30">{host.category}</p>
+                      <h3 className="text-sm font-medium text-white/90 truncate group-hover:text-white">{host.title}</h3>
+                      <p className="text-xs text-white/40 truncate">{host.host_name}</p>
+                      <p className="text-[11px] text-white/30">{host.category}</p>
                     </div>
                   </div>
                 </Link>
@@ -719,8 +719,8 @@ const PodcastFeed = () => {
         {schedules.length > 0 && (
           <section className="px-2 md:px-3 lg:px-4 mb-4">
             <div className="flex items-center justify-between mb-1.5">
-              <h2 className="text-[11px] font-bold text-white/80 flex items-center gap-1">
-                <Calendar className="h-3 w-3 text-white/50" />
+              <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 text-white/50" />
                 Upcoming
               </h2>
             </div>
@@ -751,12 +751,12 @@ const PodcastFeed = () => {
         {episodes.length > 0 && (
           <section className="px-2 md:px-3 lg:px-4 mb-6">
             <div className="flex items-center justify-between mb-1.5">
-              <h2 className="text-[11px] font-bold text-white/80 flex items-center gap-1">
-                <Headphones className="h-3 w-3 text-white/50" />
+              <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5">
+                <Headphones className="h-3.5 w-3.5 text-white/50" />
                 Episodes
               </h2>
             </div>
-            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {episodes.slice(0, 6).map((episode) => (
                 <div
                   key={episode.id}
@@ -789,8 +789,8 @@ const PodcastFeed = () => {
                       </div>
                     )}
                   </div>
-                  <h3 className="text-[9px] font-medium line-clamp-2 text-white/80 group-hover:text-white">{episode.title}</h3>
-                  <p className="text-[8px] text-white/40 truncate">{episode.host_name}</p>
+                  <h3 className="text-xs font-medium line-clamp-2 text-white/80 group-hover:text-white">{episode.title}</h3>
+                  <p className="text-[11px] text-white/40 truncate">{episode.host_name}</p>
                 </div>
               ))}
             </div>
@@ -852,7 +852,7 @@ const PodcastFeed = () => {
           <div className="flex items-center justify-between px-4 py-2.5">
             <div className="flex items-center gap-2.5">
               <img src="/bario-logo.png" alt="Bario" className="h-6 w-6 object-contain flex-shrink-0" />
-              <p className="text-[11px] text-white/70">
+              <p className="text-sm text-white/70">
                 <span className="font-semibold text-white">Join the Bario community!</span>
                 {' '}Discover the best live audio streams anywhere.
               </p>
@@ -860,7 +860,7 @@ const PodcastFeed = () => {
             <Button
               onClick={() => navigate('/auth')}
               size="sm"
-              className="bg-white text-black hover:bg-white/90 text-[10px] h-7 px-4 font-semibold rounded flex-shrink-0"
+              className="bg-white text-black hover:bg-white/90 text-xs h-8 px-5 font-semibold rounded flex-shrink-0"
             >
               Sign Up
             </Button>
