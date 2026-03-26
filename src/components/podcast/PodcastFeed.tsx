@@ -373,13 +373,6 @@ const PodcastFeed = () => {
             <Music className="h-3.5 w-3.5" />
             <span className="text-[11px] font-medium">AI Remix</span>
           </button>
-          <button
-            onClick={() => navigate('/global-heatmap')}
-            className="flex items-center gap-2 w-full p-1.5 rounded hover:bg-white/5 transition-colors text-white/70 hover:text-white"
-          >
-            <Globe className="h-3.5 w-3.5" />
-            <span className="text-[11px] font-medium">Heatmap</span>
-          </button>
           {user && (
             <button
               onClick={() => {
