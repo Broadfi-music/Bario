@@ -478,7 +478,7 @@ const PodcastFeed = () => {
                       </div>
                     )}
                     <div className="absolute top-1.5 left-1.5 bg-white text-black text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse" />
+                      <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
                       LIVE
                     </div>
                     <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1.5">
@@ -634,7 +634,7 @@ const PodcastFeed = () => {
                       <div className="w-full h-full bg-white/10" />
                     )}
                     <div className="absolute top-0.5 left-0.5 bg-white text-black text-[7px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5">
-                      <span className="w-1 h-1 bg-black rounded-full animate-pulse" />
+                      <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
                       LIVE
                     </div>
                     <div className="absolute bottom-0.5 left-0.5 bg-black/70 text-white text-[7px] px-1 py-0.5 rounded">
@@ -740,7 +740,7 @@ const PodcastFeed = () => {
                     </div>
                     {currentEpisode?.id === episode.id && isPlaying && (
                       <div className="absolute top-0.5 left-0.5 bg-white text-black text-[7px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5">
-                        <span className="w-1 h-1 bg-black rounded-full animate-pulse" />
+                        <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
                         PLAYING
                       </div>
                     )}
