@@ -867,6 +867,12 @@ const PodcastFeed = () => {
           </div>
         )}
       </main>
+
+      {/* Discover Creators Modal */}
+      <DiscoverCreatorsModal
+        isOpen={showDiscoverCreators}
+        onClose={() => setShowDiscoverCreators(false)}
+      />
     </div>
   );
 
