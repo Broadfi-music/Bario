@@ -176,7 +176,14 @@ const PodcastFeed = () => {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    // Listen for battle invite modal open from mobile nav
+    const handleOpenBattle = () => setShowBattleInviteModal(true);
+    window.addEventListener('open-battle-invite', handleOpenBattle);
+
+    return () => {
+      supabase.removeChannel(channel);
+      window.removeEventListener('open-battle-invite', handleOpenBattle);
+    };
   }, []);
 
   const fetchSchedules = async () => {
