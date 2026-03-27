@@ -553,14 +553,11 @@ const PodcastFeed = () => {
           </div>
         )}
 
-        {/* Category tabs */}
+        {/* Category tabs — Twitch-style horizontal scroll */}
         <div className="px-2 md:px-3 lg:px-4 mb-3 flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
-          {['Live Channels', 'Battles', 'Trending', 'Just Chatting', 'Music', 'Podcast'].map((cat, i) => (
+          {['All', 'Music', 'Just Chatting', 'Entertainment', 'Sports', 'Technology', 'Finance', 'Wellness', 'Spirituality', 'Lifestyle'].map((cat, i) => (
             <button
               key={cat}
-              onClick={() => {
-                if (cat === 'Battles') setShowBattleInviteModal(true);
-              }}
               className={`flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded transition-colors ${
                 i === 0 ? 'bg-white text-black' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
               }`}
@@ -655,70 +652,65 @@ const PodcastFeed = () => {
           </section>
         )}
 
-        {/* Live Channels Grid */}
-        <section className="px-2 md:px-3 lg:px-4 mb-4">
-          <div className="flex items-center justify-between mb-1.5">
-            <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-              Live channels
-            </h2>
-          </div>
-          {liveHosts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3">
-              {liveHosts.map((host) => (
-                <Link
-                  key={host.id}
-                  to={`/podcasts?session=${host.id}`}
-                  className="group block"
-                >
-                   <div className="relative aspect-video rounded overflow-hidden bg-white/5 mb-0.5">
-                     {host.cover_image_url ? (
-                       <img src={host.cover_image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
-                     ) : (
-                       <div className="w-full h-full bg-white/10" />
-                     )}
-                    <div className="absolute top-0.5 left-0.5 bg-white text-black text-[7px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5">
-                      <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
-                      LIVE
-                    </div>
-                    <div className="absolute bottom-0.5 left-0.5 bg-black/70 text-white text-[7px] px-1 py-0.5 rounded">
-                      {formatViewers(host.listener_count)} listeners
-                    </div>
-                    <div className="hidden md:flex absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity items-center justify-center">
-                      <Play className="h-6 w-6 text-white" fill="white" />
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-1">
-                    <div
-                      className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 bg-white/10"
-                      onClick={(e) => { e.preventDefault(); navigate(`/host/${host.host_id}`); }}
+        {/* Live Channels — Twitch-style categories with horizontal scroll on mobile */}
+        {(() => {
+          // Group hosts by category
+          const categories = [...new Set(liveHosts.map(h => h.category || 'Music'))];
+          return categories.map(category => {
+            const categoryHosts = liveHosts.filter(h => (h.category || 'Music') === category);
+            if (categoryHosts.length === 0) return null;
+            return (
+              <section key={category} className="px-2 md:px-3 lg:px-4 mb-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                    {category}
+                  </h2>
+                </div>
+                {/* Mobile: horizontal scroll; Desktop: grid */}
+                <div className="flex md:grid md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 overflow-x-auto scrollbar-hide pb-1 -mx-2 px-2 md:mx-0 md:px-0 md:overflow-visible">
+                  {categoryHosts.map((host) => (
+                    <Link
+                      key={host.id}
+                      to={`/podcasts?session=${host.id}`}
+                      className="group block flex-shrink-0 w-[calc(25%-6px)] min-w-[80px] md:w-auto"
                     >
-                      {host.host_avatar ? (
-                        <img src={host.host_avatar} alt="" className="w-full h-full object-cover" />
-                      ) : <div className="w-full h-full bg-white/20" />}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-medium text-white/90 truncate group-hover:text-white">{host.title}</h3>
-                      <p className="text-xs text-white/40 truncate">{host.host_name}</p>
-                      <p className="text-[11px] text-white/30">{host.category}</p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white/5 rounded-md p-6 text-center">
-              <Headphones className="w-6 h-6 text-white/20 mx-auto mb-2" />
-              <h3 className="text-[11px] font-medium mb-0.5 text-white/60">No Live Sessions</h3>
-              <p className="text-[10px] text-white/30 mb-2">Be the first to go live</p>
-              {user && (
-                <Button onClick={() => navigate('/podcasts')} size="sm" className="bg-white text-black hover:bg-white/90 text-[10px] h-6 px-3 font-semibold">
-                  Go Live
-                </Button>
-              )}
-            </div>
-          )}
-        </section>
+                      <div className="relative aspect-video rounded overflow-hidden bg-white/5 mb-0.5">
+                        {host.cover_image_url ? (
+                          <img src={host.cover_image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full bg-white/10" />
+                        )}
+                        <div className="absolute top-0.5 left-0.5 bg-white text-black text-[6px] md:text-[7px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5">
+                          <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
+                          LIVE
+                        </div>
+                        <div className="absolute bottom-0.5 left-0.5 bg-black/70 text-white text-[6px] md:text-[7px] px-1 py-0.5 rounded">
+                          {formatViewers(host.listener_count)}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 mt-0.5">
+                        <div
+                          className="w-5 h-5 md:w-8 md:h-8 rounded-full overflow-hidden flex-shrink-0 bg-white/10"
+                          onClick={(e) => { e.preventDefault(); navigate(`/host/${host.host_id}`); }}
+                        >
+                          {host.host_avatar ? (
+                            <img src={host.host_avatar} alt="" className="w-full h-full object-cover" />
+                          ) : <div className="w-full h-full bg-white/20" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-[10px] md:text-sm font-medium text-white/90 truncate group-hover:text-white">{host.title}</h3>
+                          <p className="text-[9px] md:text-xs text-white/40 truncate">{host.host_name}</p>
+                          <span className="text-[8px] md:text-[11px] text-white/30">{host.category}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            );
+          });
+        })()}
 
         {/* Upcoming Schedules */}
         {schedules.length > 0 && (
