@@ -455,24 +455,33 @@ const Podcasts = () => {
         </header>
       )}
 
-      {/* Mobile Webapp Header - Bario logo + search */}
+      {/* Mobile Webapp Header - Bario logo + search bar */}
       {isMobile && !isPWA && (
         <header className="fixed top-0 left-0 right-0 z-50 bg-black border-b border-white/10">
-          <div className="flex items-center justify-between h-12 px-3">
-            <Link to="/" className="flex items-center gap-1.5">
+          <div className="flex items-center h-12 px-3 gap-2">
+            <Link to="/" className="flex items-center gap-1.5 flex-shrink-0">
               <img src="/bario-logo.png" alt="Bario" className="h-5 w-5 object-contain" />
               <span className="text-white font-bold text-sm tracking-tight">BARIO</span>
             </Link>
-            <button
-              onClick={() => {
-                const el = document.getElementById('mobile-feed-search');
-                if (el) el.focus();
-              }}
-              className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center"
-            >
-              <Search className="h-4 w-4 text-white/60" />
-            </button>
-            <div className="flex items-center gap-2">
+            <div className="flex-1 mx-2">
+              <div className="relative">
+                <input
+                  id="mobile-feed-search"
+                  type="text"
+                  placeholder="Search"
+                  value={feedSearch}
+                  onChange={(e) => setFeedSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && feedSearch.trim()) {
+                      navigate(`/podcasts?search=${encodeURIComponent(feedSearch.trim())}`);
+                    }
+                  }}
+                  className="bg-white/5 border border-white/10 rounded text-[11px] text-white placeholder:text-white/30 h-8 w-full pl-8 pr-2 focus:outline-none focus:border-white/30"
+                />
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/30" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
               {user ? (
                 <Link to="/dashboard">
                   <div className="w-7 h-7 rounded-full overflow-hidden bg-white/20" />
