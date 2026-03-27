@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, Mic, Radio, Home, Flame, Swords, Tv, Music, User, Search } from 'lucide-react';
+import { ChevronLeft, Mic, Radio, Home, Flame, Swords, Tv, Music, User, Search, Send, Bell } from 'lucide-react';
 import BattleInviteModal from '@/components/podcast/BattleInviteModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import NotificationBell from '@/components/NotificationBell';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import HostStudio from '@/components/podcast/HostStudio';
 import PodcastFeed from '@/components/podcast/PodcastFeed';
 import KickStyleLive from '@/components/podcast/KickStyleLive';
@@ -458,12 +459,12 @@ const Podcasts = () => {
       {/* Mobile Webapp Header - Bario logo + search bar */}
       {isMobile && !isPWA && (
         <header className="fixed top-0 left-0 right-0 z-50 bg-black border-b border-white/10">
-          <div className="flex items-center h-12 px-3 gap-2">
-            <Link to="/" className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex items-center h-12 px-3 gap-1.5">
+            <Link to="/" className="flex items-center gap-1 flex-shrink-0">
               <img src="/bario-logo.png" alt="Bario" className="h-5 w-5 object-contain" />
               <span className="text-white font-bold text-sm tracking-tight">BARIO</span>
             </Link>
-            <div className="flex-1 mx-2">
+            <div className="flex-1 mx-1">
               <div className="relative">
                 <input
                   id="mobile-feed-search"
@@ -476,12 +477,19 @@ const Podcasts = () => {
                       navigate(`/podcasts?search=${encodeURIComponent(feedSearch.trim())}`);
                     }
                   }}
-                  className="bg-white/5 border border-white/10 rounded text-[11px] text-white placeholder:text-white/30 h-8 w-full pl-8 pr-2 focus:outline-none focus:border-white/30"
+                  className="bg-white/5 border border-white/10 rounded text-[11px] text-white placeholder:text-white/30 h-7 w-full pl-7 pr-2 focus:outline-none focus:border-white/30"
                 />
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/30" />
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-white/30" />
               </div>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button
+                onClick={() => toast.info('Inbox coming soon')}
+                className="w-8 h-8 flex items-center justify-center text-white/60 hover:text-white"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+              <NotificationBell />
               {user ? (
                 <Link to="/dashboard">
                   <div className="w-7 h-7 rounded-full overflow-hidden bg-white/20" />
