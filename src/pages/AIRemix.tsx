@@ -1,7 +1,7 @@
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Music, Mic, Radio, Sliders, ArrowRight } from 'lucide-react';
+import { Search, Music, Sliders, ArrowRight, Menu, X } from 'lucide-react';
 import remixStudio from '@/assets/starters/remix-studio.jpg';
 import trendingRemix from '@/assets/starters/trending-remix.jpg';
 import genreRemix from '@/assets/starters/genre-remix.jpg';
@@ -11,6 +11,7 @@ const AIRemix = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [prompt, setPrompt] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const rotatingTexts = [
     'remix any song to amapiano',
@@ -22,12 +23,12 @@ const AIRemix = () => {
 
   const [textIndex, setTextIndex] = useState(0);
 
-  useState(() => {
+  useEffect(() => {
     const interval = setInterval(() => {
       setTextIndex(prev => (prev + 1) % rotatingTexts.length);
     }, 3000);
     return () => clearInterval(interval);
-  });
+  }, []);
 
   const starters = [
     {
@@ -59,72 +60,97 @@ const AIRemix = () => {
     }
   };
 
-  return (
-    <div className={`min-h-screen bg-white text-black ${isMobile ? 'pb-20' : ''}`}>
-      {/* Mobile Top Nav */}
-      {isMobile && (
-        <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-black/5">
-          <div className="flex items-center justify-between h-11 px-3">
-            <img src="/bario-logo.png" alt="Bario" className="h-6 w-auto" />
-            <nav className="flex items-center gap-4">
-              <button onClick={() => navigate('/ai-remix')} className="text-xs font-semibold text-black border-b-2 border-black pb-0.5">Projects</button>
-              <button onClick={() => navigate('/bario-music')} className="text-xs font-semibold text-black/40">Songs</button>
-              <button onClick={() => navigate('/podcasts')} className="text-xs font-semibold text-black/40">Spaces</button>
-            </nav>
-            <button onClick={() => navigate('/auth')} className="text-xs font-semibold text-black/60">Login</button>
-          </div>
-        </header>
-      )}
+  const navItems = [
+    { label: 'Projects', path: '/ai-remix', active: true },
+    { label: 'Songs', path: '/bario-music', active: false },
+    { label: 'Spaces', path: '/podcasts', active: false },
+  ];
 
-      {/* Desktop Nav */}
+  return (
+    <div className="min-h-screen bg-black text-white">
+      {/* Desktop/Tablet Sidebar */}
       {!isMobile && (
-        <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-black/5">
-          <div className="flex items-center h-12 px-4">
+        <aside className="fixed left-0 top-0 bottom-0 w-[200px] lg:w-[220px] bg-black border-r border-white/10 z-50 flex flex-col">
+          <div className="p-4">
             <Link to="/" className="flex items-center gap-1.5">
               <img src="/bario-logo.png" alt="Bario" className="h-6 w-auto" />
-              <span className="font-bold text-lg tracking-tight">BARIO</span>
+              <span className="font-bold text-lg tracking-tight text-white">BARIO</span>
             </Link>
+          </div>
+          <nav className="flex-1 px-3 mt-4">
+            {navItems.map((item) => (
+              <button
+                key={item.label}
+                onClick={() => navigate(item.path)}
+                className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium mb-1 transition-colors ${
+                  item.active
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+          <div className="p-4 border-t border-white/10">
+            <Link to="/auth">
+              <button className="w-full bg-white text-black text-xs font-semibold px-3 py-2 rounded-lg hover:bg-white/90">
+                LOGIN
+              </button>
+            </Link>
+          </div>
+        </aside>
+      )}
 
-            <div className="flex items-center gap-1 ml-4">
-              <Search className="h-3.5 w-3.5 text-black/40" />
-            </div>
-
-            <nav className="hidden md:flex items-center gap-5 ml-auto">
-              <button onClick={() => navigate('/bario-music')} className="text-xs font-medium text-black/50 hover:text-black">Songs</button>
-              <button onClick={() => navigate('/podcasts')} className="text-xs font-medium text-black/50 hover:text-black">Spaces</button>
-              <button onClick={() => navigate('/ai-remix')} className="text-xs font-medium text-black">Projects</button>
+      {/* Mobile Top Nav */}
+      {isMobile && (
+        <header className="fixed top-0 left-0 right-0 z-50 bg-black border-b border-white/10">
+          <div className="flex items-center justify-between h-11 px-3">
+            <Link to="/" className="flex items-center gap-1.5">
+              <img src="/bario-logo.png" alt="Bario" className="h-5 w-auto" />
+              <span className="font-bold text-sm tracking-tight text-white">BARIO</span>
+            </Link>
+            <nav className="flex items-center gap-4">
+              {navItems.map((item) => (
+                <button
+                  key={item.label}
+                  onClick={() => navigate(item.path)}
+                  className={`text-xs font-semibold ${
+                    item.active
+                      ? 'text-white border-b-2 border-white pb-0.5'
+                      : 'text-white/40'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
             </nav>
-
-            <div className="flex items-center gap-2 ml-4">
-              <Link to="/auth">
-                <button className="bg-black text-white text-xs font-semibold px-3 py-1.5 rounded hover:bg-black/80">LOGIN</button>
-              </Link>
-            </div>
+            <Link to="/auth" className="text-xs font-semibold text-white/60">Login</Link>
           </div>
         </header>
       )}
 
       {/* Main Content */}
-      <main className={`${isMobile ? 'pt-14' : 'pt-16'} px-4 max-w-4xl mx-auto`}>
+      <main className={`${isMobile ? 'pt-14 pb-20' : 'ml-[200px] lg:ml-[220px] pt-8'} px-4 max-w-4xl mx-auto`}>
         {/* Hero */}
         <div className="text-center py-8 md:py-16">
-          <div className="inline-flex items-center gap-1.5 bg-black/5 rounded-full px-3 py-1 text-[10px] font-semibold text-black/60 mb-4 uppercase tracking-wider">
+          <div className="inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-[10px] font-semibold text-white/60 mb-4 uppercase tracking-wider">
             <Sliders className="h-3 w-3" />
             READY TO REMIX
           </div>
 
-          <h1 className="text-3xl md:text-6xl font-bold text-black mb-8 leading-tight">
-            Remix the <span className="text-[#4ade80]">music</span> you imagine.
+          <h1 className="text-3xl md:text-6xl font-bold text-white mb-8 leading-tight">
+            Remix the <span className="text-white/60">music</span> you imagine.
           </h1>
 
           {/* Input Area */}
           <div className="max-w-2xl mx-auto">
-            <div className="border border-black/10 rounded-xl p-3 md:p-4 bg-white shadow-sm">
+            <div className="border border-white/10 rounded-xl p-3 md:p-4 bg-white/5">
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={rotatingTexts[textIndex]}
-                className="w-full resize-none border-none outline-none text-sm md:text-base text-black placeholder:text-black/30 bg-transparent min-h-[60px]"
+                className="w-full resize-none border-none outline-none text-sm md:text-base text-white placeholder:text-white/30 bg-transparent min-h-[60px]"
                 rows={2}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -133,18 +159,18 @@ const AIRemix = () => {
                   }
                 }}
               />
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-black/5">
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
                 <div className="flex items-center gap-2">
-                  <button className="w-7 h-7 rounded-full bg-black/5 flex items-center justify-center hover:bg-black/10">
-                    <Music className="h-3.5 w-3.5 text-black/40" />
+                  <button className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10">
+                    <Music className="h-3.5 w-3.5 text-white/40" />
                   </button>
-                  <button className="w-7 h-7 rounded-full bg-black/5 flex items-center justify-center hover:bg-black/10">
-                    <Sliders className="h-3.5 w-3.5 text-black/40" />
+                  <button className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10">
+                    <Sliders className="h-3.5 w-3.5 text-white/40" />
                   </button>
                 </div>
                 <button
                   onClick={handleSubmit}
-                  className="w-8 h-8 rounded-full bg-[#4ade80] flex items-center justify-center hover:bg-[#4ade80]/80 transition-colors"
+                  className="w-8 h-8 rounded-full bg-white flex items-center justify-center hover:bg-white/80 transition-colors"
                 >
                   <ArrowRight className="h-4 w-4 text-black" />
                 </button>
@@ -155,7 +181,7 @@ const AIRemix = () => {
 
         {/* Starters */}
         <section className="mb-12">
-          <h2 className="text-lg md:text-xl font-bold text-black mb-4">Starters</h2>
+          <h2 className="text-lg md:text-xl font-bold text-white mb-4">Starters</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {starters.map((starter, i) => (
               <button
@@ -172,7 +198,7 @@ const AIRemix = () => {
                 <img src={starter.image} alt={starter.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" width={512} height={512} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                 {starter.badge && (
-                  <span className="absolute top-2 left-2 bg-[#4ade80] text-black text-[8px] font-bold px-1.5 py-0.5 rounded">
+                  <span className="absolute top-2 left-2 bg-white text-black text-[8px] font-bold px-1.5 py-0.5 rounded">
                     {starter.badge}
                   </span>
                 )}
@@ -189,16 +215,16 @@ const AIRemix = () => {
 
         {/* What will you remix */}
         <section className="mb-12">
-          <div className="inline-flex items-center gap-1.5 bg-black/5 rounded-full px-3 py-1 text-[10px] font-semibold text-black/60 mb-4 uppercase tracking-wider">
-            <span className="w-1.5 h-1.5 bg-[#4ade80] rounded-full" />
+          <div className="inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-[10px] font-semibold text-white/60 mb-4 uppercase tracking-wider">
+            <span className="w-1.5 h-1.5 bg-white rounded-full" />
             WHAT WILL YOU REMIX?
           </div>
 
-          <div className="bg-black rounded-2xl p-6 md:p-10 text-white">
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 md:p-10 text-white">
             <h2 className="text-2xl md:text-4xl font-bold mb-4">
               Everything you need to remix, publish, and share. All in one place.
             </h2>
-            <p className="text-white/60 text-sm md:text-base mb-6 max-w-xl">
+            <p className="text-white/40 text-sm md:text-base mb-6 max-w-xl">
               Upload any song, choose your genre, and let AI transform it into a professional-quality remix in seconds.
             </p>
             <Link to="/auth">
@@ -209,36 +235,9 @@ const AIRemix = () => {
           </div>
         </section>
 
-        {/* Features grid */}
-        <section className="mb-12">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-black/[0.02] rounded-xl p-5">
-              <div className="w-10 h-10 rounded-lg bg-[#4ade80]/10 flex items-center justify-center mb-3">
-                <Music className="h-5 w-5 text-[#4ade80]" />
-              </div>
-              <h3 className="font-semibold text-sm mb-1">Remix</h3>
-              <p className="text-xs text-black/50">Chat with Bario just like you're in a studio. Remix full-length songs with rich musicality and dynamic vocals.</p>
-            </div>
-            <div className="bg-black/[0.02] rounded-xl p-5">
-              <div className="w-10 h-10 rounded-lg bg-[#4ade80]/10 flex items-center justify-center mb-3">
-                <Mic className="h-5 w-5 text-[#4ade80]" />
-              </div>
-              <h3 className="font-semibold text-sm mb-1">Spaces</h3>
-              <p className="text-xs text-black/50">Go live, host rooms, battle other creators. Build your audience with real-time audio interaction.</p>
-            </div>
-            <div className="bg-black/[0.02] rounded-xl p-5">
-              <div className="w-10 h-10 rounded-lg bg-[#4ade80]/10 flex items-center justify-center mb-3">
-                <Radio className="h-5 w-5 text-[#4ade80]" />
-              </div>
-              <h3 className="font-semibold text-sm mb-1">Publish</h3>
-              <p className="text-xs text-black/50">Share your remixes with the world. Build your catalog and grow your following on Bario.</p>
-            </div>
-          </div>
-        </section>
-
         {/* Footer */}
-        <footer className="border-t border-black/5 py-6 text-center">
-          <p className="text-xs text-black/30">© 2025 Bario. All rights reserved.</p>
+        <footer className="border-t border-white/10 py-6 text-center">
+          <p className="text-xs text-white/30">© 2025 Bario. All rights reserved.</p>
         </footer>
       </main>
     </div>

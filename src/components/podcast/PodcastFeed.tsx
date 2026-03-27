@@ -667,31 +667,30 @@ const PodcastFeed = () => {
                     {category}
                   </h2>
                 </div>
-                {/* Mobile: horizontal scroll; Desktop: grid */}
-                <div className="flex md:grid md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 overflow-x-auto scrollbar-hide pb-1 -mx-2 px-2 md:mx-0 md:px-0 md:overflow-visible">
+                {/* Mobile: 2-col horizontal scroll like Twitch; Desktop: grid */}
+                <div className="flex md:grid md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-3 overflow-x-auto scrollbar-hide pb-2 -mx-2 px-2 md:mx-0 md:px-0 md:overflow-visible">
                   {categoryHosts.map((host) => (
                     <Link
                       key={host.id}
                       to={`/podcasts?session=${host.id}`}
-                      className="group block flex-shrink-0 w-[calc(25%-6px)] min-w-[80px] md:w-auto"
+                      className="group block flex-shrink-0 w-[calc(50%-8px)] min-w-[150px] md:w-auto"
                     >
-                      <div className="relative aspect-video rounded overflow-hidden bg-white/5 mb-0.5">
+                      <div className="relative aspect-video rounded-lg overflow-hidden bg-white/5 mb-1">
                         {host.cover_image_url ? (
                           <img src={host.cover_image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
                         ) : (
                           <div className="w-full h-full bg-white/10" />
                         )}
-                        <div className="absolute top-0.5 left-0.5 bg-white text-black text-[6px] md:text-[7px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5">
-                          <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
+                        <div className="absolute top-1 left-1 bg-red-600 text-white text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
                           LIVE
                         </div>
-                        <div className="absolute bottom-0.5 left-0.5 bg-black/70 text-white text-[6px] md:text-[7px] px-1 py-0.5 rounded">
-                          {formatViewers(host.listener_count)}
+                        <div className="absolute bottom-1 left-1 bg-black/80 text-white text-[9px] md:text-[10px] px-1.5 py-0.5 rounded">
+                          {formatViewers(host.listener_count)} viewers
                         </div>
                       </div>
-                      <div className="flex gap-1 mt-0.5">
+                      <div className="flex gap-2 mt-1">
                         <div
-                          className="w-5 h-5 md:w-8 md:h-8 rounded-full overflow-hidden flex-shrink-0 bg-white/10"
+                          className="w-8 h-8 md:w-8 md:h-8 rounded-full overflow-hidden flex-shrink-0 bg-white/10"
                           onClick={(e) => { e.preventDefault(); navigate(`/host/${host.host_id}`); }}
                         >
                           {host.host_avatar ? (
@@ -699,9 +698,9 @@ const PodcastFeed = () => {
                           ) : <div className="w-full h-full bg-white/20" />}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="text-[10px] md:text-sm font-medium text-white/90 truncate group-hover:text-white">{host.title}</h3>
-                          <p className="text-[9px] md:text-xs text-white/40 truncate">{host.host_name}</p>
-                          <span className="text-[8px] md:text-[11px] text-white/30">{host.category}</span>
+                          <h3 className="text-xs md:text-sm font-medium text-white/90 truncate group-hover:text-white">{host.title}</h3>
+                          <p className="text-[11px] md:text-xs text-white/40 truncate">{host.host_name}</p>
+                          <span className="text-[10px] md:text-[11px] text-white/30">{host.category}</span>
                         </div>
                       </div>
                     </Link>
