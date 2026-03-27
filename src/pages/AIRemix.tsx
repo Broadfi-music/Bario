@@ -131,21 +131,21 @@ const AIRemix = () => {
       )}
 
       {/* Main Content */}
-      <main className={`${isMobile ? 'pt-14 pb-20' : 'ml-[200px] lg:ml-[220px] pt-8'} px-4 max-w-4xl mx-auto`}>
+      <main className={`${isMobile ? 'pt-12 pb-16' : 'ml-[200px] lg:ml-[220px] pt-4'} px-3 md:px-4 max-w-4xl mx-auto`}>
         {/* Hero */}
-        <div className="text-center py-4 md:py-8">
-          <div className="inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-[10px] font-semibold text-white/60 mb-3 uppercase tracking-wider">
+        <div className="text-center py-2 md:py-4">
+          <div className="inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-[10px] font-semibold text-white/60 mb-2 uppercase tracking-wider">
             <Sliders className="h-3 w-3" />
             READY TO REMIX
           </div>
 
-          <h1 className="text-2xl md:text-5xl font-bold text-white mb-4 leading-tight">
+          <h1 className="text-2xl md:text-4xl font-bold text-white mb-2 leading-tight">
             Remix the <span className="text-white/60">music</span> you imagine.
           </h1>
 
           {/* Input Area */}
           <div className="max-w-2xl mx-auto">
-            <div className="border border-white/10 rounded-xl p-3 md:p-4 bg-white/5">
+            <div className="border border-white/10 rounded-xl p-2.5 md:p-3 bg-white/5">
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
