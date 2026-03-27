@@ -555,39 +555,38 @@ const PodcastFeed = () => {
 
         {/* Categories removed for density */}
 
-        {/* Creators — denser row */}
-        <section className="px-1.5 md:px-2 lg:px-3 mb-1.5">
-          <div className="bg-white/5 rounded-md p-1.5 md:p-2">
-            <div className="flex gap-1.5 md:gap-2 overflow-x-auto scrollbar-hide pb-0.5">
+        {/* Creators — Weverse-style full-width */}
+        <section className="px-1.5 md:px-2 lg:px-3 mb-1">
+          <h3 className="text-xs font-bold text-white/70 mb-1 px-0.5">Creators</h3>
+          <div className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide pb-1">
               <button
                 onClick={() => setShowDiscoverCreators(true)}
-                className="flex-shrink-0 flex flex-col items-center gap-0.5"
+                className="flex-shrink-0 flex flex-col items-center gap-1"
               >
-                <div className="w-11 h-11 md:w-12 md:h-12 rounded-full bg-white/5 border border-dashed border-white/20 flex items-center justify-center hover:bg-white/10 transition-colors">
-                  <Plus className="h-4 w-4 text-white/50" />
+                <div className="w-16 h-16 md:w-[72px] md:h-[72px] lg:w-20 lg:h-20 rounded-full bg-white/5 border-2 border-dashed border-white/20 flex items-center justify-center hover:bg-white/10 transition-colors">
+                  <Plus className="h-5 w-5 md:h-6 md:w-6 text-white/50" />
                 </div>
-                <span className="text-[8px] md:text-[9px] text-white/40 w-11 md:w-12 text-center truncate leading-tight">Discover</span>
+                <span className="text-[10px] text-white/40 w-16 md:w-[72px] lg:w-20 text-center truncate leading-tight">Discover</span>
               </button>
               {sidebarCreators.slice(0, 12).map(creator => (
                 <button
                   key={creator.user_id}
                   onClick={() => navigate(`/host/${creator.user_id}`)}
-                  className="flex-shrink-0 flex flex-col items-center gap-0.5"
+                  className="flex-shrink-0 flex flex-col items-center gap-1"
                 >
-                  <div className="w-11 h-11 md:w-12 md:h-12 rounded-full overflow-hidden bg-white/10 border border-white/10 hover:border-white/30 transition-colors">
+                  <div className="w-16 h-16 md:w-[72px] md:h-[72px] lg:w-20 lg:h-20 rounded-full overflow-hidden bg-white/10 border-2 border-white/10 hover:border-white/40 transition-colors">
                     {creator.avatar_url ? (
                       <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-white/20" />
                     )}
                   </div>
-                  <span className="text-[8px] md:text-[9px] text-white/60 w-11 md:w-12 text-center truncate leading-tight">
+                  <span className="text-[10px] text-white/60 w-16 md:w-[72px] lg:w-20 text-center truncate leading-tight">
                     {creator.full_name || creator.username || 'Creator'}
                   </span>
                 </button>
               ))}
             </div>
-          </div>
         </section>
 
         {/* Live Battles Section */}
