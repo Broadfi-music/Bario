@@ -379,16 +379,25 @@ const PodcastFeed = () => {
             <span className="text-[11px] font-medium">AI Remix</span>
           </button>
           {user && (
-            <button
-              onClick={() => {
-                navigate('/podcasts');
-                setTimeout(() => window.dispatchEvent(new CustomEvent('open-host-studio')), 100);
-              }}
-              className="flex items-center gap-2 w-full p-1.5 rounded bg-white text-black hover:bg-white/90 transition-colors mt-1"
-            >
-              <Mic className="h-3.5 w-3.5" />
-              <span className="text-[11px] font-semibold">Go Live</span>
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  navigate('/podcasts');
+                  setTimeout(() => window.dispatchEvent(new CustomEvent('open-host-studio')), 100);
+                }}
+                className="flex items-center gap-2 w-full p-1.5 rounded bg-white text-black hover:bg-white/90 transition-colors mt-1"
+              >
+                <Mic className="h-3.5 w-3.5" />
+                <span className="text-[11px] font-semibold">Go Live</span>
+              </button>
+              <button
+                onClick={() => navigate(`/host/${user.id}`)}
+                className="flex items-center gap-2 w-full p-1.5 rounded hover:bg-white/5 transition-colors text-white/70 hover:text-white mt-0.5"
+              >
+                <User className="h-3.5 w-3.5" />
+                <span className="text-[11px] font-medium">My Page</span>
+              </button>
+            </>
           )}
         </div>
 

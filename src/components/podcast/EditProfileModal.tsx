@@ -90,7 +90,8 @@ export const EditProfileModal = ({ open, onOpenChange, profile, coverImageUrl, o
           full_name: fullName,
           username: username,
           bio: bio,
-          avatar_url: avatarUrl
+          avatar_url: avatarUrl,
+          cover_image_url: coverUrl || null
         })
         .eq('user_id', profile.user_id);
 

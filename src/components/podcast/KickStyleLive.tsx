@@ -188,7 +188,20 @@ const KickStyleLive = ({
 
     // Demo sessions use simulated top gifters
     if (isDemoSessionId(currentSession.id)) {
-      const demoGifterNames = ['ThoughtLeader', 'MindfulMike', 'GrowthMaster', 'WisdomSeeker', 'DeepThinker', 'SoulfulSara', 'PositivePete', 'BookWorm'];
+      const roomNum = currentSession.id.replace('demo-room-', '');
+      const GIFTER_NAMES_BY_ROOM: Record<string, string[]> = {
+        '1': ['TechBoss', 'AIFanatic', 'CodeMaster', 'FutureThinker', 'DigitalNomad', 'DataWizard', 'NeuralNet', 'ByteKing'],
+        '2': ['LoveCoach', 'HeartGuard', 'RealQueenB', 'TruthTeller', 'SelfCarePro', 'BoundaryBoss', 'IntuitionQ', 'VibezOnly'],
+        '3': ['CryptoKing', 'DiamondHands', 'MoonWalker', 'SatoshiFan', 'BlockchainBro', 'HODLer', 'DeFiDegen', 'TokenMaster'],
+        '4': ['ComedyFan', 'LaughKing', 'JokesMaster', 'HumorVibes', 'FunnyBone', 'StandUpStar', 'PunchlineP', 'GiggleMon'],
+        '5': ['HealingSoul', 'PeaceMaker', 'LightWorker', 'ZenVibes', 'WarmHeart', 'InnerLight', 'GentleSpirit', 'ComfortZone'],
+        '6': ['DesiQueen', 'BollyLover', 'MusicJunkie', 'SongBird', 'RhythmKing', 'MelodyMaker', 'BeatDrop', 'FilmiBuff'],
+        '7': ['CricketFan99', 'IPLMaster', 'SixerKing', 'BowlerBoss', 'RunChaser', 'PitchPerfect', 'WicketFire', 'SpinWizard'],
+        '8': ['YogiLife', 'PeaceSeeker', 'MeditatorX', 'CalmMind', 'SpiritGuide', 'BreathWork', 'MantraVibes', 'ChakraFlow'],
+        '9': ['GoalKing', 'FootballFan', 'PitchMaster', 'StrikerPro', 'MatchDay', 'HatTrickHero', 'DefenderX', 'UltrasVibe'],
+        '10': ['GulfTechie', 'MENABuilder', 'DesertEagle', 'VisionaryX', 'InnovateME', 'EmiratesPro', 'SaudiTech', 'DubaiDream'],
+      };
+      const demoGifterNames = GIFTER_NAMES_BY_ROOM[roomNum] || ['ThoughtLeader', 'MindfulMike', 'GrowthMaster', 'WisdomSeeker', 'DeepThinker', 'SoulfulSara', 'PositivePete', 'BookWorm'];
       const initialGifters = demoGifterNames.map((name, i) => ({
         id: `demo-gifter-${i}`,
         user_id: `demo-gifter-${i}`,
