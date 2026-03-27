@@ -1,7 +1,8 @@
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Music, Sliders, ArrowRight, Menu, X } from 'lucide-react';
+import { Search, Music, Sliders, ArrowRight, Menu, X, Upload, Link as LinkIcon, FileAudio, Plus } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import remixStudio from '@/assets/starters/remix-studio.jpg';
 import trendingRemix from '@/assets/starters/trending-remix.jpg';
 import genreRemix from '@/assets/starters/genre-remix.jpg';
@@ -12,6 +13,22 @@ const AIRemix = () => {
   const isMobile = useIsMobile();
   const [prompt, setPrompt] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
+  const [showGenre, setShowGenre] = useState(false);
+  const [selectedGenre, setSelectedGenre] = useState('');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [audioUrl, setAudioUrl] = useState('');
+  const [uploadedName, setUploadedName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const genres = [
+    'pop', 'rap', 'rock', 'r&b', 'classical', 'jazz', 'soul & funk',
+    'afro', 'indie & alternative', 'latin music', 'dance & edm',
+    'reggaeton', 'electronic', 'country', 'metal', 'k-pop',
+    'reggae', 'blues', 'folk', 'lofi', 'acoustic',
+    'caribbean', 'japanese music', 'amapiano', 'gospel', 'instrumental',
+    'trap', 'funk', 'hiphop'
+  ];
 
   const rotatingTexts = [
     'remix any song to amapiano',
@@ -54,9 +71,40 @@ const AIRemix = () => {
     },
   ];
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setUploadedFile(file);
+      setUploadedName(file.name);
+      setShowUpload(false);
+    }
+  };
+
+  const handleAddUrl = () => {
+    if (audioUrl.trim()) {
+      let name = 'Music Link';
+      try {
+        const url = new URL(audioUrl);
+        if (url.hostname.includes('spotify')) name = 'Spotify Track';
+        else if (url.hostname.includes('soundcloud')) name = 'SoundCloud Track';
+        else if (url.hostname.includes('youtube')) name = 'YouTube Audio';
+        else if (url.hostname.includes('apple')) name = 'Apple Music Track';
+      } catch {}
+      setUploadedName(name);
+      setShowUpload(false);
+    }
+  };
+
   const handleSubmit = () => {
-    if (prompt.trim()) {
-      navigate(`/dashboard/new-remix?prompt=${encodeURIComponent(prompt.trim())}`);
+    if (prompt.trim() || uploadedFile || audioUrl) {
+      navigate('/dashboard/new-remix', {
+        state: {
+          prompt: prompt.trim(),
+          genre: selectedGenre,
+          uploadedFileName: uploadedName,
+          audioUrl: audioUrl || undefined,
+        }
+      });
     }
   };
 
@@ -159,13 +207,38 @@ const AIRemix = () => {
                   }
                 }}
               />
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
-                <div className="flex items-center gap-2">
-                  <button className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10">
-                    <Music className="h-3.5 w-3.5 text-white/40" />
+
+              {/* Uploaded file indicator */}
+              {uploadedName && (
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <FileAudio className="h-3.5 w-3.5 text-white/60" />
+                  <span className="text-[11px] text-white/60 truncate flex-1">{uploadedName}</span>
+                  <button onClick={() => { setUploadedFile(null); setUploadedName(''); setAudioUrl(''); }} className="text-white/40 hover:text-white">
+                    <X className="h-3 w-3" />
                   </button>
-                  <button className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10">
-                    <Sliders className="h-3.5 w-3.5 text-white/40" />
+                </div>
+              )}
+
+              {/* Genre indicator */}
+              {selectedGenre && (
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <Music className="h-3.5 w-3.5 text-white/60" />
+                  <span className="text-[11px] text-white/60">Genre: {selectedGenre.charAt(0).toUpperCase() + selectedGenre.slice(1)}</span>
+                  <button onClick={() => setSelectedGenre('')} className="text-white/40 hover:text-white">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
+                <div className="flex items-center gap-1.5">
+                  <button onClick={() => { setShowUpload(!showUpload); setShowGenre(false); }} className={`h-7 px-2.5 rounded-full text-[10px] font-medium flex items-center gap-1.5 transition-colors ${showUpload ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>
+                    <Upload className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Upload</span>
+                  </button>
+                  <button onClick={() => { setShowGenre(!showGenre); setShowUpload(false); }} className={`h-7 px-2.5 rounded-full text-[10px] font-medium flex items-center gap-1.5 transition-colors ${showGenre ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}>
+                    <Sliders className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Genre</span>
                   </button>
                 </div>
                 <button
@@ -175,6 +248,48 @@ const AIRemix = () => {
                   <ArrowRight className="h-4 w-4 text-black" />
                 </button>
               </div>
+
+              {/* Upload Panel */}
+              {showUpload && (
+                <div className="mt-2 pt-2 border-t border-white/5 space-y-2">
+                  <input ref={fileInputRef} type="file" accept="audio/*" className="hidden" onChange={handleFileUpload} />
+                  <button onClick={() => fileInputRef.current?.click()} className="w-full border border-dashed border-white/20 rounded-lg p-3 text-center hover:border-white/40 transition-colors">
+                    <Upload className="h-5 w-5 mx-auto mb-1 text-white/40" />
+                    <p className="text-[11px] text-white/40">Click to upload audio (MP3, WAV)</p>
+                  </button>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      placeholder="Or paste music link..."
+                      value={audioUrl}
+                      onChange={(e) => setAudioUrl(e.target.value)}
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-white/30 outline-none"
+                    />
+                    <button onClick={handleAddUrl} disabled={!audioUrl} className="px-3 py-2 bg-white/10 rounded-lg text-xs text-white/60 hover:bg-white/20 disabled:opacity-30">
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Genre Panel */}
+              {showGenre && (
+                <div className="mt-2 pt-2 border-t border-white/5">
+                  <div className="flex flex-wrap gap-1.5 max-h-[120px] overflow-y-auto">
+                    {genres.map((genre) => (
+                      <button
+                        key={genre}
+                        onClick={() => { setSelectedGenre(genre); setShowGenre(false); }}
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors ${
+                          selectedGenre === genre ? 'bg-white text-black' : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70'
+                        }`}
+                      >
+                        {genre.charAt(0).toUpperCase() + genre.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -193,7 +308,7 @@ const AIRemix = () => {
                     navigate('/dashboard/new-remix');
                   }
                 }}
-                className="group relative aspect-[5/4] rounded-lg overflow-hidden text-left"
+                className="group relative aspect-[4/3] rounded-lg overflow-hidden text-left"
               >
                 <img src={starter.image} alt={starter.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
