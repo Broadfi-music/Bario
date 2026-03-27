@@ -630,7 +630,7 @@ const HostProfile = () => {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 mb-6 flex-wrap">
+          <div className="flex items-center gap-2 mb-4 flex-wrap">
             {host.is_live && (
               <Button 
                 onClick={goToLiveSession}
@@ -688,16 +688,16 @@ const HostProfile = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4">
-          <TabsList className="bg-white/5 w-full justify-start border-b border-white/10 rounded-none h-12 p-0">
+          <TabsList className="bg-white/5 w-full justify-start border-b border-white/10 rounded-none h-10 p-0">
             <TabsTrigger 
               value="episodes" 
-              className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#53fc18] rounded-none h-full px-4"
+              className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-white rounded-none h-full px-4 text-sm"
             >
               Episodes
             </TabsTrigger>
             <TabsTrigger 
               value="schedule" 
-              className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-[#53fc18] rounded-none h-full px-4"
+              className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-white rounded-none h-full px-4 text-sm"
             >
               Schedule
             </TabsTrigger>
