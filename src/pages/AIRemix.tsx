@@ -179,9 +179,9 @@ const AIRemix = () => {
       )}
 
       {/* Main Content */}
-      <main className={`${isMobile ? 'pt-11 pb-14' : 'ml-[200px] lg:ml-[220px]'} px-0 max-w-5xl mx-auto`}>
+      <main className={`${isMobile ? 'pt-11 pb-14' : 'ml-[200px] lg:ml-[220px]'}`}>
         {/* Hero */}
-        <div className="text-center py-2 px-3">
+        <div className="text-center py-2 px-4 max-w-5xl mx-auto">
           <h1 className="text-2xl md:text-4xl font-bold text-white mb-2 leading-tight">
             Remix the <span className="text-white/60">music</span> you imagine.
           </h1>
@@ -289,10 +289,10 @@ const AIRemix = () => {
           </div>
         </div>
 
-        {/* Starters — edge-to-edge, large images */}
-        <section className="px-1">
-          <h2 className="text-sm md:text-base font-bold text-white mb-1.5 px-2">Starters</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-0.5">
+        {/* Starters — centered */}
+        <section className="max-w-5xl mx-auto px-4">
+          <h2 className="text-sm md:text-base font-bold text-white mb-1.5">Starters</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-1">
             {starters.map((starter, i) => (
               <button
                 key={i}
@@ -303,7 +303,7 @@ const AIRemix = () => {
                     navigate('/dashboard/new-remix');
                   }
                 }}
-                className="group relative aspect-[4/3] overflow-hidden text-left"
+                className="group relative aspect-[4/3] overflow-hidden text-left rounded-lg"
               >
                 <img src={starter.image} alt={starter.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -323,9 +323,9 @@ const AIRemix = () => {
           </div>
         </section>
 
-        {/* CTA — flush */}
-        <section className="px-1 mt-0.5">
-          <div className="bg-white/5 border border-white/10 p-4 md:p-6 text-white text-center">
+        {/* CTA — centered */}
+        <section className="max-w-5xl mx-auto px-4 mt-2">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6 md:p-8 text-white text-center">
             <h2 className="text-lg md:text-2xl font-bold mb-1">
               Everything you need to remix, publish, and share.
             </h2>
@@ -341,7 +341,7 @@ const AIRemix = () => {
         </section>
 
         {/* Footer */}
-        <footer className="border-t border-white/10 py-2 text-center mt-0.5">
+        <footer className="max-w-5xl mx-auto border-t border-white/10 py-2 text-center mt-2">
           <p className="text-[9px] text-white/30">© 2025 Bario. All rights reserved.</p>
         </footer>
       </main>
