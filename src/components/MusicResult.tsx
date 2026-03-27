@@ -538,9 +538,9 @@ export const MusicResult = ({
                     Download Stems
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handlePublish}>
+                  <DropdownMenuItem onClick={handlePublish} disabled={isPublished || isPublishing}>
                     <Globe className="h-4 w-4 mr-2" />
-                    Publish
+                    {isPublished ? 'Published ✓' : isPublishing ? 'Publishing...' : 'Publish'}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleAddToPlaylist}>
                     <ListMusic className="h-4 w-4 mr-2" />
