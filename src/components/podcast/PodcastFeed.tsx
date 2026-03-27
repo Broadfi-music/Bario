@@ -555,39 +555,38 @@ const PodcastFeed = () => {
 
         {/* Categories removed for density */}
 
-        {/* Creators — compact horizontal scroll */}
+        {/* Creators — Weverse-style dense row */}
         <section className="px-2 md:px-3 lg:px-4 mb-2">
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="text-xs font-bold text-white/80">Creators</h2>
-          </div>
-          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
-            <button
-              onClick={() => setShowDiscoverCreators(true)}
-              className="flex-shrink-0 flex flex-col items-center gap-1"
-            >
-              <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors">
-                <Plus className="h-4 w-4 text-white/50" />
-              </div>
-              <span className="text-[9px] text-white/40 w-12 md:w-14 text-center truncate">Discover</span>
-            </button>
-            {sidebarCreators.slice(0, 10).map(creator => (
+          <div className="bg-white/5 rounded-lg p-2 md:p-3">
+            <div className="flex gap-2 md:gap-3 overflow-x-auto scrollbar-hide">
               <button
-                key={creator.user_id}
-                onClick={() => navigate(`/host/${creator.user_id}`)}
+                onClick={() => setShowDiscoverCreators(true)}
                 className="flex-shrink-0 flex flex-col items-center gap-1"
               >
-                <div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden bg-white/10 border border-white/10">
-                  {creator.avatar_url ? (
-                    <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-white/20" />
-                  )}
+                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-white/5 border border-dashed border-white/20 flex items-center justify-center hover:bg-white/10 transition-colors">
+                  <Plus className="h-5 w-5 text-white/50" />
                 </div>
-                <span className="text-[9px] text-white/60 w-12 md:w-14 text-center truncate">
-                  {creator.full_name || creator.username || 'Creator'}
-                </span>
+                <span className="text-[9px] text-white/40 w-14 md:w-16 text-center truncate">Discover</span>
               </button>
-            ))}
+              {sidebarCreators.slice(0, 10).map(creator => (
+                <button
+                  key={creator.user_id}
+                  onClick={() => navigate(`/host/${creator.user_id}`)}
+                  className="flex-shrink-0 flex flex-col items-center gap-1"
+                >
+                  <div className="w-14 h-14 md:w-16 md:h-16 rounded-full overflow-hidden bg-white/10 border-2 border-white/10 hover:border-white/30 transition-colors">
+                    {creator.avatar_url ? (
+                      <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-white/20" />
+                    )}
+                  </div>
+                  <span className="text-[9px] text-white/60 w-14 md:w-16 text-center truncate leading-tight">
+                    {creator.full_name || creator.username || 'Creator'}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -645,7 +644,7 @@ const PodcastFeed = () => {
               Live channels
             </h2>
           </div>
-          <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-x-2 gap-y-3">
+          <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-x-2 gap-y-3">
             {filteredHosts.map((host) => (
               <Link
                 key={host.id}
