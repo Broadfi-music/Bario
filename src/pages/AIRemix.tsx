@@ -181,7 +181,7 @@ const AIRemix = () => {
       {/* Main Content */}
       <main className={`${isMobile ? 'pt-11 pb-14' : 'ml-[200px] lg:ml-[220px]'}`}>
         {/* Hero */}
-        <div className="text-center py-2 px-3">
+        <div className="text-center py-2 px-4 max-w-5xl mx-auto">
           <h1 className="text-2xl md:text-4xl font-bold text-white mb-2 leading-tight">
             Remix the <span className="text-white/60">music</span> you imagine.
           </h1>
