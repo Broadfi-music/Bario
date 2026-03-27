@@ -236,8 +236,8 @@ const AIRemix = () => {
         </section>
 
         {/* Footer */}
-        <footer className="border-t border-white/10 py-6 text-center">
-          <p className="text-xs text-white/30">© 2025 Bario. All rights reserved.</p>
+        <footer className="border-t border-white/10 py-3 text-center">
+          <p className="text-[10px] text-white/30">© 2025 Bario. All rights reserved.</p>
         </footer>
       </main>
     </div>
