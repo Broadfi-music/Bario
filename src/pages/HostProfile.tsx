@@ -634,25 +634,28 @@ const HostProfile = () => {
             {host.is_live && (
               <Button 
                 onClick={goToLiveSession}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                size="sm"
+                className="bg-black border border-white/20 text-white hover:bg-white/10 text-xs h-8 px-2.5"
               >
-                <Radio className="h-4 w-4 mr-2" />
+                <Radio className="h-3 w-3 mr-1.5" />
                 Live
               </Button>
             )}
             <Button
               onClick={handleFollow}
               variant={isFollowing ? "outline" : "default"}
-              className={isFollowing ? "border-[#53fc18] text-[#53fc18]" : "bg-[#53fc18] text-black hover:bg-[#53fc18]/90"}
+              size="sm"
+              className={`text-xs h-8 px-2.5 ${isFollowing ? "border-white/30 text-white/80" : "bg-white text-black hover:bg-white/90"}`}
             >
-              <Heart className={`h-4 w-4 mr-2 ${isFollowing ? 'fill-[#53fc18]' : ''}`} />
+              <Heart className={`h-3 w-3 mr-1.5 ${isFollowing ? 'fill-white/80' : ''}`} />
               {isFollowing ? 'Following' : 'Follow'}
             </Button>
             <Button
               variant="outline"
-              className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+              size="sm"
+              className="border-white/20 text-white/80 hover:bg-white/10 text-xs h-8 px-2.5"
             >
-              <UserPlus className="h-4 w-4 mr-2" />
+              <UserPlus className="h-3 w-3 mr-1.5" />
               Subscribe
             </Button>
             {isOwner && (
@@ -660,21 +663,11 @@ const HostProfile = () => {
                 <Button
                   onClick={() => setShowEditProfile(true)}
                   variant="outline"
-                  className="border-white/20 text-white hover:bg-white/10"
+                  size="sm"
+                  className="border-white/20 text-white/80 hover:bg-white/10 text-xs h-8 px-2.5"
                 >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit Profile
-                </Button>
-                <Button
-                  onClick={() => {
-                    setSelectedEpisode(null);
-                    setShowEditEpisode(true);
-                  }}
-                  variant="outline"
-                  className="border-[#53fc18]/50 text-[#53fc18] hover:bg-[#53fc18]/10"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Episode
+                  <Edit className="h-3 w-3 mr-1.5" />
+                  Edit
                 </Button>
                 <Button
                   onClick={() => {
@@ -682,10 +675,11 @@ const HostProfile = () => {
                     setShowEditSchedule(true);
                   }}
                   variant="outline"
-                  className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+                  size="sm"
+                  className="border-white/20 text-white/80 hover:bg-white/10 text-xs h-8 px-2.5"
                 >
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Create Schedule
+                  <Calendar className="h-3 w-3 mr-1.5" />
+                  Schedule
                 </Button>
               </>
             )}
