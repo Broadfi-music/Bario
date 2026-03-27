@@ -180,9 +180,9 @@ const AIRemix = () => {
         </div>
 
         {/* Starters */}
-        <section className="mb-6">
-          <h2 className="text-base md:text-lg font-bold text-white mb-3">Starters</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <section className="mb-3">
+          <h2 className="text-sm md:text-base font-bold text-white mb-2">Starters</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {starters.map((starter, i) => (
               <button
                 key={i}
@@ -193,7 +193,7 @@ const AIRemix = () => {
                     navigate('/dashboard/new-remix');
                   }
                 }}
-                className="group relative aspect-[4/5] rounded-xl overflow-hidden text-left"
+                className="group relative aspect-[5/4] rounded-lg overflow-hidden text-left"
               >
                 <img src={starter.image} alt={starter.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" width={512} height={512} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
