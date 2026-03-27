@@ -131,26 +131,26 @@ const AIRemix = () => {
       )}
 
       {/* Main Content */}
-      <main className={`${isMobile ? 'pt-14 pb-20' : 'ml-[200px] lg:ml-[220px] pt-8'} px-4 max-w-4xl mx-auto`}>
+      <main className={`${isMobile ? 'pt-12 pb-16' : 'ml-[200px] lg:ml-[220px] pt-4'} px-3 md:px-4 max-w-4xl mx-auto`}>
         {/* Hero */}
-        <div className="text-center py-4 md:py-8">
-          <div className="inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-[10px] font-semibold text-white/60 mb-3 uppercase tracking-wider">
+        <div className="text-center py-2 md:py-4">
+          <div className="inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-[10px] font-semibold text-white/60 mb-2 uppercase tracking-wider">
             <Sliders className="h-3 w-3" />
             READY TO REMIX
           </div>
 
-          <h1 className="text-2xl md:text-5xl font-bold text-white mb-4 leading-tight">
+          <h1 className="text-2xl md:text-4xl font-bold text-white mb-2 leading-tight">
             Remix the <span className="text-white/60">music</span> you imagine.
           </h1>
 
           {/* Input Area */}
           <div className="max-w-2xl mx-auto">
-            <div className="border border-white/10 rounded-xl p-3 md:p-4 bg-white/5">
+            <div className="border border-white/10 rounded-xl p-2.5 md:p-3 bg-white/5">
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={rotatingTexts[textIndex]}
-                className="w-full resize-none border-none outline-none text-sm md:text-base text-white placeholder:text-white/30 bg-transparent min-h-[60px]"
+                className="w-full resize-none border-none outline-none text-sm text-white placeholder:text-white/30 bg-transparent min-h-[48px]"
                 rows={2}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -180,9 +180,9 @@ const AIRemix = () => {
         </div>
 
         {/* Starters */}
-        <section className="mb-6">
-          <h2 className="text-base md:text-lg font-bold text-white mb-3">Starters</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <section className="mb-3">
+          <h2 className="text-sm md:text-base font-bold text-white mb-2">Starters</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {starters.map((starter, i) => (
               <button
                 key={i}
@@ -193,19 +193,19 @@ const AIRemix = () => {
                     navigate('/dashboard/new-remix');
                   }
                 }}
-                className="group relative aspect-[4/5] rounded-xl overflow-hidden text-left"
+                className="group relative aspect-[5/4] rounded-lg overflow-hidden text-left"
               >
-                <img src={starter.image} alt={starter.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" width={512} height={512} />
+                <img src={starter.image} alt={starter.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
                 {starter.badge && (
                   <span className="absolute top-2 left-2 bg-white text-black text-[8px] font-bold px-1.5 py-0.5 rounded">
                     {starter.badge}
                   </span>
                 )}
-                <div className="absolute bottom-0 left-0 right-0 p-3">
-                  <h3 className="text-sm font-semibold text-white leading-tight">{starter.title}</h3>
+                <div className="absolute bottom-0 left-0 right-0 p-2">
+                  <h3 className="text-xs font-semibold text-white leading-tight">{starter.title}</h3>
                   {starter.description && (
-                    <p className="text-[10px] text-white/60 mt-1 line-clamp-2">{starter.description}</p>
+                    <p className="text-[9px] text-white/60 mt-0.5 line-clamp-2">{starter.description}</p>
                   )}
                 </div>
               </button>
@@ -214,21 +214,21 @@ const AIRemix = () => {
         </section>
 
         {/* What will you remix */}
-        <section className="mb-6">
-          <div className="inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-[10px] font-semibold text-white/60 mb-4 uppercase tracking-wider">
+        <section className="mb-4">
+          <div className="inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-[10px] font-semibold text-white/60 mb-2 uppercase tracking-wider">
             <span className="w-1.5 h-1.5 bg-white rounded-full" />
             WHAT WILL YOU REMIX?
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 md:p-10 text-white">
-            <h2 className="text-2xl md:text-4xl font-bold mb-4">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 md:p-6 text-white">
+            <h2 className="text-xl md:text-3xl font-bold mb-2">
               Everything you need to remix, publish, and share. All in one place.
             </h2>
-            <p className="text-white/40 text-sm md:text-base mb-6 max-w-xl">
+            <p className="text-white/40 text-xs md:text-sm mb-4 max-w-xl">
               Upload any song, choose your genre, and let AI transform it into a professional-quality remix in seconds.
             </p>
             <Link to="/auth">
-              <button className="bg-white text-black px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-white/90 transition-colors">
+              <button className="bg-white text-black px-4 py-2 rounded-lg font-semibold text-sm hover:bg-white/90 transition-colors">
                 Get Started
               </button>
             </Link>
@@ -236,8 +236,8 @@ const AIRemix = () => {
         </section>
 
         {/* Footer */}
-        <footer className="border-t border-white/10 py-6 text-center">
-          <p className="text-xs text-white/30">© 2025 Bario. All rights reserved.</p>
+        <footer className="border-t border-white/10 py-3 text-center">
+          <p className="text-[10px] text-white/30">© 2025 Bario. All rights reserved.</p>
         </footer>
       </main>
     </div>
