@@ -133,13 +133,13 @@ const AIRemix = () => {
       {/* Main Content */}
       <main className={`${isMobile ? 'pt-14 pb-20' : 'ml-[200px] lg:ml-[220px] pt-8'} px-4 max-w-4xl mx-auto`}>
         {/* Hero */}
-        <div className="text-center py-8 md:py-16">
-          <div className="inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-[10px] font-semibold text-white/60 mb-4 uppercase tracking-wider">
+        <div className="text-center py-4 md:py-8">
+          <div className="inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-[10px] font-semibold text-white/60 mb-3 uppercase tracking-wider">
             <Sliders className="h-3 w-3" />
             READY TO REMIX
           </div>
 
-          <h1 className="text-3xl md:text-6xl font-bold text-white mb-8 leading-tight">
+          <h1 className="text-2xl md:text-5xl font-bold text-white mb-4 leading-tight">
             Remix the <span className="text-white/60">music</span> you imagine.
           </h1>
 
@@ -180,8 +180,8 @@ const AIRemix = () => {
         </div>
 
         {/* Starters */}
-        <section className="mb-12">
-          <h2 className="text-lg md:text-xl font-bold text-white mb-4">Starters</h2>
+        <section className="mb-6">
+          <h2 className="text-base md:text-lg font-bold text-white mb-3">Starters</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {starters.map((starter, i) => (
               <button
@@ -214,7 +214,7 @@ const AIRemix = () => {
         </section>
 
         {/* What will you remix */}
-        <section className="mb-12">
+        <section className="mb-6">
           <div className="inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-[10px] font-semibold text-white/60 mb-4 uppercase tracking-wider">
             <span className="w-1.5 h-1.5 bg-white rounded-full" />
             WHAT WILL YOU REMIX?

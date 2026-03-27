@@ -466,13 +466,13 @@ const PodcastFeed = () => {
       <main className={`md:ml-[200px] lg:ml-[220px] ${bannerHeight} pb-8 px-0`}>
         {/* Hero Carousel — Twitch-style */}
         {heroHosts.length > 0 && (
-          <div className="relative px-2 md:px-3 lg:px-4 mb-4">
+          <div className="relative px-2 md:px-3 lg:px-4 mb-2">
             <div className="relative overflow-hidden rounded-md bg-[#0e0e0e]">
               <Link
                 to={`/podcasts?session=${currentHero?.id}`}
                 className="relative block group"
               >
-                <div className="flex flex-col md:flex-row h-[200px] md:h-[260px] lg:h-[300px]">
+                <div className="flex flex-col md:flex-row h-[160px] md:h-[220px] lg:h-[260px]">
                   {/* Thumbnail — contained, not cropped */}
                    <div className="relative w-full md:w-[55%] h-full bg-black flex items-center justify-center overflow-hidden">
                      {currentHero?.cover_image_url ? (
@@ -553,56 +553,41 @@ const PodcastFeed = () => {
           </div>
         )}
 
-        {/* Category tabs — Twitch-style horizontal scroll */}
-        <div className="px-2 md:px-3 lg:px-4 mb-3 flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
-          {['All', 'Music', 'Just Chatting', 'Entertainment', 'Sports', 'Technology', 'Finance', 'Wellness', 'Spirituality', 'Lifestyle'].map((cat, i) => (
-            <button
-              key={cat}
-              className={`flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded transition-colors ${
-                i === 0 ? 'bg-white text-black' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        {/* Categories removed for density */}
 
-        {/* Creators — Weverse-style horizontal scroll (BEFORE live channels) */}
-        <section className="px-2 md:px-3 lg:px-4 mb-4">
-          <div className="flex items-center justify-between mb-1.5">
-            <h2 className="text-sm font-bold text-white/80">Creators</h2>
+        {/* Creators — compact horizontal scroll */}
+        <section className="px-2 md:px-3 lg:px-4 mb-2">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-xs font-bold text-white/80">Creators</h2>
           </div>
-          <div className="bg-[#111] rounded-lg p-4">
-            <div className="flex gap-5 overflow-x-auto scrollbar-hide pb-1">
-              {/* Plus button to discover more */}
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
+            <button
+              onClick={() => setShowDiscoverCreators(true)}
+              className="flex-shrink-0 flex flex-col items-center gap-1"
+            >
+              <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors">
+                <Plus className="h-4 w-4 text-white/50" />
+              </div>
+              <span className="text-[9px] text-white/40 w-12 md:w-14 text-center truncate">Discover</span>
+            </button>
+            {sidebarCreators.slice(0, 10).map(creator => (
               <button
-                onClick={() => setShowDiscoverCreators(true)}
-                className="flex-shrink-0 flex flex-col items-center gap-1.5"
+                key={creator.user_id}
+                onClick={() => navigate(`/host/${creator.user_id}`)}
+                className="flex-shrink-0 flex flex-col items-center gap-1"
               >
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors">
-                  <Plus className="h-5 w-5 text-white/50" />
+                <div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden bg-white/10 border border-white/10">
+                  {creator.avatar_url ? (
+                    <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-white/20" />
+                  )}
                 </div>
-                <span className="text-[11px] text-white/40 w-16 md:w-20 text-center truncate">Discover</span>
+                <span className="text-[9px] text-white/60 w-12 md:w-14 text-center truncate">
+                  {creator.full_name || creator.username || 'Creator'}
+                </span>
               </button>
-              {sidebarCreators.slice(0, 10).map(creator => (
-                <button
-                  key={creator.user_id}
-                  onClick={() => navigate(`/host/${creator.user_id}`)}
-                  className="flex-shrink-0 flex flex-col items-center gap-1.5"
-                >
-                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-white/10 border border-white/10">
-                    {creator.avatar_url ? (
-                      <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-white/20" />
-                    )}
-                  </div>
-                  <span className="text-[11px] text-white/60 w-16 md:w-20 text-center truncate">
-                    {creator.full_name || creator.username || 'Creator'}
-                  </span>
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
         </section>
 
@@ -660,7 +645,7 @@ const PodcastFeed = () => {
             const categoryHosts = liveHosts.filter(h => (h.category || 'Music') === category);
             if (categoryHosts.length === 0) return null;
             return (
-              <section key={category} className="px-2 md:px-3 lg:px-4 mb-4">
+              <section key={category} className="px-2 md:px-3 lg:px-4 mb-2">
                 <div className="flex items-center justify-between mb-1.5">
                   <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
