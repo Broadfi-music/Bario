@@ -452,20 +452,6 @@ const PodcastFeed = () => {
               </Link>
             ))}
 
-            {user && (
-              <div
-                onClick={() => navigate(`/host/${user.id}`)}
-                className="flex items-center gap-1.5 p-1 rounded hover:bg-white/5 transition-colors group cursor-pointer mt-1.5 border-t border-white/5 pt-1.5"
-              >
-                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center flex-shrink-0">
-                  <User className="w-3.5 h-3.5 text-black" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-medium text-white/80 group-hover:text-white">My Page</p>
-                  <p className="text-[9px] text-white/30">Your host profile</p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
