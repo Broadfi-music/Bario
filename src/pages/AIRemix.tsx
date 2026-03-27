@@ -202,10 +202,10 @@ const AIRemix = () => {
                     {starter.badge}
                   </span>
                 )}
-                <div className="absolute bottom-0 left-0 right-0 p-3">
-                  <h3 className="text-sm font-semibold text-white leading-tight">{starter.title}</h3>
+                <div className="absolute bottom-0 left-0 right-0 p-2">
+                  <h3 className="text-xs font-semibold text-white leading-tight">{starter.title}</h3>
                   {starter.description && (
-                    <p className="text-[10px] text-white/60 mt-1 line-clamp-2">{starter.description}</p>
+                    <p className="text-[9px] text-white/60 mt-0.5 line-clamp-2">{starter.description}</p>
                   )}
                 </div>
               </button>
@@ -214,21 +214,21 @@ const AIRemix = () => {
         </section>
 
         {/* What will you remix */}
-        <section className="mb-6">
-          <div className="inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-[10px] font-semibold text-white/60 mb-4 uppercase tracking-wider">
+        <section className="mb-4">
+          <div className="inline-flex items-center gap-1.5 bg-white/5 rounded-full px-3 py-1 text-[10px] font-semibold text-white/60 mb-2 uppercase tracking-wider">
             <span className="w-1.5 h-1.5 bg-white rounded-full" />
             WHAT WILL YOU REMIX?
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 md:p-10 text-white">
-            <h2 className="text-2xl md:text-4xl font-bold mb-4">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4 md:p-6 text-white">
+            <h2 className="text-xl md:text-3xl font-bold mb-2">
               Everything you need to remix, publish, and share. All in one place.
             </h2>
-            <p className="text-white/40 text-sm md:text-base mb-6 max-w-xl">
+            <p className="text-white/40 text-xs md:text-sm mb-4 max-w-xl">
               Upload any song, choose your genre, and let AI transform it into a professional-quality remix in seconds.
             </p>
             <Link to="/auth">
-              <button className="bg-white text-black px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-white/90 transition-colors">
+              <button className="bg-white text-black px-4 py-2 rounded-lg font-semibold text-sm hover:bg-white/90 transition-colors">
                 Get Started
               </button>
             </Link>
