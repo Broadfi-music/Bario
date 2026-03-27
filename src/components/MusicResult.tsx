@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { AudioProcessor } from '@/lib/audioProcessor';
+import { supabase } from '@/integrations/supabase/client';
 import type { FxConfig } from '@/hooks/useAudioRemix';
 
 interface MusicResultProps {
@@ -313,9 +314,33 @@ export const MusicResult = ({
     });
   };
 
+  const [isPublished, setIsPublished] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+
   const handlePublish = () => {
-    requireAuth('publish', () => {
-      toast.success('Track published successfully!');
+    requireAuth('publish', async () => {
+      if (isPublished || isPublishing) return;
+      setIsPublishing(true);
+      try {
+        const { error } = await supabase.from('remixes').insert({
+          user_id: user!.id,
+          title: trackTitle,
+          genre: genre,
+          prompt: prompt || null,
+          original_file_url: audioUrl || null,
+          remix_file_url: processedAudioUrl || audioUrl || null,
+          album_art_url: albumArt || null,
+          is_published: true,
+        });
+        if (error) throw error;
+        setIsPublished(true);
+        toast.success('Remix published to Songs!');
+      } catch (err) {
+        console.error('Publish error:', err);
+        toast.error('Failed to publish remix');
+      } finally {
+        setIsPublishing(false);
+      }
     });
   };
 
