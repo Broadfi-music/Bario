@@ -150,7 +150,7 @@ const AIRemix = () => {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={rotatingTexts[textIndex]}
-                className="w-full resize-none border-none outline-none text-sm md:text-base text-white placeholder:text-white/30 bg-transparent min-h-[60px]"
+                className="w-full resize-none border-none outline-none text-sm text-white placeholder:text-white/30 bg-transparent min-h-[48px]"
                 rows={2}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
