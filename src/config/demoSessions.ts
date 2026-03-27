@@ -1,6 +1,30 @@
 // 10 Multilingual Demo Sessions — always-live seeded rooms
 import { getDemoAvatar } from '@/lib/randomAvatars';
 
+// Room cover images
+import aiDebateCover from '@/assets/room-covers/ai-debate.jpg';
+import redFlagsCover from '@/assets/room-covers/red-flags.jpg';
+import bitcoinCover from '@/assets/room-covers/bitcoin.jpg';
+import comedyCover from '@/assets/room-covers/comedy.jpg';
+import heartbreakCover from '@/assets/room-covers/heartbreak.jpg';
+import bollywoodCover from '@/assets/room-covers/bollywood.jpg';
+import iplCover from '@/assets/room-covers/ipl.jpg';
+import meditationCover from '@/assets/room-covers/meditation.jpg';
+import messiRonaldoCover from '@/assets/room-covers/messi-ronaldo.jpg';
+import menaTechCover from '@/assets/room-covers/mena-tech.jpg';
+
+// Host avatar images
+import marcusChenAvatar from '@/assets/host-avatars/marcus-chen.jpg';
+import tashaMooreAvatar from '@/assets/host-avatars/tasha-moore.jpg';
+import alexRiveraAvatar from '@/assets/host-avatars/alex-rivera.jpg';
+import djSmoothAvatar from '@/assets/host-avatars/dj-smooth.jpg';
+import mayaRossAvatar from '@/assets/host-avatars/maya-ross.jpg';
+import rajMalhotraAvatar from '@/assets/host-avatars/raj-malhotra.jpg';
+import sunilVermaAvatar from '@/assets/host-avatars/sunil-verma.jpg';
+import swamiAnandaAvatar from '@/assets/host-avatars/swami-ananda.jpg';
+import carlosMendozaAvatar from '@/assets/host-avatars/carlos-mendoza.jpg';
+import omarHassanAvatar from '@/assets/host-avatars/omar-hassan.jpg';
+
 export interface DemoSpeaker {
   id: string;
   name: string;
@@ -41,15 +65,14 @@ export interface DemoSession {
 }
 
 const STORAGE_BASE = 'https://sufbohhsxlrefkoubmed.supabase.co/storage/v1/object/public/demo-audio';
-const COVER_BASE = '/demo';
 
 // Map 5 generated audio files across 10 rooms
 const AUDIO = {
-  room1: `${STORAGE_BASE}/demo-room-1.mp3`,   // EN - AI debate
-  room2: `${STORAGE_BASE}/demo-room-2.mp3`,   // EN - Relationship
-  room3: `${STORAGE_BASE}/demo-room-3.mp3`,   // EN - Bitcoin
-  room4: `${STORAGE_BASE}/demo-room-4.mp3`,   // EN - Comedy
-  room6: `${STORAGE_BASE}/demo-room-6.mp3`,   // HI - Bollywood
+  room1: `${STORAGE_BASE}/demo-room-1.mp3`,
+  room2: `${STORAGE_BASE}/demo-room-2.mp3`,
+  room3: `${STORAGE_BASE}/demo-room-3.mp3`,
+  room4: `${STORAGE_BASE}/demo-room-4.mp3`,
+  room6: `${STORAGE_BASE}/demo-room-6.mp3`,
 };
 
 const sessions: DemoSession[] = [
@@ -58,13 +81,13 @@ const sessions: DemoSession[] = [
     id: 'demo-room-1', hostId: 'demo-host-marcus-chen',
     title: 'Is AI Taking Over Creative Jobs?',
     description: 'Heated debate on whether artificial intelligence will replace human creativity',
-    coverImageUrl: `${COVER_BASE}/demo-space-cover.jpg`,
+    coverImageUrl: aiDebateCover,
     audioUrl: AUDIO.room1,
-    hostName: 'Marcus Chen', hostAvatar: getDemoAvatar('Marcus Chen'),
+    hostName: 'Marcus Chen', hostAvatar: marcusChenAvatar,
     category: 'Technology', language: 'en', baseListenerCount: 312,
     visualTheme: 'neural-network', energy: 'heated',
     speakers: [
-      { id: 'demo-host-marcus-chen', name: 'Marcus Chen', role: 'host', avatarGradient: 'from-blue-500 to-indigo-500', avatarUrl: getDemoAvatar('Marcus Chen') },
+      { id: 'demo-host-marcus-chen', name: 'Marcus Chen', role: 'host', avatarGradient: 'from-blue-500 to-indigo-500', avatarUrl: marcusChenAvatar },
       { id: 'demo-sp-priya', name: 'Priya Sharma', role: 'co_host', avatarGradient: 'from-pink-500 to-rose-500', avatarUrl: getDemoAvatar('Priya Sharma') },
       { id: 'demo-sp-jake', name: 'Jake Wilson', role: 'speaker', avatarGradient: 'from-emerald-500 to-green-500', avatarUrl: getDemoAvatar('Jake Wilson') },
     ],
@@ -73,13 +96,13 @@ const sessions: DemoSession[] = [
     id: 'demo-room-2', hostId: 'demo-host-tasha',
     title: 'Relationship Red Flags You\'re Ignoring',
     description: 'Real talk about the warning signs people overlook when in love',
-    coverImageUrl: `${COVER_BASE}/demo-space-cover-2.jpg`,
+    coverImageUrl: redFlagsCover,
     audioUrl: AUDIO.room2,
-    hostName: 'Tasha Moore', hostAvatar: getDemoAvatar('Tasha Moore'),
+    hostName: 'Tasha Moore', hostAvatar: tashaMooreAvatar,
     category: 'Lifestyle', language: 'en', baseListenerCount: 487,
     visualTheme: 'heartbeat-waves', energy: 'intense',
     speakers: [
-      { id: 'demo-host-tasha', name: 'Tasha Moore', role: 'host', avatarGradient: 'from-purple-500 to-pink-500', avatarUrl: getDemoAvatar('Tasha Moore') },
+      { id: 'demo-host-tasha', name: 'Tasha Moore', role: 'host', avatarGradient: 'from-purple-500 to-pink-500', avatarUrl: tashaMooreAvatar },
       { id: 'demo-sp-devon', name: 'Devon Brooks', role: 'co_host', avatarGradient: 'from-amber-500 to-orange-500', avatarUrl: getDemoAvatar('Devon Brooks') },
       { id: 'demo-sp-nina', name: 'Nina Patel', role: 'speaker', avatarGradient: 'from-teal-500 to-cyan-500', avatarUrl: getDemoAvatar('Nina Patel') },
       { id: 'demo-sp-marcus2', name: 'Marcus Wright', role: 'speaker', avatarGradient: 'from-blue-500 to-indigo-500', avatarUrl: getDemoAvatar('Marcus Wright') },
@@ -89,13 +112,13 @@ const sessions: DemoSession[] = [
     id: 'demo-room-3', hostId: 'demo-host-alex-r',
     title: 'Bitcoin to $200K - Real or Fantasy?',
     description: 'Deep market analysis on whether crypto can reach new all-time highs',
-    coverImageUrl: `${COVER_BASE}/demo-space-cover-3.jpg`,
+    coverImageUrl: bitcoinCover,
     audioUrl: AUDIO.room3,
-    hostName: 'Alex Rivera', hostAvatar: getDemoAvatar('Alex Rivera'),
+    hostName: 'Alex Rivera', hostAvatar: alexRiveraAvatar,
     category: 'Finance', language: 'en', baseListenerCount: 256,
     visualTheme: 'crypto-charts', energy: 'moderate',
     speakers: [
-      { id: 'demo-host-alex-r', name: 'Alex Rivera', role: 'host', avatarGradient: 'from-yellow-500 to-amber-500', avatarUrl: getDemoAvatar('Alex Rivera') },
+      { id: 'demo-host-alex-r', name: 'Alex Rivera', role: 'host', avatarGradient: 'from-yellow-500 to-amber-500', avatarUrl: alexRiveraAvatar },
       { id: 'demo-sp-sam', name: 'Sam Turner', role: 'co_host', avatarGradient: 'from-indigo-500 to-blue-500', avatarUrl: getDemoAvatar('Sam Turner') },
       { id: 'demo-sp-lisa', name: 'Lisa Chen', role: 'speaker', avatarGradient: 'from-rose-500 to-pink-500', avatarUrl: getDemoAvatar('Lisa Chen') },
     ],
@@ -104,13 +127,13 @@ const sessions: DemoSession[] = [
     id: 'demo-room-4', hostId: 'demo-host-dj-smooth',
     title: 'Late Night Comedy Hour',
     description: 'Stand-up stories and hilarious takes on everyday life',
-    coverImageUrl: `${COVER_BASE}/demo-space-cover.jpg`,
+    coverImageUrl: comedyCover,
     audioUrl: AUDIO.room4,
-    hostName: 'DJ Smooth', hostAvatar: getDemoAvatar('DJ Smooth'),
+    hostName: 'DJ Smooth', hostAvatar: djSmoothAvatar,
     category: 'Entertainment', language: 'en', baseListenerCount: 534,
     visualTheme: 'confetti-burst', energy: 'intense',
     speakers: [
-      { id: 'demo-host-dj-smooth', name: 'DJ Smooth', role: 'host', avatarGradient: 'from-red-500 to-orange-500', avatarUrl: getDemoAvatar('DJ Smooth') },
+      { id: 'demo-host-dj-smooth', name: 'DJ Smooth', role: 'host', avatarGradient: 'from-red-500 to-orange-500', avatarUrl: djSmoothAvatar },
       { id: 'demo-sp-carmen', name: 'Carmen Lee', role: 'co_host', avatarGradient: 'from-violet-500 to-purple-500', avatarUrl: getDemoAvatar('Carmen Lee') },
       { id: 'demo-sp-bigmike', name: 'Big Mike', role: 'speaker', avatarGradient: 'from-green-500 to-emerald-500', avatarUrl: getDemoAvatar('Big Mike') },
     ],
@@ -119,13 +142,13 @@ const sessions: DemoSession[] = [
     id: 'demo-room-5', hostId: 'demo-host-maya',
     title: 'Healing After Heartbreak',
     description: 'A safe space to talk about moving on and self-recovery',
-    coverImageUrl: `${COVER_BASE}/demo-space-cover-2.jpg`,
-    audioUrl: AUDIO.room1, // Reuse room 1 audio
-    hostName: 'Dr. Maya Ross', hostAvatar: getDemoAvatar('Dr. Maya Ross'),
+    coverImageUrl: heartbreakCover,
+    audioUrl: AUDIO.room1,
+    hostName: 'Dr. Maya Ross', hostAvatar: mayaRossAvatar,
     category: 'Wellness', language: 'en', baseListenerCount: 189,
     visualTheme: 'aurora-ripple', energy: 'calm',
     speakers: [
-      { id: 'demo-host-maya', name: 'Dr. Maya Ross', role: 'host', avatarGradient: 'from-sky-500 to-blue-500', avatarUrl: getDemoAvatar('Dr. Maya Ross') },
+      { id: 'demo-host-maya', name: 'Dr. Maya Ross', role: 'host', avatarGradient: 'from-sky-500 to-blue-500', avatarUrl: mayaRossAvatar },
       { id: 'demo-sp-jordan', name: 'Jordan Ellis', role: 'co_host', avatarGradient: 'from-slate-500 to-gray-500', avatarUrl: getDemoAvatar('Jordan Ellis') },
     ],
   },
@@ -134,13 +157,13 @@ const sessions: DemoSession[] = [
     id: 'demo-room-6', hostId: 'demo-host-raj',
     title: 'Bollywood vs Hollywood Debate',
     description: 'Kya Bollywood ab Hollywood ke level pe hai? Suniye dono taraf ke arguments',
-    coverImageUrl: `${COVER_BASE}/demo-space-cover-3.jpg`,
+    coverImageUrl: bollywoodCover,
     audioUrl: AUDIO.room6,
-    hostName: 'Raj Malhotra', hostAvatar: getDemoAvatar('Raj Malhotra'),
+    hostName: 'Raj Malhotra', hostAvatar: rajMalhotraAvatar,
     category: 'Entertainment', language: 'hi', baseListenerCount: 423,
     visualTheme: 'bollywood-sparkle', energy: 'heated',
     speakers: [
-      { id: 'demo-host-raj', name: 'Raj Malhotra', role: 'host', avatarGradient: 'from-orange-500 to-red-500', avatarUrl: getDemoAvatar('Raj Malhotra') },
+      { id: 'demo-host-raj', name: 'Raj Malhotra', role: 'host', avatarGradient: 'from-orange-500 to-red-500', avatarUrl: rajMalhotraAvatar },
       { id: 'demo-sp-ananya', name: 'Ananya Gupta', role: 'co_host', avatarGradient: 'from-pink-500 to-fuchsia-500', avatarUrl: getDemoAvatar('Ananya Gupta') },
       { id: 'demo-sp-vikram', name: 'Vikram Singh', role: 'speaker', avatarGradient: 'from-blue-500 to-cyan-500', avatarUrl: getDemoAvatar('Vikram Singh') },
     ],
@@ -149,13 +172,13 @@ const sessions: DemoSession[] = [
     id: 'demo-room-7', hostId: 'demo-host-sunil',
     title: 'IPL Season - Best Team Debate',
     description: 'Kaun jeetega IPL? Mumbai, Chennai ya RCB? Join the argument!',
-    coverImageUrl: `${COVER_BASE}/demo-space-cover.jpg`,
-    audioUrl: AUDIO.room6, // Reuse Hindi audio
-    hostName: 'Sunil Verma', hostAvatar: getDemoAvatar('Sunil Verma'),
+    coverImageUrl: iplCover,
+    audioUrl: AUDIO.room6,
+    hostName: 'Sunil Verma', hostAvatar: sunilVermaAvatar,
     category: 'Sports', language: 'hi', baseListenerCount: 567,
     visualTheme: 'cricket-energy', energy: 'intense',
     speakers: [
-      { id: 'demo-host-sunil', name: 'Sunil Verma', role: 'host', avatarGradient: 'from-blue-600 to-indigo-600', avatarUrl: getDemoAvatar('Sunil Verma') },
+      { id: 'demo-host-sunil', name: 'Sunil Verma', role: 'host', avatarGradient: 'from-blue-600 to-indigo-600', avatarUrl: sunilVermaAvatar },
       { id: 'demo-sp-ritu', name: 'Ritu Sharma', role: 'co_host', avatarGradient: 'from-red-500 to-pink-500', avatarUrl: getDemoAvatar('Ritu Sharma') },
       { id: 'demo-sp-amit', name: 'Amit Joshi', role: 'speaker', avatarGradient: 'from-yellow-500 to-orange-500', avatarUrl: getDemoAvatar('Amit Joshi') },
     ],
@@ -164,13 +187,13 @@ const sessions: DemoSession[] = [
     id: 'demo-room-9', hostId: 'demo-host-swami',
     title: 'Dhyaan Aur Shanti - Meditation Talk',
     description: 'Mann ki shaanti aur dhyaan ke baare mein ek shantipoorna charcha',
-    coverImageUrl: `${COVER_BASE}/demo-space-cover-3.jpg`,
-    audioUrl: AUDIO.room6, // Reuse Hindi audio
-    hostName: 'Swami Ananda', hostAvatar: getDemoAvatar('Swami Ananda'),
+    coverImageUrl: meditationCover,
+    audioUrl: AUDIO.room6,
+    hostName: 'Swami Ananda', hostAvatar: swamiAnandaAvatar,
     category: 'Spirituality', language: 'hi', baseListenerCount: 145,
     visualTheme: 'mandala-breath', energy: 'calm',
     speakers: [
-      { id: 'demo-host-swami', name: 'Swami Ananda', role: 'host', avatarGradient: 'from-amber-400 to-yellow-500', avatarUrl: getDemoAvatar('Swami Ananda') },
+      { id: 'demo-host-swami', name: 'Swami Ananda', role: 'host', avatarGradient: 'from-amber-400 to-yellow-500', avatarUrl: swamiAnandaAvatar },
       { id: 'demo-sp-meera', name: 'Meera Devi', role: 'co_host', avatarGradient: 'from-rose-400 to-pink-500', avatarUrl: getDemoAvatar('Meera Devi') },
     ],
   },
@@ -179,13 +202,13 @@ const sessions: DemoSession[] = [
     id: 'demo-room-10', hostId: 'demo-host-carlos',
     title: 'Messi vs Ronaldo - El Gran Debate',
     description: 'El debate eterno del fútbol. ¿Quién es el mejor de todos los tiempos?',
-    coverImageUrl: `${COVER_BASE}/demo-space-cover.jpg`,
-    audioUrl: AUDIO.room4, // Reuse comedy audio (energetic)
-    hostName: 'Carlos Mendoza', hostAvatar: getDemoAvatar('Carlos Mendoza'),
+    coverImageUrl: messiRonaldoCover,
+    audioUrl: AUDIO.room4,
+    hostName: 'Carlos Mendoza', hostAvatar: carlosMendozaAvatar,
     category: 'Sports', language: 'es', baseListenerCount: 389,
     visualTheme: 'dual-orbs', energy: 'heated',
     speakers: [
-      { id: 'demo-host-carlos', name: 'Carlos Mendoza', role: 'host', avatarGradient: 'from-green-500 to-emerald-500', avatarUrl: getDemoAvatar('Carlos Mendoza') },
+      { id: 'demo-host-carlos', name: 'Carlos Mendoza', role: 'host', avatarGradient: 'from-green-500 to-emerald-500', avatarUrl: carlosMendozaAvatar },
       { id: 'demo-sp-isabella', name: 'Isabella Torres', role: 'co_host', avatarGradient: 'from-red-500 to-rose-500', avatarUrl: getDemoAvatar('Isabella Torres') },
       { id: 'demo-sp-diego', name: 'Diego Ruiz', role: 'speaker', avatarGradient: 'from-blue-500 to-sky-500', avatarUrl: getDemoAvatar('Diego Ruiz') },
     ],
@@ -195,13 +218,13 @@ const sessions: DemoSession[] = [
     id: 'demo-room-13', hostId: 'demo-host-omar',
     title: 'Future of Technology in MENA',
     description: 'مستقبل التكنولوجيا في منطقة الشرق الأوسط وشمال أفريقيا',
-    coverImageUrl: `${COVER_BASE}/demo-space-cover-2.jpg`,
-    audioUrl: AUDIO.room3, // Reuse analysis audio
-    hostName: 'Omar Hassan', hostAvatar: getDemoAvatar('Omar Hassan'),
+    coverImageUrl: menaTechCover,
+    audioUrl: AUDIO.room3,
+    hostName: 'Omar Hassan', hostAvatar: omarHassanAvatar,
     category: 'Technology', language: 'ar', baseListenerCount: 234,
     visualTheme: 'geometric-mosaic', energy: 'moderate',
     speakers: [
-      { id: 'demo-host-omar', name: 'Omar Hassan', role: 'host', avatarGradient: 'from-teal-500 to-emerald-500', avatarUrl: getDemoAvatar('Omar Hassan') },
+      { id: 'demo-host-omar', name: 'Omar Hassan', role: 'host', avatarGradient: 'from-teal-500 to-emerald-500', avatarUrl: omarHassanAvatar },
       { id: 'demo-sp-layla', name: 'Layla Khalid', role: 'co_host', avatarGradient: 'from-rose-500 to-red-500', avatarUrl: getDemoAvatar('Layla Khalid') },
     ],
   },
@@ -225,7 +248,7 @@ export const getDemoLiveHostById = (id: string) => {
     description: s.description,
     listener_count: s.baseListenerCount + Math.floor(Math.random() * 80),
     host_name: s.hostName,
-    host_avatar: s.coverImageUrl,
+    host_avatar: s.hostAvatar,
     category: s.category,
     cover_image_url: s.coverImageUrl,
   };
@@ -238,7 +261,7 @@ export const getAllDemoLiveHosts = () => sessions.map(s => ({
   description: s.description,
   listener_count: s.baseListenerCount + Math.floor(Math.random() * 80),
   host_name: s.hostName,
-  host_avatar: s.coverImageUrl,
+  host_avatar: s.hostAvatar,
   category: s.category,
   cover_image_url: s.coverImageUrl,
 }));
@@ -248,7 +271,7 @@ export const getAllDemoLiveSessions = () => sessions.map(s => ({
   title: s.title,
   host_id: s.hostId,
   host_name: s.hostName,
-  host_avatar: s.coverImageUrl,
+  host_avatar: s.hostAvatar,
   cover_image_url: s.coverImageUrl,
   listener_count: s.baseListenerCount + Math.floor(Math.random() * 80),
   status: 'live' as const,

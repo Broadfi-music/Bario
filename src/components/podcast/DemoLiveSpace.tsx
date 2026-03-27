@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { getDemoSessionById, ALL_DEMO_SESSIONS, DemoSession, DemoSpeaker } from '@/config/demoSessions';
+import RoomVisualization from './RoomVisualization';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import AuthPromptModal from './AuthPromptModal';
 import TopEngagementModal from './TopEngagementModal';
@@ -336,9 +337,13 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
             </div>
       </div>
 
-      {/* Speakers Area - Horizontal Row */}
-      <div className="flex-1 flex items-center justify-center px-4 py-4 min-h-0 bg-black">
-        <div className="grid grid-cols-4 gap-4 justify-items-center">
+      {/* Speakers Area with animated background */}
+      <div className="flex-1 flex items-center justify-center px-4 py-4 min-h-0 relative overflow-hidden">
+        {/* Animated room visualization as background */}
+        <div className="absolute inset-0 opacity-30">
+          <RoomVisualization theme={activeDemo.visualTheme} energy={activeDemo.energy} />
+        </div>
+        <div className="relative z-10 grid grid-cols-4 gap-4 justify-items-center">
           {activeDemo.speakers.map(speaker => renderSpeaker(speaker))}
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={`slot-${i}`} className="flex flex-col items-center gap-1">
