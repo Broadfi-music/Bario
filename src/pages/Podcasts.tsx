@@ -455,27 +455,24 @@ const Podcasts = () => {
         </header>
       )}
 
-      {/* Mobile Webapp Header - standard tabs with Go Live */}
+      {/* Mobile Webapp Header - Bario logo + search */}
       {isMobile && !isPWA && (
         <header className="fixed top-0 left-0 right-0 z-50 bg-black border-b border-white/10">
           <div className="flex items-center justify-between h-12 px-3">
-            <button onClick={() => navigate('/')} className="text-white/60 hover:text-white">
-              <ChevronLeft className="h-5 w-5" />
+            <Link to="/" className="flex items-center gap-1.5">
+              <img src="/bario-logo.png" alt="Bario" className="h-5 w-5 object-contain" />
+              <span className="text-white font-bold text-sm tracking-tight">BARIO</span>
+            </Link>
+            <button
+              onClick={() => {
+                const el = document.getElementById('mobile-feed-search');
+                if (el) el.focus();
+              }}
+              className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center"
+            >
+              <Search className="h-4 w-4 text-white/60" />
             </button>
-            <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (v !== 'live') { setSelectedSession(null); setSearchParams({}); } }} className="w-auto">
-              <TabsList className="bg-white/5 h-7">
-                <TabsTrigger value="feed" className="text-[11px] px-2 data-[state=active]:bg-white data-[state=active]:text-black h-6">Feed</TabsTrigger>
-                <TabsTrigger value="live" className="text-[11px] px-2 data-[state=active]:bg-white data-[state=active]:text-black h-6">Live</TabsTrigger>
-                <TabsTrigger value="battles" className="text-[11px] px-2 data-[state=active]:bg-white data-[state=active]:text-black h-6">Battles</TabsTrigger>
-              </TabsList>
-            </Tabs>
             <div className="flex items-center gap-2">
-              {user && (
-                <Button onClick={() => setShowHostStudio(true)} size="sm" className="bg-white hover:bg-white/90 text-black text-[11px] h-7 px-3 font-semibold">
-                  <Mic className="h-3 w-3 mr-1" />
-                  Go Live
-                </Button>
-              )}
               {user ? (
                 <Link to="/dashboard">
                   <div className="w-7 h-7 rounded-full overflow-hidden bg-white/20" />
