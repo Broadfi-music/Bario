@@ -179,16 +179,16 @@ const AIRemix = () => {
       )}
 
       {/* Main Content */}
-      <main className={`${isMobile ? 'pt-11 pb-14' : 'ml-[200px] lg:ml-[220px] pt-2'} px-2 md:px-3 max-w-4xl mx-auto`}>
+      <main className={`${isMobile ? 'pt-11 pb-14' : 'ml-[200px] lg:ml-[220px]'} px-0 max-w-5xl mx-auto`}>
         {/* Hero */}
-        <div className="text-center py-1 md:py-2">
-          <h1 className="text-xl md:text-3xl font-bold text-white mb-1 leading-tight">
+        <div className="text-center py-2 px-3">
+          <h1 className="text-2xl md:text-4xl font-bold text-white mb-2 leading-tight">
             Remix the <span className="text-white/60">music</span> you imagine.
           </h1>
 
           {/* Input Area */}
           <div className="max-w-2xl mx-auto">
-            <div className="border border-white/10 rounded-xl p-2.5 md:p-3 bg-white/5">
+            <div className="border border-white/10 rounded-xl p-3 md:p-4 bg-white/5">
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
@@ -289,10 +289,10 @@ const AIRemix = () => {
           </div>
         </div>
 
-        {/* Starters */}
-        <section className="mb-2">
-          <h2 className="text-xs md:text-sm font-bold text-white mb-1">Starters</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+        {/* Starters — edge-to-edge, large images */}
+        <section className="px-1">
+          <h2 className="text-sm md:text-base font-bold text-white mb-1.5 px-2">Starters</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-0.5">
             {starters.map((starter, i) => (
               <button
                 key={i}
@@ -303,7 +303,7 @@ const AIRemix = () => {
                     navigate('/dashboard/new-remix');
                   }
                 }}
-                className="group relative aspect-[3/2] rounded-lg overflow-hidden text-left"
+                className="group relative aspect-[4/3] overflow-hidden text-left"
               >
                 <img src={starter.image} alt={starter.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -312,10 +312,10 @@ const AIRemix = () => {
                     {starter.badge}
                   </span>
                 )}
-                <div className="absolute bottom-0 left-0 right-0 p-2">
-                  <h3 className="text-xs font-semibold text-white leading-tight">{starter.title}</h3>
+                <div className="absolute bottom-0 left-0 right-0 p-2.5">
+                  <h3 className="text-sm font-semibold text-white leading-tight">{starter.title}</h3>
                   {starter.description && (
-                    <p className="text-[9px] text-white/60 mt-0.5 line-clamp-2">{starter.description}</p>
+                    <p className="text-[10px] text-white/60 mt-0.5 line-clamp-2">{starter.description}</p>
                   )}
                 </div>
               </button>
@@ -323,17 +323,17 @@ const AIRemix = () => {
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="mb-2">
-          <div className="bg-white/5 border border-white/10 rounded-lg p-3 md:p-4 text-white">
-            <h2 className="text-base md:text-xl font-bold mb-1">
+        {/* CTA — flush */}
+        <section className="px-1 mt-0.5">
+          <div className="bg-white/5 border border-white/10 p-4 md:p-6 text-white text-center">
+            <h2 className="text-lg md:text-2xl font-bold mb-1">
               Everything you need to remix, publish, and share.
             </h2>
-            <p className="text-white/40 text-[11px] md:text-xs mb-2 max-w-xl">
+            <p className="text-white/40 text-xs md:text-sm mb-3 max-w-xl mx-auto">
               Upload any song, choose your genre, and let AI transform it into a professional-quality remix.
             </p>
             <Link to="/auth">
-              <button className="bg-white text-black px-3 py-1.5 rounded-lg font-semibold text-xs hover:bg-white/90 transition-colors">
+              <button className="bg-white text-black px-4 py-2 rounded-lg font-semibold text-sm hover:bg-white/90 transition-colors">
                 Get Started
               </button>
             </Link>
@@ -341,7 +341,7 @@ const AIRemix = () => {
         </section>
 
         {/* Footer */}
-        <footer className="border-t border-white/10 py-2 text-center">
+        <footer className="border-t border-white/10 py-2 text-center mt-0.5">
           <p className="text-[9px] text-white/30">© 2025 Bario. All rights reserved.</p>
         </footer>
       </main>
