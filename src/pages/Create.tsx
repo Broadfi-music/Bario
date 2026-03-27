@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, Upload, Plus, FileAudio, Link as LinkIcon, Music, Loader2 } from 'lucide-react';
+import { Home, Library, Sparkles, User, Settings, Menu, X, Gift, Upload, Plus, FileAudio, Link as LinkIcon, Music, Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -52,6 +52,7 @@ const Create = () => {
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Library, label: 'Library', path: '/dashboard/library' },
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
+    { icon: Search, label: 'Heatmap', path: '/global-heatmap' },
     { icon: Gift, label: 'Reward & Earn', path: '/dashboard/rewards' },
     { icon: Upload, label: 'Upload', path: '/dashboard/upload' },
   ];
@@ -444,7 +445,7 @@ const Create = () => {
           <Button 
             onClick={handleGenerate}
             disabled={!((uploadedMusic || chatPrompt) && selectedGenre) || isGenerating}
-            className="w-full bg-black text-white hover:bg-black/90 h-10 text-sm"
+            className="w-full bg-black text-white hover:bg-black/90 h-12 text-base font-semibold sticky bottom-3 z-10 shadow-lg"
           >
             {isGenerating ? (
               <>

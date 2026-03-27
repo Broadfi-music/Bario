@@ -193,13 +193,13 @@ const Dashboard = () => {
     { icon: Home, label: 'Home', path: '/dashboard' },
     { icon: Library, label: 'Library', path: '/dashboard/library' },
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
+    { icon: Search, label: 'Heatmap', path: '/global-heatmap' },
     { icon: Gift, label: 'Reward & Earn', path: '/dashboard/rewards' },
     { icon: Upload, label: 'Upload', path: '/dashboard/upload' },
   ];
 
   const topNavItems = [
-    { label: 'Heatmap', path: '/global-heatmap' },
-    { label: 'Space', path: '/podcasts' },
+    { label: 'Spaces', path: '/podcasts' },
   ];
 
   const sections = [
