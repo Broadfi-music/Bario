@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Radio, Home, Plus, Globe } from 'lucide-react';
+import { Radio, Swords, Plus, Music } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthPromptModal from '@/components/podcast/AuthPromptModal';
@@ -13,26 +13,22 @@ const MobileBottomNav = () => {
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [authAction, setAuthAction] = useState('');
 
-  // Only show in PWA standalone mode, not regular mobile browser
-  const isPWA = window.matchMedia('(display-mode: standalone)').matches
-    || (window.navigator as any).standalone === true;
-
-  if (!isMobile || !isPWA) return null;
+  // Show on mobile webapp (not just PWA)
+  if (!isMobile) return null;
 
   // Hide on auth page
   if (location.pathname === '/auth') return null;
 
   const tabs = [
     { id: 'live', icon: Radio, label: 'Live', path: '/podcasts' },
-    { id: 'feed', icon: Home, label: 'Feed', path: '/podcasts?tab=feed' },
+    { id: 'battle', icon: Swords, label: 'Battle', path: null },
     { id: 'golive', icon: Plus, label: 'Go Live', path: null },
-    { id: 'heatmap', icon: Globe, label: 'Heatmap', path: '/heatmap' },
+    { id: 'remix', icon: Music, label: 'AI Remix', path: '/ai-remix' },
   ];
 
   const isActive = (tab: typeof tabs[0]) => {
-    if (tab.id === 'live') return location.pathname === '/podcasts' && !location.search.includes('tab=feed');
-    if (tab.id === 'feed') return location.pathname === '/podcasts' && location.search.includes('tab=feed');
-    if (tab.id === 'heatmap') return location.pathname === '/heatmap' || location.pathname === '/global-heatmap';
+    if (tab.id === 'live') return location.pathname === '/podcasts';
+    if (tab.id === 'remix') return location.pathname === '/ai-remix';
     return false;
   };
 
@@ -49,9 +45,14 @@ const MobileBottomNav = () => {
       }
       return;
     }
-    if (!user && (tab.id === 'feed' || tab.id === 'heatmap')) {
-      setAuthAction(tab.id === 'feed' ? 'view the feed' : 'explore the heatmap');
-      setShowAuthPrompt(true);
+    if (tab.id === 'battle') {
+      if (!user) {
+        setAuthAction('start a battle');
+        setShowAuthPrompt(true);
+      } else {
+        // Dispatch battle modal event
+        window.dispatchEvent(new CustomEvent('open-battle-invite'));
+      }
       return;
     }
     if (tab.path) {
@@ -61,8 +62,8 @@ const MobileBottomNav = () => {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-[100] bg-black/95 backdrop-blur-md border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
-        <div className="flex items-center justify-around h-14">
+      <nav className="fixed bottom-0 left-0 right-0 z-[100] bg-[#0e0e10] border-t border-white/10 pb-[env(safe-area-inset-bottom)]">
+        <div className="flex items-center justify-around h-12">
           {tabs.map((tab) => {
             const active = isActive(tab);
             const isGoLive = tab.id === 'golive';
@@ -76,7 +77,7 @@ const MobileBottomNav = () => {
                 }`}
               >
                 {isGoLive ? (
-                  <div className="w-10 h-7 rounded-lg bg-gradient-to-r from-[#ff2d55] to-[#c237eb] flex items-center justify-center -mt-1">
+                  <div className="w-10 h-7 rounded-lg bg-gradient-to-r from-[#9147ff] to-[#772ce8] flex items-center justify-center -mt-1">
                     <Plus className="h-5 w-5 text-white" strokeWidth={3} />
                   </div>
                 ) : (
