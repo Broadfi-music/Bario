@@ -391,7 +391,6 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
             </div>
           ))}
         </div>
-        </div>
       </div>
 
 
