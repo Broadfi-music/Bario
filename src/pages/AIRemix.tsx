@@ -292,7 +292,7 @@ const AIRemix = () => {
         {/* Starters — centered */}
         <section className="max-w-5xl mx-auto px-4">
           <h2 className="text-sm md:text-base font-bold text-white mb-1.5">Starters</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-1">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
             {starters.map((starter, i) => (
               <button
                 key={i}
@@ -303,7 +303,7 @@ const AIRemix = () => {
                     navigate('/dashboard/new-remix');
                   }
                 }}
-                className="group relative aspect-[4/3] overflow-hidden text-left rounded-lg"
+                className="group relative aspect-[3/2] overflow-hidden text-left rounded-lg"
               >
                 <img src={starter.image} alt={starter.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -325,11 +325,11 @@ const AIRemix = () => {
 
         {/* CTA — centered */}
         <section className="max-w-5xl mx-auto px-4 mt-2">
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6 md:p-8 text-white text-center">
-            <h2 className="text-lg md:text-2xl font-bold mb-1">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-8 md:p-12 text-white text-center">
+            <h2 className="text-xl md:text-3xl font-bold mb-2">
               Everything you need to remix, publish, and share.
             </h2>
-            <p className="text-white/40 text-xs md:text-sm mb-3 max-w-xl mx-auto">
+            <p className="text-white/40 text-sm md:text-base mb-4 max-w-2xl mx-auto">
               Upload any song, choose your genre, and let AI transform it into a professional-quality remix.
             </p>
             <Link to="/auth">
