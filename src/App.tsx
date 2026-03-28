@@ -44,6 +44,7 @@ import Install from "@/pages/Install";
 import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
 
+// Rebuild trigger: env re-injection
 const queryClient = new QueryClient();
 
 const MobileHomeRedirect = () => {
