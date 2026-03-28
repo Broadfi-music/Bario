@@ -24,6 +24,22 @@ const isPreviewContext = (() => {
   return isPreviewHost || isInIframe;
 })();
 
+const safeSessionGet = (key: string) => {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const safeSessionSet = (key: string, value: string) => {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    // Ignore storage errors in restricted iframe/privacy contexts.
+  }
+};
+
 const clearPreviewServiceWorkersAndCaches = async () => {
   if (!("serviceWorker" in navigator)) return;
 
@@ -45,14 +61,19 @@ const ensureFreshPreviewBuild = async (): Promise<boolean> => {
 
   const url = new URL(window.location.href);
   const hasBuildTag = url.searchParams.get("_preview_build") === PREVIEW_BUILD_TAG;
-  const hasReset = sessionStorage.getItem(PREVIEW_CACHE_RESET_KEY) === "1";
+  const hasReset = safeSessionGet(PREVIEW_CACHE_RESET_KEY) === "1";
   if (hasReset && hasBuildTag) return true;
 
-  sessionStorage.setItem(PREVIEW_CACHE_RESET_KEY, "1");
+  safeSessionSet(PREVIEW_CACHE_RESET_KEY, "1");
   url.searchParams.set("_preview_build", PREVIEW_BUILD_TAG);
   url.searchParams.set("_preview_refresh", Date.now().toString());
-  window.location.replace(url.toString());
-  return false;
+
+  try {
+    window.location.replace(url.toString());
+    return false;
+  } catch {
+    return true;
+  }
 };
 
 const mountApp = () => {
@@ -67,9 +88,13 @@ const mountApp = () => {
 
 if (root) {
   if (isPreviewContext) {
-    ensureFreshPreviewBuild().then((canMount) => {
-      if (canMount) mountApp();
-    });
+    ensureFreshPreviewBuild()
+      .then((canMount) => {
+        if (canMount) mountApp();
+      })
+      .catch(() => {
+        mountApp();
+      });
   } else {
     registerSW({ immediate: true });
     mountApp();
