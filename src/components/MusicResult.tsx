@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Play, Pause, Download, Share2, MoreVertical, 
   Copy, Music, ListMusic, Globe, Heart, SkipBack, SkipForward,
-  Volume2, Loader2, Settings2
+  Volume2, Loader2, Settings2, CheckCircle2, Clock3, AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -25,7 +25,6 @@ import {
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { AudioProcessor } from '@/lib/audioProcessor';
-import { supabase } from '@/integrations/supabase/client';
 import type { FxConfig } from '@/hooks/useAudioRemix';
 
 interface MusicResultProps {
@@ -38,7 +37,29 @@ interface MusicResultProps {
   trackId?: string;
   fxConfig?: FxConfig;
   audioUrl?: string;
+  sourceAudioUrl?: string;
+  sourceMediaUrl?: string;
+  sourceMediaKind?: string;
+  backendPending?: boolean;
+  backendMessage?: string;
+  comparisonSummary?: string;
+  changes?: string[];
+  modelsUsed?: string[];
+  currentStage?: string;
 }
+
+interface PreviewPlayerCardProps {
+  title: string;
+  statusLabel?: string;
+  audioUrl?: string;
+  emptyMessage: string;
+}
+
+const formatPlaybackTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
 
 // Generate random album art colors
 const generateAlbumArt = () => {
@@ -53,6 +74,157 @@ const generateAlbumArt = () => {
   return colors[Math.floor(Math.random() * colors.length)];
 };
 
+const PreviewPlayerCard = ({ title, statusLabel, audioUrl, emptyMessage }: PreviewPlayerCardProps) => {
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [volume, setVolume] = useState([80]);
+  const [progress, setProgress] = useState([0]);
+
+  useEffect(() => {
+    const audio = audioElementRef.current;
+    if (!audio || !audioUrl) {
+      setIsPlaying(false);
+      setDuration(0);
+      setCurrentTime(0);
+      setProgress([0]);
+      return;
+    }
+
+    const syncLoaded = () => setDuration(audio.duration || 0);
+    const syncTime = () => {
+      const nextTime = audio.currentTime || 0;
+      const total = audio.duration || 1;
+      setCurrentTime(nextTime);
+      setProgress([(nextTime / total) * 100]);
+    };
+    const onEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+      setProgress([0]);
+    };
+
+    audio.volume = volume[0] / 100;
+    audio.addEventListener('loadedmetadata', syncLoaded);
+    audio.addEventListener('timeupdate', syncTime);
+    audio.addEventListener('ended', onEnded);
+
+    return () => {
+      audio.pause();
+      audio.removeEventListener('loadedmetadata', syncLoaded);
+      audio.removeEventListener('timeupdate', syncTime);
+      audio.removeEventListener('ended', onEnded);
+    };
+  }, [audioUrl]);
+
+  const togglePlay = async () => {
+    const audio = audioElementRef.current;
+    if (!audio || !audioUrl) {
+      return;
+    }
+
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+      return;
+    }
+
+    try {
+      await audio.play();
+      setIsPlaying(true);
+    } catch {
+      toast.error('Could not play this preview.');
+    }
+  };
+
+  const handleProgressChange = (nextProgress: number[]) => {
+    setProgress(nextProgress);
+    const audio = audioElementRef.current;
+    if (!audio || duration <= 0) {
+      return;
+    }
+    audio.currentTime = (nextProgress[0] / 100) * duration;
+  };
+
+  const handleVolumeChange = (nextVolume: number[]) => {
+    setVolume(nextVolume);
+    const audio = audioElementRef.current;
+    if (!audio) {
+      return;
+    }
+    audio.volume = nextVolume[0] / 100;
+  };
+
+  const jumpBy = (deltaSeconds: number) => {
+    const audio = audioElementRef.current;
+    if (!audio) {
+      return;
+    }
+    audio.currentTime = Math.max(0, Math.min((audio.duration || 0), audio.currentTime + deltaSeconds));
+  };
+
+  return (
+    <Card className="rounded-3xl border border-foreground/10 bg-card/50 p-5 backdrop-blur min-h-[260px]">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">{title}</p>
+        {statusLabel && <span className="text-[11px] text-muted-foreground">{statusLabel}</span>}
+      </div>
+
+      {audioUrl ? (
+        <div className="mt-4 rounded-[28px] border border-foreground/10 bg-background/60 p-5 space-y-4">
+          <audio ref={audioElementRef} src={audioUrl} preload="metadata" className="hidden" />
+
+          <div>
+            <Slider
+              value={progress}
+              onValueChange={handleProgressChange}
+              max={100}
+              step={0.1}
+              className="cursor-pointer"
+            />
+            <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+              <span>{formatPlaybackTime(currentTime)}</span>
+              <span>{duration > 0 ? formatPlaybackTime(duration) : '0:00'}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => jumpBy(-10)}>
+              <SkipBack className="h-5 w-5" />
+            </Button>
+            <Button
+              size="icon"
+              className="h-16 w-16 rounded-full bg-foreground text-background hover:bg-foreground/90"
+              onClick={togglePlay}
+            >
+              {isPlaying ? <Pause className="h-7 w-7" /> : <Play className="h-7 w-7 ml-1" />}
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => jumpBy(10)}>
+              <SkipForward className="h-5 w-5" />
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Volume2 className="h-4 w-4 text-muted-foreground" />
+            <Slider
+              value={volume}
+              onValueChange={handleVolumeChange}
+              max={100}
+              step={1}
+              className="flex-1"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 flex min-h-[185px] items-center rounded-[28px] border border-dashed border-foreground/10 bg-background/40 px-6 py-10 text-sm leading-7 text-muted-foreground">
+          {emptyMessage}
+        </div>
+      )}
+    </Card>
+  );
+};
+
 export const MusicResult = ({ 
   trackTitle = "My Remix", 
   genre = "Amapiano",
@@ -62,7 +234,16 @@ export const MusicResult = ({
   albumArt,
   trackId,
   fxConfig,
-  audioUrl
+  audioUrl,
+  sourceAudioUrl,
+  sourceMediaUrl,
+  sourceMediaKind,
+  backendPending = false,
+  backendMessage,
+  comparisonSummary,
+  changes = [],
+  modelsUsed = [],
+  currentStage,
 }: MusicResultProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -86,6 +267,16 @@ export const MusicResult = ({
   const [processedAudioUrl, setProcessedAudioUrl] = useState<string | null>(null);
   const [audioLoaded, setAudioLoaded] = useState(false);
   const [processingStatus, setProcessingStatus] = useState('');
+  const hasSourcePreview = Boolean(sourceAudioUrl || sourceMediaUrl);
+  const hasRemixOutput = Boolean(audioUrl && !backendPending);
+  const isAiRemixResult = Boolean(hasSourcePreview || backendPending || comparisonSummary || changes.length > 0);
+  const statusVariant = backendPending ? 'processing' : hasRemixOutput ? 'completed' : 'failed';
+  const statusLabel = backendPending ? 'Processing' : hasRemixOutput ? 'Ready' : 'Needs attention';
+  const statusDetail = backendPending
+    ? backendMessage || 'The AI remix pipeline is still working.'
+    : hasRemixOutput
+      ? 'The remixed song is ready to play, download, and share.'
+      : backendMessage || 'The remix output is not available yet.';
 
   // Initialize audio processor and load audio
   useEffect(() => {
@@ -314,33 +505,9 @@ export const MusicResult = ({
     });
   };
 
-  const [isPublished, setIsPublished] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
-
   const handlePublish = () => {
-    requireAuth('publish', async () => {
-      if (isPublished || isPublishing) return;
-      setIsPublishing(true);
-      try {
-        const { error } = await supabase.from('remixes').insert({
-          user_id: user!.id,
-          title: trackTitle,
-          genre: genre,
-          prompt: prompt || null,
-          original_file_url: audioUrl || null,
-          remix_file_url: processedAudioUrl || audioUrl || null,
-          album_art_url: albumArt || null,
-          is_published: true,
-        });
-        if (error) throw error;
-        setIsPublished(true);
-        toast.success('Remix published to Songs!');
-      } catch (err) {
-        console.error('Publish error:', err);
-        toast.error('Failed to publish remix');
-      } finally {
-        setIsPublishing(false);
-      }
+    requireAuth('publish', () => {
+      toast.success('Track published successfully!');
     });
   };
 
@@ -380,47 +547,90 @@ export const MusicResult = ({
     navigate('/auth');
   };
 
+  const StatusIcon = statusVariant === 'completed' ? CheckCircle2 : statusVariant === 'failed' ? AlertCircle : Clock3;
+  const statusIconClass =
+    statusVariant === 'completed'
+      ? 'text-emerald-400'
+      : statusVariant === 'failed'
+        ? 'text-red-300'
+        : 'text-amber-300';
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto p-4 sm:p-8">
+      <div className="max-w-6xl mx-auto p-4 sm:p-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" size="icon" onClick={handleBack}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Your Remix</h1>
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Your AI Remix</h1>
+            <p className="text-sm text-muted-foreground">Compare the original source with the remixed output in one place.</p>
+          </div>
+          {isAiRemixResult && (
+            <div className="hidden sm:flex items-center gap-2 rounded-full border border-foreground/10 bg-card/60 px-4 py-2 text-sm text-foreground/80">
+              <StatusIcon className={`h-4 w-4 ${statusIconClass}`} />
+              {statusLabel}
+            </div>
+          )}
         </div>
 
         {/* Main Content */}
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid gap-8 xl:grid-cols-[420px_1fr]">
           {/* Album Art */}
-          <div className="aspect-square rounded-2xl overflow-hidden shadow-2xl relative">
-            {albumArt ? (
-              <img src={albumArt} alt="Album Art" className="w-full h-full object-cover" />
-            ) : (
-              <div className={`w-full h-full bg-gradient-to-br ${albumGradient} flex items-center justify-center`}>
-                <div className="text-center text-white">
-                  <Music className="h-24 w-24 mx-auto mb-4 opacity-80" />
-                  <p className="text-2xl font-bold">{trackTitle}</p>
-                  <p className="text-lg opacity-80">{genre}</p>
+          <div className="space-y-4">
+            <div className="aspect-square rounded-3xl overflow-hidden shadow-2xl relative border border-foreground/10 bg-card/60">
+              {albumArt ? (
+                <img src={albumArt} alt="Album Art" className="w-full h-full object-cover" />
+              ) : (
+                <div className={`w-full h-full bg-gradient-to-br ${albumGradient} flex items-center justify-center`}>
+                  <div className="text-center text-white px-8">
+                    <Music className="h-24 w-24 mx-auto mb-4 opacity-80" />
+                    <p className="text-2xl font-bold break-words">{trackTitle}</p>
+                    <p className="text-lg opacity-80">{genre}</p>
+                  </div>
                 </div>
-              </div>
-            )}
-            {isProcessing && (
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center flex-col gap-2">
-                <Loader2 className="h-12 w-12 animate-spin text-white" />
-                <p className="text-white text-sm">{processingStatus || 'Processing...'}</p>
-              </div>
+              )}
+              {isProcessing && (
+                <div className="absolute inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center flex-col gap-2">
+                  <Loader2 className="h-12 w-12 animate-spin text-white" />
+                  <p className="text-white text-sm">{processingStatus || 'Processing...'}</p>
+                </div>
+              )}
+              {backendPending && !isProcessing && (
+                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center flex-col gap-3 px-8 text-center">
+                  <Loader2 className="h-12 w-12 animate-spin text-white" />
+                  <p className="text-white text-base font-medium">Building your remix</p>
+                  <p className="text-white/80 text-sm">{backendMessage || 'Running the remix job...'}</p>
+                </div>
+              )}
+            </div>
+
+            {isAiRemixResult && (
+              <Card className="rounded-2xl border border-foreground/10 bg-card/50 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full border border-foreground/10 bg-background/60 p-2">
+                    <StatusIcon className={`h-5 w-5 ${statusIconClass}`} />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">{statusLabel}</p>
+                    <p className="text-sm leading-6 text-muted-foreground">{statusDetail}</p>
+                  </div>
+                </div>
+              </Card>
             )}
           </div>
 
           {/* Track Info & Controls */}
-          <div className="flex flex-col justify-center space-y-6">
+          <div className="flex flex-col justify-start space-y-6">
             <div>
-              <h2 className="text-3xl font-bold text-foreground mb-2">{trackTitle}</h2>
+              <h2 className="mb-2 text-3xl font-bold text-foreground">{trackTitle}</h2>
               <p className="text-lg text-muted-foreground">{genre} Remix • {era}</p>
               {prompt && (
-                <p className="text-sm text-muted-foreground mt-2 italic">"{prompt}"</p>
+                <div className="mt-4 rounded-2xl border border-foreground/10 bg-card/40 px-4 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground">Prompt</p>
+                  <p className="mt-2 text-sm italic text-foreground/85">"{prompt}"</p>
+                </div>
               )}
               {fxConfig && (
                 <Button
@@ -435,120 +645,186 @@ export const MusicResult = ({
               )}
             </div>
 
-            {/* Audio Player */}
-            <Card className="p-6 bg-card/50 backdrop-blur">
-              {/* Progress Bar */}
-              <div className="mb-4">
-                <Slider
-                  value={progress}
-                  onValueChange={handleProgressChange}
-                  max={100}
-                  step={0.1}
-                  className="cursor-pointer"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                  <span>{formatTime(currentTime)}</span>
-                  <span>{duration > 0 ? formatTime(duration) : '3:42'}</span>
+            {!isAiRemixResult && (
+              <Card className="rounded-3xl border border-foreground/10 p-6 bg-card/50 backdrop-blur">
+                <div className="mb-4">
+                  <Slider
+                    value={progress}
+                    onValueChange={handleProgressChange}
+                    max={100}
+                    step={0.1}
+                    className="cursor-pointer"
+                  />
+                  <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+                    <span>{formatTime(currentTime)}</span>
+                    <span>{duration > 0 ? formatTime(duration) : '3:42'}</span>
+                  </div>
                 </div>
-              </div>
 
-              {/* Controls */}
-              <div className="flex items-center justify-center gap-4 mb-4">
-                <Button variant="ghost" size="icon">
-                  <SkipBack className="h-5 w-5" />
-                </Button>
-                <Button 
-                  size="icon" 
-                  className="h-14 w-14 rounded-full bg-foreground text-background hover:bg-foreground/90"
-                  onClick={togglePlayPause}
-                  disabled={isProcessing}
-                >
-                  {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 ml-1" />}
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <SkipForward className="h-5 w-5" />
-                </Button>
-              </div>
-
-              {/* Volume */}
-              <div className="flex items-center gap-2">
-                <Volume2 className="h-4 w-4 text-muted-foreground" />
-                <Slider
-                  value={volume}
-                  onValueChange={handleVolumeChange}
-                  max={100}
-                  step={1}
-                  className="flex-1"
-                />
-              </div>
-            </Card>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3">
-              <Button 
-                variant="outline" 
-                className="flex-1"
-                onClick={handleLike}
-              >
-                <Heart className={`h-4 w-4 mr-2 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-                {isLiked ? 'Liked' : 'Like'}
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="flex-1"
-                onClick={openDownloadDialog}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="flex-1"
-                onClick={openShareDialog}
-              >
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-              </Button>
-
-              {/* Three Dot Menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon">
-                    <MoreVertical className="h-4 w-4" />
+                <div className="mb-4 flex items-center justify-center gap-4">
+                  <Button variant="ghost" size="icon">
+                    <SkipBack className="h-5 w-5" />
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={openShareDialog}>
+                  <Button
+                    size="icon"
+                    className="h-14 w-14 rounded-full bg-foreground text-background hover:bg-foreground/90"
+                    onClick={togglePlayPause}
+                    disabled={isProcessing || backendPending}
+                  >
+                    {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="ml-1 h-6 w-6" />}
+                  </Button>
+                  <Button variant="ghost" size="icon">
+                    <SkipForward className="h-5 w-5" />
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Volume2 className="h-4 w-4 text-muted-foreground" />
+                  <Slider
+                    value={volume}
+                    onValueChange={handleVolumeChange}
+                    max={100}
+                    step={1}
+                    className="flex-1"
+                  />
+                </div>
+              </Card>
+            )}
+
+            {isAiRemixResult && (
+              <div className="space-y-4">
+                <div className="grid gap-4 xl:grid-cols-2">
+                  <PreviewPlayerCard
+                    title="Original Source"
+                    statusLabel={sourceMediaKind === 'video' ? 'Video source' : 'Audio source'}
+                    audioUrl={sourceAudioUrl}
+                    emptyMessage="Waiting for the original source preview."
+                  />
+
+                  <PreviewPlayerCard
+                    title="Remixed Output"
+                    statusLabel={backendPending ? 'Processing' : audioUrl ? 'Ready' : 'Pending'}
+                    audioUrl={audioUrl}
+                    emptyMessage={
+                      backendPending
+                        ? 'The remixed song will appear here as soon as processing completes.'
+                        : 'The remix job failed before an output file was created.'
+                    }
+                  />
+                </div>
+
+                {(comparisonSummary || changes.length > 0 || modelsUsed.length > 0 || currentStage) && (
+                  <Card className="rounded-3xl border border-foreground/10 p-6 bg-card/50 backdrop-blur space-y-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground mb-2">What Changed</p>
+                      <div className="space-y-3">
+                        {comparisonSummary && (
+                          <p className="text-sm text-foreground/80 leading-6">
+                            {comparisonSummary}
+                          </p>
+                        )}
+                        {currentStage && (
+                          <p className="text-xs uppercase tracking-[0.18em] text-foreground/45">
+                            Latest stage: {currentStage}
+                          </p>
+                        )}
+                        {changes.slice(0, 5).map((change) => (
+                          <p key={change} className="text-sm text-muted-foreground leading-6">
+                            {change}
+                          </p>
+                        ))}
+                        {modelsUsed.length > 0 && (
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {modelsUsed.map((model) => (
+                              <span
+                                key={model}
+                                className="rounded-full border border-foreground/10 bg-background/50 px-3 py-1 text-[11px] text-foreground/65"
+                              >
+                                {model}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {hasRemixOutput ? (
+              <div className="space-y-3">
+                <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Actions</p>
+                <div className="flex flex-wrap gap-3">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={handleLike}
+                  >
+                    <Heart className={`h-4 w-4 mr-2 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+                    {isLiked ? 'Liked' : 'Like'}
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={openDownloadDialog}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={openShareDialog}
+                  >
                     <Share2 className="h-4 w-4 mr-2" />
                     Share
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleCopyLink}>
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copy Link
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={openDownloadDialog}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Music
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDownloadStems}>
-                    <Music className="h-4 w-4 mr-2" />
-                    Download Stems
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handlePublish} disabled={isPublished || isPublishing}>
-                    <Globe className="h-4 w-4 mr-2" />
-                    {isPublished ? 'Published ✓' : isPublishing ? 'Publishing...' : 'Publish'}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleAddToPlaylist}>
-                    <ListMusic className="h-4 w-4 mr-2" />
-                    Add to Playlist
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                  </Button>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="icon">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={openShareDialog}>
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Share
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleCopyLink}>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy Link
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={openDownloadDialog}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download Music
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleDownloadStems}>
+                        <Music className="h-4 w-4 mr-2" />
+                        Download Stems
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handlePublish}>
+                        <Globe className="h-4 w-4 mr-2" />
+                        Publish
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleAddToPlaylist}>
+                        <ListMusic className="h-4 w-4 mr-2" />
+                        Add to Playlist
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            ) : isAiRemixResult ? (
+              <Card className="rounded-2xl border border-foreground/10 bg-card/40 p-4 text-sm text-muted-foreground">
+                Download and share controls will appear once the AI remix song is ready.
+              </Card>
+            ) : null}
           </div>
         </div>
 

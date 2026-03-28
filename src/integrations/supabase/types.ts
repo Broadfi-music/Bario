@@ -572,39 +572,6 @@ export type Database = {
         }
         Relationships: []
       }
-      host_posts: {
-        Row: {
-          comment_count: number | null
-          content: string
-          created_at: string
-          id: string
-          image_url: string | null
-          like_count: number | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          comment_count?: number | null
-          content: string
-          created_at?: string
-          id?: string
-          image_url?: string | null
-          like_count?: number | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          comment_count?: number | null
-          content?: string
-          created_at?: string
-          id?: string
-          image_url?: string | null
-          like_count?: number | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       likes: {
         Row: {
           created_at: string

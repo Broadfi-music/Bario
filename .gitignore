@@ -11,12 +11,6 @@ node_modules
 dist
 dist-ssr
 *.local
-.env
-.env.local
-audios/
-data/
-__pycache__/
-*.zip
 
 # Editor directories and files
 .vscode/*
@@ -28,3 +22,11 @@ __pycache__/
 *.njsproj
 *.sln
 *.sw?
+/audios
+/data
+remix_backend/
+__pycache__
+.env
+.env.local
+.env.*.local
+!.env.example

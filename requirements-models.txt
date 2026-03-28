@@ -1,0 +1,12 @@
+demucs>=4.0.1
+langgraph>=0.2,<1
+librosa>=0.10.2
+replicate>=1.0.4
+soundfile>=0.12.1
+torch>=2.1
+torchaudio>=2.1
+transformers>=4.45
+yt-dlp>=2025.1.15
+
+# If you have an NVIDIA GPU, install the matching PyTorch CUDA build from the
+# official PyTorch instructions before installing the rest of this file.

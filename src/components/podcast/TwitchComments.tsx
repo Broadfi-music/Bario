@@ -76,42 +76,19 @@ const DEMO_LISTENER_NAMES = [
   'EarlyRiser', 'WorkLifeBalance', 'PeacefulListener', 'InnerPeace', 'SaveForLater',
 ];
 
-// Per-room unique messages keyed by session ID suffix
-const DEMO_MESSAGES_BY_ROOM: Record<string, string[]> = {
-  '1': ['AI is just a tool, not a replacement 🤖', 'Creative jobs need human touch', 'The debate is real 🔥', 'Automation changes everything', 'Who agrees AI helps more than hurts?', 'Tech is evolving so fast', 'Humans will always create art', 'This topic hits different 💯'],
-  '2': ['Red flags are so obvious in hindsight 🚩', 'Trust your gut always', 'Boundaries are everything', 'This is so relatable 😭', 'Love is blind but shouldnt be', 'Preach! 🙌', 'Took me years to learn this', 'Everyone needs to hear this'],
-  '3': ['Bitcoin to the moon 🚀', 'Bear market is temporary', 'Crypto is the future 💎', 'DCA all day every day', 'Whales are accumulating', 'Great analysis!', 'Charts dont lie 📊', 'Hold strong 💪'],
-  '4': ['LMAOOO 😂😂', 'This man is hilarious 🤣', 'I cant breathe laughing', 'Comedy gold right here', 'Who else is dying laughing? 💀', 'Tell the uber story again!', 'Bro im crying 😭', 'Best comedy room on Bario'],
-  '5': ['Healing takes time 🙏', 'Self love is the best love', 'Thank you for this safe space ❤️', 'Crying but in a good way', 'This is so therapeutic', 'You are not alone 🤗', 'Boundaries saved me', 'Growth after heartbreak is real ✨'],
-  '6': ['Bollywood music hits different 🎵', 'SRK forever! 👑', 'Old songs are the best', 'Kishore Kumar was legendary', 'AR Rahman is a genius 🎶', 'Desi vibes only! 🇮🇳', 'This playlist is fire 🔥', 'Nostalgia hitting hard 💫'],
-  '7': ['IPL is the best league! 🏏', 'Virat vs Rohit debate!', 'Mumbai Indians forever 💙', 'CSK whistlepodu! 💛', 'What a season this is!', 'Bumrah is unstoppable 🔥', 'Dhoni is the GOAT 🐐', 'Best cricket discussion ever'],
-  '8': ['Om shanti 🙏', 'This meditation is so calming', 'Inner peace is everything 🧘', 'Feeling so relaxed already', 'Breathe in breathe out ✨', 'Namaste to everyone here', 'This room is pure healing', 'The silence speaks volumes 🕉️'],
-  '9': ['Messi is the GOAT! 🐐', 'Ronaldo has more goals tho', 'This debate will never end ⚽', 'World Cup settled it', 'Both legends respect both 👑', 'Football is life! 🙌', 'Greatest rivalry ever', 'Cant pick just one 🤷'],
-  '10': ['MENA tech scene is booming! 🚀', 'Dubai is the future 🌆', 'Saudi Vision 2030 is real', 'Startups are thriving here', 'Innovation in the desert 🏜️', 'Arabic tech community growing fast', 'Investment flowing in 💰', 'Exciting times ahead! 🌟'],
-};
-
-const DEMO_GIFTER_NAMES_BY_ROOM: Record<string, string[]> = {
-  '1': ['TechBoss', 'AIFanatic', 'CodeMaster', 'FutureThinker', 'DigitalNomad'],
-  '2': ['LoveCoach', 'HeartGuard', 'RealQueenB', 'TruthTeller', 'SelfCarePro'],
-  '3': ['CryptoKing', 'DiamondHands', 'MoonWalker', 'SatoshiFan', 'BlockchainBro'],
-  '4': ['ComedyFan', 'LaughKing', 'JokesMaster', 'HumorVibes', 'FunnyBone'],
-  '5': ['HealingSoul', 'PeaceMaker', 'LightWorker', 'ZenVibes', 'WarmHeart'],
-  '6': ['DesiQueen', 'BollyLover', 'MusicJunkie', 'SongBird', 'RhythmKing'],
-  '7': ['CricketFan99', 'IPLMaster', 'SixerKing', 'BowlerBoss', 'RunChaser'],
-  '8': ['YogiLife', 'PeaceSeeker', 'MeditatorX', 'CalmMind', 'SpiritGuide'],
-  '9': ['GoalKing', 'FootballFan', 'PitchMaster', 'StrikerPro', 'MatchDay'],
-  '10': ['GulfTechie', 'MENABuilder', 'DesertEagle', 'VisionaryX', 'InnovateME'],
-};
-
-const getDemoMessages = (sessionId: string) => {
-  const roomNum = sessionId.replace('demo-room-', '');
-  return DEMO_MESSAGES_BY_ROOM[roomNum] || DEMO_MESSAGES_BY_ROOM['1'];
-};
-
-const getDemoGifterNames = (sessionId: string) => {
-  const roomNum = sessionId.replace('demo-room-', '');
-  return DEMO_GIFTER_NAMES_BY_ROOM[roomNum] || DEMO_GIFTER_NAMES_BY_ROOM['1'];
-};
+const DEMO_MESSAGES = [
+  'This chapter changed my perspective 🙏', 'The power of thoughts is incredible!',
+  'Love this discussion! 💜', 'So inspiring 🔥', 'Mind = blown 🤯',
+  'Thank you for sharing this wisdom', 'Every thought shapes our reality',
+  'This is exactly what I needed today', 'The audiobook is amazing quality!',
+  'Taking notes on everything 📝', 'Solomon Harvey narrates so well',
+  'We become what we think about', 'Sharing this with my friends',
+  'Life changing content ✨', 'This book should be required reading',
+  'The mind is everything', 'Pure gold! 💎', 'I listen to this every morning',
+  'James Allen was a genius', 'Self-mastery begins with thought mastery',
+  'Who else is listening from work? 👋', 'The narrator voice is so calming',
+  'As within, so without 🧘', 'Bookmarking this for later!',
+];
 
 const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHost = false, hideGiftButton = false }: TwitchCommentsProps) => {
   const { user } = useAuth();
@@ -186,11 +163,10 @@ const TwitchComments = ({ sessionId, hostId, onSendGift, sessionTitle = '', isHo
   useEffect(() => {
     if (!isDemoSession(sessionId)) return;
 
-    const roomMessages = getDemoMessages(sessionId);
     let demoIndex = 0;
     const addDemoMessage = () => {
       const name = DEMO_LISTENER_NAMES[Math.floor(Math.random() * DEMO_LISTENER_NAMES.length)];
-      const content = roomMessages[demoIndex % roomMessages.length];
+      const content = DEMO_MESSAGES[demoIndex % DEMO_MESSAGES.length];
       demoIndex++;
       const id = `demo-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
       const newMsg: Comment = {

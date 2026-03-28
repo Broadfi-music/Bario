@@ -9,21 +9,26 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:8010",
+        changeOrigin: true,
+      },
+      "/files": {
+        target: "http://127.0.0.1:8010",
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
-      injectRegister: null,
       registerType: "autoUpdate",
-      devOptions: {
-        enabled: false,
-      },
       includeAssets: ["bario-logo.png", "favicon.ico"],
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
-        cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff,woff2}"],

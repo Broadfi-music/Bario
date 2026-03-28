@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import { AnimatePresence } from "framer-motion";
@@ -44,16 +44,21 @@ import Install from "@/pages/Install";
 import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
 
-// Rebuild trigger: env re-injection
 const queryClient = new QueryClient();
 
 const MobileHomeRedirect = () => {
-  const { loading } = useAuth();
+  const { user, loading } = useAuth();
+  const isMobile = useIsMobile();
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches
+    || (window.navigator as any).standalone === true;
 
   if (loading) return null;
 
-  // Feed page is the main homepage for all users.
-  return <Podcasts />;
+  // Always send authenticated users to dashboard after OAuth/login callbacks.
+  if (user) return <Navigate to="/dashboard" replace />;
+  
+  // Only PWA gets Podcasts as home. Mobile web always gets GlobalHeatmap.
+  return (isMobile && isPWA) ? <Podcasts /> : <GlobalHeatmap />;
 };
 
 const AnimatedRoutes = ({ showSplash }: { showSplash: boolean }) => {
@@ -105,6 +110,7 @@ const AnimatedRoutes = ({ showSplash }: { showSplash: boolean }) => {
 
 const App = () => {
   const [showSplash, setShowSplash] = useState(() => {
+    // Only show splash on PWA (standalone mode), not regular browser
     const isPWA = window.matchMedia('(display-mode: standalone)').matches
       || (window.navigator as any).standalone === true;
     if (!isPWA) return false;
@@ -112,15 +118,6 @@ const App = () => {
     sessionStorage.setItem('bario-splash-shown', 'true');
     return true;
   });
-
-  // Force reload when a new service worker activates (fixes stale cache)
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        window.location.reload();
-      });
-    }
-  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

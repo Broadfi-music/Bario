@@ -73,7 +73,7 @@ const BarioMusic = () => {
   const fetchUploads = async () => {
     setLoading(true);
     try {
-      // Fetch uploads
+      // Fetch uploads first
       const { data: uploadsData, error: uploadsError } = await supabase
         .from('user_uploads')
         .select('*')
@@ -82,34 +82,8 @@ const BarioMusic = () => {
 
       if (uploadsError) throw uploadsError;
 
-      // Fetch published remixes
-      const { data: remixesData } = await supabase
-        .from('remixes')
-        .select('*')
-        .eq('is_published', true)
-        .order('created_at', { ascending: false });
-
-      // Convert remixes to the same shape as uploads
-      const remixesAsUploads: UserUpload[] = (remixesData || []).map(r => ({
-        id: r.id,
-        title: r.title,
-        description: r.prompt,
-        cover_image_url: r.album_art_url,
-        audio_url: r.remix_file_url || r.original_file_url || '',
-        genre: r.genre,
-        play_count: r.play_count,
-        like_count: r.like_count,
-        duration_ms: null,
-        user_id: r.user_id,
-        created_at: r.created_at,
-      }));
-
-      // Combine both lists
-      const allTracks = [...(uploadsData || []), ...remixesAsUploads]
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
       // Fetch profiles for all unique user_ids
-      const userIds = [...new Set(allTracks.map(u => u.user_id))];
+      const userIds = [...new Set((uploadsData || []).map(u => u.user_id))];
       let profilesMap: Record<string, any> = {};
       
       if (userIds.length > 0) {
@@ -124,14 +98,14 @@ const BarioMusic = () => {
         }, {} as Record<string, any>);
       }
 
-      // Merge profiles
-      const tracksWithProfiles = allTracks.map(track => ({
-        ...track,
-        profiles: profilesMap[track.user_id] || null
+      // Merge profiles into uploads
+      const uploadsWithProfiles = (uploadsData || []).map(upload => ({
+        ...upload,
+        profiles: profilesMap[upload.user_id] || null
       }));
 
-      setUploads(tracksWithProfiles as UserUpload[]);
-      setFilteredUploads(tracksWithProfiles as UserUpload[]);
+      setUploads(uploadsWithProfiles as UserUpload[]);
+      setFilteredUploads(uploadsWithProfiles as UserUpload[]);
     } catch (error) {
       console.error('Error fetching uploads:', error);
     } finally {

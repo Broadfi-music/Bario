@@ -5,8 +5,7 @@ import { Users, Plus, Trophy, Mic, MicOff, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { getDemoSessionById, ALL_DEMO_SESSIONS, DemoSession, DemoSpeaker } from '@/config/demoSessions';
-import RoomVisualization from './RoomVisualization';
+import { demoSession, demoSession2, demoSession3, DemoSpeaker, DemoSession, DEMO_SESSION_ID_2, DEMO_SESSION_ID_3 } from '@/config/demoSpace';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import AuthPromptModal from './AuthPromptModal';
 import TopEngagementModal from './TopEngagementModal';
@@ -45,7 +44,7 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
   const navigate = useNavigate();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   // Pick the right demo session
-  const activeDemo: DemoSession = getDemoSessionById(sessionId || '') || ALL_DEMO_SESSIONS[0];
+  const activeDemo: DemoSession = sessionId === DEMO_SESSION_ID_3 ? demoSession3 : sessionId === DEMO_SESSION_ID_2 ? demoSession2 : demoSession;
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -337,13 +336,9 @@ const DemoLiveSpace = ({ onLeave, sessionId }: DemoLiveSpaceProps) => {
             </div>
       </div>
 
-      {/* Speakers Area with animated background */}
-      <div className="flex-1 flex items-center justify-center px-4 py-4 min-h-0 relative overflow-hidden">
-        {/* Animated room visualization as background */}
-        <div className="absolute inset-0 opacity-30">
-          <RoomVisualization theme={activeDemo.visualTheme} energy={activeDemo.energy} />
-        </div>
-        <div className="relative z-10 grid grid-cols-4 gap-4 justify-items-center">
+      {/* Speakers Area - Horizontal Row */}
+      <div className="flex-1 flex items-center justify-center px-4 py-4 min-h-0 bg-black">
+        <div className="grid grid-cols-4 gap-4 justify-items-center">
           {activeDemo.speakers.map(speaker => renderSpeaker(speaker))}
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={`slot-${i}`} className="flex flex-col items-center gap-1">
