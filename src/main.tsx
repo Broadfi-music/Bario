@@ -5,98 +5,31 @@ import App from "./App";
 import "./index.css";
 
 const root = document.getElementById("root");
-// Force rebuild: 2026-03-28-preview-hotfix-v5
-const PREVIEW_BUILD_TAG = "2026-03-28-preview-hotfix-v5";
-const PREVIEW_CACHE_RESET_KEY = `bario-preview-cache-reset-${PREVIEW_BUILD_TAG}`;
 
 const isPreviewContext = (() => {
-  const isPreviewHost =
-    window.location.hostname.includes("id-preview--") ||
-    window.location.hostname.includes("lovableproject.com");
-
-  let isInIframe = false;
   try {
-    isInIframe = window.self !== window.top;
-  } catch {
-    isInIframe = true;
-  }
-
-  return isPreviewHost || isInIframe;
-})();
-
-const safeSessionGet = (key: string) => {
-  try {
-    return sessionStorage.getItem(key);
-  } catch {
-    return null;
-  }
-};
-
-const safeSessionSet = (key: string, value: string) => {
-  try {
-    sessionStorage.setItem(key, value);
-  } catch {
-    // Ignore storage errors in restricted iframe/privacy contexts.
-  }
-};
-
-const clearPreviewServiceWorkersAndCaches = async () => {
-  if (!("serviceWorker" in navigator)) return;
-
-  try {
-    const registrations = await navigator.serviceWorker.getRegistrations();
-    await Promise.allSettled(registrations.map((registration) => registration.unregister()));
-
-    if ("caches" in window) {
-      const cacheKeys = await caches.keys();
-      await Promise.allSettled(cacheKeys.map((cacheKey) => caches.delete(cacheKey)));
-    }
-  } catch (error) {
-    console.warn("Preview cache cleanup skipped", error);
-  }
-};
-
-const ensureFreshPreviewBuild = async (): Promise<boolean> => {
-  await clearPreviewServiceWorkersAndCaches();
-
-  const url = new URL(window.location.href);
-  const hasBuildTag = url.searchParams.get("_preview_build") === PREVIEW_BUILD_TAG;
-  const hasReset = safeSessionGet(PREVIEW_CACHE_RESET_KEY) === "1";
-  if (hasReset && hasBuildTag) return true;
-
-  safeSessionSet(PREVIEW_CACHE_RESET_KEY, "1");
-  url.searchParams.set("_preview_build", PREVIEW_BUILD_TAG);
-  url.searchParams.set("_preview_refresh", Date.now().toString());
-
-  try {
-    window.location.replace(url.toString());
-    return false;
+    return (
+      window.self !== window.top ||
+      window.location.hostname.includes("lovableproject.com") ||
+      window.location.hostname.includes("id-preview--")
+    );
   } catch {
     return true;
   }
-};
+})();
 
-const mountApp = () => {
-  if (!root) return;
+if (isPreviewContext) {
+  navigator.serviceWorker?.getRegistrations().then((regs) =>
+    regs.forEach((r) => r.unregister())
+  );
+} else {
+  registerSW({ immediate: true });
+}
 
+if (root) {
   createRoot(root).render(
     <StrictMode>
       <App />
     </StrictMode>
   );
-};
-
-if (root) {
-  if (isPreviewContext) {
-    ensureFreshPreviewBuild()
-      .then((canMount) => {
-        if (canMount) mountApp();
-      })
-      .catch(() => {
-        mountApp();
-      });
-  } else {
-    registerSW({ immediate: true });
-    mountApp();
-  }
 }
