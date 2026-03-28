@@ -5,9 +5,9 @@ import App from "./App";
 import "./index.css";
 
 const root = document.getElementById("root");
-// Force rebuild: 2026-03-28-fresh
-const BUILD_TIMESTAMP = "__BUILD_TS_" + Date.now();
-const PREVIEW_CACHE_RESET_KEY = "bario-preview-cache-reset-v4";
+// Force rebuild: 2026-03-28-preview-hotfix-v5
+const PREVIEW_BUILD_TAG = "2026-03-28-preview-hotfix-v5";
+const PREVIEW_CACHE_RESET_KEY = `bario-preview-cache-reset-${PREVIEW_BUILD_TAG}`;
 
 const isPreviewContext = (() => {
   const isPreviewHost =
@@ -43,11 +43,13 @@ const clearPreviewServiceWorkersAndCaches = async () => {
 const ensureFreshPreviewBuild = async (): Promise<boolean> => {
   await clearPreviewServiceWorkersAndCaches();
 
+  const url = new URL(window.location.href);
+  const hasBuildTag = url.searchParams.get("_preview_build") === PREVIEW_BUILD_TAG;
   const hasReset = sessionStorage.getItem(PREVIEW_CACHE_RESET_KEY) === "1";
-  if (hasReset) return true;
+  if (hasReset && hasBuildTag) return true;
 
   sessionStorage.setItem(PREVIEW_CACHE_RESET_KEY, "1");
-  const url = new URL(window.location.href);
+  url.searchParams.set("_preview_build", PREVIEW_BUILD_TAG);
   url.searchParams.set("_preview_refresh", Date.now().toString());
   window.location.replace(url.toString());
   return false;
