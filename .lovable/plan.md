@@ -1,25 +1,67 @@
 
 
-## Fix: Force fresh preview load
+## Fix: Remove preview redirect loop causing blank screen in editor
 
-The app code and backend are fully intact and working. The blank preview is caused by stale cached content from the previous broken state.
+### Root Cause
 
-### What I'll do
+The `ensureFreshPreviewBuild` function in `src/main.tsx` forces a `window.location.replace()` redirect every time it detects a "preview context" (iframe or lovableproject.com domain). It relies on `sessionStorage` to track whether a redirect already happened, but inside the Lovable editor's iframe, `sessionStorage` is often blocked or cleared between navigations. This creates an **infinite redirect loop** → blank screen.
 
-1. **Add a unique rebuild comment** to `src/main.tsx` (different from the previous App.tsx comment) to force Vite to do a full HMR refresh and clear the module cache
-2. **Bump the preview cache reset key** from `v3` to `v4` in `src/main.tsx` — this forces the preview's `ensureFreshPreviewBuild` function to do a one-time hard reload, clearing any cached broken state
+The app itself is fully functional — both the preview URL and published URL (bario.icu) render correctly when loaded directly.
 
-### Why this works
+### What I'll Do
 
-The `main.tsx` file has a built-in mechanism (`PREVIEW_CACHE_RESET_KEY`) that detects when it needs to force a hard reload in preview mode. Changing the key from `v3` to `v4` triggers this mechanism, ensuring the preview iframe gets a completely fresh build.
+**Simplify `src/main.tsx`** — Remove all the complex preview cache-busting logic (`ensureFreshPreviewBuild`, `clearPreviewServiceWorkersAndCaches`, `safeSessionGet/Set`, `PREVIEW_BUILD_TAG`, `PREVIEW_CACHE_RESET_KEY`). Replace with:
 
-### Backend status
+1. A simple guard that **only unregisters service workers** in preview/iframe contexts (no redirects, no URL manipulation)
+2. Immediately mount the app in all cases
+3. Keep `registerSW` only for non-preview contexts (production PWA)
 
-All data is safe and intact:
-- 53 user profiles
-- 128 podcast sessions (7 live)
-- 49 battles (3 active)  
-- All tables, RLS policies, storage buckets, and edge functions are unchanged
+```typescript
+// Simplified main.tsx structure:
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { registerSW } from "virtual:pwa-register";
+import App from "./App";
+import "./index.css";
 
-No backend changes needed.
+const root = document.getElementById("root");
+
+// Only unregister SWs in preview — never redirect
+const isPreviewContext = (() => {
+  try {
+    return window.self !== window.top
+      || window.location.hostname.includes("lovableproject.com")
+      || window.location.hostname.includes("id-preview--");
+  } catch { return true; }
+})();
+
+if (isPreviewContext) {
+  navigator.serviceWorker?.getRegistrations().then(regs =>
+    regs.forEach(r => r.unregister())
+  );
+} else {
+  registerSW({ immediate: true });
+}
+
+if (root) {
+  createRoot(root).render(
+    <StrictMode><App /></StrictMode>
+  );
+}
+```
+
+### Files Changed
+
+- `src/main.tsx` — Replace ~100 lines with ~25 lines (remove redirect loop)
+
+### What This Fixes
+
+- Eliminates the infinite redirect loop in the Lovable editor iframe
+- App mounts immediately in all environments
+- Service workers still properly disabled in preview contexts
+- PWA still works correctly on the published site
+
+### Backend Status
+
+No changes needed. All data, tables, edge functions, and storage are intact.
 
