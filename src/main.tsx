@@ -5,8 +5,9 @@ import App from "./App";
 import "./index.css";
 
 const root = document.getElementById("root");
+// Force rebuild: 2026-03-28-fresh
 const BUILD_TIMESTAMP = "__BUILD_TS_" + Date.now();
-const PREVIEW_CACHE_RESET_KEY = "bario-preview-cache-reset-v3";
+const PREVIEW_CACHE_RESET_KEY = "bario-preview-cache-reset-v4";
 
 const isPreviewContext = (() => {
   const isPreviewHost =
