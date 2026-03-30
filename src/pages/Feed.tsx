@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Heart, MessageCircle, Send, ArrowLeft, Radio, Swords, Sparkles, User, Mic, Users } from 'lucide-react';
+import { useFollowSystem } from '@/hooks/useFollowSystem';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -77,6 +78,7 @@ const Feed = () => {
   const [sendingCommentPostId, setSendingCommentPostId] = useState<string | null>(null);
   const [liveSessions, setLiveSessions] = useState<LiveSession[]>([]);
   const [suggestedCreators, setSuggestedCreators] = useState<SuggestedCreator[]>([]);
+  const { toggleFollow, isFollowing } = useFollowSystem();
 
   const postIds = useMemo(() => posts.map((p) => p.id), [posts]);
 
@@ -123,38 +125,14 @@ const Feed = () => {
   };
 
   const fetchLiveSessions = async () => {
-    const { data } = await db
-      .from('podcast_sessions')
-      .select('id, title, host_id, listener_count')
-      .eq('status', 'live')
-      .order('listener_count', { ascending: false })
-      .limit(4);
-
-    if (data && data.length > 0) {
-      const hostIds = [...new Set(data.map((s: any) => s.host_id))] as string[];
-      const { data: profiles } = await db.from('profiles').select('user_id, full_name, avatar_url').in('user_id', hostIds);
-      const profMap = new Map<string, any>((profiles || []).map((p: any) => [p.user_id, p]));
-
-      setLiveSessions(data.map((s: any) => {
-        const prof = profMap.get(s.host_id);
-        return {
-          id: s.id,
-          title: s.title,
-          host_name: prof?.full_name || 'Host',
-          host_avatar: prof?.avatar_url || null,
-          listener_count: s.listener_count || 0,
-        };
-      }));
-    } else {
-      // Use demo sessions as fallback
-      setLiveSessions(ALL_DEMO_SESSIONS.slice(0, 4).map(s => ({
-        id: s.id,
-        title: s.title,
-        host_name: s.hostName,
-        host_avatar: s.hostAvatar || getDemoAvatar(s.hostName),
-        listener_count: s.baseListenerCount + Math.floor(Math.random() * 50),
-      })));
-    }
+    // Always use demo sessions for Live Now sidebar
+    setLiveSessions(ALL_DEMO_SESSIONS.slice(0, 4).map(s => ({
+      id: s.id,
+      title: s.title,
+      host_name: s.hostName,
+      host_avatar: s.hostAvatar || getDemoAvatar(s.hostName),
+      listener_count: s.baseListenerCount + Math.floor(Math.random() * 50),
+    })));
   };
 
   const fetchSuggestedCreators = async () => {
@@ -286,23 +264,18 @@ const Feed = () => {
   }, [postIds.join(',')]);
 
   return (
-    <div className="min-h-screen bg-black text-white pb-20">
+    <div className="min-h-screen bg-background text-foreground pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-black/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-3 py-2.5">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate('/podcasts?tab=feed')}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
-              aria-label="Back"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-            <h1 className="text-sm font-semibold">Creator Feed</h1>
-          </div>
-          <Link to="/messages" className="text-xs text-white/70 hover:text-white">
-            Open DMs
-          </Link>
+      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-center px-3 py-2.5 relative">
+          <button
+            onClick={() => navigate('/podcasts?tab=feed')}
+            className="absolute left-3 inline-flex h-8 w-8 items-center justify-center rounded-full text-foreground/70 hover:bg-secondary hover:text-foreground"
+            aria-label="Back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <h1 className="text-lg font-black tracking-tight italic">Creator Feed</h1>
         </div>
       </header>
 
@@ -310,12 +283,12 @@ const Feed = () => {
         {/* Left Sidebar - hidden on mobile */}
         <aside className="hidden lg:block w-52 flex-shrink-0">
           <div className="sticky top-14 space-y-1">
-            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider px-2 mb-2">Navigate</p>
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2">Navigate</p>
             {NAV_ITEMS.map(item => (
               <button
                 key={item.label}
                 onClick={() => navigate(item.path)}
-                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left"
+                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-foreground/70 hover:text-foreground hover:bg-secondary/50 transition-colors text-left"
               >
                 <item.icon className="h-4 w-4" />
                 <span className="text-xs font-medium">{item.label}</span>
@@ -323,20 +296,20 @@ const Feed = () => {
             ))}
 
             {/* Recommended Channels */}
-            <div className="mt-5 pt-4 border-t border-white/10">
-              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider px-2 mb-2">Recommended</p>
+            <div className="mt-5 pt-4 border-t border-border">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2">Recommended</p>
               {ALL_DEMO_SESSIONS.slice(0, 5).map(session => (
                 <button
                   key={session.id}
                   onClick={() => navigate(`/podcasts?session=${session.id}`)}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors text-left"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors text-left"
                 >
-                  <div className="h-6 w-6 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
+                  <div className="h-6 w-6 rounded-full overflow-hidden bg-secondary flex-shrink-0">
                     <img src={session.hostAvatar || getDemoAvatar(session.hostName)} alt="" className="h-full w-full object-cover" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[11px] truncate">{session.hostName}</p>
-                    <p className="text-[9px] text-white/30 truncate">{session.category}</p>
+                    <p className="text-[9px] text-muted-foreground truncate">{session.category}</p>
                   </div>
                 </button>
               ))}
@@ -347,9 +320,9 @@ const Feed = () => {
         {/* Main Feed */}
         <main className="flex-1 min-w-0">
           {loading ? (
-            <div className="text-center text-sm text-white/50 py-10">Loading feed...</div>
+            <div className="text-center text-sm text-muted-foreground py-10">Loading feed...</div>
           ) : posts.length === 0 ? (
-            <div className="text-center text-sm text-white/50 py-10">No posts yet.</div>
+            <div className="text-center text-sm text-muted-foreground py-10">No posts yet.</div>
           ) : (
             <div className="space-y-2">
               {posts.map(post => {
@@ -357,32 +330,32 @@ const Feed = () => {
                 const isLiked = likedPostIds.has(post.id);
 
                 return (
-                  <article key={post.id} className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                  <article key={post.id} className="rounded-lg border border-border bg-card px-3 py-2.5">
                     <div className="flex items-start gap-2">
                       <button
                         onClick={() => navigate(`/host/${post.user_id}`)}
-                        className="h-8 w-8 overflow-hidden rounded-full bg-white/10 flex-shrink-0"
+                        className="h-8 w-8 overflow-hidden rounded-full bg-secondary flex-shrink-0"
                       >
                         {post.author_avatar ? (
                           <img src={post.author_avatar} alt="" className="h-full w-full object-cover" loading="lazy" />
                         ) : (
-                          <div className="h-full w-full bg-white/20" />
+                          <div className="h-full w-full bg-secondary" />
                         )}
                       </button>
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 text-[11px]">
-                          <button onClick={() => navigate(`/host/${post.user_id}`)} className="font-semibold text-white hover:underline">
+                          <button onClick={() => navigate(`/host/${post.user_id}`)} className="font-semibold text-foreground hover:underline">
                             {post.author_name}
                           </button>
-                          {post.author_username && <span className="text-white/40">@{post.author_username}</span>}
-                          <span className="text-white/30">· {formatTimeAgo(post.created_at)}</span>
+                          {post.author_username && <span className="text-muted-foreground">@{post.author_username}</span>}
+                          <span className="text-muted-foreground">· {formatTimeAgo(post.created_at)}</span>
                         </div>
 
-                        <p className="mt-1 whitespace-pre-wrap text-[13px] text-white/85 leading-snug">{post.content}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-[13px] text-foreground/85 leading-snug">{post.content}</p>
 
                         {post.image_url && (
-                          <div className="mt-1.5 overflow-hidden rounded-lg border border-white/10">
+                          <div className="mt-1.5 overflow-hidden rounded-lg border border-border">
                             <img src={post.image_url} alt="Post" className="max-h-[300px] w-full object-cover" loading="lazy" />
                           </div>
                         )}
@@ -390,12 +363,12 @@ const Feed = () => {
                         <div className="mt-1.5 flex items-center gap-4 text-[11px]">
                           <button
                             onClick={() => toggleLike(post.id)}
-                            className={`inline-flex items-center gap-1 ${isLiked ? 'text-pink-400' : 'text-white/50 hover:text-pink-300'}`}
+                            className={`inline-flex items-center gap-1 ${isLiked ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                           >
                             <Heart className={`h-3.5 w-3.5 ${isLiked ? 'fill-current' : ''}`} />
                             {likeCounts[post.id] || 0}
                           </button>
-                          <span className="inline-flex items-center gap-1 text-white/50">
+                          <span className="inline-flex items-center gap-1 text-muted-foreground">
                             <MessageCircle className="h-3.5 w-3.5" />
                             {postComments.length}
                           </span>
@@ -408,12 +381,12 @@ const Feed = () => {
                             onChange={e => setCommentDrafts(prev => ({ ...prev, [post.id]: e.target.value }))}
                             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addComment(post.id); } }}
                             placeholder="Reply..."
-                            className="flex-1 bg-white/5 border border-white/10 rounded-full text-[11px] text-white placeholder:text-white/30 h-7 px-3 focus:outline-none focus:border-white/20"
+                            className="flex-1 bg-secondary/50 border border-border rounded-full text-[11px] text-foreground placeholder:text-muted-foreground h-7 px-3 focus:outline-none focus:border-border"
                           />
                           <button
                             onClick={() => addComment(post.id)}
                             disabled={sendingCommentPostId === post.id || !commentDrafts[post.id]?.trim()}
-                            className="h-7 w-7 flex items-center justify-center rounded-full bg-white/10 text-white/60 hover:bg-white/20 disabled:opacity-30"
+                            className="h-7 w-7 flex items-center justify-center rounded-full bg-secondary text-muted-foreground hover:bg-secondary disabled:opacity-30"
                           >
                             <Send className="h-3 w-3" />
                           </button>
@@ -422,8 +395,8 @@ const Feed = () => {
                         {postComments.length > 0 && (
                           <div className="mt-1.5 space-y-1 pl-1">
                             {postComments.slice(-3).map(comment => (
-                              <div key={comment.id} className="text-[11px] text-white/70">
-                                <button onClick={() => navigate(`/host/${comment.user_id}`)} className="mr-1 font-semibold text-white/90 hover:underline">
+                              <div key={comment.id} className="text-[11px] text-foreground/70">
+                                <button onClick={() => navigate(`/host/${comment.user_id}`)} className="mr-1 font-semibold text-foreground/90 hover:underline">
                                   {comment.author_name}
                                 </button>
                                 {comment.content}
@@ -445,25 +418,25 @@ const Feed = () => {
           <div className="sticky top-14 space-y-5">
             {/* Live Sessions */}
             <div>
-              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">Live Now</p>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Live Now</p>
               <div className="space-y-1.5">
                 {liveSessions.map(session => (
                   <button
                     key={session.id}
                     onClick={() => navigate(`/podcasts?session=${session.id}`)}
-                    className="w-full flex items-center gap-2 p-2 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/5 transition-colors text-left"
+                    className="w-full flex items-center gap-2 p-2 rounded-lg border border-border bg-card hover:bg-secondary/50 transition-colors text-left"
                   >
-                    <div className="h-8 w-8 rounded-full overflow-hidden bg-white/10 flex-shrink-0 relative">
+                    <div className="h-8 w-8 rounded-full overflow-hidden bg-secondary flex-shrink-0 relative">
                       {session.host_avatar ? (
                         <img src={session.host_avatar} alt="" className="h-full w-full object-cover" />
                       ) : (
-                        <div className="h-full w-full bg-white/20" />
+                        <div className="h-full w-full bg-secondary" />
                       )}
-                      <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border border-black" />
+                      <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border border-background" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-medium text-white truncate">{session.title}</p>
-                      <div className="flex items-center gap-1 text-[9px] text-white/40">
+                      <p className="text-[11px] font-medium text-foreground truncate">{session.title}</p>
+                      <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
                         <span>{session.host_name}</span>
                         <span>·</span>
                         <Users className="h-2.5 w-2.5" />
@@ -477,27 +450,28 @@ const Feed = () => {
 
             {/* Creators to Follow */}
             <div>
-              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">Creators to Follow</p>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Creators to Follow</p>
               <div className="space-y-1">
                 {suggestedCreators.map(creator => (
-                  <button
-                    key={creator.user_id}
-                    onClick={() => navigate(`/host/${creator.user_id}`)}
-                    className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors text-left"
-                  >
-                    <div className="h-8 w-8 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
-                      {creator.avatar_url ? (
-                        <img src={creator.avatar_url} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="h-full w-full bg-white/20" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-medium text-white truncate">{creator.full_name || creator.username || 'Creator'}</p>
-                      {creator.username && <p className="text-[9px] text-white/40 truncate">@{creator.username}</p>}
-                    </div>
-                    <span className="text-[9px] text-white/50 border border-white/20 rounded-full px-2 py-0.5">Follow</span>
-                  </button>
+                  <div key={creator.user_id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 transition-colors">
+                    <button onClick={() => navigate(`/host/${creator.user_id}`)} className="h-8 w-8 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+                      {creator.avatar_url ? <img src={creator.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-secondary" />}
+                    </button>
+                    <button onClick={() => navigate(`/host/${creator.user_id}`)} className="min-w-0 flex-1 text-left">
+                      <p className="text-[11px] font-medium text-foreground truncate">{creator.full_name || creator.username || 'Creator'}</p>
+                      {creator.username && <p className="text-[9px] text-muted-foreground truncate">@{creator.username}</p>}
+                    </button>
+                    <button
+                      onClick={() => toggleFollow(creator.user_id)}
+                      className={`text-[9px] border rounded-full px-2 py-0.5 transition-colors ${
+                        isFollowing(creator.user_id)
+                          ? 'border-foreground/30 text-foreground/70 hover:border-destructive hover:text-destructive'
+                          : 'border-foreground/20 text-muted-foreground hover:border-foreground/40'
+                      }`}
+                    >
+                      {isFollowing(creator.user_id) ? 'Following' : 'Follow'}
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>

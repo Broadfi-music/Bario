@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Send, Search, Plus } from 'lucide-react';
+import { ArrowLeft, Send, Search, Settings, Radio, Swords, Sparkles, User, Users, Mic } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { ALL_DEMO_SESSIONS } from '@/config/demoSessions';
+import { getDemoAvatar, getRandomAvatarUrl } from '@/lib/randomAvatars';
+import { useFollowSystem } from '@/hooks/useFollowSystem';
 
 type Profile = {
   user_id: string;
@@ -21,79 +23,78 @@ type Conversation = {
   last_message?: string;
 };
 
+type Message = {
+  id: string;
+  sender_id: string;
+  content: string;
+  created_at: string;
+};
+
+const NAV_ITEMS = [
+  { icon: Radio, label: 'Live', path: '/podcasts?tab=live' },
+  { icon: Swords, label: 'Battles', path: '/podcasts?tab=battles' },
+  { icon: Sparkles, label: 'Feed', path: '/feed' },
+  { icon: User, label: 'My Page', path: '/dashboard/profile' },
+];
+
+const formatTimeAgo = (dateStr: string) => {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  const weeks = Math.floor(days / 7);
+  return `${weeks}w`;
+};
+
 const Messages = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const targetUserId = searchParams.get('to');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [suggestedCreators, setSuggestedCreators] = useState<Profile[]>([]);
   const [activeConvoId, setActiveConvoId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<{ id: string; sender_id: string; content: string; created_at: string }[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Profile[]>([]);
+  const [searching, setSearching] = useState(false);
 
   const db = supabase as any;
 
-  // Fetch conversations
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => { scrollToBottom(); }, [messages]);
+
   const fetchConversations = async () => {
     if (!user) return;
     setLoading(true);
 
-    const { data: parts } = await db
-      .from('conversation_participants')
-      .select('conversation_id')
-      .eq('user_id', user.id);
-
-    if (!parts || parts.length === 0) {
-      setConversations([]);
-      setLoading(false);
-      return;
-    }
+    const { data: parts } = await db.from('conversation_participants').select('conversation_id').eq('user_id', user.id);
+    if (!parts || parts.length === 0) { setConversations([]); setLoading(false); return; }
 
     const convoIds = parts.map((p: any) => p.conversation_id);
+    const { data: convos } = await db.from('conversations').select('id, last_message_at').in('id', convoIds).order('last_message_at', { ascending: false, nullsFirst: false });
+    const { data: allParts } = await db.from('conversation_participants').select('conversation_id, user_id').in('conversation_id', convoIds);
 
-    const { data: convos } = await db
-      .from('conversations')
-      .select('id, last_message_at')
-      .in('id', convoIds)
-      .order('last_message_at', { ascending: false, nullsFirst: false });
-
-    // Get other participants
-    const { data: allParts } = await db
-      .from('conversation_participants')
-      .select('conversation_id, user_id')
-      .in('conversation_id', convoIds);
-
-    const otherUserIds = [...new Set(
-      (allParts || [])
-        .filter((p: any) => p.user_id !== user.id)
-        .map((p: any) => p.user_id)
-    )] as string[];
-
-    const { data: profiles } = otherUserIds.length
-      ? await db.from('profiles').select('user_id, full_name, username, avatar_url').in('user_id', otherUserIds)
-      : { data: [] };
-
+    const otherUserIds = [...new Set((allParts || []).filter((p: any) => p.user_id !== user.id).map((p: any) => p.user_id))] as string[];
+    const { data: profiles } = otherUserIds.length ? await db.from('profiles').select('user_id, full_name, username, avatar_url').in('user_id', otherUserIds) : { data: [] };
     const profileMap = new Map<string, Profile>((profiles || []).map((p: any) => [p.user_id, p]));
 
-    // Get last message per convo
-    const { data: lastMsgs } = await db
-      .from('direct_messages')
-      .select('conversation_id, content')
-      .in('conversation_id', convoIds)
-      .order('created_at', { ascending: false })
-      .limit(convoIds.length);
-
+    const { data: lastMsgs } = await db.from('direct_messages').select('conversation_id, content').in('conversation_id', convoIds).order('created_at', { ascending: false }).limit(convoIds.length);
     const lastMsgMap = new Map<string, string>();
-    (lastMsgs || []).forEach((m: any) => {
-      if (!lastMsgMap.has(m.conversation_id)) lastMsgMap.set(m.conversation_id, m.content);
-    });
+    (lastMsgs || []).forEach((m: any) => { if (!lastMsgMap.has(m.conversation_id)) lastMsgMap.set(m.conversation_id, m.content); });
 
-    const convoList: Conversation[] = (convos || []).map((c: any) => {
+    setConversations((convos || []).map((c: any) => {
       const otherPart = (allParts || []).find((p: any) => p.conversation_id === c.id && p.user_id !== user.id);
       const otherProfile = otherPart ? profileMap.get(otherPart.user_id) : null;
       return {
@@ -102,281 +103,286 @@ const Messages = () => {
         other_user: otherProfile || { user_id: '', full_name: 'Unknown', username: null, avatar_url: null },
         last_message: lastMsgMap.get(c.id),
       };
-    });
-
-    setConversations(convoList);
+    }));
     setLoading(false);
   };
 
-  // Fetch suggested creators
   const fetchSuggested = async () => {
-    const { data } = await db
-      .from('profiles')
-      .select('user_id, full_name, username, avatar_url')
-      .limit(12);
-    setSuggestedCreators(
-      (data || []).filter((p: any) => p.user_id !== user?.id).map((p: any) => ({
-        user_id: p.user_id,
-        full_name: p.full_name,
-        username: p.username,
-        avatar_url: p.avatar_url,
-      }))
-    );
+    const { data } = await db.from('profiles').select('user_id, full_name, username, avatar_url').limit(12);
+    setSuggestedCreators((data || []).filter((p: any) => p.user_id !== user?.id));
   };
 
-  // Open or create DM with a user
+  const searchCreators = async (query: string) => {
+    if (!query.trim()) { setSearchResults([]); return; }
+    setSearching(true);
+    const { data } = await db.from('profiles').select('user_id, full_name, username, avatar_url').or(`full_name.ilike.%${query}%,username.ilike.%${query}%`).limit(10);
+    setSearchResults((data || []).filter((p: any) => p.user_id !== user?.id));
+    setSearching(false);
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => searchCreators(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const openDmWith = async (otherUserId: string) => {
     if (!user) return;
-
-    // Validate that otherUserId looks like a UUID (real user)
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(otherUserId)) {
       toast.error('This is a demo creator and cannot receive messages');
       return;
     }
     const dmKey = [user.id, otherUserId].sort().join('_');
+    const { data: existing } = await db.from('conversations').select('id').eq('dm_key', dmKey).limit(1);
+    if (existing && existing.length > 0) { setActiveConvoId(existing[0].id); return; }
 
-    // Check existing
-    const { data: existing } = await db
-      .from('conversations')
-      .select('id')
-      .eq('dm_key', dmKey)
-      .limit(1);
+    const { data: newConvo, error } = await db.from('conversations').insert({ created_by: user.id, dm_key: dmKey }).select('id').single();
+    if (error || !newConvo) { toast.error('Failed to start conversation'); return; }
 
-    if (existing && existing.length > 0) {
-      setActiveConvoId(existing[0].id);
-      return;
-    }
-
-    // Create new
-    const { data: newConvo, error } = await db
-      .from('conversations')
-      .insert({ created_by: user.id, dm_key: dmKey })
-      .select('id')
-      .single();
-
-    if (error || !newConvo) {
-      toast.error('Failed to start conversation');
-      return;
-    }
-
-    // Add participants
     await db.from('conversation_participants').insert([
       { conversation_id: newConvo.id, user_id: user.id },
       { conversation_id: newConvo.id, user_id: otherUserId },
     ]);
-
     setActiveConvoId(newConvo.id);
     await fetchConversations();
   };
 
-  // Fetch messages for active convo
   const fetchMessages = async (convoId: string) => {
-    const { data } = await db
-      .from('direct_messages')
-      .select('id, sender_id, content, created_at')
-      .eq('conversation_id', convoId)
-      .order('created_at', { ascending: true });
+    const { data } = await db.from('direct_messages').select('id, sender_id, content, created_at').eq('conversation_id', convoId).order('created_at', { ascending: true });
     setMessages(data || []);
   };
 
-  // Send message
   const sendMessage = async () => {
     if (!user || !activeConvoId || !draft.trim()) return;
     setSending(true);
-    const { error } = await db.from('direct_messages').insert({
-      conversation_id: activeConvoId,
-      sender_id: user.id,
-      content: draft.trim(),
-    });
-    if (error) {
-      toast.error('Failed to send');
-    } else {
-      setDraft('');
-      await fetchMessages(activeConvoId);
-    }
+    const { error } = await db.from('direct_messages').insert({ conversation_id: activeConvoId, sender_id: user.id, content: draft.trim() });
+    if (error) { toast.error('Failed to send'); } else { setDraft(''); await fetchMessages(activeConvoId); }
     setSending(false);
   };
 
-  useEffect(() => {
-    if (user) {
-      fetchConversations();
-      fetchSuggested();
-    }
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (targetUserId && user) {
-      openDmWith(targetUserId);
-    }
-  }, [targetUserId, user?.id]);
+  useEffect(() => { if (user) { fetchConversations(); fetchSuggested(); } }, [user?.id]);
+  useEffect(() => { if (targetUserId && user) { openDmWith(targetUserId); } }, [targetUserId, user?.id]);
 
   useEffect(() => {
     if (activeConvoId) {
       fetchMessages(activeConvoId);
-
-      const channel = db
-        .channel(`dm-${activeConvoId}`)
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages', filter: `conversation_id=eq.${activeConvoId}` }, () => {
-          fetchMessages(activeConvoId);
-        })
-        .subscribe();
-
+      const channel = db.channel(`dm-${activeConvoId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages', filter: `conversation_id=eq.${activeConvoId}` }, () => fetchMessages(activeConvoId)).subscribe();
       return () => { db.removeChannel(channel); };
     }
   }, [activeConvoId]);
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="text-center">
-          <p className="text-white/60 mb-4">Sign in to access messages</p>
-          <Link to="/auth"><Button>Sign In</Button></Link>
+          <p className="text-muted-foreground mb-4">Sign in to access messages</p>
+          <Link to="/auth"><Button variant="outline">Sign In</Button></Link>
         </div>
       </div>
     );
   }
 
   const activeConvo = conversations.find(c => c.id === activeConvoId);
-
-  const filteredCreators = searchQuery
-    ? suggestedCreators.filter(c =>
-        (c.full_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (c.username || '').toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : suggestedCreators;
+  const displayList = searchQuery.trim() ? searchResults : conversations.length > 0 ? [] : [];
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-black/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-3 py-2.5">
+    <div className="h-screen bg-background text-foreground flex">
+      {/* Left Sidebar - Navigation */}
+      <aside className="hidden xl:flex w-56 flex-col border-r border-border flex-shrink-0">
+        <div className="p-4">
+          <h2 className="text-sm font-bold tracking-wide">Bario</h2>
+        </div>
+        <nav className="flex-1 px-2 space-y-0.5">
+          {NAV_ITEMS.map(item => (
+            <button key={item.label} onClick={() => navigate(item.path)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-full text-foreground/70 hover:text-foreground hover:bg-secondary transition-colors text-left">
+              <item.icon className="h-5 w-5" />
+              <span className="text-sm font-medium">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+        {/* Suggested Channels */}
+        <div className="border-t border-border p-3">
+          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Suggested Channels</p>
+          {ALL_DEMO_SESSIONS.slice(0, 4).map(s => (
+            <button key={s.id} onClick={() => navigate(`/podcasts?session=${s.id}`)} className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-foreground/60 hover:text-foreground hover:bg-secondary/50 transition-colors text-left">
+              <img src={s.hostAvatar || getDemoAvatar(s.hostName)} alt="" className="h-6 w-6 rounded-full object-cover" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] truncate">{s.hostName}</p>
+                <p className="text-[9px] text-muted-foreground truncate">{s.category}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </aside>
+
+      {/* Conversation List Panel */}
+      <div className={`${activeConvoId ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 flex-col border-r border-border flex-shrink-0`}>
+        {/* Chat Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => activeConvoId ? setActiveConvoId(null) : navigate('/podcasts?tab=feed')}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
-            >
+            <button onClick={() => navigate('/podcasts?tab=feed')} className="md:hidden h-8 w-8 flex items-center justify-center rounded-full hover:bg-secondary">
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <h1 className="text-sm font-semibold">
-              {activeConvoId && activeConvo ? (activeConvo.other_user.full_name || activeConvo.other_user.username || 'Chat') : 'Messages'}
-            </h1>
+            <h1 className="text-base font-bold">Messages</h1>
           </div>
+          <button className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-secondary">
+            <Settings className="h-4 w-4 text-foreground/60" />
+          </button>
         </div>
-      </header>
 
-      {activeConvoId ? (
-        /* Chat View */
-        <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full">
-          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
-            {messages.length === 0 ? (
-              <p className="text-center text-white/40 text-sm py-10">No messages yet. Say hello!</p>
-            ) : (
-              messages.map(msg => (
-                <div key={msg.id} className={`flex ${msg.sender_id === user.id ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${
-                    msg.sender_id === user.id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-white/10 text-white'
-                  }`}>
-                    {msg.content}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-          <div className="border-t border-white/10 p-3 flex items-end gap-2">
-            <Textarea
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-              placeholder="Type a message..."
-              className="min-h-[44px] max-h-[120px] bg-white/5 text-sm resize-none"
-            />
-            <Button onClick={sendMessage} disabled={sending || !draft.trim()} size="sm" className="h-10">
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      ) : (
-        /* Inbox View */
-        <div className="max-w-5xl mx-auto w-full px-3 py-3">
-          {/* Search */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+        {/* Search */}
+        <div className="px-3 py-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search creators..."
+              placeholder="Search people"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/30 h-10 pl-10 pr-3 focus:outline-none focus:border-white/30"
+              className="w-full bg-secondary border-0 rounded-full text-sm text-foreground placeholder:text-muted-foreground h-10 pl-10 pr-3 focus:outline-none focus:ring-1 focus:ring-foreground/20"
             />
           </div>
+        </div>
 
-          {/* Existing conversations */}
-          {conversations.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Conversations</h2>
+        {/* Search Results */}
+        {searchQuery.trim() && searchResults.length > 0 && (
+          <div className="border-b border-border">
+            {searchResults.map(p => (
+              <button key={p.user_id} onClick={() => { setSearchQuery(''); openDmWith(p.user_id); }} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors text-left">
+                <div className="h-10 w-10 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+                  {p.avatar_url ? <img src={p.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-secondary" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold truncate">{p.full_name || p.username || 'Creator'}</p>
+                  {p.username && <p className="text-xs text-muted-foreground truncate">@{p.username}</p>}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Conversation List */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide">
+          {loading ? (
+            <div className="text-center text-sm text-muted-foreground py-10">Loading...</div>
+          ) : conversations.length === 0 && !searchQuery.trim() ? (
+            <div className="px-4 py-6">
+              <p className="text-sm text-muted-foreground mb-4">No conversations yet. Start chatting with a creator!</p>
               <div className="space-y-1">
-                {conversations.map(convo => (
-                  <button
-                    key={convo.id}
-                    onClick={() => setActiveConvoId(convo.id)}
-                    className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-white/5 transition-colors text-left"
-                  >
-                    <div className="h-10 w-10 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
-                      {convo.other_user.avatar_url ? (
-                        <img src={convo.other_user.avatar_url} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="h-full w-full bg-white/20" />
-                      )}
+                {suggestedCreators.slice(0, 8).map(c => (
+                  <button key={c.user_id} onClick={() => openDmWith(c.user_id)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-secondary/50 transition-colors text-left">
+                    <div className="h-10 w-10 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+                      {c.avatar_url ? <img src={c.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-secondary" />}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-white truncate">
-                        {convo.other_user.full_name || convo.other_user.username || 'Creator'}
-                      </p>
-                      {convo.last_message && (
-                        <p className="text-xs text-white/40 truncate">{convo.last_message}</p>
-                      )}
+                      <p className="text-sm font-medium truncate">{c.full_name || c.username || 'Creator'}</p>
+                      {c.username && <p className="text-xs text-muted-foreground truncate">@{c.username}</p>}
                     </div>
                   </button>
                 ))}
               </div>
             </div>
+          ) : (
+            conversations.map(convo => (
+              <button
+                key={convo.id}
+                onClick={() => setActiveConvoId(convo.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors text-left ${activeConvoId === convo.id ? 'bg-secondary/50' : ''}`}
+              >
+                <div className="h-12 w-12 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+                  {convo.other_user.avatar_url ? <img src={convo.other_user.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-secondary" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold truncate">{convo.other_user.full_name || convo.other_user.username || 'Creator'}</p>
+                    {convo.last_message_at && <span className="text-[11px] text-muted-foreground flex-shrink-0">{formatTimeAgo(convo.last_message_at)}</span>}
+                  </div>
+                  {convo.last_message && <p className="text-xs text-muted-foreground truncate mt-0.5">{convo.last_message}</p>}
+                </div>
+              </button>
+            ))
           )}
+        </div>
+      </div>
 
-          {/* Suggested creators */}
-          <div>
-            <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">
-              {conversations.length > 0 ? 'Start a new chat' : 'Creators to message'}
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {filteredCreators.map(creator => (
-                <button
-                  key={creator.user_id}
-                  onClick={() => openDmWith(creator.user_id)}
-                  className="flex flex-col items-center gap-2 p-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
-                >
-                  <div className="h-12 w-12 rounded-full overflow-hidden bg-white/10">
-                    {creator.avatar_url ? (
-                      <img src={creator.avatar_url} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="h-full w-full bg-white/20" />
-                    )}
+      {/* Chat View Panel */}
+      <div className={`${activeConvoId ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-w-0`}>
+        {activeConvoId && activeConvo ? (
+          <>
+            {/* Chat Header */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+              <button onClick={() => setActiveConvoId(null)} className="md:hidden h-8 w-8 flex items-center justify-center rounded-full hover:bg-secondary">
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <div className="h-9 w-9 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+                {activeConvo.other_user.avatar_url ? <img src={activeConvo.other_user.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-secondary" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold truncate">{activeConvo.other_user.full_name || activeConvo.other_user.username || 'Creator'}</p>
+                {activeConvo.other_user.username && <p className="text-xs text-muted-foreground">@{activeConvo.other_user.username}</p>}
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1 scrollbar-hide">
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <div className="h-16 w-16 rounded-full overflow-hidden bg-secondary mb-3">
+                    {activeConvo.other_user.avatar_url ? <img src={activeConvo.other_user.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-secondary" />}
                   </div>
-                  <div className="text-center min-w-0 w-full">
-                    <p className="text-xs font-medium text-white truncate">{creator.full_name || creator.username || 'Creator'}</p>
-                    {creator.username && <p className="text-[10px] text-white/40 truncate">@{creator.username}</p>}
+                  <p className="font-bold text-lg">{activeConvo.other_user.full_name || activeConvo.other_user.username}</p>
+                  {activeConvo.other_user.username && <p className="text-sm text-muted-foreground">@{activeConvo.other_user.username}</p>}
+                  <button onClick={() => navigate(`/host/${activeConvo.other_user.user_id}`)} className="mt-2 text-xs border border-border rounded-full px-4 py-1.5 hover:bg-secondary transition-colors">
+                    View Profile
+                  </button>
+                  <p className="text-xs text-muted-foreground mt-4">Start a conversation</p>
+                </div>
+              ) : (
+                messages.map(msg => (
+                  <div key={msg.id} className={`flex ${msg.sender_id === user.id ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${
+                      msg.sender_id === user.id
+                        ? 'bg-foreground text-background rounded-br-sm'
+                        : 'bg-secondary text-foreground rounded-bl-sm'
+                    }`}>
+                      {msg.content}
+                      <p className={`text-[10px] mt-1 ${msg.sender_id === user.id ? 'text-background/50' : 'text-muted-foreground'}`}>
+                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 text-[10px] text-primary">
-                    <Plus className="h-3 w-3" /> Message
-                  </div>
-                </button>
-              ))}
+                ))
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Message Input */}
+            <div className="border-t border-border p-3 flex items-end gap-2">
+              <input
+                value={draft}
+                onChange={e => setDraft(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                placeholder="Start a new message"
+                className="flex-1 bg-secondary rounded-full text-sm text-foreground placeholder:text-muted-foreground h-10 px-4 focus:outline-none focus:ring-1 focus:ring-foreground/20"
+              />
+              <button onClick={sendMessage} disabled={sending || !draft.trim()} className="h-10 w-10 flex items-center justify-center rounded-full bg-foreground text-background hover:bg-foreground/90 disabled:opacity-30 transition-colors">
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+          </>
+        ) : (
+          /* Empty State */
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center max-w-sm">
+              <h2 className="text-2xl font-bold mb-1">Select a message</h2>
+              <p className="text-sm text-muted-foreground mb-4">Choose from your existing conversations or start a new one.</p>
+              <Button variant="outline" className="rounded-full" onClick={() => document.querySelector<HTMLInputElement>('input[placeholder="Search people"]')?.focus()}>
+                New message
+              </Button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

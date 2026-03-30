@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { getCreatorCover } from '@/lib/creatorCovers';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Users, Play, Calendar, Radio, Heart, Share2, Edit, MoreVertical, Pause, Plus, Mic, Trash2, UserPlus, MessageCircle, Image as ImageIcon, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -418,8 +419,9 @@ const HostProfile = () => {
 
       <main className="pt-12 pb-20">
         {/* Banner */}
-        <div className="relative h-32 sm:h-48 bg-gradient-to-r from-purple-900/50 to-pink-900/50">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200')] bg-cover bg-center opacity-30" />
+        <div className="relative h-32 sm:h-48 overflow-hidden">
+          <img src={host?.avatar_url ? getCreatorCover(host.user_id) : getCreatorCover(hostId || 'default')} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
 
         {/* Profile Info */}

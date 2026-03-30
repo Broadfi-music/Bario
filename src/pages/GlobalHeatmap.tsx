@@ -613,7 +613,7 @@ const GlobalHeatmap = () => {
           </div>
           
           {/* Genre Filters */}
-          <div className="flex gap-2 pb-2 overflow-x-auto">
+          <div className="flex gap-2 pb-2 overflow-x-auto scrollbar-hide">
             <button
               onClick={() => handleGenreFilter('')}
               className={`px-3 py-1.5 rounded-full text-[9px] whitespace-nowrap transition-colors ${
