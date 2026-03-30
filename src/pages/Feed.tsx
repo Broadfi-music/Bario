@@ -450,27 +450,28 @@ const Feed = () => {
 
             {/* Creators to Follow */}
             <div>
-              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">Creators to Follow</p>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Creators to Follow</p>
               <div className="space-y-1">
                 {suggestedCreators.map(creator => (
-                  <button
-                    key={creator.user_id}
-                    onClick={() => navigate(`/host/${creator.user_id}`)}
-                    className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors text-left"
-                  >
-                    <div className="h-8 w-8 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
-                      {creator.avatar_url ? (
-                        <img src={creator.avatar_url} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="h-full w-full bg-white/20" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-medium text-white truncate">{creator.full_name || creator.username || 'Creator'}</p>
-                      {creator.username && <p className="text-[9px] text-white/40 truncate">@{creator.username}</p>}
-                    </div>
-                    <span className="text-[9px] text-white/50 border border-white/20 rounded-full px-2 py-0.5">Follow</span>
-                  </button>
+                  <div key={creator.user_id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-secondary/50 transition-colors">
+                    <button onClick={() => navigate(`/host/${creator.user_id}`)} className="h-8 w-8 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+                      {creator.avatar_url ? <img src={creator.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-secondary" />}
+                    </button>
+                    <button onClick={() => navigate(`/host/${creator.user_id}`)} className="min-w-0 flex-1 text-left">
+                      <p className="text-[11px] font-medium text-foreground truncate">{creator.full_name || creator.username || 'Creator'}</p>
+                      {creator.username && <p className="text-[9px] text-muted-foreground truncate">@{creator.username}</p>}
+                    </button>
+                    <button
+                      onClick={() => toggleFollow(creator.user_id)}
+                      className={`text-[9px] border rounded-full px-2 py-0.5 transition-colors ${
+                        isFollowing(creator.user_id)
+                          ? 'border-foreground/30 text-foreground/70 hover:border-destructive hover:text-destructive'
+                          : 'border-foreground/20 text-muted-foreground hover:border-foreground/40'
+                      }`}
+                    >
+                      {isFollowing(creator.user_id) ? 'Following' : 'Follow'}
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
