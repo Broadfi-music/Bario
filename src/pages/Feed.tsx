@@ -133,7 +133,7 @@ const Feed = () => {
     if (data && data.length > 0) {
       const hostIds = [...new Set(data.map((s: any) => s.host_id))] as string[];
       const { data: profiles } = await db.from('profiles').select('user_id, full_name, avatar_url').in('user_id', hostIds);
-      const profMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+      const profMap = new Map<string, any>((profiles || []).map((p: any) => [p.user_id, p]));
 
       setLiveSessions(data.map((s: any) => {
         const prof = profMap.get(s.host_id);
