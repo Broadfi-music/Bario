@@ -125,38 +125,14 @@ const Feed = () => {
   };
 
   const fetchLiveSessions = async () => {
-    const { data } = await db
-      .from('podcast_sessions')
-      .select('id, title, host_id, listener_count')
-      .eq('status', 'live')
-      .order('listener_count', { ascending: false })
-      .limit(4);
-
-    if (data && data.length > 0) {
-      const hostIds = [...new Set(data.map((s: any) => s.host_id))] as string[];
-      const { data: profiles } = await db.from('profiles').select('user_id, full_name, avatar_url').in('user_id', hostIds);
-      const profMap = new Map<string, any>((profiles || []).map((p: any) => [p.user_id, p]));
-
-      setLiveSessions(data.map((s: any) => {
-        const prof = profMap.get(s.host_id);
-        return {
-          id: s.id,
-          title: s.title,
-          host_name: prof?.full_name || 'Host',
-          host_avatar: prof?.avatar_url || null,
-          listener_count: s.listener_count || 0,
-        };
-      }));
-    } else {
-      // Use demo sessions as fallback
-      setLiveSessions(ALL_DEMO_SESSIONS.slice(0, 4).map(s => ({
-        id: s.id,
-        title: s.title,
-        host_name: s.hostName,
-        host_avatar: s.hostAvatar || getDemoAvatar(s.hostName),
-        listener_count: s.baseListenerCount + Math.floor(Math.random() * 50),
-      })));
-    }
+    // Always use demo sessions for Live Now sidebar
+    setLiveSessions(ALL_DEMO_SESSIONS.slice(0, 4).map(s => ({
+      id: s.id,
+      title: s.title,
+      host_name: s.hostName,
+      host_avatar: s.hostAvatar || getDemoAvatar(s.hostName),
+      listener_count: s.baseListenerCount + Math.floor(Math.random() * 50),
+    })));
   };
 
   const fetchSuggestedCreators = async () => {
@@ -288,23 +264,18 @@ const Feed = () => {
   }, [postIds.join(',')]);
 
   return (
-    <div className="min-h-screen bg-black text-white pb-20">
+    <div className="min-h-screen bg-background text-foreground pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-black/95 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-3 py-2.5">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate('/podcasts?tab=feed')}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
-              aria-label="Back"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-            <h1 className="text-sm font-semibold">Creator Feed</h1>
-          </div>
-          <Link to="/messages" className="text-xs text-white/70 hover:text-white">
-            Open DMs
-          </Link>
+      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-center px-3 py-2.5 relative">
+          <button
+            onClick={() => navigate('/podcasts?tab=feed')}
+            className="absolute left-3 inline-flex h-8 w-8 items-center justify-center rounded-full text-foreground/70 hover:bg-secondary hover:text-foreground"
+            aria-label="Back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <h1 className="text-lg font-black tracking-tight italic">Creator Feed</h1>
         </div>
       </header>
 
