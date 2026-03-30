@@ -254,7 +254,7 @@ const Feed = () => {
         <div className="mx-auto flex max-w-3xl items-center justify-between px-3 py-2.5">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => navigate('/podcasts?tab=live')}
+              onClick={() => navigate('/podcasts?tab=feed')}
               className="inline-flex h-8 w-8 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
               aria-label="Back"
             >

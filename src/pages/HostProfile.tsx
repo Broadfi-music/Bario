@@ -489,7 +489,13 @@ const HostProfile = () => {
               Subscribe
             </Button>
             <Button variant="outline" size="sm" className="border-white/20 text-white/80 hover:bg-white/10 text-xs h-8 px-2.5"
-              onClick={() => toast.info('DM feature coming soon')}
+              onClick={() => {
+                if (!user) {
+                  navigate('/auth');
+                  return;
+                }
+                navigate(`/messages?to=${host?.user_id}`);
+              }}
             >
               <MessageCircle className="h-3 w-3 mr-1.5" />
               Message
