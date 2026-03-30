@@ -543,6 +543,13 @@ const Podcasts = () => {
 
           {/* Right — Actions */}
           <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => toast.info('Inbox coming soon')}
+                className="w-8 h-8 flex items-center justify-center text-white/60 hover:text-white transition-colors"
+                title="Messages"
+              >
+                <Send className="h-4 w-4" />
+              </button>
             <NotificationBell />
             {user ? (
               <Link to="/dashboard">
