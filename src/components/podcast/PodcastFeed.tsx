@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronLeft, ChevronRight, Users, Play, Pause, Calendar, Headphones, Search, User, X, Swords, Radio, Flame, Mic, Music, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users, Play, Pause, Calendar, Headphones, Search, User, X, Swords, Radio, Flame, Mic, Music, Plus, Heart, MessageCircle, Share2, MoreHorizontal, Image as ImageIcon } from 'lucide-react';
 import DiscoverCreatorsModal from './DiscoverCreatorsModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
@@ -105,6 +105,7 @@ const PodcastFeed = () => {
   const [activeBattles, setActiveBattles] = useState<BattleSession[]>([]);
   const [showDiscoverCreators, setShowDiscoverCreators] = useState(false);
   const [sidebarCreators, setSidebarCreators] = useState<{user_id: string; full_name: string | null; username: string | null; avatar_url: string | null}[]>([]);
+  const [creatorPosts, setCreatorPosts] = useState<any[]>([]);
 
   const filteredHosts = searchQuery.trim()
     ? liveHosts.filter(h =>
@@ -164,6 +165,7 @@ const PodcastFeed = () => {
     fetchEpisodes();
     fetchActiveBattles();
     fetchSidebarCreators();
+    fetchCreatorPosts();
 
     const channel = supabase
       .channel('podcast-feed-live')
@@ -174,6 +176,7 @@ const PodcastFeed = () => {
         }
         fetchActiveBattles();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'host_posts' }, () => fetchCreatorPosts())
       .subscribe();
 
     // Listen for battle invite modal open from mobile nav
@@ -306,6 +309,29 @@ const PodcastFeed = () => {
     if (data) setSidebarCreators(data);
   };
 
+  const fetchCreatorPosts = async () => {
+    const { data: posts } = await supabase
+      .from('host_posts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(20);
+    
+    if (posts && posts.length > 0) {
+      const userIds = [...new Set(posts.map(p => p.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, username, avatar_url')
+        .in('user_id', userIds);
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
+      setCreatorPosts(posts.map(p => ({
+        ...p,
+        author_name: profileMap.get(p.user_id)?.full_name || profileMap.get(p.user_id)?.username || 'Creator',
+        author_avatar: profileMap.get(p.user_id)?.avatar_url || null,
+        author_username: profileMap.get(p.user_id)?.username || null,
+      })));
+    }
+  };
+
   const heroHosts = liveHosts.slice(0, 5);
   const currentHero = heroHosts[heroIndex];
   const nextHero = () => setHeroIndex((prev) => (prev + 1) % heroHosts.length);
@@ -363,6 +389,16 @@ const PodcastFeed = () => {
           >
             <Radio className="h-3.5 w-3.5" />
             <span className="text-[11px] font-medium">Live</span>
+          </button>
+          <button
+            onClick={() => {
+              const feedSection = document.getElementById('creator-feed-section');
+              if (feedSection) feedSection.scrollIntoView({ behavior: 'smooth' });
+            }}
+            className="flex items-center gap-2 w-full p-1.5 rounded hover:bg-white/5 transition-colors text-white/70 hover:text-white"
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+            <span className="text-[11px] font-medium">Feed</span>
           </button>
           <button
             onClick={() => setShowBattleInviteModal(true)}
@@ -711,6 +747,81 @@ const PodcastFeed = () => {
         )}
 
         {/* Episodes */}
+
+        {/* Creator Feed — Twitter-style posts */}
+        {creatorPosts.length > 0 && (
+          <section id="creator-feed-section" className="px-2 md:px-3 lg:px-4 mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5">
+                <MessageCircle className="h-3.5 w-3.5 text-white/50" />
+                Creator Feed
+              </h2>
+            </div>
+            <div className="space-y-0">
+              {creatorPosts.map((post) => (
+                <div
+                  key={post.id}
+                  className="border-b border-white/5 py-3 hover:bg-white/[0.02] transition-colors cursor-pointer px-1"
+                  onClick={() => navigate(`/host/${post.user_id}`)}
+                >
+                  <div className="flex gap-2.5">
+                    {/* Avatar */}
+                    <div
+                      className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 bg-white/10"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/host/${post.user_id}`); }}
+                    >
+                      {post.author_avatar ? (
+                        <img src={post.author_avatar} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-white/20 flex items-center justify-center">
+                          <User className="w-4 h-4 text-white/40" />
+                        </div>
+                      )}
+                    </div>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-xs font-semibold text-white truncate">{post.author_name}</span>
+                        {post.author_username && (
+                          <span className="text-[11px] text-white/30 truncate">@{post.author_username}</span>
+                        )}
+                        <span className="text-[10px] text-white/20">·</span>
+                        <span className="text-[10px] text-white/30 flex-shrink-0">
+                          {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+                      <p className="text-[13px] text-white/80 leading-snug mb-2 whitespace-pre-wrap">{post.content}</p>
+                      {/* Post Image */}
+                      {post.image_url && (
+                        <div className="rounded-xl overflow-hidden border border-white/10 mb-2 max-h-[300px]">
+                          <img src={post.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                        </div>
+                      )}
+                      {/* Actions */}
+                      <div className="flex items-center gap-6">
+                        <button className="flex items-center gap-1 text-white/30 hover:text-blue-400 transition-colors group">
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          <span className="text-[11px]">{post.comment_count || 0}</span>
+                        </button>
+                        <button className="flex items-center gap-1 text-white/30 hover:text-pink-400 transition-colors group">
+                          <Heart className="h-3.5 w-3.5" />
+                          <span className="text-[11px]">{post.like_count || 0}</span>
+                        </button>
+                        <button
+                          className="flex items-center gap-1 text-white/30 hover:text-green-400 transition-colors group"
+                          onClick={(e) => { e.stopPropagation(); navigator.share?.({ text: post.content, url: window.location.origin + `/host/${post.user_id}` }).catch(() => {}); }}
+                        >
+                          <Share2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {episodes.length > 0 && (
           <section className="px-2 md:px-3 lg:px-4 mb-6">
             <div className="flex items-center justify-between mb-1.5">
