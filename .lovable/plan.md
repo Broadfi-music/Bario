@@ -1,12 +1,39 @@
 
+### Root cause confirmed
+- `preview--...` URL is passing through the platform auth bridge (not a normal app route), so direct browser checks can appear blank if auth/cookies are blocked.
+- Published domains (`era-remix-studio.lovable.app`, `bario.icu`) are returning a black shell behavior consistent with stale/invalid cached app shell on clients.
+- Creator DM entry is still a placeholder in `HostProfile`.
+- Feed back button is hardcoded to `/podcasts?tab=live`, which causes the wrong return route.
 
-## Merge Investor Deck + Traction Report into One PPTX
+### Implementation plan
+1) **Stabilize web/published rendering**
+- Update `src/main.tsx` with a one-time cache reset key for non-preview domains:
+  - unregister existing service workers
+  - clear Cache Storage entries
+  - force a single hard reload
+- Keep service workers disabled in editor/preview contexts.
+- Trigger a fresh deployment with this cache-bust change.
 
-### What We Have
-- **Deck 1** (bario-investor-deck.pptx): 16 slides — Cover, Problem, Solution, How It Works, Product, Market, Why Bario Wins, Community Reach, Engagement Metrics, Monetization Proof, Growth Trajectory, Market Opportunity, Revenue Model, What We've Proven, Team & Ask, Closing
-- **Traction PDF** (bario-traction-metrics.pdf): 7 pages — Executive Summary, Platform Features, Community & Social Reach, Engagement Metrics (detailed table), Monetization Proof (gift economy table + revenue projections), Market Opportunity, What We've Proven + Milestones
-- **Evidence Screenshot**: Shows the live product (The Product section, How It Works flow, AI Remix moat)
+2) **Fix feed back navigation**
+- Update `src/pages/Feed.tsx` back action from `/podcasts?tab=live` to `/podcasts?tab=feed`.
+- Preserve origin route via `location.state.from`, with fallback to `/podcasts?tab=feed`.
 
-### Merged Deck Structure (19 slides)
+3) **Make creator messaging functional**
+- Replace “DM feature coming soon” in `src/pages/HostProfile.tsx` with:
+  - if logged in: `navigate('/messages?to=<creator_user_id>')`
+  - if logged out: route to auth and return to intended DM target after login.
+- Add/confirm message entry from creator feed cards to the same DM route.
 
-The
+4) **Verify end-to-end**
+- Test and capture verification screenshots for:
+  - `https://era-remix-studio.lovable.app/podcasts`
+  - `https://bario.icu/podcasts`
+  - `https://preview--era-remix-studio.lovable.app/podcasts` (expect auth/app view, not black)
+- Validate:
+  - Feed back returns to Podcasts feed tab
+  - Host profile Message opens DM thread
+  - DM send/receive works between creators
+
+### Technical details
+- Target files: `src/main.tsx`, `src/pages/Feed.tsx`, `src/pages/HostProfile.tsx`, `src/pages/Podcasts.tsx` (plus `src/pages/Messages.tsx` only for auth-return refinement).
+- Existing backend tables/policies for DMs, likes, and comments are already in place; no new migration planned unless verification exposes an access policy gap.
