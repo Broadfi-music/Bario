@@ -363,7 +363,7 @@ const Feed = () => {
                         <div className="mt-1.5 flex items-center gap-4 text-[11px]">
                           <button
                             onClick={() => toggleLike(post.id)}
-                            className={`inline-flex items-center gap-1 ${isLiked ? 'text-pink-400' : 'text-white/50 hover:text-pink-300'}`}
+                            className={`inline-flex items-center gap-1 ${isLiked ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                           >
                             <Heart className={`h-3.5 w-3.5 ${isLiked ? 'fill-current' : ''}`} />
                             {likeCounts[post.id] || 0}
