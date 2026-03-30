@@ -391,10 +391,7 @@ const PodcastFeed = () => {
             <span className="text-[11px] font-medium">Live</span>
           </button>
           <button
-            onClick={() => {
-              const feedSection = document.getElementById('creator-feed-section');
-              if (feedSection) feedSection.scrollIntoView({ behavior: 'smooth' });
-            }}
+            onClick={() => navigate('/feed')}
             className="flex items-center gap-2 w-full p-1.5 rounded hover:bg-white/5 transition-colors text-white/70 hover:text-white"
           >
             <MessageCircle className="h-3.5 w-3.5" />
