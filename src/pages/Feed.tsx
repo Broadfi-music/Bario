@@ -76,19 +76,22 @@ const Feed = () => {
       .select('user_id, full_name, username, avatar_url')
       .in('user_id', userIds);
 
-    const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p]));
+    const profileMap = new Map<string, { full_name?: string; username?: string; avatar_url?: string }>((profiles || []).map((p: any) => [p.user_id, p]));
 
     setPosts(
-      postsRows.map((p: any) => ({
-        id: p.id,
-        user_id: p.user_id,
-        content: p.content,
-        image_url: p.image_url,
-        created_at: p.created_at,
-        author_name: profileMap.get(p.user_id)?.full_name || profileMap.get(p.user_id)?.username || 'Creator',
-        author_username: profileMap.get(p.user_id)?.username || null,
-        author_avatar: profileMap.get(p.user_id)?.avatar_url || null,
-      }))
+      postsRows.map((p: any) => {
+        const prof = profileMap.get(p.user_id);
+        return {
+          id: p.id,
+          user_id: p.user_id,
+          content: p.content,
+          image_url: p.image_url,
+          created_at: p.created_at,
+          author_name: prof?.full_name || prof?.username || 'Creator',
+          author_username: prof?.username || null,
+          author_avatar: prof?.avatar_url || null,
+        };
+      })
     );
 
     setLoading(false);
@@ -114,10 +117,10 @@ const Feed = () => {
     setLikeCounts(nextLikeCounts);
 
     if (user) {
-      const liked = new Set(
+      const liked = new Set<string>(
         (likes || [])
           .filter((l: any) => l.user_id === user.id)
-          .map((l: any) => l.post_id)
+          .map((l: any) => l.post_id as string)
       );
       setLikedPostIds(liked);
     } else {
@@ -140,7 +143,7 @@ const Feed = () => {
           .in('user_id', commentUserIds)
       : { data: [] };
 
-    const commentProfileMap = new Map((commentProfiles || []).map((p: any) => [p.user_id, p]));
+    const commentProfileMap = new Map<string, { full_name?: string; username?: string; avatar_url?: string }>((commentProfiles || []).map((p: any) => [p.user_id, p]));
     const groupedComments: Record<string, PostComment[]> = {};
 
     commentRows.forEach((c: any) => {
