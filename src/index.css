@@ -37,7 +37,7 @@ body {
     --popover: 0 0% 5%;
     --popover-foreground: 0 0% 100%;
 
-    --primary: 10 90% 62%;
+    --primary: 0 0% 0%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 0 0% 10%;
@@ -46,7 +46,7 @@ body {
     --muted: 0 0% 15%;
     --muted-foreground: 0 0% 60%;
 
-    --accent: 10 90% 62%;
+    --accent: 0 0% 10%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
@@ -54,7 +54,7 @@ body {
 
     --border: 0 0% 20%;
     --input: 0 0% 15%;
-    --ring: 10 90% 62%;
+    --ring: 0 0% 30%;
 
     --radius: 0.75rem;
     
