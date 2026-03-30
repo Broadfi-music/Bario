@@ -43,6 +43,8 @@ import Rewards from "@/pages/Rewards";
 import Install from "@/pages/Install";
 import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
+import Feed from "@/pages/Feed";
+import Messages from "@/pages/Messages";
 
 // Rebuild trigger: env re-injection
 const queryClient = new QueryClient();
@@ -92,6 +94,8 @@ const AnimatedRoutes = ({ showSplash }: { showSplash: boolean }) => {
           <Route path="/bario-music" element={<BarioMusic />} />
           <Route path="/bario-music/:id" element={<BarioMusicDetail />} />
           <Route path="/dashboard/rewards" element={<Rewards />} />
+          <Route path="/feed" element={<Feed />} />
+          <Route path="/messages" element={<Messages />} />
           
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/install" element={<Install />} />
