@@ -23,7 +23,25 @@ if (isPreviewContext) {
     regs.forEach((r) => r.unregister())
   );
 } else {
-  registerSW({ immediate: true });
+  // One-time cache reset for published domains to clear stale SW shells
+  const CACHE_RESET_KEY = "bario-cache-v5";
+  if (!localStorage.getItem(CACHE_RESET_KEY)) {
+    localStorage.setItem(CACHE_RESET_KEY, "1");
+    // Unregister all service workers
+    navigator.serviceWorker?.getRegistrations().then((regs) =>
+      regs.forEach((r) => r.unregister())
+    );
+    // Clear all caches
+    if ("caches" in window) {
+      caches.keys().then((names) =>
+        names.forEach((name) => caches.delete(name))
+      );
+    }
+    // Force hard reload after clearing
+    setTimeout(() => window.location.reload(), 300);
+  } else {
+    registerSW({ immediate: true });
+  }
 }
 
 if (root) {
