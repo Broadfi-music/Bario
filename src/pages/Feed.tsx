@@ -283,12 +283,12 @@ const Feed = () => {
         {/* Left Sidebar - hidden on mobile */}
         <aside className="hidden lg:block w-52 flex-shrink-0">
           <div className="sticky top-14 space-y-1">
-            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider px-2 mb-2">Navigate</p>
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2">Navigate</p>
             {NAV_ITEMS.map(item => (
               <button
                 key={item.label}
                 onClick={() => navigate(item.path)}
-                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors text-left"
+                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-foreground/70 hover:text-foreground hover:bg-secondary/50 transition-colors text-left"
               >
                 <item.icon className="h-4 w-4" />
                 <span className="text-xs font-medium">{item.label}</span>
@@ -296,20 +296,20 @@ const Feed = () => {
             ))}
 
             {/* Recommended Channels */}
-            <div className="mt-5 pt-4 border-t border-white/10">
-              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider px-2 mb-2">Recommended</p>
+            <div className="mt-5 pt-4 border-t border-border">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2">Recommended</p>
               {ALL_DEMO_SESSIONS.slice(0, 5).map(session => (
                 <button
                   key={session.id}
                   onClick={() => navigate(`/podcasts?session=${session.id}`)}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 transition-colors text-left"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors text-left"
                 >
-                  <div className="h-6 w-6 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
+                  <div className="h-6 w-6 rounded-full overflow-hidden bg-secondary flex-shrink-0">
                     <img src={session.hostAvatar || getDemoAvatar(session.hostName)} alt="" className="h-full w-full object-cover" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-[11px] truncate">{session.hostName}</p>
-                    <p className="text-[9px] text-white/30 truncate">{session.category}</p>
+                    <p className="text-[9px] text-muted-foreground truncate">{session.category}</p>
                   </div>
                 </button>
               ))}
@@ -320,9 +320,9 @@ const Feed = () => {
         {/* Main Feed */}
         <main className="flex-1 min-w-0">
           {loading ? (
-            <div className="text-center text-sm text-white/50 py-10">Loading feed...</div>
+            <div className="text-center text-sm text-muted-foreground py-10">Loading feed...</div>
           ) : posts.length === 0 ? (
-            <div className="text-center text-sm text-white/50 py-10">No posts yet.</div>
+            <div className="text-center text-sm text-muted-foreground py-10">No posts yet.</div>
           ) : (
             <div className="space-y-2">
               {posts.map(post => {
@@ -330,32 +330,32 @@ const Feed = () => {
                 const isLiked = likedPostIds.has(post.id);
 
                 return (
-                  <article key={post.id} className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2.5">
+                  <article key={post.id} className="rounded-lg border border-border bg-card px-3 py-2.5">
                     <div className="flex items-start gap-2">
                       <button
                         onClick={() => navigate(`/host/${post.user_id}`)}
-                        className="h-8 w-8 overflow-hidden rounded-full bg-white/10 flex-shrink-0"
+                        className="h-8 w-8 overflow-hidden rounded-full bg-secondary flex-shrink-0"
                       >
                         {post.author_avatar ? (
                           <img src={post.author_avatar} alt="" className="h-full w-full object-cover" loading="lazy" />
                         ) : (
-                          <div className="h-full w-full bg-white/20" />
+                          <div className="h-full w-full bg-secondary" />
                         )}
                       </button>
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 text-[11px]">
-                          <button onClick={() => navigate(`/host/${post.user_id}`)} className="font-semibold text-white hover:underline">
+                          <button onClick={() => navigate(`/host/${post.user_id}`)} className="font-semibold text-foreground hover:underline">
                             {post.author_name}
                           </button>
-                          {post.author_username && <span className="text-white/40">@{post.author_username}</span>}
-                          <span className="text-white/30">· {formatTimeAgo(post.created_at)}</span>
+                          {post.author_username && <span className="text-muted-foreground">@{post.author_username}</span>}
+                          <span className="text-muted-foreground">· {formatTimeAgo(post.created_at)}</span>
                         </div>
 
-                        <p className="mt-1 whitespace-pre-wrap text-[13px] text-white/85 leading-snug">{post.content}</p>
+                        <p className="mt-1 whitespace-pre-wrap text-[13px] text-foreground/85 leading-snug">{post.content}</p>
 
                         {post.image_url && (
-                          <div className="mt-1.5 overflow-hidden rounded-lg border border-white/10">
+                          <div className="mt-1.5 overflow-hidden rounded-lg border border-border">
                             <img src={post.image_url} alt="Post" className="max-h-[300px] w-full object-cover" loading="lazy" />
                           </div>
                         )}
@@ -368,7 +368,7 @@ const Feed = () => {
                             <Heart className={`h-3.5 w-3.5 ${isLiked ? 'fill-current' : ''}`} />
                             {likeCounts[post.id] || 0}
                           </button>
-                          <span className="inline-flex items-center gap-1 text-white/50">
+                          <span className="inline-flex items-center gap-1 text-muted-foreground">
                             <MessageCircle className="h-3.5 w-3.5" />
                             {postComments.length}
                           </span>
@@ -381,12 +381,12 @@ const Feed = () => {
                             onChange={e => setCommentDrafts(prev => ({ ...prev, [post.id]: e.target.value }))}
                             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addComment(post.id); } }}
                             placeholder="Reply..."
-                            className="flex-1 bg-white/5 border border-white/10 rounded-full text-[11px] text-white placeholder:text-white/30 h-7 px-3 focus:outline-none focus:border-white/20"
+                            className="flex-1 bg-secondary/50 border border-border rounded-full text-[11px] text-foreground placeholder:text-muted-foreground h-7 px-3 focus:outline-none focus:border-border"
                           />
                           <button
                             onClick={() => addComment(post.id)}
                             disabled={sendingCommentPostId === post.id || !commentDrafts[post.id]?.trim()}
-                            className="h-7 w-7 flex items-center justify-center rounded-full bg-white/10 text-white/60 hover:bg-white/20 disabled:opacity-30"
+                            className="h-7 w-7 flex items-center justify-center rounded-full bg-secondary text-muted-foreground hover:bg-secondary disabled:opacity-30"
                           >
                             <Send className="h-3 w-3" />
                           </button>
@@ -395,8 +395,8 @@ const Feed = () => {
                         {postComments.length > 0 && (
                           <div className="mt-1.5 space-y-1 pl-1">
                             {postComments.slice(-3).map(comment => (
-                              <div key={comment.id} className="text-[11px] text-white/70">
-                                <button onClick={() => navigate(`/host/${comment.user_id}`)} className="mr-1 font-semibold text-white/90 hover:underline">
+                              <div key={comment.id} className="text-[11px] text-foreground/70">
+                                <button onClick={() => navigate(`/host/${comment.user_id}`)} className="mr-1 font-semibold text-foreground/90 hover:underline">
                                   {comment.author_name}
                                 </button>
                                 {comment.content}
@@ -418,25 +418,25 @@ const Feed = () => {
           <div className="sticky top-14 space-y-5">
             {/* Live Sessions */}
             <div>
-              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">Live Now</p>
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Live Now</p>
               <div className="space-y-1.5">
                 {liveSessions.map(session => (
                   <button
                     key={session.id}
                     onClick={() => navigate(`/podcasts?session=${session.id}`)}
-                    className="w-full flex items-center gap-2 p-2 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/5 transition-colors text-left"
+                    className="w-full flex items-center gap-2 p-2 rounded-lg border border-border bg-card hover:bg-secondary/50 transition-colors text-left"
                   >
-                    <div className="h-8 w-8 rounded-full overflow-hidden bg-white/10 flex-shrink-0 relative">
+                    <div className="h-8 w-8 rounded-full overflow-hidden bg-secondary flex-shrink-0 relative">
                       {session.host_avatar ? (
                         <img src={session.host_avatar} alt="" className="h-full w-full object-cover" />
                       ) : (
-                        <div className="h-full w-full bg-white/20" />
+                        <div className="h-full w-full bg-secondary" />
                       )}
-                      <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border border-black" />
+                      <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border border-background" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-medium text-white truncate">{session.title}</p>
-                      <div className="flex items-center gap-1 text-[9px] text-white/40">
+                      <p className="text-[11px] font-medium text-foreground truncate">{session.title}</p>
+                      <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
                         <span>{session.host_name}</span>
                         <span>·</span>
                         <Users className="h-2.5 w-2.5" />
