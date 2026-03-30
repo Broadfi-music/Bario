@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Heart, MessageCircle, Send, ArrowLeft, Radio, Swords, Sparkles, User, Mic, Users } from 'lucide-react';
+import { useFollowSystem } from '@/hooks/useFollowSystem';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -77,6 +78,7 @@ const Feed = () => {
   const [sendingCommentPostId, setSendingCommentPostId] = useState<string | null>(null);
   const [liveSessions, setLiveSessions] = useState<LiveSession[]>([]);
   const [suggestedCreators, setSuggestedCreators] = useState<SuggestedCreator[]>([]);
+  const { toggleFollow, isFollowing } = useFollowSystem();
 
   const postIds = useMemo(() => posts.map((p) => p.id), [posts]);
 
