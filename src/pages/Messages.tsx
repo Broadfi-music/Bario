@@ -128,6 +128,12 @@ const Messages = () => {
   const openDmWith = async (otherUserId: string) => {
     if (!user) return;
 
+    // Validate that otherUserId looks like a UUID (real user)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(otherUserId)) {
+      toast.error('This is a demo creator and cannot receive messages');
+      return;
+    }
     const dmKey = [user.id, otherUserId].sort().join('_');
 
     // Check existing
