@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Radio, Swords, Plus, Music, User } from 'lucide-react';
+import { House, Sparkles, Plus, Music, User } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthPromptModal from '@/components/podcast/AuthPromptModal';
@@ -20,15 +20,16 @@ const MobileBottomNav = () => {
   if (location.pathname === '/auth') return null;
 
   const tabs = [
-    { id: 'live', icon: Radio, label: 'Live', path: '/podcasts' },
-    { id: 'battle', icon: Swords, label: 'Battle', path: null },
+    { id: 'home', icon: House, label: 'Home', path: '/podcasts?tab=feed' },
+    { id: 'feed', icon: Sparkles, label: 'Feed', path: '/feed' },
     { id: 'golive', icon: Plus, label: 'Go Live', path: null },
     { id: 'remix', icon: Music, label: 'AI Remix', path: '/ai-remix' },
     { id: 'mypage', icon: User, label: 'My Page', path: null },
   ];
 
   const isActive = (tab: typeof tabs[0]) => {
-    if (tab.id === 'live') return location.pathname === '/podcasts';
+    if (tab.id === 'home') return location.pathname === '/podcasts';
+    if (tab.id === 'feed') return location.pathname === '/feed';
     if (tab.id === 'remix') return location.pathname === '/ai-remix';
     if (tab.id === 'mypage') return location.pathname.startsWith('/host/');
     return false;
@@ -44,15 +45,6 @@ const MobileBottomNav = () => {
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('open-host-studio'));
         }, 100);
-      }
-      return;
-    }
-    if (tab.id === 'battle') {
-      if (!user) {
-        setAuthAction('start a battle');
-        setShowAuthPrompt(true);
-      } else {
-        window.dispatchEvent(new CustomEvent('open-battle-invite'));
       }
       return;
     }

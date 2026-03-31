@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, Mic, Radio, Home, Flame, Swords, Tv, Music, User, Search, Send, Bell } from 'lucide-react';
+import { ChevronLeft, Mic, Radio, Home, Flame, Swords, Tv, Music, User, Search, Send, Bell, Sparkles } from 'lucide-react';
 import BattleInviteModal from '@/components/podcast/BattleInviteModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import NotificationBell from '@/components/NotificationBell';
@@ -49,17 +49,17 @@ const Podcasts = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showHostStudio, setShowHostStudio] = useState(false);
-  // Default to 'live' tab only on PWA mobile, 'feed' everywhere else; respect URL param
+  // Default to feed everywhere; respect URL param
   const tabFromUrl = searchParams.get('tab');
   const isPWA = window.matchMedia('(display-mode: standalone)').matches
     || (window.navigator as any).standalone === true;
-  const [activeTab, setActiveTab] = useState(tabFromUrl || (isMobile && isPWA ? 'live' : 'feed'));
+  const [activeTab, setActiveTab] = useState(tabFromUrl || 'feed');
   const [feedSearch, setFeedSearch] = useState('');
 
   // Fix: useIsMobile returns false initially, so correct the tab once we know
   useEffect(() => {
     if (!tabFromUrl) {
-      setActiveTab((isMobile && isPWA) ? 'live' : 'feed');
+      setActiveTab('feed');
     }
   }, [isMobile, tabFromUrl]);
   const [liveSessions, setLiveSessions] = useState<PodcastSession[]>([]);
@@ -419,24 +419,21 @@ const Podcasts = () => {
           <div className="flex items-center justify-center h-11 px-3 relative">
             <div className="flex items-center gap-5 mx-auto">
               <button
-                onClick={() => { setActiveTab('battles'); }}
-                className={`flex items-center gap-1 text-sm font-semibold transition-colors ${activeTab === 'battles' ? 'text-white border-b-2 border-white pb-0.5' : 'text-white/50'}`}
+                onClick={() => {
+                  setActiveTab('feed');
+                  setSearchParams({ tab: 'feed' });
+                }}
+                className={`flex items-center gap-1 text-sm font-semibold transition-colors ${activeTab === 'feed' ? 'text-white border-b-2 border-white pb-0.5' : 'text-white/50'}`}
               >
-                <Tv className="h-3.5 w-3.5" />
-                Battle
+                <Home className="h-3.5 w-3.5" />
+                Home
               </button>
               <button
-                onClick={() => { setShowBattleInviteModal(true); }}
+                onClick={() => navigate('/feed')}
                 className="flex items-center gap-1 text-sm font-semibold text-white/50 transition-colors hover:text-white"
               >
-                <Swords className="h-3.5 w-3.5" />
-                Start Battle
-              </button>
-              <button
-                onClick={() => navigate('/bario-music')}
-                className="text-sm font-semibold text-white/50 transition-colors hover:text-white"
-              >
-                Bario Music
+                <Sparkles className="h-3.5 w-3.5" />
+                Feed
               </button>
             </div>
             {/* Profile icon - absolute right */}

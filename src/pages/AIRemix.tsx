@@ -1,7 +1,7 @@
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Music, Sliders, ArrowRight, Menu, X, Upload, Link as LinkIcon, FileAudio, Plus } from 'lucide-react';
+import { Search, Music, Sliders, ArrowRight, Menu, X, Upload, Link as LinkIcon, FileAudio, Plus, User } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import remixStudio from '@/assets/starters/remix-studio.jpg';
@@ -116,8 +116,6 @@ const AIRemix = () => {
     { label: 'Spaces', path: '/podcasts', active: false },
   ];
 
-  const userLabel = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Signed in';
-
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Desktop/Tablet Sidebar */}
@@ -149,13 +147,12 @@ const AIRemix = () => {
               <div className="w-full h-9 rounded-lg bg-white/5 animate-pulse" />
             ) : user ? (
               <div className="space-y-2">
-                <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-white/40">Signed in</p>
-                  <p className="mt-1 truncate text-sm font-semibold text-white">{userLabel}</p>
-                </div>
                 <Link to="/dashboard">
-                  <button className="w-full bg-white text-black text-xs font-semibold px-3 py-2 rounded-lg hover:bg-white/90">
-                    DASHBOARD
+                  <button className="w-full border border-white/10 bg-white/5 text-white text-xs font-semibold px-3 py-2 rounded-lg hover:bg-white/10 flex items-center justify-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-white/10">
+                      <User className="h-3.5 w-3.5" />
+                    </span>
+                    ACCOUNT
                   </button>
                 </Link>
               </div>
@@ -196,8 +193,8 @@ const AIRemix = () => {
             {loading ? (
               <div className="h-4 w-16 rounded bg-white/5 animate-pulse" />
             ) : user ? (
-              <button onClick={() => navigate('/dashboard')} className="text-xs font-semibold text-white">
-                {userLabel}
+              <button onClick={() => navigate('/dashboard')} className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10">
+                <User className="h-4 w-4" />
               </button>
             ) : (
               <Link to="/auth" className="text-xs font-semibold text-white/60">Login</Link>

@@ -1678,6 +1678,10 @@ export type Database = {
         Args: { battle_uuid: string; increment_by?: number; score_side: string }
         Returns: Json
       }
+      start_direct_conversation: {
+        Args: { other_user_id: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

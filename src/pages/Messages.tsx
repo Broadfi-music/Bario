@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Send, Search, Settings, Radio, Swords, Sparkles, User, Users, Mic } from 'lucide-react';
+import { ArrowLeft, Send, Search, Settings, Radio, Sparkles, User, Users, Mic } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -32,8 +32,7 @@ type Message = {
 };
 
 const NAV_ITEMS = [
-  { icon: Radio, label: 'Live', path: '/podcasts?tab=live' },
-  { icon: Swords, label: 'Battles', path: '/podcasts?tab=battles' },
+  { icon: Radio, label: 'Home', path: '/podcasts?tab=feed' },
   { icon: Sparkles, label: 'Feed', path: '/feed' },
   { icon: User, label: 'My Page', path: '/dashboard/profile' },
 ];
@@ -158,55 +157,16 @@ const Messages = () => {
       return;
     }
 
-    const dmKey = [activeUser.id, otherUserId].sort().join('_');
-    const { data: existing, error: existingError } = await db
-      .from('conversations')
-      .select('id')
-      .eq('dm_key', dmKey)
-      .maybeSingle();
+    const { data: conversationId, error: conversationError } = await db
+      .rpc('start_direct_conversation', { other_user_id: otherUserId });
 
-    if (existingError) {
-      console.error('Failed to look up existing conversation', existingError);
-    }
-
-    if (existing?.id) {
-      setActiveConvoId(existing.id);
-      return;
-    }
-
-    const { data: newConvo, error: conversationError } = await db
-      .from('conversations')
-      .insert({ created_by: activeUser.id, dm_key: dmKey })
-      .select('id')
-      .single();
-
-    if (conversationError || !newConvo) {
+    if (conversationError || !conversationId) {
       console.error('Failed to create conversation', conversationError);
       toast.error('Failed to start conversation');
       return;
     }
 
-    const { error: selfParticipantError } = await db
-      .from('conversation_participants')
-      .insert({ conversation_id: newConvo.id, user_id: activeUser.id });
-
-    if (selfParticipantError) {
-      console.error('Failed to add current user to conversation', selfParticipantError);
-      toast.error('Failed to start conversation');
-      return;
-    }
-
-    const { error: otherParticipantError } = await db
-      .from('conversation_participants')
-      .insert({ conversation_id: newConvo.id, user_id: otherUserId });
-
-    if (otherParticipantError) {
-      console.error('Failed to add creator to conversation', otherParticipantError);
-      toast.error('Failed to start conversation');
-      return;
-    }
-
-    setActiveConvoId(newConvo.id);
+    setActiveConvoId(conversationId);
     await fetchConversations();
   };
 
