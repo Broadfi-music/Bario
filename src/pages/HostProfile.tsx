@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getCreatorCover } from '@/lib/creatorCovers';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, Users, Play, Calendar, Radio, Heart, Share2, Edit, MoreVertical, Pause, Plus, Mic, Trash2, UserPlus, MessageCircle, Image as ImageIcon, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -50,6 +50,13 @@ interface HostPost {
   image_url: string | null;
   like_count: number;
   created_at: string;
+}
+
+interface SidebarCreator {
+  user_id: string;
+  full_name: string | null;
+  username: string | null;
+  avatar_url: string | null;
 }
 
 import { getDemoAvatar } from '@/lib/randomAvatars';
@@ -156,6 +163,7 @@ const formatTimeAgo = (dateStr: string) => {
 const HostProfile = () => {
   const { hostId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { playTrack, currentTrack, isPlaying, pauseTrack, resumeTrack } = useAudioPlayer();
   const [host, setHost] = useState<HostData | null>(null);
@@ -166,6 +174,7 @@ const HostProfile = () => {
   const [activeTab, setActiveTab] = useState('posts');
   const [loading, setLoading] = useState(true);
   const [followerCount, setFollowerCount] = useState(0);
+  const [creatorSuggestions, setCreatorSuggestions] = useState<SidebarCreator[]>([]);
   
   // Post creation state
   const [newPostContent, setNewPostContent] = useState('');
@@ -187,6 +196,7 @@ const HostProfile = () => {
     if (hostId) {
       fetchHostData();
       fetchPosts();
+      fetchCreatorSuggestions();
       setupRealtimeSubscription();
     }
   }, [hostId]);
@@ -271,6 +281,18 @@ const HostProfile = () => {
     }
     
     setLoading(false);
+  };
+
+  const fetchCreatorSuggestions = async () => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('user_id, full_name, username, avatar_url')
+      .neq('user_id', hostId || '')
+      .limit(5);
+
+    if (!error && data) {
+      setCreatorSuggestions(data as SidebarCreator[]);
+    }
   };
 
   const handleFollow = async () => {
@@ -396,6 +418,14 @@ const HostProfile = () => {
     );
   }
 
+  const recommendedSessions = ALL_DEMO_SESSIONS
+    .filter((session) => session.hostId !== host.user_id && session.id !== host.current_session_id)
+    .slice(0, 4);
+
+  const messageTarget = host?.user_id
+    ? `/messages?to=${host.user_id}&from=${encodeURIComponent(`${location.pathname}${location.search}`)}`
+    : '/messages';
+
   return (
     <div className="min-h-screen bg-[#0e0e10] text-white">
       {/* Header */}
@@ -418,17 +448,19 @@ const HostProfile = () => {
       </header>
 
       <main className="pt-12 pb-20">
-        {/* Banner */}
-        <div className="relative h-32 sm:h-48 overflow-hidden">
-          <img src={host?.avatar_url ? getCreatorCover(host.user_id) : getCreatorCover(hostId || 'default')} alt="" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        </div>
+        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <section className="min-w-0">
+            {/* Banner */}
+            <div className="relative h-28 overflow-hidden rounded-2xl sm:h-40">
+              <img src={host?.avatar_url ? getCreatorCover(host.user_id) : getCreatorCover(hostId || 'default')} alt="" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            </div>
 
-        {/* Profile Info */}
-        <div className="px-4 -mt-12 relative z-10">
-          <div className="flex items-end gap-3 mb-4">
+            {/* Profile Info */}
+            <div className="px-2 -mt-10 relative z-10 sm:px-4">
+              <div className="flex items-end gap-3 mb-4">
             <div className="relative">
-              <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 border-[#0e0e10] bg-neutral-800">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-4 border-[#0e0e10] bg-neutral-800">
                 {host.avatar_url ? (
                   <img src={host.avatar_url} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -454,67 +486,68 @@ const HostProfile = () => {
                 Edit Profile
               </Button>
             )}
-          </div>
-
-          <div className="mb-4">
-            <h1 className="text-xl sm:text-2xl font-bold">{host.full_name}</h1>
-            {host.username && <p className="text-white/50 text-sm">@{host.username}</p>}
-          </div>
-
-          {host.bio && <p className="text-white/70 text-sm mb-4 max-w-xl">{host.bio}</p>}
-
-          {/* Stats */}
-          <div className="flex items-center gap-6 mb-4">
-            <div className="flex items-center gap-1.5">
-              <Users className="h-4 w-4 text-white/50" />
-              <span className="font-semibold">{formatFollowers(followerCount)}</span>
-              <span className="text-white/50 text-sm">Followers</span>
             </div>
-          </div>
+              </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 mb-4 flex-wrap">
-            {host.is_live && (
-              <Button onClick={goToLiveSession} size="sm" className="bg-black border border-white/20 text-white hover:bg-white/10 text-xs h-8 px-2.5">
-                <Radio className="h-3 w-3 mr-1.5" />
-                Live
-              </Button>
-            )}
-            <Button onClick={handleFollow} variant={isFollowing ? "outline" : "default"} size="sm"
-              className={`text-xs h-8 px-2.5 ${isFollowing ? "border-white/30 text-white/80" : "bg-white text-black hover:bg-white/90"}`}
-            >
-              <Heart className={`h-3 w-3 mr-1.5 ${isFollowing ? 'fill-white/80' : ''}`} />
-              {isFollowing ? 'Following' : 'Follow'}
-            </Button>
-            <Button variant="outline" size="sm" className="border-white/20 text-white/80 hover:bg-white/10 text-xs h-8 px-2.5">
-              <UserPlus className="h-3 w-3 mr-1.5" />
-              Subscribe
-            </Button>
-            <Button variant="outline" size="sm" className="border-white/20 text-white/80 hover:bg-white/10 text-xs h-8 px-2.5"
-              onClick={() => {
-                if (!user) {
-                  navigate('/auth');
-                  return;
-                }
-                navigate(`/messages?to=${host?.user_id}`);
-              }}
-            >
-              <MessageCircle className="h-3 w-3 mr-1.5" />
-              Message
-            </Button>
-            {isOwner && (
-              <Button onClick={() => { setSelectedSchedule(null); setShowEditSchedule(true); }}
-                variant="outline" size="sm" className="border-white/20 text-white/80 hover:bg-white/10 text-xs h-8 px-2.5"
-              >
-                <Calendar className="h-3 w-3 mr-1.5" />
-                Schedule
-              </Button>
-            )}
-          </div>
-        </div>
+              <div className="mb-4">
+                <h1 className="text-xl sm:text-2xl font-bold">{host.full_name}</h1>
+                {host.username && <p className="text-white/50 text-sm">@{host.username}</p>}
+              </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4">
+              {host.bio && <p className="text-white/70 text-sm mb-4 max-w-2xl">{host.bio}</p>}
+
+              {/* Stats */}
+              <div className="flex items-center gap-6 mb-4">
+                <div className="flex items-center gap-1.5">
+                  <Users className="h-4 w-4 text-white/50" />
+                  <span className="font-semibold">{formatFollowers(followerCount)}</span>
+                  <span className="text-white/50 text-sm">Followers</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
+                {host.is_live && (
+                  <Button onClick={goToLiveSession} size="sm" className="bg-black border border-white/20 text-white hover:bg-white/10 text-xs h-8 px-2.5">
+                    <Radio className="h-3 w-3 mr-1.5" />
+                    Live
+                  </Button>
+                )}
+                <Button onClick={handleFollow} variant={isFollowing ? "outline" : "default"} size="sm"
+                  className={`text-xs h-8 px-2.5 ${isFollowing ? "border-white/30 text-white/80" : "bg-white text-black hover:bg-white/90"}`}
+                >
+                  <Heart className={`h-3 w-3 mr-1.5 ${isFollowing ? 'fill-white/80' : ''}`} />
+                  {isFollowing ? 'Following' : 'Follow'}
+                </Button>
+                <Button variant="outline" size="sm" className="border-white/20 text-white/80 hover:bg-white/10 text-xs h-8 px-2.5">
+                  <UserPlus className="h-3 w-3 mr-1.5" />
+                  Subscribe
+                </Button>
+                <Button variant="outline" size="sm" className="border-white/20 text-white/80 hover:bg-white/10 text-xs h-8 px-2.5"
+                  onClick={() => {
+                    if (!user) {
+                      navigate('/auth');
+                      return;
+                    }
+                    navigate(messageTarget);
+                  }}
+                >
+                  <MessageCircle className="h-3 w-3 mr-1.5" />
+                  Message
+                </Button>
+                {isOwner && (
+                  <Button onClick={() => { setSelectedSchedule(null); setShowEditSchedule(true); }}
+                    variant="outline" size="sm" className="border-white/20 text-white/80 hover:bg-white/10 text-xs h-8 px-2.5"
+                  >
+                    <Calendar className="h-3 w-3 mr-1.5" />
+                    Schedule
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="px-0 sm:px-4">
           <TabsList className="bg-white/5 w-full justify-start border-b border-white/10 rounded-none h-10 p-0">
             <TabsTrigger value="posts" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-white rounded-none h-full px-4 text-sm">
               Posts
@@ -733,7 +766,59 @@ const HostProfile = () => {
               {schedules.length === 0 && <div className="text-center py-8 text-white/50">No upcoming schedules</div>}
             </div>
           </TabsContent>
-        </Tabs>
+            </Tabs>
+          </section>
+
+          <aside className="hidden xl:block">
+            <div className="sticky top-16 space-y-4">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <h2 className="text-sm font-semibold text-white">Recommended sessions</h2>
+                <div className="mt-3 space-y-3">
+                  {recommendedSessions.map((session) => (
+                    <button
+                      key={session.id}
+                      onClick={() => navigate(`/podcasts?session=${session.id}`)}
+                      className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-white/5"
+                    >
+                      <img
+                        src={session.hostAvatar || getDemoAvatar(session.hostName)}
+                        alt={session.hostName}
+                        className="h-11 w-11 rounded-xl object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-white">{session.title}</p>
+                        <p className="truncate text-xs text-white/50">{session.hostName} · {session.category}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <h2 className="text-sm font-semibold text-white">Bario creators</h2>
+                <div className="mt-3 space-y-3">
+                  {creatorSuggestions.map((creator) => (
+                    <button
+                      key={creator.user_id}
+                      onClick={() => navigate(`/host/${creator.user_id}`)}
+                      className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-white/5"
+                    >
+                      <img
+                        src={creator.avatar_url || getDemoAvatar(creator.full_name || creator.username || 'Creator')}
+                        alt={creator.full_name || creator.username || 'Creator'}
+                        className="h-11 w-11 rounded-full object-cover"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-white">{creator.full_name || creator.username || 'Creator'}</p>
+                        {creator.username && <p className="truncate text-xs text-white/50">@{creator.username}</p>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
       </main>
 
       {/* Edit Profile Modal */}

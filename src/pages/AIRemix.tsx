@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Music, Sliders, ArrowRight, Menu, X, Upload, Link as LinkIcon, FileAudio, Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/contexts/AuthContext';
 import remixStudio from '@/assets/starters/remix-studio.jpg';
 import trendingRemix from '@/assets/starters/trending-remix.jpg';
 import genreRemix from '@/assets/starters/genre-remix.jpg';
@@ -11,6 +12,7 @@ import audioEffects from '@/assets/starters/audio-effects.jpg';
 const AIRemix = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { user, loading } = useAuth();
   const [prompt, setPrompt] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
@@ -114,6 +116,8 @@ const AIRemix = () => {
     { label: 'Spaces', path: '/podcasts', active: false },
   ];
 
+  const userLabel = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Signed in';
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Desktop/Tablet Sidebar */}
@@ -141,11 +145,27 @@ const AIRemix = () => {
             ))}
           </nav>
           <div className="p-4 border-t border-white/10">
-            <Link to="/auth">
-              <button className="w-full bg-white text-black text-xs font-semibold px-3 py-2 rounded-lg hover:bg-white/90">
-                LOGIN
-              </button>
-            </Link>
+            {loading ? (
+              <div className="w-full h-9 rounded-lg bg-white/5 animate-pulse" />
+            ) : user ? (
+              <div className="space-y-2">
+                <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-white/40">Signed in</p>
+                  <p className="mt-1 truncate text-sm font-semibold text-white">{userLabel}</p>
+                </div>
+                <Link to="/dashboard">
+                  <button className="w-full bg-white text-black text-xs font-semibold px-3 py-2 rounded-lg hover:bg-white/90">
+                    DASHBOARD
+                  </button>
+                </Link>
+              </div>
+            ) : (
+              <Link to="/auth">
+                <button className="w-full bg-white text-black text-xs font-semibold px-3 py-2 rounded-lg hover:bg-white/90">
+                  LOGIN
+                </button>
+              </Link>
+            )}
           </div>
         </aside>
       )}
@@ -173,7 +193,15 @@ const AIRemix = () => {
                 </button>
               ))}
             </nav>
-            <Link to="/auth" className="text-xs font-semibold text-white/60">Login</Link>
+            {loading ? (
+              <div className="h-4 w-16 rounded bg-white/5 animate-pulse" />
+            ) : user ? (
+              <button onClick={() => navigate('/dashboard')} className="text-xs font-semibold text-white">
+                {userLabel}
+              </button>
+            ) : (
+              <Link to="/auth" className="text-xs font-semibold text-white/60">Login</Link>
+            )}
           </div>
         </header>
       )}
@@ -332,9 +360,9 @@ const AIRemix = () => {
             <p className="text-white/40 text-sm md:text-base mb-4 max-w-2xl mx-auto">
               Upload any song, choose your genre, and let AI transform it into a professional-quality remix.
             </p>
-            <Link to="/auth">
+            <Link to={user ? '/dashboard' : '/auth'}>
               <button className="bg-white text-black px-4 py-2 rounded-lg font-semibold text-sm hover:bg-white/90 transition-colors">
-                Get Started
+                {user ? 'Open Dashboard' : 'Get Started'}
               </button>
             </Link>
           </div>

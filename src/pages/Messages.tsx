@@ -64,7 +64,7 @@ const Messages = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [searching, setSearching] = useState(false);
@@ -88,10 +88,10 @@ const Messages = () => {
 
   const fetchConversations = async () => {
     if (!user) return;
-    setLoading(true);
+    setIsLoadingConversations(true);
 
     const { data: parts } = await db.from('conversation_participants').select('conversation_id').eq('user_id', user.id);
-    if (!parts || parts.length === 0) { setConversations([]); setLoading(false); return; }
+    if (!parts || parts.length === 0) { setConversations([]); setIsLoadingConversations(false); return; }
 
     const convoIds = parts.map((p: any) => p.conversation_id);
     const { data: convos } = await db.from('conversations').select('id, last_message_at').in('id', convoIds).order('last_message_at', { ascending: false, nullsFirst: false });
@@ -115,7 +115,7 @@ const Messages = () => {
         last_message: lastMsgMap.get(c.id),
       };
     }));
-    setLoading(false);
+    setIsLoadingConversations(false);
   };
 
   const fetchSuggested = async () => {
@@ -344,7 +344,7 @@ const Messages = () => {
 
         {/* Conversation List */}
         <div className="flex-1 overflow-y-auto scrollbar-hide">
-          {loading ? (
+          {isLoadingConversations ? (
             <div className="text-center text-sm text-muted-foreground py-10">Loading...</div>
           ) : conversations.length === 0 && !searchQuery.trim() ? (
             <div className="px-4 py-6">
