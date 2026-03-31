@@ -450,80 +450,81 @@ const HostProfile = () => {
       <main className="pt-12 pb-20">
         <div className="mx-auto grid max-w-7xl gap-6 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_320px]">
           <section className="min-w-0">
-            {/* Banner */}
             <div className="relative h-28 overflow-hidden rounded-2xl sm:h-40">
               <img src={host?.avatar_url ? getCreatorCover(host.user_id) : getCreatorCover(hostId || 'default')} alt="" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             </div>
 
-            {/* Profile Info */}
-            <div className="px-2 -mt-10 relative z-10 sm:px-4">
-              <div className="flex items-end gap-3 mb-4">
-            <div className="relative">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-4 border-[#0e0e10] bg-neutral-800">
-                {host.avatar_url ? (
-                  <img src={host.avatar_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500" />
-                )}
-              </div>
-              {host.is_live && (
-                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                  LIVE
+            <div className="relative z-10 -mt-10 px-2 sm:px-4">
+              <div className="mb-4 flex items-end gap-3">
+                <div className="relative">
+                  <div className="h-20 w-20 overflow-hidden rounded-full border-4 border-[#0e0e10] bg-neutral-800 sm:h-24 sm:w-24">
+                    {host.avatar_url ? (
+                      <img src={host.avatar_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="h-full w-full bg-gradient-to-br from-purple-500 to-pink-500" />
+                    )}
+                  </div>
+                  {host.is_live && (
+                    <div className="absolute -bottom-1 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+                      LIVE
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            {/* Edit Profile beside icon */}
-            {isOwner && (
-              <Button
-                onClick={() => setShowEditProfile(true)}
-                variant="outline"
-                size="sm"
-                className="border-white/20 text-white/80 hover:bg-white/10 text-xs h-8 px-2.5 mb-2"
-              >
-                <Edit className="h-3 w-3 mr-1" />
-                Edit Profile
-              </Button>
-            )}
-            </div>
+
+                {isOwner && (
+                  <Button
+                    onClick={() => setShowEditProfile(true)}
+                    variant="outline"
+                    size="sm"
+                    className="mb-2 h-8 border-white/20 px-2.5 text-xs text-white/80 hover:bg-white/10"
+                  >
+                    <Edit className="mr-1 h-3 w-3" />
+                    Edit Profile
+                  </Button>
+                )}
               </div>
 
               <div className="mb-4">
-                <h1 className="text-xl sm:text-2xl font-bold">{host.full_name}</h1>
-                {host.username && <p className="text-white/50 text-sm">@{host.username}</p>}
+                <h1 className="text-xl font-bold sm:text-2xl">{host.full_name}</h1>
+                {host.username && <p className="text-sm text-white/50">@{host.username}</p>}
               </div>
 
-              {host.bio && <p className="text-white/70 text-sm mb-4 max-w-2xl">{host.bio}</p>}
+              {host.bio && <p className="mb-4 max-w-2xl text-sm text-white/70">{host.bio}</p>}
 
-              {/* Stats */}
-              <div className="flex items-center gap-6 mb-4">
+              <div className="mb-4 flex items-center gap-6">
                 <div className="flex items-center gap-1.5">
                   <Users className="h-4 w-4 text-white/50" />
                   <span className="font-semibold">{formatFollowers(followerCount)}</span>
-                  <span className="text-white/50 text-sm">Followers</span>
+                  <span className="text-sm text-white/50">Followers</span>
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex items-center gap-2 mb-4 flex-wrap">
+              <div className="mb-4 flex flex-wrap items-center gap-2">
                 {host.is_live && (
-                  <Button onClick={goToLiveSession} size="sm" className="bg-black border border-white/20 text-white hover:bg-white/10 text-xs h-8 px-2.5">
-                    <Radio className="h-3 w-3 mr-1.5" />
+                  <Button onClick={goToLiveSession} size="sm" className="h-8 border border-white/20 bg-black px-2.5 text-xs text-white hover:bg-white/10">
+                    <Radio className="mr-1.5 h-3 w-3" />
                     Live
                   </Button>
                 )}
-                <Button onClick={handleFollow} variant={isFollowing ? "outline" : "default"} size="sm"
-                  className={`text-xs h-8 px-2.5 ${isFollowing ? "border-white/30 text-white/80" : "bg-white text-black hover:bg-white/90"}`}
+                <Button
+                  onClick={handleFollow}
+                  variant={isFollowing ? 'outline' : 'default'}
+                  size="sm"
+                  className={`h-8 px-2.5 text-xs ${isFollowing ? 'border-white/30 text-white/80' : 'bg-white text-black hover:bg-white/90'}`}
                 >
-                  <Heart className={`h-3 w-3 mr-1.5 ${isFollowing ? 'fill-white/80' : ''}`} />
+                  <Heart className={`mr-1.5 h-3 w-3 ${isFollowing ? 'fill-white/80' : ''}`} />
                   {isFollowing ? 'Following' : 'Follow'}
                 </Button>
-                <Button variant="outline" size="sm" className="border-white/20 text-white/80 hover:bg-white/10 text-xs h-8 px-2.5">
-                  <UserPlus className="h-3 w-3 mr-1.5" />
+                <Button variant="outline" size="sm" className="h-8 border-white/20 px-2.5 text-xs text-white/80 hover:bg-white/10">
+                  <UserPlus className="mr-1.5 h-3 w-3" />
                   Subscribe
                 </Button>
-                <Button variant="outline" size="sm" className="border-white/20 text-white/80 hover:bg-white/10 text-xs h-8 px-2.5"
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 border-white/20 px-2.5 text-xs text-white/80 hover:bg-white/10"
                   onClick={() => {
                     if (!user) {
                       navigate('/auth');
@@ -532,23 +533,28 @@ const HostProfile = () => {
                     navigate(messageTarget);
                   }}
                 >
-                  <MessageCircle className="h-3 w-3 mr-1.5" />
+                  <MessageCircle className="mr-1.5 h-3 w-3" />
                   Message
                 </Button>
                 {isOwner && (
-                  <Button onClick={() => { setSelectedSchedule(null); setShowEditSchedule(true); }}
-                    variant="outline" size="sm" className="border-white/20 text-white/80 hover:bg-white/10 text-xs h-8 px-2.5"
+                  <Button
+                    onClick={() => {
+                      setSelectedSchedule(null);
+                      setShowEditSchedule(true);
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 border-white/20 px-2.5 text-xs text-white/80 hover:bg-white/10"
                   >
-                    <Calendar className="h-3 w-3 mr-1.5" />
+                    <Calendar className="mr-1.5 h-3 w-3" />
                     Schedule
                   </Button>
                 )}
               </div>
             </div>
 
-            {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="px-0 sm:px-4">
-          <TabsList className="bg-white/5 w-full justify-start border-b border-white/10 rounded-none h-10 p-0">
+              <TabsList className="h-10 w-full justify-start rounded-none border-b border-white/10 bg-white/5 p-0">
             <TabsTrigger value="posts" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-white rounded-none h-full px-4 text-sm">
               Posts
             </TabsTrigger>
