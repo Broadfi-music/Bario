@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { ALL_DEMO_SESSIONS } from '@/config/demoSessions';
 import { getDemoAvatar, getRandomAvatarUrl } from '@/lib/randomAvatars';
 import { useFollowSystem } from '@/hooks/useFollowSystem';
+import { getFreshSession, isValidUUID } from '@/lib/authUtils';
 
 type Profile = {
   user_id: string;
@@ -50,10 +51,11 @@ const formatTimeAgo = (dateStr: string) => {
 };
 
 const Messages = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const targetUserId = searchParams.get('to');
+  const backTarget = searchParams.get('from');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -71,6 +73,15 @@ const Messages = () => {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const goBack = () => {
+    if (backTarget) {
+      navigate(decodeURIComponent(backTarget));
+      return;
+    }
+
+    navigate('/podcasts');
   };
 
   useEffect(() => { scrollToBottom(); }, [messages]);
@@ -126,23 +137,75 @@ const Messages = () => {
   }, [searchQuery]);
 
   const openDmWith = async (otherUserId: string) => {
-    if (!user) return;
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(otherUserId)) {
-      toast.error('This is a demo creator and cannot receive messages');
+    if (loading) return;
+
+    const session = await getFreshSession();
+    const activeUser = session?.user ?? user;
+
+    if (!activeUser) {
+      toast.error('Please sign in to message creators');
+      navigate('/auth');
       return;
     }
-    const dmKey = [user.id, otherUserId].sort().join('_');
-    const { data: existing } = await db.from('conversations').select('id').eq('dm_key', dmKey).limit(1);
-    if (existing && existing.length > 0) { setActiveConvoId(existing[0].id); return; }
 
-    const { data: newConvo, error } = await db.from('conversations').insert({ created_by: user.id, dm_key: dmKey }).select('id').single();
-    if (error || !newConvo) { toast.error('Failed to start conversation'); return; }
+    if (!isValidUUID(otherUserId)) {
+      toast.error('Only registered creators can receive messages right now');
+      return;
+    }
 
-    await db.from('conversation_participants').insert([
-      { conversation_id: newConvo.id, user_id: user.id },
-      { conversation_id: newConvo.id, user_id: otherUserId },
-    ]);
+    if (activeUser.id === otherUserId) {
+      toast.error('You cannot start a conversation with yourself');
+      return;
+    }
+
+    const dmKey = [activeUser.id, otherUserId].sort().join('_');
+    const { data: existing, error: existingError } = await db
+      .from('conversations')
+      .select('id')
+      .eq('dm_key', dmKey)
+      .maybeSingle();
+
+    if (existingError) {
+      console.error('Failed to look up existing conversation', existingError);
+    }
+
+    if (existing?.id) {
+      setActiveConvoId(existing.id);
+      return;
+    }
+
+    const { data: newConvo, error: conversationError } = await db
+      .from('conversations')
+      .insert({ created_by: activeUser.id, dm_key: dmKey })
+      .select('id')
+      .single();
+
+    if (conversationError || !newConvo) {
+      console.error('Failed to create conversation', conversationError);
+      toast.error('Failed to start conversation');
+      return;
+    }
+
+    const { error: selfParticipantError } = await db
+      .from('conversation_participants')
+      .insert({ conversation_id: newConvo.id, user_id: activeUser.id });
+
+    if (selfParticipantError) {
+      console.error('Failed to add current user to conversation', selfParticipantError);
+      toast.error('Failed to start conversation');
+      return;
+    }
+
+    const { error: otherParticipantError } = await db
+      .from('conversation_participants')
+      .insert({ conversation_id: newConvo.id, user_id: otherUserId });
+
+    if (otherParticipantError) {
+      console.error('Failed to add creator to conversation', otherParticipantError);
+      toast.error('Failed to start conversation');
+      return;
+    }
+
     setActiveConvoId(newConvo.id);
     await fetchConversations();
   };
@@ -160,8 +223,18 @@ const Messages = () => {
     setSending(false);
   };
 
-  useEffect(() => { if (user) { fetchConversations(); fetchSuggested(); } }, [user?.id]);
-  useEffect(() => { if (targetUserId && user) { openDmWith(targetUserId); } }, [targetUserId, user?.id]);
+  useEffect(() => {
+    if (!loading && user) {
+      fetchConversations();
+      fetchSuggested();
+    }
+  }, [loading, user?.id]);
+
+  useEffect(() => {
+    if (!loading && targetUserId && user) {
+      openDmWith(targetUserId);
+    }
+  }, [targetUserId, loading, user?.id]);
 
   useEffect(() => {
     if (activeConvoId) {
@@ -170,6 +243,14 @@ const Messages = () => {
       return () => { db.removeChannel(channel); };
     }
   }, [activeConvoId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <div className="text-sm text-muted-foreground">Loading messages…</div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -220,7 +301,7 @@ const Messages = () => {
         {/* Chat Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <button onClick={() => navigate('/podcasts?tab=feed')} className="md:hidden h-8 w-8 flex items-center justify-center rounded-full hover:bg-secondary">
+            <button onClick={goBack} className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-secondary">
               <ArrowLeft className="h-4 w-4" />
             </button>
             <h1 className="text-base font-bold">Messages</h1>
