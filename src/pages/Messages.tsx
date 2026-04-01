@@ -138,6 +138,7 @@ const Messages = () => {
   const openDmWith = async (otherUserId: string) => {
     if (loading) return;
 
+    // 1. Ensure fresh auth session
     const session = await getFreshSession();
     const activeUser = session?.user ?? user;
 
@@ -157,17 +158,78 @@ const Messages = () => {
       return;
     }
 
-    const { data: conversationId, error: conversationError } = await db
-      .rpc('start_direct_conversation', { other_user_id: otherUserId });
+    try {
+      // 2. Call RPC to create/find conversation
+      const { data: conversationId, error: conversationError } = await db
+        .rpc('start_direct_conversation', { other_user_id: otherUserId });
 
-    if (conversationError || !conversationId) {
-      console.error('Failed to create conversation', conversationError);
+      if (conversationError) {
+        console.error('RPC error:', conversationError);
+        // If JWT error, refresh and retry once
+        if (conversationError.message?.includes('JWT') || conversationError.code === 'PGRST303') {
+          const refreshed = await getFreshSession();
+          if (!refreshed) {
+            toast.error('Session expired. Please sign in again.');
+            navigate('/auth');
+            return;
+          }
+          const { data: retryId, error: retryErr } = await db
+            .rpc('start_direct_conversation', { other_user_id: otherUserId });
+          if (retryErr || !retryId) {
+            toast.error('Failed to start conversation');
+            return;
+          }
+          // Use retried result
+          await hydrateAndOpenConversation(retryId, otherUserId);
+          return;
+        }
+        toast.error('Failed to start conversation');
+        return;
+      }
+
+      if (!conversationId) {
+        toast.error('Failed to start conversation');
+        return;
+      }
+
+      // 3. Hydrate local state with the conversation
+      await hydrateAndOpenConversation(conversationId, otherUserId);
+    } catch (err) {
+      console.error('Unexpected DM error:', err);
       toast.error('Failed to start conversation');
-      return;
     }
+  };
 
-    setActiveConvoId(conversationId);
-    await fetchConversations();
+  const hydrateAndOpenConversation = async (convoId: string, otherUserId: string) => {
+    // Fetch other user's profile
+    const { data: otherProfile } = await db
+      .from('profiles')
+      .select('user_id, full_name, username, avatar_url')
+      .eq('user_id', otherUserId)
+      .single();
+
+    const otherUser: Profile = otherProfile || {
+      user_id: otherUserId,
+      full_name: 'Creator',
+      username: null,
+      avatar_url: null,
+    };
+
+    // Inject conversation into local state immediately so UI renders
+    setConversations(prev => {
+      const exists = prev.find(c => c.id === convoId);
+      if (exists) return prev;
+      return [{
+        id: convoId,
+        last_message_at: null,
+        other_user: otherUser,
+        last_message: undefined,
+      }, ...prev];
+    });
+
+    setActiveConvoId(convoId);
+    // Also refresh full list in background
+    fetchConversations();
   };
 
   const fetchMessages = async (convoId: string) => {
