@@ -336,7 +336,12 @@ const Podcasts = () => {
 
       const profileMap = new Map<string, ProfileInfo>(profiles.map(p => [p.user_id, p]));
       
-      setLiveSessions(sessions.map(s => {
+      const freshSessions = sessions.filter(s => {
+        if (s.started_at && new Date(s.started_at).getTime() < oneHourAgo) return false;
+        return true;
+      });
+
+      setLiveSessions(freshSessions.map(s => {
         const profile = profileMap.get(s.host_id);
         return {
           id: s.id,
