@@ -292,20 +292,19 @@ const Podcasts = () => {
 
   const fetchLiveSessions = async (retryCount = 0) => {
     try {
-      // IMPORTANT: Filter out battle sessions (they have "Battle:" prefix in title)
-      // Battle sessions should NOT appear in the regular live feed
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
       const { data: sessions, error } = await supabase
         .from('podcast_sessions')
         .select('*')
         .eq('status', 'live')
-        .not('title', 'ilike', 'Battle:%') // Exclude battle sessions
+        .is('ended_at', null)
+        .gte('created_at', twoHoursAgo)
+        .not('title', 'ilike', 'Battle:%')
         .order('listener_count', { ascending: false });
       
-      // Handle JWT errors with retry
       if (error) {
         console.error('Error fetching live sessions:', error);
         if ((error.message?.includes('JWT') || error.code === 'PGRST303') && retryCount < 1) {
-          console.log('JWT error, refreshing token and retrying...');
           await supabase.auth.refreshSession();
           return fetchLiveSessions(retryCount + 1);
         }
@@ -313,6 +312,9 @@ const Podcasts = () => {
       }
       
       if (!sessions) return;
+
+      // Additional staleness filter: exclude sessions older than 1 hour
+      const oneHourAgo = Date.now() - 60 * 60 * 1000;
 
       const validHostIds = sessions.filter(s => isValidUUID(s.host_id)).map(s => s.host_id);
       
@@ -334,7 +336,12 @@ const Podcasts = () => {
 
       const profileMap = new Map<string, ProfileInfo>(profiles.map(p => [p.user_id, p]));
       
-      setLiveSessions(sessions.map(s => {
+      const freshSessions = sessions.filter(s => {
+        if (s.started_at && new Date(s.started_at).getTime() < oneHourAgo) return false;
+        return true;
+      });
+
+      setLiveSessions(freshSessions.map(s => {
         const profile = profileMap.get(s.host_id);
         return {
           id: s.id,
