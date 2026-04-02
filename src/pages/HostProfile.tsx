@@ -448,7 +448,7 @@ const HostProfile = () => {
       </header>
 
       <main className="pt-12 pb-20">
-        <div className="mx-auto grid max-w-7xl gap-6 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-4 xl:grid-cols-[minmax(0,1fr)_280px]">
           <section className="min-w-0">
             <div className="relative h-28 overflow-hidden rounded-2xl sm:h-40">
               <img src={host?.avatar_url ? getCreatorCover(host.user_id) : getCreatorCover(hostId || 'default')} alt="" className="w-full h-full object-cover" />
