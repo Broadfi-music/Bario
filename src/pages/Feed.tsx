@@ -324,8 +324,8 @@ const Feed = () => {
           ) : posts.length === 0 ? (
             <div className="text-center text-sm text-muted-foreground py-10">No posts yet.</div>
           ) : (
-            <div className="space-y-2">
-              {posts.map(post => {
+            <div className="space-y-2 max-w-xl mx-auto">
+              {posts.slice(0, 3).map(post => {
                 const postComments = commentsByPost[post.id] || [];
                 const isLiked = likedPostIds.has(post.id);
 
