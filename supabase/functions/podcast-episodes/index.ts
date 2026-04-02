@@ -119,7 +119,7 @@ serve(async (req) => {
           id: 'fallback-5',
           title: 'Indie Artist Spotlight',
           description: 'Underground artists you need to know',
-          cover_image_url: '/src/assets/podcast-cover-5.jpg',
+          cover_image_url: 'https://images.unsplash.com/photo-1485579149621-3123dd979571?w=400',
           audio_url: '',
           duration_ms: 2400000,
           play_count: 67000,
