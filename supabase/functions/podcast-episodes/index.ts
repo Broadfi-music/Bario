@@ -132,7 +132,7 @@ serve(async (req) => {
           id: 'fallback-6',
           title: 'The Future of Music Streaming',
           description: 'Industry experts discuss where music is heading',
-          cover_image_url: '/src/assets/podcast-cover-6.jpg',
+          cover_image_url: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400',
           audio_url: '',
           duration_ms: 3900000,
           play_count: 142000,
