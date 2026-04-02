@@ -93,7 +93,7 @@ serve(async (req) => {
           id: 'fallback-3',
           title: 'K-Pop Global Domination',
           description: 'How K-Pop conquered the world music industry',
-          cover_image_url: '/src/assets/podcast-cover-3.jpg',
+          cover_image_url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400',
           audio_url: '',
           duration_ms: 3200000,
           play_count: 156000,
