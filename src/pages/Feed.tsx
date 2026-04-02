@@ -324,13 +324,13 @@ const Feed = () => {
           ) : posts.length === 0 ? (
             <div className="text-center text-sm text-muted-foreground py-10">No posts yet.</div>
           ) : (
-            <div className="space-y-2">
-              {posts.map(post => {
+            <div className="space-y-2 max-w-xl mx-auto">
+              {posts.slice(0, 3).map(post => {
                 const postComments = commentsByPost[post.id] || [];
                 const isLiked = likedPostIds.has(post.id);
 
                 return (
-                  <article key={post.id} className="rounded-lg border border-border bg-card px-3 py-2.5">
+                  <article key={post.id} className="rounded-lg border border-border bg-card px-3 py-2.5 max-w-lg">
                     <div className="flex items-start gap-2">
                       <button
                         onClick={() => navigate(`/host/${post.user_id}`)}

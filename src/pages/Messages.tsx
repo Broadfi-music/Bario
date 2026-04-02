@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Send, Search, Settings, Radio, Sparkles, User, Users, Mic } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { ALL_DEMO_SESSIONS } from '@/config/demoSessions';
 import { getDemoAvatar, getRandomAvatarUrl } from '@/lib/randomAvatars';
 import { useFollowSystem } from '@/hooks/useFollowSystem';
-import { getFreshSession, isValidUUID } from '@/lib/authUtils';
+import { isValidUUID } from '@/lib/authUtils';
 
 type Profile = {
   user_id: string;
@@ -50,12 +50,13 @@ const formatTimeAgo = (dateStr: string) => {
 };
 
 const Messages = () => {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const targetUserId = searchParams.get('to');
   const backTarget = searchParams.get('from');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const dmInitiated = useRef(false);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [suggestedCreators, setSuggestedCreators] = useState<Profile[]>([]);
@@ -67,8 +68,7 @@ const Messages = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [searching, setSearching] = useState(false);
-
-  const db = supabase as any;
+  const [isReady, setIsReady] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -79,28 +79,42 @@ const Messages = () => {
       navigate(decodeURIComponent(backTarget));
       return;
     }
-
     navigate('/podcasts');
   };
 
   useEffect(() => { scrollToBottom(); }, [messages]);
 
-  const fetchConversations = async () => {
+  // Wait for auth to be fully ready
+  useEffect(() => {
+    if (authLoading) return;
+    
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setIsReady(true);
+      } else {
+        setIsReady(true); // Still ready, just no user
+      }
+    };
+    initAuth();
+  }, [authLoading]);
+
+  const fetchConversations = useCallback(async () => {
     if (!user) return;
     setIsLoadingConversations(true);
 
-    const { data: parts } = await db.from('conversation_participants').select('conversation_id').eq('user_id', user.id);
+    const { data: parts } = await supabase.from('conversation_participants').select('conversation_id').eq('user_id', user.id);
     if (!parts || parts.length === 0) { setConversations([]); setIsLoadingConversations(false); return; }
 
     const convoIds = parts.map((p: any) => p.conversation_id);
-    const { data: convos } = await db.from('conversations').select('id, last_message_at').in('id', convoIds).order('last_message_at', { ascending: false, nullsFirst: false });
-    const { data: allParts } = await db.from('conversation_participants').select('conversation_id, user_id').in('conversation_id', convoIds);
+    const { data: convos } = await supabase.from('conversations').select('id, last_message_at').in('id', convoIds).order('last_message_at', { ascending: false, nullsFirst: false });
+    const { data: allParts } = await supabase.from('conversation_participants').select('conversation_id, user_id').in('conversation_id', convoIds);
 
     const otherUserIds = [...new Set((allParts || []).filter((p: any) => p.user_id !== user.id).map((p: any) => p.user_id))] as string[];
-    const { data: profiles } = otherUserIds.length ? await db.from('profiles').select('user_id, full_name, username, avatar_url').in('user_id', otherUserIds) : { data: [] };
+    const { data: profiles } = otherUserIds.length ? await supabase.from('profiles').select('user_id, full_name, username, avatar_url').in('user_id', otherUserIds) : { data: [] };
     const profileMap = new Map<string, Profile>((profiles || []).map((p: any) => [p.user_id, p]));
 
-    const { data: lastMsgs } = await db.from('direct_messages').select('conversation_id, content').in('conversation_id', convoIds).order('created_at', { ascending: false }).limit(convoIds.length);
+    const { data: lastMsgs } = await supabase.from('direct_messages').select('conversation_id, content').in('conversation_id', convoIds).order('created_at', { ascending: false });
     const lastMsgMap = new Map<string, string>();
     (lastMsgs || []).forEach((m: any) => { if (!lastMsgMap.has(m.conversation_id)) lastMsgMap.set(m.conversation_id, m.content); });
 
@@ -115,17 +129,17 @@ const Messages = () => {
       };
     }));
     setIsLoadingConversations(false);
-  };
+  }, [user]);
 
   const fetchSuggested = async () => {
-    const { data } = await db.from('profiles').select('user_id, full_name, username, avatar_url').limit(12);
+    const { data } = await supabase.from('profiles').select('user_id, full_name, username, avatar_url').limit(12);
     setSuggestedCreators((data || []).filter((p: any) => p.user_id !== user?.id));
   };
 
   const searchCreators = async (query: string) => {
     if (!query.trim()) { setSearchResults([]); return; }
     setSearching(true);
-    const { data } = await db.from('profiles').select('user_id, full_name, username, avatar_url').or(`full_name.ilike.%${query}%,username.ilike.%${query}%`).limit(10);
+    const { data } = await supabase.from('profiles').select('user_id, full_name, username, avatar_url').or(`full_name.ilike.%${query}%,username.ilike.%${query}%`).limit(10);
     setSearchResults((data || []).filter((p: any) => p.user_id !== user?.id));
     setSearching(false);
   };
@@ -135,74 +149,78 @@ const Messages = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const openDmWith = async (otherUserId: string) => {
-    if (loading) return;
-
-    // 1. Ensure fresh auth session
-    const session = await getFreshSession();
-    const activeUser = session?.user ?? user;
-
-    if (!activeUser) {
+  const openDmWith = useCallback(async (otherUserId: string) => {
+    if (!user) {
       toast.error('Please sign in to message creators');
       navigate('/auth');
       return;
     }
 
     if (!isValidUUID(otherUserId)) {
-      toast.error('Only registered creators can receive messages right now');
+      toast('This is a demo creator. Messaging is available with real creators who have signed up.');
       return;
     }
 
-    if (activeUser.id === otherUserId) {
-      toast.error('You cannot start a conversation with yourself');
+    if (user.id === otherUserId) {
+      toast.error('You cannot message yourself');
       return;
     }
 
     try {
-      // 2. Call RPC to create/find conversation
-      const { data: conversationId, error: conversationError } = await db
-        .rpc('start_direct_conversation', { other_user_id: otherUserId });
+      // Ensure fresh session before RPC
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        // Try refresh
+        const { data: refreshData } = await supabase.auth.refreshSession();
+        if (!refreshData.session) {
+          toast.error('Session expired. Please sign in again.');
+          navigate('/auth');
+          return;
+        }
+      }
 
-      if (conversationError) {
-        console.error('RPC error:', conversationError);
-        // If JWT error, refresh and retry once
-        if (conversationError.message?.includes('JWT') || conversationError.code === 'PGRST303') {
-          const refreshed = await getFreshSession();
-          if (!refreshed) {
+      const { data: conversationId, error } = await supabase.rpc('start_direct_conversation', { other_user_id: otherUserId });
+
+      if (error) {
+        console.error('DM RPC error:', error);
+        
+        // Retry once after refresh
+        if (error.message?.includes('JWT') || error.code === 'PGRST303') {
+          const { data: refreshData } = await supabase.auth.refreshSession();
+          if (!refreshData.session) {
             toast.error('Session expired. Please sign in again.');
             navigate('/auth');
             return;
           }
-          const { data: retryId, error: retryErr } = await db
-            .rpc('start_direct_conversation', { other_user_id: otherUserId });
+          const { data: retryId, error: retryErr } = await supabase.rpc('start_direct_conversation', { other_user_id: otherUserId });
           if (retryErr || !retryId) {
-            toast.error('Failed to start conversation');
+            console.error('DM retry error:', retryErr);
+            toast.error('Failed to start conversation. Please try again.');
             return;
           }
-          // Use retried result
           await hydrateAndOpenConversation(retryId, otherUserId);
           return;
         }
-        toast.error('Failed to start conversation');
+        
+        toast.error('Failed to start conversation. Please try again.');
         return;
       }
 
       if (!conversationId) {
-        toast.error('Failed to start conversation');
+        toast.error('Failed to create conversation');
         return;
       }
 
-      // 3. Hydrate local state with the conversation
       await hydrateAndOpenConversation(conversationId, otherUserId);
     } catch (err) {
       console.error('Unexpected DM error:', err);
-      toast.error('Failed to start conversation');
+      toast.error('Something went wrong. Please try again.');
     }
-  };
+  }, [user, navigate]);
 
   const hydrateAndOpenConversation = async (convoId: string, otherUserId: string) => {
     // Fetch other user's profile
-    const { data: otherProfile } = await db
+    const { data: otherProfile } = await supabase
       .from('profiles')
       .select('user_id, full_name, username, avatar_url')
       .eq('user_id', otherUserId)
@@ -215,7 +233,7 @@ const Messages = () => {
       avatar_url: null,
     };
 
-    // Inject conversation into local state immediately so UI renders
+    // Inject into local state
     setConversations(prev => {
       const exists = prev.find(c => c.id === convoId);
       if (exists) return prev;
@@ -228,45 +246,53 @@ const Messages = () => {
     });
 
     setActiveConvoId(convoId);
-    // Also refresh full list in background
     fetchConversations();
   };
 
   const fetchMessages = async (convoId: string) => {
-    const { data } = await db.from('direct_messages').select('id, sender_id, content, created_at').eq('conversation_id', convoId).order('created_at', { ascending: true });
+    const { data } = await supabase.from('direct_messages').select('id, sender_id, content, created_at').eq('conversation_id', convoId).order('created_at', { ascending: true });
     setMessages(data || []);
   };
 
   const sendMessage = async () => {
     if (!user || !activeConvoId || !draft.trim()) return;
     setSending(true);
-    const { error } = await db.from('direct_messages').insert({ conversation_id: activeConvoId, sender_id: user.id, content: draft.trim() });
-    if (error) { toast.error('Failed to send'); } else { setDraft(''); await fetchMessages(activeConvoId); }
+    const { error } = await supabase.from('direct_messages').insert({ conversation_id: activeConvoId, sender_id: user.id, content: draft.trim() });
+    if (error) { 
+      console.error('Send message error:', error);
+      toast.error('Failed to send message'); 
+    } else { 
+      setDraft(''); 
+      await fetchMessages(activeConvoId); 
+    }
     setSending(false);
   };
 
+  // Load conversations when auth ready
   useEffect(() => {
-    if (!loading && user) {
+    if (isReady && user) {
       fetchConversations();
       fetchSuggested();
     }
-  }, [loading, user?.id]);
+  }, [isReady, user?.id]);
 
+  // Handle ?to= param - open DM with target user
   useEffect(() => {
-    if (!loading && targetUserId && user) {
-      openDmWith(targetUserId);
-    }
-  }, [targetUserId, loading, user?.id]);
+    if (!isReady || !user || !targetUserId || dmInitiated.current) return;
+    dmInitiated.current = true;
+    openDmWith(targetUserId);
+  }, [isReady, user?.id, targetUserId, openDmWith]);
 
+  // Realtime subscription for active conversation
   useEffect(() => {
     if (activeConvoId) {
       fetchMessages(activeConvoId);
-      const channel = db.channel(`dm-${activeConvoId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages', filter: `conversation_id=eq.${activeConvoId}` }, () => fetchMessages(activeConvoId)).subscribe();
-      return () => { db.removeChannel(channel); };
+      const channel = supabase.channel(`dm-${activeConvoId}`).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'direct_messages', filter: `conversation_id=eq.${activeConvoId}` }, () => fetchMessages(activeConvoId)).subscribe();
+      return () => { supabase.removeChannel(channel); };
     }
   }, [activeConvoId]);
 
-  if (loading) {
+  if (!isReady) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
         <div className="text-sm text-muted-foreground">Loading messages…</div>
@@ -286,7 +312,6 @@ const Messages = () => {
   }
 
   const activeConvo = conversations.find(c => c.id === activeConvoId);
-  const displayList = searchQuery.trim() ? searchResults : conversations.length > 0 ? [] : [];
 
   return (
     <div className="h-screen bg-background text-foreground flex">
@@ -303,7 +328,6 @@ const Messages = () => {
             </button>
           ))}
         </nav>
-        {/* Suggested Channels */}
         <div className="border-t border-border p-3">
           <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Suggested Channels</p>
           {ALL_DEMO_SESSIONS.slice(0, 4).map(s => (
@@ -320,7 +344,6 @@ const Messages = () => {
 
       {/* Conversation List Panel */}
       <div className={`${activeConvoId ? 'hidden md:flex' : 'flex'} w-full md:w-80 lg:w-96 flex-col border-r border-border flex-shrink-0`}>
-        {/* Chat Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
             <button onClick={goBack} className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-secondary">
@@ -333,7 +356,6 @@ const Messages = () => {
           </button>
         </div>
 
-        {/* Search */}
         <div className="px-3 py-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -347,7 +369,6 @@ const Messages = () => {
           </div>
         </div>
 
-        {/* Search Results */}
         {searchQuery.trim() && searchResults.length > 0 && (
           <div className="border-b border-border">
             {searchResults.map(p => (
@@ -364,7 +385,6 @@ const Messages = () => {
           </div>
         )}
 
-        {/* Conversation List */}
         <div className="flex-1 overflow-y-auto scrollbar-hide">
           {isLoadingConversations ? (
             <div className="text-center text-sm text-muted-foreground py-10">Loading...</div>
@@ -412,7 +432,6 @@ const Messages = () => {
       <div className={`${activeConvoId ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-w-0`}>
         {activeConvoId && activeConvo ? (
           <>
-            {/* Chat Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
               <button onClick={() => setActiveConvoId(null)} className="md:hidden h-8 w-8 flex items-center justify-center rounded-full hover:bg-secondary">
                 <ArrowLeft className="h-4 w-4" />
@@ -426,7 +445,6 @@ const Messages = () => {
               </div>
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1 scrollbar-hide">
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
@@ -459,7 +477,6 @@ const Messages = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Message Input */}
             <div className="border-t border-border p-3 flex items-end gap-2">
               <input
                 value={draft}
@@ -474,7 +491,6 @@ const Messages = () => {
             </div>
           </>
         ) : (
-          /* Empty State */
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center max-w-sm">
               <h2 className="text-2xl font-bold mb-1">Select a message</h2>
