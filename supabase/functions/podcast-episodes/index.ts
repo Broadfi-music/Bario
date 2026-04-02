@@ -106,7 +106,7 @@ serve(async (req) => {
           id: 'fallback-4',
           title: 'Reggaeton Revolution',
           description: 'The rise of Latin music in mainstream culture',
-          cover_image_url: '/src/assets/podcast-cover-4.jpg',
+          cover_image_url: 'https://images.unsplash.com/photo-1504898770365-14faca6a7320?w=400',
           audio_url: '',
           duration_ms: 4200000,
           play_count: 203000,
