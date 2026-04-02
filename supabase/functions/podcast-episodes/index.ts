@@ -67,7 +67,7 @@ serve(async (req) => {
           id: 'fallback-1',
           title: 'The Evolution of Hip-Hop in 2024',
           description: 'Breaking down the biggest trends in hip-hop this year',
-          cover_image_url: '/src/assets/podcast-cover-1.jpg',
+          cover_image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400',
           audio_url: '',
           duration_ms: 3600000,
           play_count: 125000,
