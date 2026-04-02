@@ -80,7 +80,7 @@ serve(async (req) => {
           id: 'fallback-2',
           title: 'Behind the Beats: Production Secrets',
           description: 'Studio session breakdown with guest producers',
-          cover_image_url: '/src/assets/podcast-cover-2.jpg',
+          cover_image_url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=400',
           audio_url: '',
           duration_ms: 2700000,
           play_count: 89000,
