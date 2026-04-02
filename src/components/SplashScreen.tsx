@@ -36,22 +36,17 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
             <source src="/splash-video.mp4" type="video/mp4" />
           </video>
 
-          {/* Logo + Tagline */}
+          {/* Tagline only - no logo overlay on video */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.3, ease: 'easeOut' }}
-            className="relative z-10 flex flex-col items-center gap-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 1 }}
+            className="relative z-10 flex flex-col items-center"
           >
-            <img
-              src="/bario-logo.png"
-              alt="Bario"
-              className="h-24 w-auto object-contain"
-            />
             <motion.p
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
+              transition={{ duration: 0.6, delay: 1.5 }}
               className="text-white/90 text-lg font-light tracking-[0.25em] uppercase"
             >
               Connect. Create. Elevate.

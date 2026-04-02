@@ -330,7 +330,7 @@ const Feed = () => {
                 const isLiked = likedPostIds.has(post.id);
 
                 return (
-                  <article key={post.id} className="rounded-lg border border-border bg-card px-3 py-2.5">
+                  <article key={post.id} className="rounded-lg border border-border bg-card px-3 py-2.5 max-w-lg">
                     <div className="flex items-start gap-2">
                       <button
                         onClick={() => navigate(`/host/${post.user_id}`)}
