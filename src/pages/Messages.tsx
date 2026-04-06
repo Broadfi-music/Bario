@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { ALL_DEMO_SESSIONS } from '@/config/demoSessions';
 import { getDemoAvatar, getRandomAvatarUrl } from '@/lib/randomAvatars';
 import { useFollowSystem } from '@/hooks/useFollowSystem';
-import { isValidUUID } from '@/lib/authUtils';
+import { getFreshSession, isValidUUID } from '@/lib/authUtils';
 
 type Profile = {
   user_id: string;
@@ -69,6 +69,7 @@ const Messages = () => {
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [searching, setSearching] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -118,7 +119,7 @@ const Messages = () => {
     const lastMsgMap = new Map<string, string>();
     (lastMsgs || []).forEach((m: any) => { if (!lastMsgMap.has(m.conversation_id)) lastMsgMap.set(m.conversation_id, m.content); });
 
-    setConversations((convos || []).map((c: any) => {
+    const nextConversations = (convos || []).map((c: any) => {
       const otherPart = (allParts || []).find((p: any) => p.conversation_id === c.id && p.user_id !== user.id);
       const otherProfile = otherPart ? profileMap.get(otherPart.user_id) : null;
       return {
@@ -127,9 +128,17 @@ const Messages = () => {
         other_user: otherProfile || { user_id: '', full_name: 'Unknown', username: null, avatar_url: null },
         last_message: lastMsgMap.get(c.id),
       };
-    }));
+    });
+
+    setConversations(nextConversations);
+
+    if (activeConvoId) {
+      const currentActive = nextConversations.find((convo) => convo.id === activeConvoId) || null;
+      if (currentActive) setActiveConversation(currentActive);
+    }
+
     setIsLoadingConversations(false);
-  }, [user]);
+  }, [user, activeConvoId]);
 
   const fetchSuggested = async () => {
     const { data } = await supabase.from('profiles').select('user_id, full_name, username, avatar_url').limit(12);
@@ -167,27 +176,21 @@ const Messages = () => {
     }
 
     try {
-      // Ensure fresh session before RPC
-      const { data: { session } } = await supabase.auth.getSession();
+      const session = await getFreshSession();
       if (!session) {
-        // Try refresh
-        const { data: refreshData } = await supabase.auth.refreshSession();
-        if (!refreshData.session) {
-          toast.error('Session expired. Please sign in again.');
-          navigate('/auth');
-          return;
-        }
+        toast.error('Session expired. Please sign in again.');
+        navigate('/auth');
+        return;
       }
 
       const { data: conversationId, error } = await supabase.rpc('start_direct_conversation', { other_user_id: otherUserId });
 
       if (error) {
         console.error('DM RPC error:', error);
-        
-        // Retry once after refresh
+
         if (error.message?.includes('JWT') || error.code === 'PGRST303') {
-          const { data: refreshData } = await supabase.auth.refreshSession();
-          if (!refreshData.session) {
+          const retrySession = await getFreshSession();
+          if (!retrySession) {
             toast.error('Session expired. Please sign in again.');
             navigate('/auth');
             return;
@@ -233,10 +236,16 @@ const Messages = () => {
       avatar_url: null,
     };
 
-    // Inject into local state
+    const hydratedConversation: Conversation = {
+      id: convoId,
+      last_message_at: null,
+      other_user: otherUser,
+      last_message: undefined,
+    };
+
     setConversations(prev => {
       const exists = prev.find(c => c.id === convoId);
-      if (exists) return prev;
+      if (exists) return prev.map((conversation) => conversation.id === convoId ? { ...conversation, other_user: otherUser } : conversation);
       return [{
         id: convoId,
         last_message_at: null,
@@ -246,6 +255,9 @@ const Messages = () => {
     });
 
     setActiveConvoId(convoId);
+    setActiveConversation(hydratedConversation);
+    setMessages([]);
+    await fetchMessages(convoId);
     fetchConversations();
   };
 
@@ -256,14 +268,34 @@ const Messages = () => {
 
   const sendMessage = async () => {
     if (!user || !activeConvoId || !draft.trim()) return;
+
+    const session = await getFreshSession();
+    if (!session) {
+      toast.error('Session expired. Please sign in again.');
+      navigate('/auth');
+      return;
+    }
+
+    const content = draft.trim();
     setSending(true);
-    const { error } = await supabase.from('direct_messages').insert({ conversation_id: activeConvoId, sender_id: user.id, content: draft.trim() });
+    const { data, error } = await supabase
+      .from('direct_messages')
+      .insert({ conversation_id: activeConvoId, sender_id: user.id, content })
+      .select('id, sender_id, content, created_at')
+      .single();
+
     if (error) { 
       console.error('Send message error:', error);
       toast.error('Failed to send message'); 
     } else { 
-      setDraft(''); 
-      await fetchMessages(activeConvoId); 
+      setDraft('');
+      if (data) {
+        setMessages(prev => [...prev, data as Message]);
+        setConversations(prev => prev.map(convo => convo.id === activeConvoId ? { ...convo, last_message: content, last_message_at: data.created_at } : convo));
+        setActiveConversation(prev => prev && prev.id === activeConvoId ? { ...prev, last_message: content, last_message_at: data.created_at } : prev);
+      } else {
+        await fetchMessages(activeConvoId);
+      }
     }
     setSending(false);
   };
@@ -292,6 +324,16 @@ const Messages = () => {
     }
   }, [activeConvoId]);
 
+  useEffect(() => {
+    if (!activeConvoId) {
+      setActiveConversation(null);
+      return;
+    }
+
+    const conversation = conversations.find((item) => item.id === activeConvoId);
+    if (conversation) setActiveConversation(conversation);
+  }, [activeConvoId, conversations]);
+
   if (!isReady) {
     return (
       <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
@@ -311,7 +353,7 @@ const Messages = () => {
     );
   }
 
-  const activeConvo = conversations.find(c => c.id === activeConvoId);
+  const activeConvo = activeConversation || conversations.find(c => c.id === activeConvoId);
 
   return (
     <div className="h-screen bg-background text-foreground flex">

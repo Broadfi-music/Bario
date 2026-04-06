@@ -12,6 +12,8 @@ import { EditProfileModal } from '@/components/podcast/EditProfileModal';
 import { EditEpisodeModal } from '@/components/podcast/EditEpisodeModal';
 import { EditScheduleModal } from '@/components/podcast/EditScheduleModal';
 import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
+import { getMostRecentActiveStandardLiveSession } from '@/lib/liveSessions';
+import { getPodcastEpisodeDisplayCover } from '@/lib/podcastEpisodeCovers';
 
 interface HostData {
   id: string;
@@ -263,9 +265,23 @@ const HostProfile = () => {
         setIsFollowing(!!followData);
       }
 
-      const { data: liveSession } = await supabase.from('podcast_sessions').select('id').eq('host_id', hostId).eq('status', 'live').single();
+      const { data: liveSessions } = await supabase
+        .from('podcast_sessions')
+        .select('id, title, status, started_at, created_at, ended_at')
+        .eq('host_id', hostId)
+        .eq('status', 'live')
+        .is('ended_at', null)
+        .not('title', 'ilike', 'Battle:%')
+        .order('created_at', { ascending: false });
+
+      const liveSession = getMostRecentActiveStandardLiveSession(liveSessions || []);
       const { data: episodeData } = await supabase.from('podcast_episodes').select('*').eq('host_id', hostId).order('created_at', { ascending: false });
-      if (episodeData && episodeData.length > 0) setEpisodes(episodeData);
+      if (episodeData && episodeData.length > 0) {
+        setEpisodes(episodeData.map((episode) => ({
+          ...episode,
+          cover_image_url: getPodcastEpisodeDisplayCover(episode),
+        })));
+      }
 
       const { data: scheduleData } = await supabase.from('podcast_schedules').select('*').eq('user_id', hostId).gte('scheduled_at', new Date().toISOString()).order('scheduled_at', { ascending: true });
       if (scheduleData && scheduleData.length > 0) setSchedules(scheduleData);
@@ -325,7 +341,7 @@ const HostProfile = () => {
     if (currentTrack?.id === episode.id) {
       isPlaying ? pauseTrack() : resumeTrack();
     } else {
-      playTrack({ id: episode.id, title: episode.title, artist: host?.full_name || 'Host', coverUrl: episode.cover_image_url || '', audioUrl: episode.audio_url, type: 'podcast' });
+      playTrack({ id: episode.id, title: episode.title, artist: host?.full_name || 'Host', coverUrl: getPodcastEpisodeDisplayCover(episode), audioUrl: episode.audio_url, type: 'podcast' });
       toast.success(`Playing: ${episode.title}`);
     }
   };
@@ -567,7 +583,7 @@ const HostProfile = () => {
           </TabsList>
 
           {/* Posts Tab */}
-          <TabsContent value="posts" className="mt-4">
+            <TabsContent value="posts" className="mt-4 max-w-3xl">
             {/* Create Post Form (owner only) */}
             {isOwner && (
               <div className="bg-white/5 rounded-lg p-3 mb-4">
@@ -621,7 +637,7 @@ const HostProfile = () => {
             )}
 
             {/* Posts list */}
-            <div className="space-y-3">
+            <div className="max-w-3xl space-y-3">
               {posts.map(post => (
                 <div key={post.id} className="bg-white/5 rounded-lg p-3">
                   <div className="flex items-start gap-3">

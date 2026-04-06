@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { getFreshSession, isDemoSession } from '@/lib/authUtils';
+import { getActiveStandardLiveSessions } from '@/lib/liveSessions';
 import { 
   Mic, MicOff, Radio, Users, Share2, 
   HandMetal, Volume2, X,
@@ -124,12 +125,29 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     const checkExistingSession = async () => {
       if (!user) return;
       
-      const { data: existingSession } = await supabase
+      const { data: existingSessions } = await supabase
         .from('podcast_sessions')
         .select('*')
         .eq('host_id', user.id)
         .eq('status', 'live')
-        .single();
+        .is('ended_at', null)
+        .not('title', 'ilike', 'Battle:%')
+        .order('created_at', { ascending: false });
+
+      const liveSessions = getActiveStandardLiveSessions(existingSessions || []);
+      const existingSession = liveSessions[0];
+
+      if (liveSessions.length > 1) {
+        await Promise.all(
+          liveSessions.slice(1).map((staleSession) =>
+            supabase
+              .from('podcast_sessions')
+              .update({ status: 'ended', ended_at: new Date().toISOString() })
+              .eq('id', staleSession.id)
+              .eq('host_id', user.id)
+          )
+        );
+      }
       
       if (existingSession) {
         console.log('🔄 Found existing live session:', existingSession.id);
@@ -274,14 +292,30 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
 
     try {
       // Check for existing live session to prevent duplicates
-      const { data: existingSession } = await supabase
+      const { data: existingSessions } = await supabase
         .from('podcast_sessions')
-        .select('id, title')
+        .select('id, title, started_at, created_at, ended_at, status')
         .eq('host_id', user.id)
         .eq('status', 'live')
         .is('ended_at', null)
-        .maybeSingle();
-      
+        .not('title', 'ilike', 'Battle:%')
+        .order('created_at', { ascending: false });
+
+      const liveSessions = getActiveStandardLiveSessions(existingSessions || []);
+      const existingSession = liveSessions[0];
+
+      if (liveSessions.length > 1) {
+        await Promise.all(
+          liveSessions.slice(1).map((staleSession) =>
+            supabase
+              .from('podcast_sessions')
+              .update({ status: 'ended', ended_at: new Date().toISOString() })
+              .eq('id', staleSession.id)
+              .eq('host_id', user.id)
+          )
+        );
+      }
+
       if (existingSession) {
         console.log('🔄 Using existing live session:', existingSession.id);
         setSessionId(existingSession.id);
@@ -515,7 +549,17 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open && isLive) {
+          setIsMinimized(true);
+          onClose();
+          return;
+        }
+        onClose();
+      }}
+    >
       <DialogContent className="bg-black/95 border-white/10 max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-white flex items-center gap-2 text-sm">

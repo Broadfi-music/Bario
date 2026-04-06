@@ -15,6 +15,7 @@ import KickStyleLive from '@/components/podcast/KickStyleLive';
 import BattleReelScroller from '@/components/podcast/BattleReelScroller';
 import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
 import { getAllDemoPodcastSessions, getDemoSessionById, isDemoSessionId } from '@/config/demoSessions';
+import { getActiveStandardLiveSessions, getMostRecentActiveStandardLiveSession } from '@/lib/liveSessions';
 
 interface PodcastSession {
   id: string;
@@ -80,22 +81,34 @@ const Podcasts = () => {
     const checkHostSession = async () => {
       const { data } = await supabase
         .from('podcast_sessions')
-        .select('id, title, listener_count')
+        .select('id, title, listener_count, status, created_at, started_at, ended_at')
         .eq('host_id', user.id)
         .eq('status', 'live')
-        .single();
-      
-      if (data) {
+        .is('ended_at', null)
+        .not('title', 'ilike', 'Battle:%')
+        .order('created_at', { ascending: false });
+
+      const liveSessions = getActiveStandardLiveSessions(data || []);
+      const activeSession = liveSessions[0];
+
+      if (liveSessions.length > 1) {
+        await Promise.all(
+          liveSessions.slice(1).map((staleSession) =>
+            supabase
+              .from('podcast_sessions')
+              .update({ status: 'ended', ended_at: new Date().toISOString() })
+              .eq('id', staleSession.id)
+              .eq('host_id', user.id)
+          )
+        );
+      }
+
+      if (activeSession) {
         setHostLiveSession({
-          id: data.id,
-          title: data.title,
-          listener_count: data.listener_count || 0
+          id: activeSession.id,
+          title: activeSession.title,
+          listener_count: activeSession.listener_count || 0
         });
-        // IMPORTANT: Skip auto-opening HostStudio for battle sessions
-        // Battle sessions have "Battle:" prefix in title
-        if (!data.title?.startsWith('Battle:')) {
-          setShowHostStudio(true);
-        }
       } else {
         setHostLiveSession(null);
       }
@@ -336,7 +349,7 @@ const Podcasts = () => {
 
       const profileMap = new Map<string, ProfileInfo>(profiles.map(p => [p.user_id, p]));
       
-      const freshSessions = sessions.filter(s => {
+      const freshSessions = getActiveStandardLiveSessions(sessions || []).filter(s => {
         if (s.started_at && new Date(s.started_at).getTime() < oneHourAgo) return false;
         return true;
       });

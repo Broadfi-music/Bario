@@ -4,6 +4,7 @@ import { Play, Pause, Clock, Heart, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
 import { toast } from 'sonner';
+import { getPodcastEpisodeDisplayCover } from '@/lib/podcastEpisodeCovers';
 
 interface Episode {
   id: string;
@@ -64,7 +65,7 @@ const PodcastEpisodes = () => {
       title: episode.title,
       artist: 'Podcast Episode',
       audioUrl: episode.audio_url,
-      coverUrl: episode.cover_image_url || undefined,
+      coverUrl: getPodcastEpisodeDisplayCover(episode),
       type: 'podcast'
     });
     toast.success(`Playing: ${episode.title}`);
@@ -108,9 +109,9 @@ const PodcastEpisodes = () => {
         >
           {/* Thumbnail */}
           <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
-            {episode.cover_image_url ? (
+            {getPodcastEpisodeDisplayCover(episode) ? (
               <img
-                src={episode.cover_image_url}
+                src={getPodcastEpisodeDisplayCover(episode)}
                 alt={episode.title}
                 className="w-full h-full object-cover"
               />
