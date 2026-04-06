@@ -10,6 +10,8 @@ import BattleInviteModal from './BattleInviteModal';
 import BattleNotification from './BattleNotification';
 import BattleReelScroller from './BattleReelScroller';
 import { getAllDemoLiveHosts, isDemoSessionId, getDemoSessionById } from '@/config/demoSessions';
+import { getActiveStandardLiveSessions } from '@/lib/liveSessions';
+import { getPodcastEpisodeDisplayCover } from '@/lib/podcastEpisodeCovers';
 
 interface LiveHost {
   id: string;
@@ -233,7 +235,7 @@ const PodcastFeed = () => {
           id: e.id, host_id: e.host_id,
           host_name: profile?.full_name || profile?.username || 'Music Podcast',
           host_avatar: profile?.avatar_url || undefined,
-          title: e.title, cover_image_url: e.cover_image_url || undefined,
+          title: e.title, cover_image_url: getPodcastEpisodeDisplayCover(e),
           audio_url: e.audio_url || undefined, play_count: e.play_count || 0,
           duration_ms: e.duration_ms || 0, isRealUser: !!profile
         };
@@ -273,12 +275,7 @@ const PodcastFeed = () => {
         .in('user_id', hostIds);
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
-      const oneHourAgo = Date.now() - 60 * 60 * 1000;
-      const realSessions = sessions
-        .filter(s => {
-          if (s.started_at && new Date(s.started_at).getTime() < oneHourAgo) return false;
-          return true;
-        })
+      const realSessions = getActiveStandardLiveSessions(sessions || [])
         .map(s => {
           const profile = profileMap.get(s.host_id);
           return {
@@ -291,10 +288,8 @@ const PodcastFeed = () => {
         });
 
       const allDemos = getAllDemoLiveHosts();
-      const demosToAdd = allDemos.filter(d =>
-        !realSessions.some(s => s.id === d.id)
-      );
-      setLiveHosts([...demosToAdd, ...realSessions]);
+      const demosToAdd = allDemos.filter(d => !realSessions.some(s => s.id === d.id));
+      setLiveHosts(realSessions.length > 0 ? [...realSessions, ...demosToAdd.slice(0, Math.max(0, 10 - realSessions.length))] : allDemos);
     } catch {
       setLiveHosts(getAllDemoLiveHosts());
     }
@@ -310,11 +305,11 @@ const PodcastFeed = () => {
   };
 
   const fetchCreatorPosts = async () => {
-    const { data: posts } = await supabase
+      const { data: posts } = await supabase
       .from('host_posts')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(20);
+        .limit(6);
     
     if (posts && posts.length > 0) {
       const userIds = [...new Set(posts.map(p => p.user_id))];
@@ -323,7 +318,7 @@ const PodcastFeed = () => {
         .select('user_id, full_name, username, avatar_url')
         .in('user_id', userIds);
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-      setCreatorPosts(posts.map(p => ({
+      setCreatorPosts(posts.slice(0, 3).map(p => ({
         ...p,
         author_name: profileMap.get(p.user_id)?.full_name || profileMap.get(p.user_id)?.username || 'Creator',
         author_avatar: profileMap.get(p.user_id)?.avatar_url || null,

@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
 import { getAllDemoPodcastSessions, getDemoSessionById, isDemoSessionId, getDemoChatMessages } from '@/config/demoSessions';
 import { getRandomAvatarUrl } from '@/lib/randomAvatars';
+import { getActiveStandardLiveSessions } from '@/lib/liveSessions';
 
 interface PodcastSession {
   id: string;
@@ -300,13 +301,16 @@ const KickStyleLive = ({
       try {
         const { data: liveSessions } = await supabase
           .from('podcast_sessions')
-          .select('id, host_id, title, description, cover_image_url, status, listener_count, started_at')
+          .select('id, host_id, title, description, cover_image_url, status, listener_count, started_at, created_at, ended_at')
           .eq('status', 'live')
+          .is('ended_at', null)
+          .gte('created_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())
           .not('title', 'ilike', 'Battle:%')
           .limit(8);
 
         if (liveSessions && liveSessions.length > 0) {
-          const hostIds = liveSessions.map(s => s.host_id).filter(isValidUUID);
+          const validLiveSessions = getActiveStandardLiveSessions(liveSessions);
+          const hostIds = validLiveSessions.map(s => s.host_id).filter(isValidUUID);
           const { data: profiles } = await supabase
             .from('profiles')
             .select('user_id, full_name, avatar_url, username')
@@ -314,7 +318,7 @@ const KickStyleLive = ({
 
           const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
 
-          realSessions = liveSessions
+          realSessions = validLiveSessions
             .filter(s => s.id !== currentSession?.id)
             .map(s => ({
               ...s,
@@ -444,8 +448,10 @@ const KickStyleLive = ({
           // IMPORTANT: Filter out battle sessions
           const { data, error } = await supabase
             .from('podcast_sessions')
-            .select('*')
+            .select('id, host_id, title, description, cover_image_url, status, listener_count, started_at, created_at, ended_at')
             .eq('status', 'live')
+            .is('ended_at', null)
+            .gte('created_at', new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString())
             .not('title', 'ilike', 'Battle:%') // Exclude battle sessions
             .order('listener_count', { ascending: false })
             .limit(10);
@@ -457,9 +463,11 @@ const KickStyleLive = ({
             return;
           }
           
-          if (data && data.length > 0) {
+          const validLiveSessions = getActiveStandardLiveSessions(data || []);
+
+          if (validLiveSessions.length > 0) {
             // Fetch profiles
-            const hostIds = data.map(s => s.host_id).filter(isValidUUID);
+            const hostIds = validLiveSessions.map(s => s.host_id).filter(isValidUUID);
             const { data: profiles } = await supabase
               .from('profiles')
               .select('user_id, full_name, avatar_url, username')
@@ -467,7 +475,7 @@ const KickStyleLive = ({
             
             const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
             
-            const enriched = data.map(s => ({
+            const enriched = validLiveSessions.map(s => ({
               ...s,
               status: s.status as 'scheduled' | 'live' | 'ended',
               host_name: profileMap.get(s.host_id)?.full_name || profileMap.get(s.host_id)?.username || 'Host',
