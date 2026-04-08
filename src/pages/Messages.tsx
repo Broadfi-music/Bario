@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { ALL_DEMO_SESSIONS } from '@/config/demoSessions';
 import { getDemoAvatar, getRandomAvatarUrl } from '@/lib/randomAvatars';
 import { useFollowSystem } from '@/hooks/useFollowSystem';
-import { getFreshSession, isValidUUID } from '@/lib/authUtils';
+import { getFreshSession, isValidUUID, withAuthRetry } from '@/lib/authUtils';
 
 type Profile = {
   user_id: string;
@@ -47,6 +47,12 @@ const formatTimeAgo = (dateStr: string) => {
   if (days < 7) return `${days}d`;
   const weeks = Math.floor(days / 7);
   return `${weeks}w`;
+};
+
+const buildConversationKey = (currentUserId: string, otherUserId: string) => {
+  return currentUserId < otherUserId
+    ? `${currentUserId}_${otherUserId}`
+    : `${otherUserId}_${currentUserId}`;
 };
 
 const Messages = () => {
@@ -183,6 +189,20 @@ const Messages = () => {
         return;
       }
 
+      const dmKey = buildConversationKey(user.id, otherUserId);
+
+      const { data: existingConversation } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('dm_key', dmKey)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingConversation?.id) {
+        await hydrateAndOpenConversation(existingConversation.id, otherUserId);
+        return;
+      }
+
       const { data: conversationId, error } = await supabase.rpc('start_direct_conversation', { other_user_id: otherUserId });
 
       if (error) {
@@ -197,11 +217,35 @@ const Messages = () => {
           }
           const { data: retryId, error: retryErr } = await supabase.rpc('start_direct_conversation', { other_user_id: otherUserId });
           if (retryErr || !retryId) {
+            const { data: recoveredConversation } = await supabase
+              .from('conversations')
+              .select('id')
+              .eq('dm_key', dmKey)
+              .limit(1)
+              .maybeSingle();
+
+            if (recoveredConversation?.id) {
+              await hydrateAndOpenConversation(recoveredConversation.id, otherUserId);
+              return;
+            }
+
             console.error('DM retry error:', retryErr);
             toast.error('Failed to start conversation. Please try again.');
             return;
           }
           await hydrateAndOpenConversation(retryId, otherUserId);
+          return;
+        }
+
+        const { data: recoveredConversation } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('dm_key', dmKey)
+          .limit(1)
+          .maybeSingle();
+
+        if (recoveredConversation?.id) {
+          await hydrateAndOpenConversation(recoveredConversation.id, otherUserId);
           return;
         }
         
@@ -227,7 +271,8 @@ const Messages = () => {
       .from('profiles')
       .select('user_id, full_name, username, avatar_url')
       .eq('user_id', otherUserId)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     const otherUser: Profile = otherProfile || {
       user_id: otherUserId,
@@ -278,19 +323,33 @@ const Messages = () => {
 
     const content = draft.trim();
     setSending(true);
-    const { data, error } = await supabase
-      .from('direct_messages')
-      .insert({ conversation_id: activeConvoId, sender_id: user.id, content })
-      .select('id, sender_id, content, created_at')
-      .single();
+    const optimisticId = `temp-${Date.now()}`;
+    const optimisticMessage: Message = {
+      id: optimisticId,
+      sender_id: user.id,
+      content,
+      created_at: new Date().toISOString(),
+    };
+
+    setMessages(prev => [...prev, optimisticMessage]);
+    setDraft('');
+
+    const { data, error } = await withAuthRetry(() =>
+      supabase
+        .from('direct_messages')
+        .insert({ conversation_id: activeConvoId, sender_id: user.id, content })
+        .select('id, sender_id, content, created_at')
+        .single()
+    );
 
     if (error) { 
       console.error('Send message error:', error);
+      setMessages(prev => prev.filter(message => message.id !== optimisticId));
+      setDraft(content);
       toast.error('Failed to send message'); 
     } else { 
-      setDraft('');
       if (data) {
-        setMessages(prev => [...prev, data as Message]);
+        setMessages(prev => prev.map(message => message.id === optimisticId ? data as Message : message));
         setConversations(prev => prev.map(convo => convo.id === activeConvoId ? { ...convo, last_message: content, last_message_at: data.created_at } : convo));
         setActiveConversation(prev => prev && prev.id === activeConvoId ? { ...prev, last_message: content, last_message_at: data.created_at } : prev);
       } else {
