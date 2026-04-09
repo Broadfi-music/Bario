@@ -86,7 +86,7 @@ const Messages = () => {
       navigate(decodeURIComponent(backTarget));
       return;
     }
-    navigate('/podcasts');
+    navigate('/podcasts?tab=feed');
   };
 
   useEffect(() => { scrollToBottom(); }, [messages]);
@@ -160,9 +160,8 @@ const Messages = () => {
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => searchCreators(searchQuery), 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    dmInitiated.current = false;
+  }, [targetUserId]);
 
   const openDmWith = useCallback(async (otherUserId: string) => {
     if (!user) {
@@ -180,6 +179,25 @@ const Messages = () => {
       toast.error('You cannot message yourself');
       return;
     }
+
+    const findExistingConversationId = async () => {
+      const { data: myParticipants } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', user.id);
+
+      const myConversationIds = (myParticipants || []).map((item: { conversation_id: string }) => item.conversation_id);
+      if (myConversationIds.length === 0) return null;
+
+      const { data: sharedParticipants } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', otherUserId)
+        .in('conversation_id', myConversationIds)
+        .limit(1);
+
+      return sharedParticipants?.[0]?.conversation_id ?? null;
+    };
 
     try {
       const session = await getFreshSession();
@@ -203,62 +221,24 @@ const Messages = () => {
         return;
       }
 
-      const { data: conversationId, error } = await supabase.rpc('start_direct_conversation', { other_user_id: otherUserId });
+      const { data: rpcConversationId, error: rpcError } = await withAuthRetry(async () => {
+        const result = await supabase.rpc('start_direct_conversation', { other_user_id: otherUserId });
+        return {
+          data: (result.data as string | null) ?? null,
+          error: result.error,
+        };
+      });
 
-      if (error) {
-        console.error('DM RPC error:', error);
+      const recoveredConversationId = await findExistingConversationId();
+      const resolvedConversationId = rpcConversationId || recoveredConversationId;
 
-        if (error.message?.includes('JWT') || error.code === 'PGRST303') {
-          const retrySession = await getFreshSession();
-          if (!retrySession) {
-            toast.error('Session expired. Please sign in again.');
-            navigate('/auth');
-            return;
-          }
-          const { data: retryId, error: retryErr } = await supabase.rpc('start_direct_conversation', { other_user_id: otherUserId });
-          if (retryErr || !retryId) {
-            const { data: recoveredConversation } = await supabase
-              .from('conversations')
-              .select('id')
-              .eq('dm_key', dmKey)
-              .limit(1)
-              .maybeSingle();
-
-            if (recoveredConversation?.id) {
-              await hydrateAndOpenConversation(recoveredConversation.id, otherUserId);
-              return;
-            }
-
-            console.error('DM retry error:', retryErr);
-            toast.error('Failed to start conversation. Please try again.');
-            return;
-          }
-          await hydrateAndOpenConversation(retryId, otherUserId);
-          return;
-        }
-
-        const { data: recoveredConversation } = await supabase
-          .from('conversations')
-          .select('id')
-          .eq('dm_key', dmKey)
-          .limit(1)
-          .maybeSingle();
-
-        if (recoveredConversation?.id) {
-          await hydrateAndOpenConversation(recoveredConversation.id, otherUserId);
-          return;
-        }
-        
+      if (!resolvedConversationId) {
+        console.error('DM RPC error:', rpcError);
         toast.error('Failed to start conversation. Please try again.');
         return;
       }
 
-      if (!conversationId) {
-        toast.error('Failed to create conversation');
-        return;
-      }
-
-      await hydrateAndOpenConversation(conversationId, otherUserId);
+      await hydrateAndOpenConversation(resolvedConversationId, otherUserId);
     } catch (err) {
       console.error('Unexpected DM error:', err);
       toast.error('Something went wrong. Please try again.');

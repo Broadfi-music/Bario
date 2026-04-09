@@ -85,6 +85,28 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const routeToLiveSession = (liveSessionId: string, liveTitle: string, startedAt: string) => {
+    if (!user) return;
+
+    window.dispatchEvent(new CustomEvent('host-session-started', {
+      detail: {
+        id: liveSessionId,
+        host_id: user.id,
+        title: liveTitle,
+        description: null,
+        cover_image_url: null,
+        status: 'live',
+        listener_count: Math.max(listenerCount, 1),
+        started_at: startedAt,
+        host_name: user.email?.split('@')[0] || 'Host',
+        host_avatar: null,
+        category: 'Live',
+      }
+    }));
+
+    onClose();
+  };
+
   // 1-hour session timer - auto-end when time runs out
   useEffect(() => {
     if (isLive && sessionStartTime) {
@@ -323,12 +345,12 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
         setIsLive(true);
         subscribeToUpdates(existingSession.id);
         
-        // Connect to audio for existing session
         if (!isAudioConnected && !isAudioConnecting) {
           await connectAudio(existingSession.id);
         }
         
         toast.info('Reconnected to your existing live session');
+        routeToLiveSession(existingSession.id, existingSession.title, existingSession.started_at || existingSession.created_at || new Date().toISOString());
         return;
       }
 
@@ -410,6 +432,7 @@ const HostStudio = ({ isOpen, onClose, session }: HostStudioProps) => {
       }
 
       toast.success('You are now LIVE!');
+      routeToLiveSession(newSessionId, title.trim(), data.started_at || new Date().toISOString());
     } catch (err) {
       console.error('Failed to start session:', err);
       toast.error('Failed to start session');
