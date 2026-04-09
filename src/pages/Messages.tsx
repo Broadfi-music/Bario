@@ -334,13 +334,14 @@ const Messages = () => {
     setMessages(prev => [...prev, optimisticMessage]);
     setDraft('');
 
-    const { data, error } = await withAuthRetry(() =>
-      supabase
+    const { data, error } = await withAuthRetry(async () => {
+      const result = await supabase
         .from('direct_messages')
         .insert({ conversation_id: activeConvoId, sender_id: user.id, content })
         .select('id, sender_id, content, created_at')
-        .single()
-    );
+        .single();
+      return result as { data: { id: string; sender_id: string; content: string; created_at: string } | null; error: any };
+    });
 
     if (error) { 
       console.error('Send message error:', error);
