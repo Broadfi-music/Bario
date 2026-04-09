@@ -388,6 +388,20 @@ const Podcasts = () => {
     return () => window.removeEventListener('open-host-studio', handler);
   }, []);
 
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const customEvent = event as CustomEvent<PodcastSession>;
+      if (!customEvent.detail) return;
+      setShowHostStudio(false);
+      setSelectedSession(customEvent.detail);
+      setActiveTab('live');
+      setSearchParams({ tab: 'live', session: customEvent.detail.id });
+    };
+
+    window.addEventListener('host-session-started', handler as EventListener);
+    return () => window.removeEventListener('host-session-started', handler as EventListener);
+  }, [setSearchParams]);
+
   return (
     <div className={`min-h-screen bg-black text-white ${isMobile ? 'pb-20' : ''}`}>
       {/* Battle Session Banner - shown when user is in an active battle */}

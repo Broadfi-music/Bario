@@ -102,6 +102,7 @@ const KickStyleLive = ({
   }, [selectedSession, allSessions]);
 
   const currentSession = selectedSession || allSessions[activeIndex] || sessions[currentIndex];
+  const isCurrentHost = Boolean(user && currentSession && !isDemoSessionId(currentSession.id) && user.id === currentSession.host_id);
 
   const [listenerCount, setListenerCount] = useState(0);
 
@@ -530,6 +531,32 @@ const KickStyleLive = ({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
+      {isCurrentHost && (
+        <div className="absolute right-4 top-20 z-50">
+          <Button
+            onClick={async () => {
+              const { error } = await supabase
+                .from('podcast_sessions')
+                .update({ status: 'ended', ended_at: new Date().toISOString() })
+                .eq('id', currentSession.id)
+                .eq('host_id', user!.id);
+
+              if (error) {
+                toast.error('Failed to end session');
+                return;
+              }
+
+              toast.success('Session ended');
+              onSessionSelect(null);
+              navigate('/podcasts?tab=feed');
+            }}
+            size="sm"
+            className="bg-white text-black hover:bg-white/90"
+          >
+            End Session
+          </Button>
+        </div>
+      )}
       <div className={`h-full flex ${hostLiveSession ? 'pt-[88px]' : 'pt-[100px] sm:pt-12'}`}>
         {/* Left Sidebar - Recommendations & Gifters (Desktop only) */}
         <aside className="hidden lg:flex flex-col w-60 bg-[#18181b] border-r border-white/5 overflow-y-auto scrollbar-hide">

@@ -76,6 +76,7 @@ const Feed = () => {
   const [commentsByPost, setCommentsByPost] = useState<Record<string, PostComment[]>>({});
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [sendingCommentPostId, setSendingCommentPostId] = useState<string | null>(null);
+  const [expandedCommentsPostId, setExpandedCommentsPostId] = useState<string | null>(null);
   const [liveSessions, setLiveSessions] = useState<LiveSession[]>([]);
   const [suggestedCreators, setSuggestedCreators] = useState<SuggestedCreator[]>([]);
   const { toggleFollow, isFollowing } = useFollowSystem();
@@ -276,6 +277,13 @@ const Feed = () => {
             <ArrowLeft className="h-4 w-4" />
           </button>
           <h1 className="text-lg font-black tracking-tight italic">Creator Feed</h1>
+          <button
+            onClick={() => navigate(`/messages?from=${encodeURIComponent('/feed')}`)}
+            className="absolute right-3 inline-flex h-8 w-8 items-center justify-center rounded-full text-foreground/70 hover:bg-secondary hover:text-foreground"
+            aria-label="Messages"
+          >
+            <Send className="h-4 w-4" />
+          </button>
         </div>
       </header>
 
@@ -295,7 +303,6 @@ const Feed = () => {
               </button>
             ))}
 
-            {/* Recommended Channels */}
             <div className="mt-5 pt-4 border-t border-border">
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 mb-2">Recommended</p>
               {ALL_DEMO_SESSIONS.slice(0, 5).map(session => (
@@ -317,7 +324,6 @@ const Feed = () => {
           </div>
         </aside>
 
-        {/* Main Feed */}
         <main className="flex-1 min-w-0">
           {loading ? (
             <div className="text-center text-sm text-muted-foreground py-10">Loading feed...</div>
@@ -328,6 +334,7 @@ const Feed = () => {
               {posts.slice(0, 3).map(post => {
                 const postComments = commentsByPost[post.id] || [];
                 const isLiked = likedPostIds.has(post.id);
+                const isCommentsOpen = expandedCommentsPostId === post.id;
 
                 return (
                   <article key={post.id} className="rounded-lg border border-border bg-card px-3 py-2.5 max-w-lg">
@@ -368,40 +375,53 @@ const Feed = () => {
                             <Heart className={`h-3.5 w-3.5 ${isLiked ? 'fill-current' : ''}`} />
                             {likeCounts[post.id] || 0}
                           </button>
-                          <span className="inline-flex items-center gap-1 text-muted-foreground">
+                          <button
+                            onClick={() => setExpandedCommentsPostId(isCommentsOpen ? null : post.id)}
+                            className={`inline-flex items-center gap-1 ${isCommentsOpen ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                          >
                             <MessageCircle className="h-3.5 w-3.5" />
                             {postComments.length}
-                          </span>
-                        </div>
-
-                        {/* Compact comment input */}
-                        <div className="mt-1.5 flex items-center gap-1.5">
-                          <input
-                            value={commentDrafts[post.id] || ''}
-                            onChange={e => setCommentDrafts(prev => ({ ...prev, [post.id]: e.target.value }))}
-                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addComment(post.id); } }}
-                            placeholder="Reply..."
-                            className="flex-1 bg-secondary/50 border border-border rounded-full text-[11px] text-foreground placeholder:text-muted-foreground h-7 px-3 focus:outline-none focus:border-border"
-                          />
+                          </button>
                           <button
-                            onClick={() => addComment(post.id)}
-                            disabled={sendingCommentPostId === post.id || !commentDrafts[post.id]?.trim()}
-                            className="h-7 w-7 flex items-center justify-center rounded-full bg-secondary text-muted-foreground hover:bg-secondary disabled:opacity-30"
+                            onClick={() => navigate(`/messages?to=${post.user_id}&from=${encodeURIComponent('/feed')}`)}
+                            className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
                           >
-                            <Send className="h-3 w-3" />
+                            <Send className="h-3.5 w-3.5" />
+                            DM
                           </button>
                         </div>
 
-                        {postComments.length > 0 && (
-                          <div className="mt-1.5 space-y-1 pl-1">
-                            {postComments.slice(-3).map(comment => (
-                              <div key={comment.id} className="text-[11px] text-foreground/70">
-                                <button onClick={() => navigate(`/host/${comment.user_id}`)} className="mr-1 font-semibold text-foreground/90 hover:underline">
-                                  {comment.author_name}
-                                </button>
-                                {comment.content}
+                        {isCommentsOpen && (
+                          <div className="mt-2 rounded-2xl border border-border bg-secondary/30 p-2">
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                value={commentDrafts[post.id] || ''}
+                                onChange={e => setCommentDrafts(prev => ({ ...prev, [post.id]: e.target.value }))}
+                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addComment(post.id); } }}
+                                placeholder="Post your reply"
+                                className="flex-1 bg-background border border-border rounded-full text-[11px] text-foreground placeholder:text-muted-foreground h-8 px-3 focus:outline-none focus:border-border"
+                              />
+                              <button
+                                onClick={() => addComment(post.id)}
+                                disabled={sendingCommentPostId === post.id || !commentDrafts[post.id]?.trim()}
+                                className="h-8 w-8 flex items-center justify-center rounded-full bg-foreground text-background hover:bg-foreground/90 disabled:opacity-30"
+                              >
+                                <Send className="h-3 w-3" />
+                              </button>
+                            </div>
+
+                            {postComments.length > 0 && (
+                              <div className="mt-2 space-y-2">
+                                {postComments.slice(-4).map(comment => (
+                                  <div key={comment.id} className="flex gap-2 rounded-2xl bg-background px-3 py-2 text-[11px]">
+                                    <button onClick={() => navigate(`/host/${comment.user_id}`)} className="font-semibold text-foreground hover:underline">
+                                      {comment.author_name}
+                                    </button>
+                                    <p className="min-w-0 flex-1 text-foreground/75">{comment.content}</p>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
+                            )}
                           </div>
                         )}
                       </div>

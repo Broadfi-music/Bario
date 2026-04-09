@@ -36,6 +36,8 @@ const PushSubscriptionManager = () => {
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') return;
 
+        const initialRegistration = await navigator.serviceWorker.register('/sw.js');
+        await initialRegistration.update();
         const registration = await navigator.serviceWorker.ready;
         if (!('pushManager' in registration)) return;
 

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Bell, Gift, UserPlus, Radio, Swords, Trophy, Music, CheckCheck, Trash2, Mic } from 'lucide-react';
+import { Bell, Gift, UserPlus, Radio, Swords, Trophy, Music, CheckCheck, Trash2, Mic, MessageCircle } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,6 +20,7 @@ const typeIcons: Record<string, React.ReactNode> = {
   gift_received: <Gift className="w-4 h-4 text-pink-400" />,
   live_session: <Radio className="w-4 h-4 text-red-400" />,
   follow_live: <Radio className="w-4 h-4 text-red-400" />,
+  direct_message: <MessageCircle className="w-4 h-4 text-foreground" />,
   battle_invite: <Swords className="w-4 h-4 text-purple-400" />,
   join_accepted: <Mic className="w-4 h-4 text-green-400" />,
   chart_topper: <Trophy className="w-4 h-4 text-yellow-400" />,
