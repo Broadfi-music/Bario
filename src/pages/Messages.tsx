@@ -159,6 +159,13 @@ const Messages = () => {
     setSearching(false);
   };
 
+  // Debounced search
+  useEffect(() => {
+    if (!searchQuery.trim()) { setSearchResults([]); return; }
+    const timer = setTimeout(() => searchCreators(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   useEffect(() => {
     dmInitiated.current = false;
   }, [targetUserId]);
