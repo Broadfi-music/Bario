@@ -1678,6 +1678,10 @@ export type Database = {
         Args: { battle_uuid: string; increment_by?: number; score_side: string }
         Returns: Json
       }
+      is_conversation_member: {
+        Args: { _conversation_id: string; _user_id: string }
+        Returns: boolean
+      }
       start_direct_conversation: {
         Args: { other_user_id: string }
         Returns: string
