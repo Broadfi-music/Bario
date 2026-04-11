@@ -566,7 +566,7 @@ const Messages = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="border-t border-border p-3 flex items-end gap-2">
+            <div className="border-t border-border p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom)+60px)] md:pb-3 flex items-end gap-2">
               <input
                 value={draft}
                 onChange={e => setDraft(e.target.value)}
@@ -574,7 +574,7 @@ const Messages = () => {
                 placeholder="Start a new message"
                 className="flex-1 bg-secondary rounded-full text-sm text-foreground placeholder:text-muted-foreground h-10 px-4 focus:outline-none focus:ring-1 focus:ring-foreground/20"
               />
-              <button onClick={sendMessage} disabled={sending || !draft.trim()} className="h-10 w-10 flex items-center justify-center rounded-full bg-foreground text-background hover:bg-foreground/90 disabled:opacity-30 transition-colors">
+              <button onClick={sendMessage} disabled={sending || !draft.trim()} className="h-10 w-10 flex items-center justify-center rounded-full bg-foreground text-background hover:bg-foreground/90 disabled:opacity-30 transition-colors flex-shrink-0">
                 <Send className="h-4 w-4" />
               </button>
             </div>
