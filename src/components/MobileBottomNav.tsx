@@ -41,6 +41,7 @@ const MobileBottomNav = () => {
         setAuthAction('go live');
         setShowAuthPrompt(true);
       } else {
+        // Navigate to podcasts and trigger quick go-live flow (skip host studio)
         navigate('/podcasts');
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('open-host-studio'));

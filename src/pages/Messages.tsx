@@ -525,13 +525,19 @@ const Messages = () => {
               <button onClick={() => setActiveConvoId(null)} className="md:hidden h-8 w-8 flex items-center justify-center rounded-full hover:bg-secondary">
                 <ArrowLeft className="h-4 w-4" />
               </button>
-              <div className="h-9 w-9 rounded-full overflow-hidden bg-secondary flex-shrink-0">
+              <button
+                onClick={() => navigate(`/host/${activeConvo.other_user.user_id}`)}
+                className="h-9 w-9 rounded-full overflow-hidden bg-secondary flex-shrink-0 hover:ring-2 hover:ring-foreground/20 transition-all"
+              >
                 {activeConvo.other_user.avatar_url ? <img src={activeConvo.other_user.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-secondary" />}
-              </div>
-              <div className="min-w-0 flex-1">
+              </button>
+              <button
+                onClick={() => navigate(`/host/${activeConvo.other_user.user_id}`)}
+                className="min-w-0 flex-1 text-left hover:opacity-80 transition-opacity"
+              >
                 <p className="text-sm font-bold truncate">{activeConvo.other_user.full_name || activeConvo.other_user.username || 'Creator'}</p>
                 {activeConvo.other_user.username && <p className="text-xs text-muted-foreground">@{activeConvo.other_user.username}</p>}
-              </div>
+              </button>
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1 scrollbar-hide">

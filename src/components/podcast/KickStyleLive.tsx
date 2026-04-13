@@ -535,6 +535,18 @@ const KickStyleLive = ({
         <div className="absolute right-4 top-20 z-50">
           <Button
             onClick={async () => {
+              // Save recording as episode before ending
+              try {
+                await supabase.from('podcast_episodes').insert({
+                  session_id: currentSession.id,
+                  host_id: user!.id,
+                  title: currentSession.title,
+                  description: `Recorded live session: ${currentSession.title}`
+                });
+              } catch (e) {
+                console.log('Episode save (non-critical):', e);
+              }
+
               const { error } = await supabase
                 .from('podcast_sessions')
                 .update({ status: 'ended', ended_at: new Date().toISOString() })
@@ -546,12 +558,12 @@ const KickStyleLive = ({
                 return;
               }
 
-              toast.success('Session ended');
+              toast.success('Session ended & saved as episode');
               onSessionSelect(null);
               navigate('/podcasts?tab=feed');
             }}
             size="sm"
-            className="bg-white text-black hover:bg-white/90"
+            className="bg-red-600 text-white hover:bg-red-700 font-semibold"
           >
             End Session
           </Button>

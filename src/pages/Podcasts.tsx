@@ -382,11 +382,31 @@ const Podcasts = () => {
   };
 
   // Listen for open-host-studio event from MobileBottomNav
+  // If host already has a live session, route to room instead of opening studio
   useEffect(() => {
-    const handler = () => setShowHostStudio(true);
+    const handler = () => {
+      if (hostLiveSession && user) {
+        // Already live - route directly to the room
+        const sessionObj: PodcastSession = {
+          id: hostLiveSession.id,
+          host_id: user.id,
+          title: hostLiveSession.title,
+          description: null,
+          cover_image_url: null,
+          status: 'live',
+          listener_count: hostLiveSession.listener_count,
+          started_at: new Date().toISOString(),
+        };
+        setSelectedSession(sessionObj);
+        setActiveTab('live');
+        setSearchParams({ tab: 'live', session: hostLiveSession.id });
+      } else {
+        setShowHostStudio(true);
+      }
+    };
     window.addEventListener('open-host-studio', handler);
     return () => window.removeEventListener('open-host-studio', handler);
-  }, []);
+  }, [hostLiveSession, user]);
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -427,7 +447,7 @@ const Podcasts = () => {
       )}
 
       {/* Live Session Banner - shown when host has an active session */}
-      {hostLiveSession && !showHostStudio && !hostBattle && (
+      {hostLiveSession && !hostBattle && (
         <div className="fixed top-0 left-0 right-0 z-[60] bg-white py-2 px-4">
           <div className="flex items-center justify-center gap-3 max-w-screen-xl mx-auto">
             <div className="flex items-center gap-2">
@@ -437,11 +457,26 @@ const Podcasts = () => {
             <span className="text-xs text-black/70 truncate max-w-[120px] sm:max-w-xs">{hostLiveSession.title}</span>
             <span className="text-xs text-black/50">{hostLiveSession.listener_count} listeners</span>
             <Button
-              onClick={() => setShowHostStudio(true)}
+              onClick={() => {
+                // Navigate directly to the live room, not the studio
+                const sessionObj: PodcastSession = {
+                  id: hostLiveSession.id,
+                  host_id: user!.id,
+                  title: hostLiveSession.title,
+                  description: null,
+                  cover_image_url: null,
+                  status: 'live',
+                  listener_count: hostLiveSession.listener_count,
+                  started_at: new Date().toISOString(),
+                };
+                setSelectedSession(sessionObj);
+                setActiveTab('live');
+                setSearchParams({ tab: 'live', session: hostLiveSession.id });
+              }}
               size="sm"
               className="bg-black hover:bg-black/80 text-white text-xs h-6 px-2"
             >
-              Return to Studio
+              Return to Session
             </Button>
           </div>
         </div>
