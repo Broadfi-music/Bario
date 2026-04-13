@@ -382,11 +382,31 @@ const Podcasts = () => {
   };
 
   // Listen for open-host-studio event from MobileBottomNav
+  // If host already has a live session, route to room instead of opening studio
   useEffect(() => {
-    const handler = () => setShowHostStudio(true);
+    const handler = () => {
+      if (hostLiveSession && user) {
+        // Already live - route directly to the room
+        const sessionObj: PodcastSession = {
+          id: hostLiveSession.id,
+          host_id: user.id,
+          title: hostLiveSession.title,
+          description: null,
+          cover_image_url: null,
+          status: 'live',
+          listener_count: hostLiveSession.listener_count,
+          started_at: new Date().toISOString(),
+        };
+        setSelectedSession(sessionObj);
+        setActiveTab('live');
+        setSearchParams({ tab: 'live', session: hostLiveSession.id });
+      } else {
+        setShowHostStudio(true);
+      }
+    };
     window.addEventListener('open-host-studio', handler);
     return () => window.removeEventListener('open-host-studio', handler);
-  }, []);
+  }, [hostLiveSession, user]);
 
   useEffect(() => {
     const handler = (event: Event) => {
