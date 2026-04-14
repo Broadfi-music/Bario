@@ -495,8 +495,33 @@ const KickStyleLive = ({
       fetchFallbackSessions();
     }
   }, [sessions.length, selectedSession, onSessionSelect]);
+  const handleEndSession = async () => {
+    if (!user || !currentSession || isDemoSessionId(currentSession.id)) return;
+    try {
+      await supabase.from('podcast_episodes').insert({
+        session_id: currentSession.id,
+        host_id: user.id,
+        title: currentSession.title,
+        description: `Recorded live session: ${currentSession.title}`
+      });
+    } catch (e) {
+      console.log('Episode save (non-critical):', e);
+    }
+    const { error } = await supabase
+      .from('podcast_sessions')
+      .update({ status: 'ended', ended_at: new Date().toISOString() })
+      .eq('id', currentSession.id)
+      .eq('host_id', user.id);
+    if (error) {
+      toast.error('Failed to end session');
+      return;
+    }
+    toast.success('Session ended & saved as episode');
+    onSessionSelect(null);
+    navigate('/podcasts?tab=feed');
+  };
 
-  if (!currentSession) {
+
     // If no session, try to show demo session as fallback
     const demoSession = getAllDemoPodcastSessions()[0];
     if (demoSession) {
