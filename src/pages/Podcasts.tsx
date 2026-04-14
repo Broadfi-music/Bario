@@ -384,27 +384,147 @@ const Podcasts = () => {
     setSearchParams({});
   };
 
+  // Quick Go Live function - skips Host Studio entirely
+  const quickGoLive = async () => {
+    if (!user || !goLiveTitle.trim()) {
+      toast.error('Please enter a session title');
+      return;
+    }
+    setIsStartingLive(true);
+    try {
+      const authSession = await getFreshSession();
+      if (!authSession) {
+        toast.error('Session expired. Please sign in again.');
+        return;
+      }
+
+      // Check for existing live session
+      const { data: existingSessions } = await supabase
+        .from('podcast_sessions')
+        .select('id, title, started_at, created_at, ended_at, status')
+        .eq('host_id', user.id)
+        .eq('status', 'live')
+        .is('ended_at', null)
+        .not('title', 'ilike', 'Battle:%')
+        .order('created_at', { ascending: false });
+
+      const liveSessions = getActiveStandardLiveSessions(existingSessions || []);
+      
+      // Clean up stale sessions
+      if (liveSessions.length > 1) {
+        await Promise.all(
+          liveSessions.slice(1).map((s) =>
+            supabase.from('podcast_sessions').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', s.id).eq('host_id', user.id)
+          )
+        );
+      }
+
+      if (liveSessions.length > 0) {
+        // Already live - route to room
+        const existing = liveSessions[0];
+        const sessionObj: PodcastSession = {
+          id: existing.id, host_id: user.id, title: existing.title,
+          description: null, cover_image_url: null, status: 'live',
+          listener_count: existing.listener_count || 0, started_at: existing.started_at,
+        };
+        setSelectedSession(sessionObj);
+        setActiveTab('live');
+        setSearchParams({ tab: 'live', session: existing.id });
+        setShowGoLiveDialog(false);
+        setGoLiveTitle('');
+        toast.info('Reconnected to your existing live session');
+        return;
+      }
+
+      // Get profile for cover image
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('avatar_url, cover_image_url, full_name')
+        .eq('user_id', user.id)
+        .single();
+
+      const coverImage = profileData?.cover_image_url || profileData?.avatar_url || `https://api.dicebear.com/9.x/shapes/svg?seed=${user.id}`;
+
+      // Create new session
+      const { data, error } = await supabase
+        .from('podcast_sessions')
+        .insert({
+          host_id: user.id,
+          title: goLiveTitle.trim(),
+          status: 'live',
+          started_at: new Date().toISOString(),
+          cover_image_url: coverImage,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        toast.error('Failed to start session');
+        return;
+      }
+
+      // Add host as participant
+      await supabase.from('podcast_participants').insert({
+        session_id: data.id,
+        user_id: user.id,
+        role: 'host',
+        is_muted: false,
+      });
+
+      // Notify followers
+      try {
+        await supabase.functions.invoke('create-notification', {
+          body: {
+            notify_followers: true,
+            source_user_id: user.id,
+            type: 'follow_live',
+            title: '🔴 Live Now!',
+            message: `${profileData?.full_name || 'Someone you follow'} just went live: ${goLiveTitle.trim()}`,
+            icon_url: profileData?.avatar_url || null,
+            action_url: `/podcasts?session=${data.id}`,
+          },
+        });
+      } catch (e) { console.log('Notification non-critical:', e); }
+
+      toast.success('You are now LIVE!');
+
+      // Route directly to room
+      const sessionObj: PodcastSession = {
+        id: data.id, host_id: user.id, title: goLiveTitle.trim(),
+        description: null, cover_image_url: coverImage, status: 'live',
+        listener_count: 1, started_at: data.started_at,
+        host_name: profileData?.full_name || user.email?.split('@')[0] || 'Host',
+        host_avatar: profileData?.avatar_url || null,
+      };
+      setSelectedSession(sessionObj);
+      setActiveTab('live');
+      setSearchParams({ tab: 'live', session: data.id });
+      setShowGoLiveDialog(false);
+      setGoLiveTitle('');
+      setHostLiveSession({ id: data.id, title: goLiveTitle.trim(), listener_count: 1 });
+    } catch (err) {
+      console.error('Go live error:', err);
+      toast.error('Failed to go live');
+    } finally {
+      setIsStartingLive(false);
+    }
+  };
+
   // Listen for open-host-studio event from MobileBottomNav
-  // If host already has a live session, route to room instead of opening studio
+  // If host already has a live session, route to room instead of opening dialog
   useEffect(() => {
     const handler = () => {
       if (hostLiveSession && user) {
-        // Already live - route directly to the room
         const sessionObj: PodcastSession = {
-          id: hostLiveSession.id,
-          host_id: user.id,
-          title: hostLiveSession.title,
-          description: null,
-          cover_image_url: null,
-          status: 'live',
-          listener_count: hostLiveSession.listener_count,
-          started_at: new Date().toISOString(),
+          id: hostLiveSession.id, host_id: user.id, title: hostLiveSession.title,
+          description: null, cover_image_url: null, status: 'live',
+          listener_count: hostLiveSession.listener_count, started_at: new Date().toISOString(),
         };
         setSelectedSession(sessionObj);
         setActiveTab('live');
         setSearchParams({ tab: 'live', session: hostLiveSession.id });
       } else {
-        setShowHostStudio(true);
+        setShowGoLiveDialog(true);
       }
     };
     window.addEventListener('open-host-studio', handler);
