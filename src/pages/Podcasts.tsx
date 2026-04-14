@@ -535,7 +535,7 @@ const Podcasts = () => {
     const handler = (event: Event) => {
       const customEvent = event as CustomEvent<PodcastSession>;
       if (!customEvent.detail) return;
-      setShowHostStudio(false);
+      setShowGoLiveDialog(false);
       setSelectedSession(customEvent.detail);
       setActiveTab('live');
       setSearchParams({ tab: 'live', session: customEvent.detail.id });
@@ -694,7 +694,7 @@ const Podcasts = () => {
       )}
 
       {/* Desktop Header */}
-      <header className={`fixed left-0 right-0 z-50 bg-black border-b border-white/10 hidden md:block ${(hostLiveSession && !showHostStudio) || (hostBattle && !showBattleSession) ? 'top-10' : 'top-0'}`}>
+      <header className={`fixed left-0 right-0 z-50 bg-black border-b border-white/10 hidden md:block ${(hostLiveSession) || (hostBattle && !showBattleSession) ? 'top-10' : 'top-0'}`}>
         <div className="flex items-center h-12 px-2 sm:px-4">
           {/* Left — Logo */}
           <div className="flex items-center gap-3 flex-shrink-0">
@@ -762,26 +762,21 @@ const Podcasts = () => {
         </div>
       </header>
 
-      {/* Hide content when HostStudio is open on mobile (Go Live = full screen) */}
-      {!(isMobile && showHostStudio) && (
-        <>
-          {activeTab === 'live' ? (
-            <KickStyleLive
-              sessions={liveSessions}
-              currentIndex={currentIndex}
-              onIndexChange={setCurrentIndex}
-              selectedSession={selectedSession || getAllDemoPodcastSessions()[0]}
-              onSessionSelect={setSelectedSession}
-              hostLiveSession={hostLiveSession}
-            />
-          ) : activeTab === 'battles' ? (
-            <div className="pt-16">
-              <BattleReelScroller onClose={() => setActiveTab('feed')} />
-            </div>
-          ) : (
-            <PodcastFeed />
-          )}
-        </>
+      {activeTab === 'live' ? (
+        <KickStyleLive
+          sessions={liveSessions}
+          currentIndex={currentIndex}
+          onIndexChange={setCurrentIndex}
+          selectedSession={selectedSession || getAllDemoPodcastSessions()[0]}
+          onSessionSelect={setSelectedSession}
+          hostLiveSession={hostLiveSession}
+        />
+      ) : activeTab === 'battles' ? (
+        <div className="pt-16">
+          <BattleReelScroller onClose={() => setActiveTab('feed')} />
+        </div>
+      ) : (
+        <PodcastFeed />
       )}
 
       {/* Battle Invite Modal */}
@@ -790,12 +785,31 @@ const Podcasts = () => {
         onClose={() => setShowBattleInviteModal(false)}
       />
 
-      {/* Host Studio */}
-      <HostStudio
-        isOpen={showHostStudio}
-        onClose={() => setShowHostStudio(false)}
-        session={null}
-      />
+      {/* Quick Go Live Dialog */}
+      <Dialog open={showGoLiveDialog} onOpenChange={setShowGoLiveDialog}>
+        <DialogContent className="bg-[#18181b] border-white/10 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-white text-lg">Go Live</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Enter session title..."
+              value={goLiveTitle}
+              onChange={(e) => setGoLiveTitle(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') quickGoLive(); }}
+              className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
+              autoFocus
+            />
+            <Button
+              onClick={quickGoLive}
+              disabled={isStartingLive || !goLiveTitle.trim()}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold"
+            >
+              {isStartingLive ? 'Starting...' : '🔴 Go Live Now'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Battle Session View */}
       {showBattleSession && hostBattle && (
