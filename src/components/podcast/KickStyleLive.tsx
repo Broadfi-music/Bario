@@ -495,6 +495,7 @@ const KickStyleLive = ({
       fetchFallbackSessions();
     }
   }, [sessions.length, selectedSession, onSessionSelect]);
+
   const handleEndSession = async () => {
     if (!user || !currentSession || isDemoSessionId(currentSession.id)) return;
     try {
@@ -521,7 +522,7 @@ const KickStyleLive = ({
     navigate('/podcasts?tab=feed');
   };
 
-
+  if (!currentSession) {
     // If no session, try to show demo session as fallback
     const demoSession = getAllDemoPodcastSessions()[0];
     if (demoSession) {
