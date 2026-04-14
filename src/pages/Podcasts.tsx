@@ -425,7 +425,7 @@ const Podcasts = () => {
         const sessionObj: PodcastSession = {
           id: existing.id, host_id: user.id, title: existing.title,
           description: null, cover_image_url: null, status: 'live',
-          listener_count: existing.listener_count || 0, started_at: existing.started_at,
+          listener_count: (existing as any).listener_count || 0, started_at: existing.started_at,
         };
         setSelectedSession(sessionObj);
         setActiveTab('live');
