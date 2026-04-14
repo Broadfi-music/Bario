@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Home, Library, Sparkles, User, Settings, Plus, Play, Heart, Pause, Menu, X, Gift, SkipBack, SkipForward, Volume2, Search, Upload } from 'lucide-react';
+import { Home, Library, Sparkles, User, Settings, Plus, Play, Heart, Pause, Menu, X, Gift, SkipBack, SkipForward, Volume2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -195,7 +195,6 @@ const Dashboard = () => {
     { icon: Sparkles, label: 'Create', path: '/dashboard/create' },
     { icon: Search, label: 'Heatmap', path: '/global-heatmap' },
     { icon: Gift, label: 'Reward & Earn', path: '/dashboard/rewards' },
-    { icon: Upload, label: 'Upload', path: '/dashboard/upload' },
   ];
 
   const topNavItems = [

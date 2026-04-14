@@ -5,15 +5,16 @@ import BattleInviteModal from '@/components/podcast/BattleInviteModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import NotificationBell from '@/components/NotificationBell';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import HostStudio from '@/components/podcast/HostStudio';
 import PodcastFeed from '@/components/podcast/PodcastFeed';
 import KickStyleLive from '@/components/podcast/KickStyleLive';
 import BattleReelScroller from '@/components/podcast/BattleReelScroller';
-import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
+import { isValidUUID, isDemoLiveSession, getFreshSession } from '@/lib/authUtils';
 import { getAllDemoPodcastSessions, getDemoSessionById, isDemoSessionId } from '@/config/demoSessions';
 import { getActiveStandardLiveSessions, getMostRecentActiveStandardLiveSession } from '@/lib/liveSessions';
 
@@ -49,7 +50,9 @@ const Podcasts = () => {
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showHostStudio, setShowHostStudio] = useState(false);
+  const [showGoLiveDialog, setShowGoLiveDialog] = useState(false);
+  const [goLiveTitle, setGoLiveTitle] = useState('');
+  const [isStartingLive, setIsStartingLive] = useState(false);
   // Default to feed everywhere; respect URL param
   const tabFromUrl = searchParams.get('tab');
   const isPWA = window.matchMedia('(display-mode: standalone)').matches
@@ -381,27 +384,147 @@ const Podcasts = () => {
     setSearchParams({});
   };
 
+  // Quick Go Live function - skips Host Studio entirely
+  const quickGoLive = async () => {
+    if (!user || !goLiveTitle.trim()) {
+      toast.error('Please enter a session title');
+      return;
+    }
+    setIsStartingLive(true);
+    try {
+      const authSession = await getFreshSession();
+      if (!authSession) {
+        toast.error('Session expired. Please sign in again.');
+        return;
+      }
+
+      // Check for existing live session
+      const { data: existingSessions } = await supabase
+        .from('podcast_sessions')
+        .select('id, title, started_at, created_at, ended_at, status')
+        .eq('host_id', user.id)
+        .eq('status', 'live')
+        .is('ended_at', null)
+        .not('title', 'ilike', 'Battle:%')
+        .order('created_at', { ascending: false });
+
+      const liveSessions = getActiveStandardLiveSessions(existingSessions || []);
+      
+      // Clean up stale sessions
+      if (liveSessions.length > 1) {
+        await Promise.all(
+          liveSessions.slice(1).map((s) =>
+            supabase.from('podcast_sessions').update({ status: 'ended', ended_at: new Date().toISOString() }).eq('id', s.id).eq('host_id', user.id)
+          )
+        );
+      }
+
+      if (liveSessions.length > 0) {
+        // Already live - route to room
+        const existing = liveSessions[0];
+        const sessionObj: PodcastSession = {
+          id: existing.id, host_id: user.id, title: existing.title,
+          description: null, cover_image_url: null, status: 'live',
+          listener_count: (existing as any).listener_count || 0, started_at: existing.started_at,
+        };
+        setSelectedSession(sessionObj);
+        setActiveTab('live');
+        setSearchParams({ tab: 'live', session: existing.id });
+        setShowGoLiveDialog(false);
+        setGoLiveTitle('');
+        toast.info('Reconnected to your existing live session');
+        return;
+      }
+
+      // Get profile for cover image
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('avatar_url, cover_image_url, full_name')
+        .eq('user_id', user.id)
+        .single();
+
+      const coverImage = profileData?.cover_image_url || profileData?.avatar_url || `https://api.dicebear.com/9.x/shapes/svg?seed=${user.id}`;
+
+      // Create new session
+      const { data, error } = await supabase
+        .from('podcast_sessions')
+        .insert({
+          host_id: user.id,
+          title: goLiveTitle.trim(),
+          status: 'live',
+          started_at: new Date().toISOString(),
+          cover_image_url: coverImage,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        toast.error('Failed to start session');
+        return;
+      }
+
+      // Add host as participant
+      await supabase.from('podcast_participants').insert({
+        session_id: data.id,
+        user_id: user.id,
+        role: 'host',
+        is_muted: false,
+      });
+
+      // Notify followers
+      try {
+        await supabase.functions.invoke('create-notification', {
+          body: {
+            notify_followers: true,
+            source_user_id: user.id,
+            type: 'follow_live',
+            title: '🔴 Live Now!',
+            message: `${profileData?.full_name || 'Someone you follow'} just went live: ${goLiveTitle.trim()}`,
+            icon_url: profileData?.avatar_url || null,
+            action_url: `/podcasts?session=${data.id}`,
+          },
+        });
+      } catch (e) { console.log('Notification non-critical:', e); }
+
+      toast.success('You are now LIVE!');
+
+      // Route directly to room
+      const sessionObj: PodcastSession = {
+        id: data.id, host_id: user.id, title: goLiveTitle.trim(),
+        description: null, cover_image_url: coverImage, status: 'live',
+        listener_count: 1, started_at: data.started_at,
+        host_name: profileData?.full_name || user.email?.split('@')[0] || 'Host',
+        host_avatar: profileData?.avatar_url || null,
+      };
+      setSelectedSession(sessionObj);
+      setActiveTab('live');
+      setSearchParams({ tab: 'live', session: data.id });
+      setShowGoLiveDialog(false);
+      setGoLiveTitle('');
+      setHostLiveSession({ id: data.id, title: goLiveTitle.trim(), listener_count: 1 });
+    } catch (err) {
+      console.error('Go live error:', err);
+      toast.error('Failed to go live');
+    } finally {
+      setIsStartingLive(false);
+    }
+  };
+
   // Listen for open-host-studio event from MobileBottomNav
-  // If host already has a live session, route to room instead of opening studio
+  // If host already has a live session, route to room instead of opening dialog
   useEffect(() => {
     const handler = () => {
       if (hostLiveSession && user) {
-        // Already live - route directly to the room
         const sessionObj: PodcastSession = {
-          id: hostLiveSession.id,
-          host_id: user.id,
-          title: hostLiveSession.title,
-          description: null,
-          cover_image_url: null,
-          status: 'live',
-          listener_count: hostLiveSession.listener_count,
-          started_at: new Date().toISOString(),
+          id: hostLiveSession.id, host_id: user.id, title: hostLiveSession.title,
+          description: null, cover_image_url: null, status: 'live',
+          listener_count: hostLiveSession.listener_count, started_at: new Date().toISOString(),
         };
         setSelectedSession(sessionObj);
         setActiveTab('live');
         setSearchParams({ tab: 'live', session: hostLiveSession.id });
       } else {
-        setShowHostStudio(true);
+        setShowGoLiveDialog(true);
       }
     };
     window.addEventListener('open-host-studio', handler);
@@ -412,7 +535,7 @@ const Podcasts = () => {
     const handler = (event: Event) => {
       const customEvent = event as CustomEvent<PodcastSession>;
       if (!customEvent.detail) return;
-      setShowHostStudio(false);
+      setShowGoLiveDialog(false);
       setSelectedSession(customEvent.detail);
       setActiveTab('live');
       setSearchParams({ tab: 'live', session: customEvent.detail.id });
@@ -571,7 +694,7 @@ const Podcasts = () => {
       )}
 
       {/* Desktop Header */}
-      <header className={`fixed left-0 right-0 z-50 bg-black border-b border-white/10 hidden md:block ${(hostLiveSession && !showHostStudio) || (hostBattle && !showBattleSession) ? 'top-10' : 'top-0'}`}>
+      <header className={`fixed left-0 right-0 z-50 bg-black border-b border-white/10 hidden md:block ${(hostLiveSession) || (hostBattle && !showBattleSession) ? 'top-10' : 'top-0'}`}>
         <div className="flex items-center h-12 px-2 sm:px-4">
           {/* Left — Logo */}
           <div className="flex items-center gap-3 flex-shrink-0">
@@ -639,26 +762,21 @@ const Podcasts = () => {
         </div>
       </header>
 
-      {/* Hide content when HostStudio is open on mobile (Go Live = full screen) */}
-      {!(isMobile && showHostStudio) && (
-        <>
-          {activeTab === 'live' ? (
-            <KickStyleLive
-              sessions={liveSessions}
-              currentIndex={currentIndex}
-              onIndexChange={setCurrentIndex}
-              selectedSession={selectedSession || getAllDemoPodcastSessions()[0]}
-              onSessionSelect={setSelectedSession}
-              hostLiveSession={hostLiveSession}
-            />
-          ) : activeTab === 'battles' ? (
-            <div className="pt-16">
-              <BattleReelScroller onClose={() => setActiveTab('feed')} />
-            </div>
-          ) : (
-            <PodcastFeed />
-          )}
-        </>
+      {activeTab === 'live' ? (
+        <KickStyleLive
+          sessions={liveSessions}
+          currentIndex={currentIndex}
+          onIndexChange={setCurrentIndex}
+          selectedSession={selectedSession || getAllDemoPodcastSessions()[0]}
+          onSessionSelect={setSelectedSession}
+          hostLiveSession={hostLiveSession}
+        />
+      ) : activeTab === 'battles' ? (
+        <div className="pt-16">
+          <BattleReelScroller onClose={() => setActiveTab('feed')} />
+        </div>
+      ) : (
+        <PodcastFeed />
       )}
 
       {/* Battle Invite Modal */}
@@ -667,12 +785,31 @@ const Podcasts = () => {
         onClose={() => setShowBattleInviteModal(false)}
       />
 
-      {/* Host Studio */}
-      <HostStudio
-        isOpen={showHostStudio}
-        onClose={() => setShowHostStudio(false)}
-        session={null}
-      />
+      {/* Quick Go Live Dialog */}
+      <Dialog open={showGoLiveDialog} onOpenChange={setShowGoLiveDialog}>
+        <DialogContent className="bg-[#18181b] border-white/10 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-white text-lg">Go Live</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Enter session title..."
+              value={goLiveTitle}
+              onChange={(e) => setGoLiveTitle(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') quickGoLive(); }}
+              className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
+              autoFocus
+            />
+            <Button
+              onClick={quickGoLive}
+              disabled={isStartingLive || !goLiveTitle.trim()}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold"
+            >
+              {isStartingLive ? 'Starting...' : '🔴 Go Live Now'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Battle Session View */}
       {showBattleSession && hostBattle && (

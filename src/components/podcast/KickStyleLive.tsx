@@ -496,6 +496,32 @@ const KickStyleLive = ({
     }
   }, [sessions.length, selectedSession, onSessionSelect]);
 
+  const handleEndSession = async () => {
+    if (!user || !currentSession || isDemoSessionId(currentSession.id)) return;
+    try {
+      await supabase.from('podcast_episodes').insert({
+        session_id: currentSession.id,
+        host_id: user.id,
+        title: currentSession.title,
+        description: `Recorded live session: ${currentSession.title}`
+      });
+    } catch (e) {
+      console.log('Episode save (non-critical):', e);
+    }
+    const { error } = await supabase
+      .from('podcast_sessions')
+      .update({ status: 'ended', ended_at: new Date().toISOString() })
+      .eq('id', currentSession.id)
+      .eq('host_id', user.id);
+    if (error) {
+      toast.error('Failed to end session');
+      return;
+    }
+    toast.success('Session ended & saved as episode');
+    onSessionSelect(null);
+    navigate('/podcasts?tab=feed');
+  };
+
   if (!currentSession) {
     // If no session, try to show demo session as fallback
     const demoSession = getAllDemoPodcastSessions()[0];
@@ -531,44 +557,7 @@ const KickStyleLive = ({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {isCurrentHost && (
-        <div className="absolute right-4 top-20 z-50">
-          <Button
-            onClick={async () => {
-              // Save recording as episode before ending
-              try {
-                await supabase.from('podcast_episodes').insert({
-                  session_id: currentSession.id,
-                  host_id: user!.id,
-                  title: currentSession.title,
-                  description: `Recorded live session: ${currentSession.title}`
-                });
-              } catch (e) {
-                console.log('Episode save (non-critical):', e);
-              }
-
-              const { error } = await supabase
-                .from('podcast_sessions')
-                .update({ status: 'ended', ended_at: new Date().toISOString() })
-                .eq('id', currentSession.id)
-                .eq('host_id', user!.id);
-
-              if (error) {
-                toast.error('Failed to end session');
-                return;
-              }
-
-              toast.success('Session ended & saved as episode');
-              onSessionSelect(null);
-              navigate('/podcasts?tab=feed');
-            }}
-            size="sm"
-            className="bg-red-600 text-white hover:bg-red-700 font-semibold"
-          >
-            End Session
-          </Button>
-        </div>
-      )}
+      {/* End session handler extracted for reuse */}
       <div className={`h-full flex ${hostLiveSession ? 'pt-[88px]' : 'pt-[100px] sm:pt-12'}`}>
         {/* Left Sidebar - Recommendations & Gifters (Desktop only) */}
         <aside className="hidden lg:flex flex-col w-60 bg-[#18181b] border-r border-white/5 overflow-y-auto scrollbar-hide">
@@ -669,17 +658,42 @@ const KickStyleLive = ({
               )}
             </div>
 
+            {/* End Session - Desktop: under participants */}
+            {isCurrentHost && (
+              <div className="hidden lg:flex justify-center py-2 bg-[#0e0e10]">
+                <Button
+                  onClick={handleEndSession}
+                  size="sm"
+                  className="bg-red-600 text-white hover:bg-red-700 font-semibold text-xs px-6"
+                >
+                  End Session
+                </Button>
+              </div>
+            )}
 
-            {/* Mobile Chat - Collapsible */}
-            <div className="lg:hidden shrink-0 h-[200px] border-t border-white/5">
-              <TwitchComments 
-                key={`mobile-chat-${currentSession.id}`}
-                sessionId={currentSession.id}
-                hostId={currentSession.host_id}
-                onSendGift={() => setShowGiftModal(true)}
-                sessionTitle={currentSession.title}
-                isHost={user?.id === currentSession.host_id}
-              />
+            {/* Mobile: End Session + Chat */}
+            <div className="lg:hidden shrink-0 border-t border-white/5">
+              {isCurrentHost && (
+                <div className="flex justify-center py-1.5 bg-[#0e0e10]">
+                  <Button
+                    onClick={handleEndSession}
+                    size="sm"
+                    className="bg-red-600 text-white hover:bg-red-700 font-semibold text-[11px] h-7 px-4"
+                  >
+                    End Session
+                  </Button>
+                </div>
+              )}
+              <div className="h-[180px]">
+                <TwitchComments 
+                  key={`mobile-chat-${currentSession.id}`}
+                  sessionId={currentSession.id}
+                  hostId={currentSession.host_id}
+                  onSendGift={() => setShowGiftModal(true)}
+                  sessionTitle={currentSession.title}
+                  isHost={user?.id === currentSession.host_id}
+                />
+              </div>
             </div>
           </div>
 
