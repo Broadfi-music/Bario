@@ -31,7 +31,7 @@ import CreatorProfile from "@/pages/CreatorProfile";
 import MusicResultPage from "@/pages/MusicResultPage";
 import HeatmapDetail from "@/pages/HeatmapDetail";
 import Analytics from "@/pages/Analytics";
-import Upload from "@/pages/Upload";
+
 import ArtistProfile from "@/pages/ArtistProfile";
 import Podcasts from "@/pages/Podcasts";
 import PodcastHost from "@/pages/PodcastHost";
@@ -83,7 +83,7 @@ const AnimatedRoutes = ({ showSplash }: { showSplash: boolean }) => {
           <Route path="/dashboard/create" element={<Create />} />
           <Route path="/dashboard/library" element={<Library />} />
           <Route path="/dashboard/analytics" element={<Analytics />} />
-          <Route path="/dashboard/upload" element={<Upload />} />
+          {/* Upload route removed */}
           <Route path="/dashboard/creator/:id" element={<CreatorProfile />} />
           <Route path="/dashboard/artist/:id" element={<ArtistProfile />} />
           <Route path="/dashboard/music-result" element={<MusicResultPage />} />
