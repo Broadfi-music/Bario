@@ -5,15 +5,16 @@ import BattleInviteModal from '@/components/podcast/BattleInviteModal';
 import { useIsMobile } from '@/hooks/use-mobile';
 import NotificationBell from '@/components/NotificationBell';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import HostStudio from '@/components/podcast/HostStudio';
 import PodcastFeed from '@/components/podcast/PodcastFeed';
 import KickStyleLive from '@/components/podcast/KickStyleLive';
 import BattleReelScroller from '@/components/podcast/BattleReelScroller';
-import { isValidUUID, isDemoLiveSession } from '@/lib/authUtils';
+import { isValidUUID, isDemoLiveSession, getFreshSession } from '@/lib/authUtils';
 import { getAllDemoPodcastSessions, getDemoSessionById, isDemoSessionId } from '@/config/demoSessions';
 import { getActiveStandardLiveSessions, getMostRecentActiveStandardLiveSession } from '@/lib/liveSessions';
 
