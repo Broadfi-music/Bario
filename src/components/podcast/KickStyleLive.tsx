@@ -657,17 +657,42 @@ const KickStyleLive = ({
               )}
             </div>
 
+            {/* End Session - Desktop: under participants */}
+            {isCurrentHost && (
+              <div className="hidden lg:flex justify-center py-2 bg-[#0e0e10]">
+                <Button
+                  onClick={handleEndSession}
+                  size="sm"
+                  className="bg-red-600 text-white hover:bg-red-700 font-semibold text-xs px-6"
+                >
+                  End Session
+                </Button>
+              </div>
+            )}
 
-            {/* Mobile Chat - Collapsible */}
-            <div className="lg:hidden shrink-0 h-[200px] border-t border-white/5">
-              <TwitchComments 
-                key={`mobile-chat-${currentSession.id}`}
-                sessionId={currentSession.id}
-                hostId={currentSession.host_id}
-                onSendGift={() => setShowGiftModal(true)}
-                sessionTitle={currentSession.title}
-                isHost={user?.id === currentSession.host_id}
-              />
+            {/* Mobile: End Session + Chat */}
+            <div className="lg:hidden shrink-0 border-t border-white/5">
+              {isCurrentHost && (
+                <div className="flex justify-center py-1.5 bg-[#0e0e10]">
+                  <Button
+                    onClick={handleEndSession}
+                    size="sm"
+                    className="bg-red-600 text-white hover:bg-red-700 font-semibold text-[11px] h-7 px-4"
+                  >
+                    End Session
+                  </Button>
+                </div>
+              )}
+              <div className="h-[180px]">
+                <TwitchComments 
+                  key={`mobile-chat-${currentSession.id}`}
+                  sessionId={currentSession.id}
+                  hostId={currentSession.host_id}
+                  onSendGift={() => setShowGiftModal(true)}
+                  sessionTitle={currentSession.title}
+                  isHost={user?.id === currentSession.host_id}
+                />
+              </div>
             </div>
           </div>
 
