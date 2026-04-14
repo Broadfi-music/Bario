@@ -50,7 +50,9 @@ const Podcasts = () => {
   const isMobile = useIsMobile();
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [showHostStudio, setShowHostStudio] = useState(false);
+  const [showGoLiveDialog, setShowGoLiveDialog] = useState(false);
+  const [goLiveTitle, setGoLiveTitle] = useState('');
+  const [isStartingLive, setIsStartingLive] = useState(false);
   // Default to feed everywhere; respect URL param
   const tabFromUrl = searchParams.get('tab');
   const isPWA = window.matchMedia('(display-mode: standalone)').matches
