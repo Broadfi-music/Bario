@@ -465,11 +465,21 @@ const Messages = () => {
             {/* Chat Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-[#0a0a0a]/80 backdrop-blur-xl">
               <button onClick={() => setActiveConvoId(null)} className="md:hidden h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/10"><ArrowLeft className="h-4 w-4" /></button>
-              <button onClick={() => navigate(`/host/${activeConvo.other_user.user_id}`)} className="h-10 w-10 rounded-full overflow-hidden bg-white/10 flex-shrink-0 ring-2 ring-white/10 hover:ring-white/30 transition-all">
-                {activeConvo.other_user.avatar_url ? <img src={activeConvo.other_user.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-gradient-to-br from-purple-500 to-pink-500" />}
-              </button>
+              <div className="relative">
+                <button onClick={() => navigate(`/host/${activeConvo.other_user.user_id}`)} className="h-10 w-10 rounded-full overflow-hidden bg-white/10 flex-shrink-0 ring-2 ring-white/10 hover:ring-white/30 transition-all">
+                  {activeConvo.other_user.avatar_url ? <img src={activeConvo.other_user.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-gradient-to-br from-purple-500 to-pink-500" />}
+                </button>
+                <OnlineIndicator isOnline={isOnline(activeConvo.other_user.user_id)} size="md" className="-bottom-0.5 -right-0.5" />
+              </div>
               <button onClick={() => navigate(`/host/${activeConvo.other_user.user_id}`)} className="min-w-0 flex-1 text-left hover:opacity-80 transition-opacity">
                 <p className="text-sm font-bold truncate">{activeConvo.other_user.full_name || activeConvo.other_user.username || 'Creator'}</p>
+                <p className="text-[11px] text-white/30 font-mono">
+                  {isOnline(activeConvo.other_user.user_id) ? (
+                    <span className="text-green-400">● Online</span>
+                  ) : (
+                    activeConvo.other_user.username ? `@${activeConvo.other_user.username}` : ''
+                  )}
+                </p>
                 {activeConvo.other_user.username && <p className="text-[11px] text-white/30 font-mono">@{activeConvo.other_user.username}</p>}
               </button>
               {/* Battle from DM */}
