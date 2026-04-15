@@ -331,10 +331,18 @@ const PodcastFeed = () => {
     }
   };
 
-  const heroHosts = liveHosts.slice(0, 5);
-  const currentHero = heroHosts[heroIndex];
+  // Real sessions always come first in hero — show all real, then fill with demos up to 10
+  const realHeroHosts = liveHosts.filter(h => !isDemoSessionId(h.id));
+  const demoHeroHosts = liveHosts.filter(h => isDemoSessionId(h.id));
+  const heroHosts = [...realHeroHosts, ...demoHeroHosts].slice(0, Math.max(5, realHeroHosts.length));
+  const currentHero = heroHosts[heroIndex % heroHosts.length];
   const nextHero = () => setHeroIndex((prev) => (prev + 1) % heroHosts.length);
   const prevHero = () => setHeroIndex((prev) => (prev - 1 + heroHosts.length) % heroHosts.length);
+
+  // Split live channels: real first, then demo
+  const realChannels = filteredHosts.filter(h => !isDemoSessionId(h.id));
+  const demoChannels = filteredHosts.filter(h => isDemoSessionId(h.id));
+  const orderedChannels = [...realChannels, ...demoChannels];
 
   useEffect(() => {
     if (heroHosts.length === 0) return;
