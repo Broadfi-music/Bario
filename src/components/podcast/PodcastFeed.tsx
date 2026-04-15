@@ -313,7 +313,7 @@ const PodcastFeed = () => {
       .from('host_posts')
       .select('*')
       .order('created_at', { ascending: false })
-        .limit(6);
+        .limit(20);
     
     if (posts && posts.length > 0) {
       const userIds = [...new Set(posts.map(p => p.user_id))];
@@ -322,7 +322,7 @@ const PodcastFeed = () => {
         .select('user_id, full_name, username, avatar_url')
         .in('user_id', userIds);
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-      setCreatorPosts(posts.slice(0, 3).map(p => ({
+      setCreatorPosts(posts.map(p => ({
         ...p,
         author_name: profileMap.get(p.user_id)?.full_name || profileMap.get(p.user_id)?.username || 'Creator',
         author_avatar: profileMap.get(p.user_id)?.avatar_url || null,
