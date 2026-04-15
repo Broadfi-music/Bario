@@ -736,7 +736,7 @@ const PodcastFeed = () => {
           </section>
         )}
 
-        {/* Live Channels Block 1 — first 3 sessions */}
+        {/* All Live Channels — all sessions in one grid */}
         {orderedChannels.length > 0 && (
           <section className="px-2 md:px-3 lg:px-4 mb-2">
             <div className="flex items-center justify-between mb-1">
@@ -746,7 +746,7 @@ const PodcastFeed = () => {
               </h2>
             </div>
             <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-x-1.5 gap-y-2">
-              {orderedChannels.slice(0, 3).map((host) => (
+              {orderedChannels.map((host) => (
                 <Link key={host.id} to={`/podcasts?session=${host.id}`} className="group block">
                   <div className="relative aspect-video rounded overflow-hidden bg-white/5">
                     {host.cover_image_url ? <img src={host.cover_image_url} alt="" className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-white/10" />}
