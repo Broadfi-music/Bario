@@ -46,6 +46,7 @@ import NotFound from "@/pages/NotFound";
 import Feed from "@/pages/Feed";
 import Messages from "@/pages/Messages";
 import Privacy from "@/pages/Privacy";
+import Terms from "@/pages/Terms";
 
 // Rebuild trigger: env re-injection
 const queryClient = new QueryClient();
@@ -100,6 +101,7 @@ const AnimatedRoutes = ({ showSplash }: { showSplash: boolean }) => {
           
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/install" element={<Install />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="*" element={<NotFound />} />

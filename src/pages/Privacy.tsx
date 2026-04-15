@@ -110,10 +110,16 @@ const Privacy = () => {
           </section>
         </div>
 
-        <div className="mt-10 text-center">
-          <Link to="/" className="text-muted-foreground text-sm hover:text-foreground transition-colors">
-            ← Back to Bario
-          </Link>
+        <div className="mt-8 pt-6 border-t border-border">
+          <div className="flex justify-center gap-4 text-sm">
+            <Link to="/terms" className="text-muted-foreground hover:text-foreground transition-colors">
+              Terms of Service
+            </Link>
+            <span className="text-border">•</span>
+            <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
+              ← Back to Bario
+            </Link>
+          </div>
         </div>
       </div>
     </div>
