@@ -89,6 +89,56 @@ const formatScheduleTime = (dateStr: string) => {
   return `In ${days}d`;
 };
 
+const FEED_DEMO_SESSION_PRIORITY = [
+  ['late night comedy hour'],
+  ['healing after heartbreak'],
+  ['bollywood vs hollywood debate'],
+  ['ipl season best team debate', 'ipl season - best team debate'],
+  ['dhyaan aur shanti', 'meditation talk'],
+  ['messi vs ronaldo', 'el gran debate'],
+  ['future of technology in mena', 'future of technology'],
+];
+
+const FEED_CREATOR_PRIORITY = [
+  ['ayomide'],
+  ['sai prasath', 'saiprasath'],
+  ['velu km', 'velukm'],
+];
+
+const normalizeFeedValue = (value?: string | null) =>
+  (value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+const prioritizeItems = <T,>(
+  items: T[],
+  getValues: (item: T) => Array<string | null | undefined>,
+  priorityGroups: string[][]
+) => {
+  const usedIndexes = new Set<number>();
+  const prioritized: T[] = [];
+
+  priorityGroups.forEach((group) => {
+    const matchIndex = items.findIndex((item, index) => {
+      if (usedIndexes.has(index)) return false;
+
+      const values = getValues(item).map(normalizeFeedValue).filter(Boolean);
+      return group.some((alias) => {
+        const normalizedAlias = normalizeFeedValue(alias);
+        return values.some((value) => value.includes(normalizedAlias));
+      });
+    });
+
+    if (matchIndex >= 0) {
+      usedIndexes.add(matchIndex);
+      prioritized.push(items[matchIndex]);
+    }
+  });
+
+  return {
+    prioritized,
+    remaining: items.filter((_, index) => !usedIndexes.has(index)),
+  };
+};
+
 const PodcastFeed = () => {
   const { isOnline } = usePresence();
   const navigate = useNavigate();
@@ -339,10 +389,23 @@ const PodcastFeed = () => {
   const nextHero = () => setHeroIndex((prev) => (prev + 1) % heroHosts.length);
   const prevHero = () => setHeroIndex((prev) => (prev - 1 + heroHosts.length) % heroHosts.length);
 
-  // Split live channels: real first, then demo
+  // Split live channels: real first, then demos in the requested editorial order
   const realChannels = filteredHosts.filter(h => !isDemoSessionId(h.id));
   const demoChannels = filteredHosts.filter(h => isDemoSessionId(h.id));
-  const orderedChannels = [...realChannels, ...demoChannels];
+  const { prioritized: prioritizedDemoChannels, remaining: remainingDemoChannels } = prioritizeItems(
+    demoChannels,
+    (host) => [host.title, host.host_name, host.category],
+    FEED_DEMO_SESSION_PRIORITY
+  );
+  const orderedChannels = [...realChannels, ...prioritizedDemoChannels, ...remainingDemoChannels];
+  const { prioritized: prioritizedCreatorPosts, remaining: remainingCreatorPosts } = prioritizeItems(
+    creatorPosts,
+    (post) => [post.author_name, post.author_username],
+    FEED_CREATOR_PRIORITY
+  );
+  const orderedCreatorPosts = [...prioritizedCreatorPosts, ...remainingCreatorPosts];
+  const leadCreatorPosts = orderedCreatorPosts.slice(0, 3);
+  const trailingCreatorPosts = orderedCreatorPosts.slice(3);
 
   useEffect(() => {
     if (heroHosts.length === 0) return;
@@ -780,19 +843,19 @@ const PodcastFeed = () => {
 
           return (
             <>
-              {/* First 3 Creator Posts (Ayomide, Sai Prasath etc) */}
-              {creatorPosts.length > 0 && (
+              {/* First 3 Creator Posts (Ayomide, Sai Prasath, Velu km) */}
+              {leadCreatorPosts.length > 0 && (
                 <section id="creator-feed-section" className="px-2 md:px-3 lg:px-4 mb-2">
                   <div className="flex items-center justify-between mb-1.5">
                     <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5 text-white/50" />Creator Feed</h2>
                     <button onClick={() => navigate('/feed')} className="text-[10px] text-white/40 hover:text-white transition-colors">See all</button>
                   </div>
-                  <div className="space-y-0">{creatorPosts.slice(0, 3).map(renderPost)}</div>
+                  <div className="space-y-0">{leadCreatorPosts.map(renderPost)}</div>
                 </section>
               )}
 
-              {/* Live Channels Block 2 — next 4 sessions (IPL Season etc) in grid */}
-              {renderChannelGrid(channelBlock2, 'Live channels')}
+              {/* Live Channels Block 2 — next 4 sessions without a section title */}
+              {renderChannelGrid(channelBlock2)}
 
               {/* Episodes */}
               {episodes.length > 0 && (
@@ -820,12 +883,12 @@ const PodcastFeed = () => {
               )}
 
               {/* Remaining Creator Posts (zazieproduction etc) */}
-              {creatorPosts.length > 3 && (
+              {trailingCreatorPosts.length > 0 && (
                 <section className="px-2 md:px-3 lg:px-4 mb-2">
                   <div className="flex items-center justify-between mb-1.5">
                     <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5 text-white/50" />More from Creators</h2>
                   </div>
-                  <div className="space-y-0">{creatorPosts.slice(3).map(renderPost)}</div>
+                  <div className="space-y-0">{trailingCreatorPosts.map(renderPost)}</div>
                 </section>
               )}
 
