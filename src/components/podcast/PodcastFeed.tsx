@@ -837,9 +837,7 @@ const PodcastFeed = () => {
             ) : null
           );
 
-          // Split channels into blocks for interleaving
-          const channelBlock2 = orderedChannels.slice(3, 7);
-          const channelBlock3 = orderedChannels.slice(7);
+          // No more channel splitting — all channels are shown in the top grid
 
           return (
             <>
@@ -854,8 +852,6 @@ const PodcastFeed = () => {
                 </section>
               )}
 
-               {/* Live Channels Block 2 — next 4 sessions in grid without title */}
-              {renderChannelGrid(channelBlock2)}
 
               {/* Episodes */}
               {episodes.length > 0 && (
@@ -911,9 +907,6 @@ const PodcastFeed = () => {
                   </div>
                 </section>
               )}
-
-              {/* Remaining Live Channels */}
-              {channelBlock3.length > 0 && renderChannelGrid(channelBlock3, 'Live channels')}
             </>
           );
         })()}
