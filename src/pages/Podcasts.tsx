@@ -611,36 +611,29 @@ const Podcasts = () => {
           <div className="flex items-center justify-center h-11 px-3 relative">
             <div className="flex items-center gap-5 mx-auto">
               <button
-                onClick={() => {
-                  setActiveTab('feed');
-                  setSearchParams({ tab: 'feed' });
-                }}
-                className={`flex items-center gap-1 text-sm font-semibold transition-colors ${activeTab === 'feed' ? 'text-white border-b-2 border-white pb-0.5' : 'text-white/50'}`}
-              >
-                <Home className="h-3.5 w-3.5" />
-                Home
-              </button>
-              <button
                 onClick={() => navigate('/feed')}
-                className="flex items-center gap-1 text-sm font-semibold text-white/50 transition-colors hover:text-white"
+                className="flex items-center gap-1 text-sm font-semibold text-white transition-colors"
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 Feed
               </button>
             </div>
-            {/* Profile icon - absolute right */}
-            <button
-              onClick={() => {
-                if (user) {
-                  navigate('/dashboard');
-                } else {
-                  navigate('/auth');
-                }
-              }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 transition-colors hover:text-white"
-            >
-              <User className="h-5 w-5" />
-            </button>
+            {/* Notification + Profile icons - absolute right */}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+              <NotificationBell />
+              <button
+                onClick={() => {
+                  if (user) {
+                    navigate('/dashboard');
+                  } else {
+                    navigate('/auth');
+                  }
+                }}
+                className="text-white/60 transition-colors hover:text-white"
+              >
+                <User className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </header>
       )}
