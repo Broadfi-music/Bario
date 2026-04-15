@@ -12,6 +12,8 @@ import BattleReelScroller from './BattleReelScroller';
 import { getAllDemoLiveHosts, isDemoSessionId, getDemoSessionById } from '@/config/demoSessions';
 import { getActiveStandardLiveSessions } from '@/lib/liveSessions';
 import { getPodcastEpisodeDisplayCover } from '@/lib/podcastEpisodeCovers';
+import { usePresence } from '@/hooks/usePresence';
+import OnlineIndicator from '@/components/OnlineIndicator';
 
 interface LiveHost {
   id: string;
@@ -88,6 +90,7 @@ const formatScheduleTime = (dateStr: string) => {
 };
 
 const PodcastFeed = () => {
+  const { isOnline } = usePresence();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [liveHosts, setLiveHosts] = useState<LiveHost[]>([]);
@@ -288,8 +291,9 @@ const PodcastFeed = () => {
         });
 
       const allDemos = getAllDemoLiveHosts();
-      const demosToAdd = allDemos.filter(d => !realSessions.some(s => s.id === d.id));
-      setLiveHosts(realSessions.length > 0 ? [...realSessions, ...demosToAdd.slice(0, Math.max(0, 10 - realSessions.length))] : allDemos);
+      // Real sessions always come first, demos fill remaining
+      // Show ALL real sessions, then append demos after
+      setLiveHosts([...realSessions, ...allDemos]);
     } catch {
       setLiveHosts(getAllDemoLiveHosts());
     }
@@ -309,7 +313,7 @@ const PodcastFeed = () => {
       .from('host_posts')
       .select('*')
       .order('created_at', { ascending: false })
-        .limit(6);
+        .limit(20);
     
     if (posts && posts.length > 0) {
       const userIds = [...new Set(posts.map(p => p.user_id))];
@@ -318,7 +322,7 @@ const PodcastFeed = () => {
         .select('user_id, full_name, username, avatar_url')
         .in('user_id', userIds);
       const profileMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-      setCreatorPosts(posts.slice(0, 3).map(p => ({
+      setCreatorPosts(posts.map(p => ({
         ...p,
         author_name: profileMap.get(p.user_id)?.full_name || profileMap.get(p.user_id)?.username || 'Creator',
         author_avatar: profileMap.get(p.user_id)?.avatar_url || null,
@@ -597,12 +601,15 @@ const PodcastFeed = () => {
                   onClick={() => navigate(`/host/${creator.user_id}`)}
                   className="flex-shrink-0 flex flex-col items-center gap-1"
                 >
-                  <div className="w-16 h-16 md:w-[72px] md:h-[72px] lg:w-20 lg:h-20 rounded-full overflow-hidden bg-white/10 border-2 border-white/10 hover:border-white/40 transition-colors">
-                    {creator.avatar_url ? (
-                      <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-white/20" />
-                    )}
+                  <div className="relative">
+                    <div className={`w-16 h-16 md:w-[72px] md:h-[72px] lg:w-20 lg:h-20 rounded-full overflow-hidden bg-white/10 border-2 ${isOnline(creator.user_id) ? 'border-green-500/60' : 'border-white/10'} hover:border-white/40 transition-colors`}>
+                      {creator.avatar_url ? (
+                        <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-white/20" />
+                      )}
+                    </div>
+                    <OnlineIndicator isOnline={isOnline(creator.user_id)} size="md" className="-bottom-0.5 -right-0.5" />
                   </div>
                   <span className="text-[10px] text-white/60 w-16 md:w-[72px] lg:w-20 text-center truncate leading-tight">
                     {creator.full_name || creator.username || 'Creator'}
@@ -706,6 +713,78 @@ const PodcastFeed = () => {
           </div>
         </section>
 
+        {/* Creator Feed — Twitter-style posts (first 3 posts after live channels) */}
+        {creatorPosts.length > 0 && (
+          <section id="creator-feed-section" className="px-2 md:px-3 lg:px-4 mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5">
+                <MessageCircle className="h-3.5 w-3.5 text-white/50" />
+                Creator Feed
+              </h2>
+              <button onClick={() => navigate('/feed')} className="text-[10px] text-white/40 hover:text-white transition-colors">See all</button>
+            </div>
+            <div className="space-y-0">
+              {creatorPosts.slice(0, 3).map((post) => (
+                <div
+                  key={post.id}
+                  className="border-b border-white/5 py-3 hover:bg-white/[0.02] transition-colors cursor-pointer px-1"
+                  onClick={() => navigate(`/host/${post.user_id}`)}
+                >
+                  <div className="flex gap-2.5">
+                    <div className="relative flex-shrink-0">
+                      <div
+                        className="w-9 h-9 rounded-full overflow-hidden bg-white/10"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/host/${post.user_id}`); }}
+                      >
+                        {post.author_avatar ? (
+                          <img src={post.author_avatar} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-white/20 flex items-center justify-center">
+                            <User className="w-4 h-4 text-white/40" />
+                          </div>
+                        )}
+                      </div>
+                      <OnlineIndicator isOnline={isOnline(post.user_id)} size="sm" className="-bottom-0.5 -right-0.5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-xs font-semibold text-white truncate">{post.author_name}</span>
+                        {post.author_username && <span className="text-[11px] text-white/30 truncate">@{post.author_username}</span>}
+                        <span className="text-[10px] text-white/20">·</span>
+                        <span className="text-[10px] text-white/30 flex-shrink-0">
+                          {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+                      <p className="text-[13px] text-white/80 leading-snug mb-2 whitespace-pre-wrap">{post.content}</p>
+                      {post.image_url && (
+                        <div className="rounded-xl overflow-hidden border border-white/10 mb-2 max-h-[300px]">
+                          <img src={post.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                        </div>
+                      )}
+                      <div className="flex items-center gap-6">
+                        <button className="flex items-center gap-1 text-white/30 hover:text-blue-400 transition-colors">
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          <span className="text-[11px]">{post.comment_count || 0}</span>
+                        </button>
+                        <button className="flex items-center gap-1 text-white/30 hover:text-pink-400 transition-colors">
+                          <Heart className="h-3.5 w-3.5" />
+                          <span className="text-[11px]">{post.like_count || 0}</span>
+                        </button>
+                        <button
+                          className="flex items-center gap-1 text-white/30 hover:text-green-400 transition-colors"
+                          onClick={(e) => { e.stopPropagation(); navigator.share?.({ text: post.content, url: window.location.origin + `/host/${post.user_id}` }).catch(() => {}); }}
+                        >
+                          <Share2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Upcoming Schedules */}
         {schedules.length > 0 && (
           <section className="px-2 md:px-3 lg:px-4 mb-4">
@@ -738,69 +817,58 @@ const PodcastFeed = () => {
           </section>
         )}
 
-        {/* Episodes */}
-
-        {/* Creator Feed — Twitter-style posts */}
-        {creatorPosts.length > 0 && (
-          <section id="creator-feed-section" className="px-2 md:px-3 lg:px-4 mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5">
-                <MessageCircle className="h-3.5 w-3.5 text-white/50" />
-                Creator Feed
-              </h2>
-            </div>
+        {/* More Creator Posts (remaining after first 3) */}
+        {creatorPosts.length > 3 && (
+          <section className="px-2 md:px-3 lg:px-4 mb-4">
             <div className="space-y-0">
-              {creatorPosts.map((post) => (
+              {creatorPosts.slice(3).map((post) => (
                 <div
                   key={post.id}
                   className="border-b border-white/5 py-3 hover:bg-white/[0.02] transition-colors cursor-pointer px-1"
                   onClick={() => navigate(`/host/${post.user_id}`)}
                 >
                   <div className="flex gap-2.5">
-                    {/* Avatar */}
-                    <div
-                      className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 bg-white/10"
-                      onClick={(e) => { e.stopPropagation(); navigate(`/host/${post.user_id}`); }}
-                    >
-                      {post.author_avatar ? (
-                        <img src={post.author_avatar} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-white/20 flex items-center justify-center">
-                          <User className="w-4 h-4 text-white/40" />
-                        </div>
-                      )}
+                    <div className="relative flex-shrink-0">
+                      <div
+                        className="w-9 h-9 rounded-full overflow-hidden bg-white/10"
+                        onClick={(e) => { e.stopPropagation(); navigate(`/host/${post.user_id}`); }}
+                      >
+                        {post.author_avatar ? (
+                          <img src={post.author_avatar} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-white/20 flex items-center justify-center">
+                            <User className="w-4 h-4 text-white/40" />
+                          </div>
+                        )}
+                      </div>
+                      <OnlineIndicator isOnline={isOnline(post.user_id)} size="sm" className="-bottom-0.5 -right-0.5" />
                     </div>
-                    {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 mb-0.5">
                         <span className="text-xs font-semibold text-white truncate">{post.author_name}</span>
-                        {post.author_username && (
-                          <span className="text-[11px] text-white/30 truncate">@{post.author_username}</span>
-                        )}
+                        {post.author_username && <span className="text-[11px] text-white/30 truncate">@{post.author_username}</span>}
                         <span className="text-[10px] text-white/20">·</span>
                         <span className="text-[10px] text-white/30 flex-shrink-0">
                           {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </span>
                       </div>
                       <p className="text-[13px] text-white/80 leading-snug mb-2 whitespace-pre-wrap">{post.content}</p>
-                      {/* Post Image */}
                       {post.image_url && (
                         <div className="rounded-xl overflow-hidden border border-white/10 mb-2 max-h-[300px]">
                           <img src={post.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
                         </div>
                       )}
-                      {/* Actions */}
                       <div className="flex items-center gap-6">
-                        <button className="flex items-center gap-1 text-white/30 hover:text-blue-400 transition-colors group">
+                        <button className="flex items-center gap-1 text-white/30 hover:text-blue-400 transition-colors">
                           <MessageCircle className="h-3.5 w-3.5" />
                           <span className="text-[11px]">{post.comment_count || 0}</span>
                         </button>
-                        <button className="flex items-center gap-1 text-white/30 hover:text-pink-400 transition-colors group">
+                        <button className="flex items-center gap-1 text-white/30 hover:text-pink-400 transition-colors">
                           <Heart className="h-3.5 w-3.5" />
                           <span className="text-[11px]">{post.like_count || 0}</span>
                         </button>
                         <button
-                          className="flex items-center gap-1 text-white/30 hover:text-green-400 transition-colors group"
+                          className="flex items-center gap-1 text-white/30 hover:text-green-400 transition-colors"
                           onClick={(e) => { e.stopPropagation(); navigator.share?.({ text: post.content, url: window.location.origin + `/host/${post.user_id}` }).catch(() => {}); }}
                         >
                           <Share2 className="h-3.5 w-3.5" />
@@ -814,6 +882,7 @@ const PodcastFeed = () => {
           </section>
         )}
 
+        {/* Episodes */}
         {episodes.length > 0 && (
           <section className="px-2 md:px-3 lg:px-4 mb-6">
             <div className="flex items-center justify-between mb-1.5">
