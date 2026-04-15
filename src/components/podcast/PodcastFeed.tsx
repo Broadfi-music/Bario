@@ -291,8 +291,9 @@ const PodcastFeed = () => {
         });
 
       const allDemos = getAllDemoLiveHosts();
-      const demosToAdd = allDemos.filter(d => !realSessions.some(s => s.id === d.id));
-      setLiveHosts(realSessions.length > 0 ? [...realSessions, ...demosToAdd.slice(0, Math.max(0, 10 - realSessions.length))] : allDemos);
+      // Real sessions always come first, demos fill remaining
+      // Show ALL real sessions, then append demos after
+      setLiveHosts([...realSessions, ...allDemos]);
     } catch {
       setLiveHosts(getAllDemoLiveHosts());
     }
