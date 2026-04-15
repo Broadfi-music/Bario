@@ -673,114 +673,117 @@ const PodcastFeed = () => {
           </section>
         )}
 
-        {/* Live Channels — flat grid, no categories, tight like Twitch */}
-        <section className="px-2 md:px-3 lg:px-4 mb-2">
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-              Live channels
-            </h2>
-          </div>
-          <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-x-1.5 gap-y-2">
-            {orderedChannels.map((host) => (
-              <Link
-                key={host.id}
-                to={`/podcasts?session=${host.id}`}
-                className="group block"
-              >
-                <div className="relative aspect-video rounded overflow-hidden bg-white/5">
-                  {host.cover_image_url ? (
-                    <img src={host.cover_image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
-                  ) : (
-                    <div className="w-full h-full bg-white/10" />
-                  )}
-                  <div className="absolute top-1 left-1 bg-red-600 text-white text-[7px] md:text-[9px] font-bold px-1 md:px-1.5 py-0.5 rounded">
-                    LIVE
+        {/* Live Channels Block 1 — first 3 sessions */}
+        {orderedChannels.length > 0 && (
+          <section className="px-2 md:px-3 lg:px-4 mb-2">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                Live channels
+              </h2>
+            </div>
+            <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-x-1.5 gap-y-2">
+              {orderedChannels.slice(0, 3).map((host) => (
+                <Link key={host.id} to={`/podcasts?session=${host.id}`} className="group block">
+                  <div className="relative aspect-video rounded overflow-hidden bg-white/5">
+                    {host.cover_image_url ? <img src={host.cover_image_url} alt="" className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-white/10" />}
+                    <div className="absolute top-1 left-1 bg-red-600 text-white text-[7px] md:text-[9px] font-bold px-1 md:px-1.5 py-0.5 rounded">LIVE</div>
+                    <div className="absolute bottom-1 left-1 bg-black/80 text-white text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 rounded">{formatViewers(host.listener_count)} viewers</div>
                   </div>
-                  <div className="absolute bottom-1 left-1 bg-black/80 text-white text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 rounded">
-                    {formatViewers(host.listener_count)} viewers
+                  <div className="flex gap-1.5 mt-1">
+                    <div className="w-6 h-6 md:w-8 md:h-8 rounded-full overflow-hidden flex-shrink-0 bg-white/10" onClick={(e) => { e.preventDefault(); navigate(`/host/${host.host_id}`); }}>
+                      {host.host_avatar ? <img src={host.host_avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-white/20" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-[11px] md:text-sm font-medium text-white/90 truncate group-hover:text-white">{host.title}</h3>
+                      <p className="text-[10px] md:text-xs text-white/40 truncate">{host.host_name}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex gap-1.5 mt-1">
-                  <div
-                    className="w-6 h-6 md:w-8 md:h-8 rounded-full overflow-hidden flex-shrink-0 bg-white/10"
-                    onClick={(e) => { e.preventDefault(); navigate(`/host/${host.host_id}`); }}
-                  >
-                    {host.host_avatar ? (
-                      <img src={host.host_avatar} alt="" className="w-full h-full object-cover" />
-                    ) : <div className="w-full h-full bg-white/20" />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-[11px] md:text-sm font-medium text-white/90 truncate group-hover:text-white">{host.title}</h3>
-                    <p className="text-[10px] md:text-xs text-white/40 truncate">{host.host_name}</p>
-                    <span className="text-[9px] md:text-[11px] text-white/30">{host.category}</span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
-        {/* === INTERLEAVED FEED: Posts ↔ Sessions ↔ Episodes === */}
+        {/* === INTERLEAVED FEED === */}
         {(() => {
           const renderPost = (post: any) => (
             <div
               key={post.id}
-              className="border-b border-white/5 py-3 hover:bg-white/[0.02] transition-colors cursor-pointer px-1"
+              className="border-b border-white/5 py-2.5 hover:bg-white/[0.02] transition-colors cursor-pointer px-1 max-w-sm"
               onClick={() => navigate(`/host/${post.user_id}`)}
             >
-              <div className="flex gap-2.5">
+              <div className="flex gap-2">
                 <div className="relative flex-shrink-0">
-                  <div className="w-9 h-9 rounded-full overflow-hidden bg-white/10" onClick={(e) => { e.stopPropagation(); navigate(`/host/${post.user_id}`); }}>
-                    {post.author_avatar ? <img src={post.author_avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-white/20 flex items-center justify-center"><User className="w-4 h-4 text-white/40" /></div>}
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10" onClick={(e) => { e.stopPropagation(); navigate(`/host/${post.user_id}`); }}>
+                    {post.author_avatar ? <img src={post.author_avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-white/20 flex items-center justify-center"><User className="w-3.5 h-3.5 text-white/40" /></div>}
                   </div>
                   <OnlineIndicator isOnline={isOnline(post.user_id)} size="sm" className="-bottom-0.5 -right-0.5" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-0.5">
-                    <span className="text-xs font-semibold text-white truncate">{post.author_name}</span>
-                    {post.author_username && <span className="text-[11px] text-white/30 truncate">@{post.author_username}</span>}
-                    <span className="text-[10px] text-white/20">·</span>
-                    <span className="text-[10px] text-white/30 flex-shrink-0">{new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                    <span className="text-[11px] font-semibold text-white truncate">{post.author_name}</span>
+                    {post.author_username && <span className="text-[10px] text-white/30 truncate">@{post.author_username}</span>}
+                    <span className="text-[9px] text-white/20">·</span>
+                    <span className="text-[9px] text-white/30 flex-shrink-0">{new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                   </div>
-                  <p className="text-[13px] text-white/80 leading-snug mb-2 whitespace-pre-wrap">{post.content}</p>
-                  {post.image_url && <div className="rounded-xl overflow-hidden border border-white/10 mb-2 max-h-[300px]"><img src={post.image_url} alt="" className="w-full h-full object-cover" loading="lazy" /></div>}
-                  <div className="flex items-center gap-6">
-                    <button className="flex items-center gap-1 text-white/30 hover:text-blue-400 transition-colors"><MessageCircle className="h-3.5 w-3.5" /><span className="text-[11px]">{post.comment_count || 0}</span></button>
-                    <button className="flex items-center gap-1 text-white/30 hover:text-pink-400 transition-colors"><Heart className="h-3.5 w-3.5" /><span className="text-[11px]">{post.like_count || 0}</span></button>
-                    <button className="flex items-center gap-1 text-white/30 hover:text-green-400 transition-colors" onClick={(e) => { e.stopPropagation(); navigator.share?.({ text: post.content, url: window.location.origin + `/host/${post.user_id}` }).catch(() => {}); }}><Share2 className="h-3.5 w-3.5" /></button>
+                  <p className="text-[12px] text-white/80 leading-snug mb-1.5 whitespace-pre-wrap">{post.content}</p>
+                  {post.image_url && <div className="rounded-lg overflow-hidden border border-white/10 mb-1.5 max-h-[200px]"><img src={post.image_url} alt="" className="w-full h-full object-cover" loading="lazy" /></div>}
+                  <div className="flex items-center gap-5">
+                    <button className="flex items-center gap-1 text-white/30 hover:text-blue-400 transition-colors"><MessageCircle className="h-3 w-3" /><span className="text-[10px]">{post.comment_count || 0}</span></button>
+                    <button className="flex items-center gap-1 text-white/30 hover:text-pink-400 transition-colors"><Heart className="h-3 w-3" /><span className="text-[10px]">{post.like_count || 0}</span></button>
+                    <button className="flex items-center gap-1 text-white/30 hover:text-green-400 transition-colors" onClick={(e) => { e.stopPropagation(); navigator.share?.({ text: post.content, url: window.location.origin + `/host/${post.user_id}` }).catch(() => {}); }}><Share2 className="h-3 w-3" /></button>
                   </div>
                 </div>
               </div>
             </div>
           );
 
-          const renderInlineSession = (host: LiveHost) => (
-            <Link key={`inline-${host.id}`} to={`/podcasts?session=${host.id}`} className="flex items-center gap-2 p-2 rounded bg-white/[0.03] hover:bg-white/[0.06] transition-colors border border-white/5">
-              <div className="relative w-12 h-12 rounded overflow-hidden flex-shrink-0 bg-white/5">
-                {host.cover_image_url ? <img src={host.cover_image_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-white/10" />}
-                <div className="absolute top-0.5 left-0.5 bg-red-600 text-white text-[6px] font-bold px-1 py-0.5 rounded">LIVE</div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-xs font-medium text-white/90 truncate">{host.title}</h4>
-                <p className="text-[10px] text-white/40 truncate">{host.host_name} · {formatViewers(host.listener_count)} viewers</p>
-              </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                <span className="text-[9px] text-white/30">{formatViewers(host.listener_count)}</span>
-              </div>
-            </Link>
+          const renderChannelGrid = (channels: LiveHost[], label?: string) => (
+            channels.length > 0 ? (
+              <section className="px-2 md:px-3 lg:px-4 mb-2">
+                {label && (
+                  <div className="flex items-center mb-1">
+                    <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                      {label}
+                    </h2>
+                  </div>
+                )}
+                <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-x-1.5 gap-y-2">
+                  {channels.map((host) => (
+                    <Link key={`grid-${host.id}`} to={`/podcasts?session=${host.id}`} className="group block">
+                      <div className="relative aspect-video rounded overflow-hidden bg-white/5">
+                        {host.cover_image_url ? <img src={host.cover_image_url} alt="" className="w-full h-full object-cover" loading="lazy" /> : <div className="w-full h-full bg-white/10" />}
+                        <div className="absolute top-1 left-1 bg-red-600 text-white text-[7px] md:text-[9px] font-bold px-1 md:px-1.5 py-0.5 rounded">LIVE</div>
+                        <div className="absolute bottom-1 left-1 bg-black/80 text-white text-[8px] md:text-[10px] px-1 md:px-1.5 py-0.5 rounded">{formatViewers(host.listener_count)} viewers</div>
+                      </div>
+                      <div className="flex gap-1.5 mt-1">
+                        <div className="w-6 h-6 md:w-8 md:h-8 rounded-full overflow-hidden flex-shrink-0 bg-white/10" onClick={(e) => { e.preventDefault(); navigate(`/host/${host.host_id}`); }}>
+                          {host.host_avatar ? <img src={host.host_avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-white/20" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-[11px] md:text-sm font-medium text-white/90 truncate group-hover:text-white">{host.title}</h3>
+                          <p className="text-[10px] md:text-xs text-white/40 truncate">{host.host_name}</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            ) : null
           );
 
-          const sessionBlock1 = orderedChannels.slice(0, 3);
-          const sessionBlock2 = orderedChannels.slice(3, 6);
+          // Split channels into blocks for interleaving
+          const channelBlock2 = orderedChannels.slice(3, 7);
+          const channelBlock3 = orderedChannels.slice(7);
 
           return (
             <>
-              {/* First 3 Creator Posts */}
+              {/* First 3 Creator Posts (Ayomide, Sai Prasath etc) */}
               {creatorPosts.length > 0 && (
                 <section id="creator-feed-section" className="px-2 md:px-3 lg:px-4 mb-2">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-1.5">
                     <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5 text-white/50" />Creator Feed</h2>
                     <button onClick={() => navigate('/feed')} className="text-[10px] text-white/40 hover:text-white transition-colors">See all</button>
                   </div>
@@ -788,19 +791,42 @@ const PodcastFeed = () => {
                 </section>
               )}
 
-              {/* Inline Live Sessions block 1 */}
-              {sessionBlock1.length > 0 && (
-                <section className="px-2 md:px-3 lg:px-4 mb-2"><div className="space-y-1.5">{sessionBlock1.map(renderInlineSession)}</div></section>
+              {/* Live Channels Block 2 — next 4 sessions (IPL Season etc) in grid */}
+              {renderChannelGrid(channelBlock2, 'Live channels')}
+
+              {/* Episodes */}
+              {episodes.length > 0 && (
+                <section className="px-2 md:px-3 lg:px-4 mb-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5"><Headphones className="h-3.5 w-3.5 text-white/50" />Episodes</h2>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {episodes.slice(0, 6).map((episode) => (
+                      <div key={episode.id} className="group cursor-pointer" onClick={() => { if (episode.audio_url) playEpisode(episode); else if (episode.isRealUser) navigate(`/host/${episode.host_id}`); }}>
+                        <div className="relative aspect-square rounded overflow-hidden bg-white/5 mb-1">
+                          {episode.cover_image_url ? <img src={episode.cover_image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /> : <div className="w-full h-full bg-white/10" />}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            {currentEpisode?.id === episode.id && isPlaying ? <Pause className="h-5 w-5 text-white" fill="white" /> : <Play className="h-5 w-5 text-white" fill="white" />}
+                          </div>
+                          {currentEpisode?.id === episode.id && isPlaying && <div className="absolute top-0.5 left-0.5 bg-white text-black text-[7px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5"><span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />PLAYING</div>}
+                          {episode.duration_ms > 0 && <div className="absolute bottom-0.5 right-0.5 bg-black/70 text-white text-[7px] px-1 py-0.5 rounded">{formatDuration(episode.duration_ms)}</div>}
+                        </div>
+                        <h3 className="text-[11px] font-medium line-clamp-2 text-white/80 group-hover:text-white">{episode.title}</h3>
+                        <p className="text-[10px] text-white/40 truncate">{episode.host_name}</p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
               )}
 
-              {/* Creator Posts 4-6 */}
+              {/* Remaining Creator Posts (zazieproduction etc) */}
               {creatorPosts.length > 3 && (
-                <section className="px-2 md:px-3 lg:px-4 mb-2"><div className="space-y-0">{creatorPosts.slice(3, 6).map(renderPost)}</div></section>
-              )}
-
-              {/* Inline Live Sessions block 2 */}
-              {sessionBlock2.length > 0 && (
-                <section className="px-2 md:px-3 lg:px-4 mb-2"><div className="space-y-1.5">{sessionBlock2.map(renderInlineSession)}</div></section>
+                <section className="px-2 md:px-3 lg:px-4 mb-2">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5 text-white/50" />More from Creators</h2>
+                  </div>
+                  <div className="space-y-0">{creatorPosts.slice(3).map(renderPost)}</div>
+                </section>
               )}
 
               {/* Schedules */}
@@ -823,35 +849,8 @@ const PodcastFeed = () => {
                 </section>
               )}
 
-              {/* Episodes */}
-              {episodes.length > 0 && (
-                <section className="px-2 md:px-3 lg:px-4 mb-4">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <h2 className="text-sm font-bold text-white/80 flex items-center gap-1.5"><Headphones className="h-3.5 w-3.5 text-white/50" />Episodes</h2>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {episodes.slice(0, 6).map((episode) => (
-                      <div key={episode.id} className="group cursor-pointer" onClick={() => { if (episode.audio_url) playEpisode(episode); else if (episode.isRealUser) navigate(`/host/${episode.host_id}`); }}>
-                        <div className="relative aspect-square rounded overflow-hidden bg-white/5 mb-1">
-                          {episode.cover_image_url ? <img src={episode.cover_image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /> : <div className="w-full h-full bg-white/10" />}
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            {currentEpisode?.id === episode.id && isPlaying ? <Pause className="h-5 w-5 text-white" fill="white" /> : <Play className="h-5 w-5 text-white" fill="white" />}
-                          </div>
-                          {currentEpisode?.id === episode.id && isPlaying && <div className="absolute top-0.5 left-0.5 bg-white text-black text-[7px] font-bold px-1 py-0.5 rounded flex items-center gap-0.5"><span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />PLAYING</div>}
-                          {episode.duration_ms > 0 && <div className="absolute bottom-0.5 right-0.5 bg-black/70 text-white text-[7px] px-1 py-0.5 rounded">{formatDuration(episode.duration_ms)}</div>}
-                        </div>
-                        <h3 className="text-xs font-medium line-clamp-2 text-white/80 group-hover:text-white">{episode.title}</h3>
-                        <p className="text-[11px] text-white/40 truncate">{episode.host_name}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {/* Remaining Creator Posts (after episodes) */}
-              {creatorPosts.length > 6 && (
-                <section className="px-2 md:px-3 lg:px-4 mb-6"><div className="space-y-0">{creatorPosts.slice(6).map(renderPost)}</div></section>
-              )}
+              {/* Remaining Live Channels if more than 7 */}
+              {renderChannelGrid(channelBlock3, 'More Live')}
             </>
           );
         })()}
