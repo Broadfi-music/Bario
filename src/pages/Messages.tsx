@@ -480,7 +480,6 @@ const Messages = () => {
                     activeConvo.other_user.username ? `@${activeConvo.other_user.username}` : ''
                   )}
                 </p>
-                {activeConvo.other_user.username && <p className="text-[11px] text-white/30 font-mono">@{activeConvo.other_user.username}</p>}
               </button>
               {/* Battle from DM */}
               <button onClick={() => setShowBattleInvite(true)} className="h-9 w-9 flex items-center justify-center rounded-full bg-white/5 hover:bg-yellow-500/20 text-white/50 hover:text-yellow-400 transition-all" title="Start Battle">
