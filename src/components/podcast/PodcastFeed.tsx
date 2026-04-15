@@ -12,6 +12,8 @@ import BattleReelScroller from './BattleReelScroller';
 import { getAllDemoLiveHosts, isDemoSessionId, getDemoSessionById } from '@/config/demoSessions';
 import { getActiveStandardLiveSessions } from '@/lib/liveSessions';
 import { getPodcastEpisodeDisplayCover } from '@/lib/podcastEpisodeCovers';
+import { usePresence } from '@/hooks/usePresence';
+import OnlineIndicator from '@/components/OnlineIndicator';
 
 interface LiveHost {
   id: string;
@@ -88,6 +90,7 @@ const formatScheduleTime = (dateStr: string) => {
 };
 
 const PodcastFeed = () => {
+  const { isOnline } = usePresence();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [liveHosts, setLiveHosts] = useState<LiveHost[]>([]);
