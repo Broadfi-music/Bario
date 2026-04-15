@@ -9,6 +9,8 @@ import { ALL_DEMO_SESSIONS } from '@/config/demoSessions';
 import { getDemoAvatar } from '@/lib/randomAvatars';
 import { getFreshSession, isValidUUID, withAuthRetry } from '@/lib/authUtils';
 import BattleInviteModal from '@/components/podcast/BattleInviteModal';
+import { usePresence } from '@/hooks/usePresence';
+import OnlineIndicator from '@/components/OnlineIndicator';
 
 type Profile = {
   user_id: string;
@@ -59,6 +61,7 @@ const Messages = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const dmInitiated = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { isOnline, onlineUserIds } = usePresence();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [suggestedCreators, setSuggestedCreators] = useState<Profile[]>([]);
@@ -372,6 +375,29 @@ const Messages = () => {
           </div>
         </div>
 
+        {/* Online Creators Section */}
+        {onlineUserIds.size > 0 && !searchQuery.trim() && (
+          <div className="px-3 py-2 border-b border-white/5">
+            <p className="text-[10px] font-semibold text-green-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+              Online Now
+            </p>
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
+              {suggestedCreators.filter(c => isOnline(c.user_id)).map(c => (
+                <button key={`online-${c.user_id}`} onClick={() => openDmWith(c.user_id)} className="flex-shrink-0 flex flex-col items-center gap-1 group">
+                  <div className="relative">
+                    <div className="h-12 w-12 rounded-full overflow-hidden bg-white/10 ring-2 ring-green-500/50 group-hover:ring-green-400 transition-all">
+                      {c.avatar_url ? <img src={c.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-gradient-to-br from-emerald-500 to-cyan-500" />}
+                    </div>
+                    <OnlineIndicator isOnline={true} size="md" className="-bottom-0.5 -right-0.5" />
+                  </div>
+                  <p className="text-[10px] text-white/50 truncate w-14 text-center">{c.full_name || c.username || 'Creator'}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {searchQuery.trim() && searchResults.length > 0 && (
           <div className="border-b border-white/5">
             {searchResults.map(p => (
@@ -417,6 +443,7 @@ const Messages = () => {
                   <div className="h-12 w-12 rounded-full overflow-hidden bg-white/10 flex-shrink-0 ring-1 ring-white/10">
                     {convo.other_user.avatar_url ? <img src={convo.other_user.avatar_url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full bg-gradient-to-br from-violet-500 to-fuchsia-500" />}
                   </div>
+                  <OnlineIndicator isOnline={isOnline(convo.other_user.user_id)} size="md" className="-bottom-0.5 -right-0.5" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between">
