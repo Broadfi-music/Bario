@@ -1,33 +1,25 @@
 
 
-## PWA & Play Store Status
+# Deploy assetlinks.json for Google Play TWA Verification
 
-**Your PWA is already fully configured** with `vite-plugin-pwa`, manifest, icons, and service worker push notifications. It's ready for Play Store upload via TWA/PWABuilder.
+## What this does
+Creates the Digital Asset Links file at `public/.well-known/assetlinks.json` in your project. When published, it will be served at `https://bario.icu/.well-known/assetlinks.json`, which Google uses to verify your TWA app owns the domain. This removes the browser address bar from your app.
 
-**Important answer to your question about updates**: Since you're using a TWA (Trusted Web Activity) AAB file, **you do NOT need to re-upload the AAB** for content updates. The TWA is just a thin wrapper pointing to your published URL (`https://era-remix-studio.lovable.app`). Any updates you make in Lovable and publish will automatically reflect in the Play Store app. You only need to re-upload the AAB if you change the app name, icons, package name, or TWA configuration itself.
+## Steps
 
----
+1. **Create file `public/.well-known/assetlinks.json`** with your provided content:
+```json
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "icu.bario.twa",
+    "sha256_cert_fingerprints": ["B4:51:6A:B5:AB:CA:F1:4B:3D:02:05:4C:B8:5E:58:C5:AC:AF:A5:86:BB:34:F7:9D:3B:4D:65:F3:3D:A7:5F:49"]
+  }
+}]
+```
 
-## UI Changes Plan
+2. **Publish the app** so the file goes live at `https://bario.icu/.well-known/assetlinks.json`
 
-### 1. Mobile Bottom Nav: Change "Feed" to "DM"
-**File**: `src/components/MobileBottomNav.tsx`
-- Replace the second tab (currently `{ id: 'feed', icon: Sparkles, label: 'Feed', path: '/feed' }`) with `{ id: 'dm', icon: MessageCircle, label: 'DM', path: '/messages' }`
-- Update `isActive` to check `location.pathname === '/messages'` for the `dm` tab
-- Import `MessageCircle` from lucide-react instead of `Sparkles`
-
-### 2. PWA Top Header: Remove "Home", keep only "Feed", add Notification icon
-**File**: `src/pages/Podcasts.tsx` (lines 608-646)
-- Remove the "Home" button entirely from the PWA header
-- Keep only the "Feed" button (with Sparkles icon) as the single centered tab
-- Add `<NotificationBell />` component next to the profile icon on the right side of the header (or as a separate absolute-positioned element)
-- Import is already present (`NotificationBell` is imported at line 6)
-
-### Summary of changes
-| Location | Current | New |
-|---|---|---|
-| Bottom nav, 2nd tab | Feed → /feed | DM → /messages |
-| PWA top header | Home + Feed | Feed only + Notification bell |
-
-Two files modified: `MobileBottomNav.tsx` and `Podcasts.tsx`.
+That's it — one file created, then publish.
 
