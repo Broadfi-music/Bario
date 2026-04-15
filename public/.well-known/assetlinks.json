@@ -1,8 +1,12 @@
-[{
-  "relation": ["delegate_permission/common.handle_all_urls"],
-  "target": {
-    "namespace": "android_app",
-    "package_name": "icu.bario.twa",
-    "sha256_cert_fingerprints": ["B4:51:6A:B5:AB:CA:F1:4B:3D:02:05:4C:B8:5E:58:C5:AC:AF:A5:86:BB:34:F7:9D:3B:4D:65:F3:3D:A7:5F:49"]
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "icu.bario.twa",
+      "sha256_cert_fingerprints": [
+        "A6:22:C0:66:84:55:E9:34:DC:D7:FA:FB:08:9B:C7:B6:A7:66:A9:62:B9:88:94:3C:08:BD:C9:64:4A:B2:05:21"
+      ]
+    }
   }
-}]
+]
