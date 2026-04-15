@@ -601,12 +601,15 @@ const PodcastFeed = () => {
                   onClick={() => navigate(`/host/${creator.user_id}`)}
                   className="flex-shrink-0 flex flex-col items-center gap-1"
                 >
-                  <div className="w-16 h-16 md:w-[72px] md:h-[72px] lg:w-20 lg:h-20 rounded-full overflow-hidden bg-white/10 border-2 border-white/10 hover:border-white/40 transition-colors">
-                    {creator.avatar_url ? (
-                      <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-white/20" />
-                    )}
+                  <div className="relative">
+                    <div className={`w-16 h-16 md:w-[72px] md:h-[72px] lg:w-20 lg:h-20 rounded-full overflow-hidden bg-white/10 border-2 ${isOnline(creator.user_id) ? 'border-green-500/60' : 'border-white/10'} hover:border-white/40 transition-colors`}>
+                      {creator.avatar_url ? (
+                        <img src={creator.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-white/20" />
+                      )}
+                    </div>
+                    <OnlineIndicator isOnline={isOnline(creator.user_id)} size="md" className="-bottom-0.5 -right-0.5" />
                   </div>
                   <span className="text-[10px] text-white/60 w-16 md:w-[72px] lg:w-20 text-center truncate leading-tight">
                     {creator.full_name || creator.username || 'Creator'}
