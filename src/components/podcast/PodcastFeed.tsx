@@ -773,7 +773,7 @@ const PodcastFeed = () => {
           const renderPost = (post: any) => (
             <div
               key={post.id}
-              className="border-b border-white/5 py-2.5 hover:bg-white/[0.02] transition-colors cursor-pointer px-1 max-w-sm"
+              className="border-b border-white/5 py-2.5 hover:bg-white/[0.02] transition-colors cursor-pointer px-1 max-w-lg"
               onClick={() => navigate(`/host/${post.user_id}`)}
             >
               <div className="flex gap-2">
@@ -854,7 +854,7 @@ const PodcastFeed = () => {
                 </section>
               )}
 
-              {/* Live Channels Block 2 — next 4 sessions without a section title */}
+               {/* Live Channels Block 2 — next 4 sessions in grid without title */}
               {renderChannelGrid(channelBlock2)}
 
               {/* Episodes */}
@@ -912,8 +912,8 @@ const PodcastFeed = () => {
                 </section>
               )}
 
-              {/* Remaining Live Channels if more than 7 */}
-              {renderChannelGrid(channelBlock3, 'More Live')}
+              {/* Remaining Live Channels */}
+              {channelBlock3.length > 0 && renderChannelGrid(channelBlock3, 'Live channels')}
             </>
           );
         })()}
