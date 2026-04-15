@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { House, Sparkles, Plus, Music, User } from 'lucide-react';
+import { House, MessageCircle, Plus, Music, User } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/contexts/AuthContext';
 import AuthPromptModal from '@/components/podcast/AuthPromptModal';
@@ -21,7 +21,7 @@ const MobileBottomNav = () => {
 
   const tabs = [
     { id: 'home', icon: House, label: 'Home', path: '/podcasts?tab=feed' },
-    { id: 'feed', icon: Sparkles, label: 'Feed', path: '/feed' },
+    { id: 'dm', icon: MessageCircle, label: 'DM', path: '/messages' },
     { id: 'golive', icon: Plus, label: 'Go Live', path: null },
     { id: 'remix', icon: Music, label: 'AI Remix', path: '/ai-remix' },
     { id: 'mypage', icon: User, label: 'My Page', path: null },
@@ -29,7 +29,7 @@ const MobileBottomNav = () => {
 
   const isActive = (tab: typeof tabs[0]) => {
     if (tab.id === 'home') return location.pathname === '/podcasts';
-    if (tab.id === 'feed') return location.pathname === '/feed';
+    if (tab.id === 'dm') return location.pathname === '/messages';
     if (tab.id === 'remix') return location.pathname === '/ai-remix';
     if (tab.id === 'mypage') return location.pathname.startsWith('/host/');
     return false;
