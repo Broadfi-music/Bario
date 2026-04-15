@@ -682,7 +682,7 @@ const PodcastFeed = () => {
             </h2>
           </div>
           <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-x-1.5 gap-y-2">
-            {filteredHosts.map((host) => (
+            {orderedChannels.map((host) => (
               <Link
                 key={host.id}
                 to={`/podcasts?session=${host.id}`}
