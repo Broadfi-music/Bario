@@ -226,7 +226,12 @@ Create an instrumental-only Lyria 3 Pro prompt that specifies:
 - Specific instruments (drums, bass, synths, guitars, etc.)
 - Production style and energy level
 - Song structure (intro, verse groove, chorus build, bridge, outro)
-- Reference artists/producers for style
+
+CRITICAL RULES:
+- Do NOT mention any real artist names, band names, or producer names anywhere in the prompt.
+- Do NOT use "REFERENCE ARTISTS" or "REFERENCE PRODUCERS" sections.
+- Instead, describe the sonic style directly (e.g., "dreamy indie synth-pop" instead of naming an artist).
+- Lyria will reject prompts containing real artist/producer names.
 
 Output ONLY the Lyria prompt text. No explanations.`;
 
