@@ -16,17 +16,76 @@ const MODELS = {
   whisper: "8099696689d249cf8b122d833c36ac3f75505c666a395ca40ef26f68e7d3d16e",
 };
 
-function sanitizeLyriaPrompt(prompt: string) {
+const GENERATOR_VARIATIONS = [
+  "balanced studio arrangement, punchy drums, warm bass, wide synth pads, clean topline space",
+  "higher energy, stronger drums, bigger bass motion, brighter hooks, wide stereo lift",
+  "intimate arrangement, softer drums, warmer textures, airier pads, moody late-night atmosphere",
+] as const;
+
+function sanitizeGenerationPrompt(prompt: string) {
   return prompt
     .replace(/reference\s+(?:artists?|producers?)(?:\/(?:artists?|producers?))?\s*:.*$/gim, "")
     .replace(/(?:artists?|producers?)\s+reference\s*:.*$/gim, "")
     .replace(/\b(?:inspired by|in the style of|similar to|like|à la)\b[^.\n]*/gim, "")
     .replace(/\b(?:The 1975|Billie Eilish|Finneas|Louis Bell)\b/gi, "")
-    .replace(/\n{3,}/g, "\n\n")
+    .replace(/["“”']/g, "")
+    .replace(/\b(?:lyrics?|verse|chorus|bridge|outro|intro|hook)\b\s*:?[A-Za-z0-9 ,.-]*/gim, "")
+    .replace(/\b(?:genre|sub-genre|tempo|key signature|instruments|production style|energy level|song structure)\b\s*:?/gi, "")
+    .replace(/[•*]/g, ",")
+    .replace(/\n{2,}/g, "\n")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
-// ---------- Replicate helpers ----------
+function compressPrompt(prompt: string, maxLength = 320) {
+  const normalized = prompt.replace(/\s+/g, " ").replace(/,\s*,+/g, ", ").trim();
+  if (normalized.length <= maxLength) return normalized;
+  return normalized.slice(0, maxLength).replace(/[,:;\-\s]+$/g, "").trim();
+}
+
+function detectGenre(text: string, fallback = "pop") {
+  const match = text.match(/\b(pop|rap|rock|r&b|afro|afrobeats|amapiano|jazz|soul|electronic|trap|hiphop|hip-hop|country|reggae|latin|lofi|indie|folk|punk|metal|gospel|blues|dancehall|kpop|drill)\b/i)?.[1];
+  return match || fallback;
+}
+
+function buildBaseInstrumentalPrompt(prompt: string, fallbackGenre: string) {
+  const cleaned = sanitizeGenerationPrompt(prompt)
+    .replace(/\b\d{2,3}\s?bpm\b/gi, "")
+    .replace(/\b[a-g](?:#|b)?\s?(?:major|minor)\b/gi, "")
+    .replace(/\s*,\s*/g, ", ");
+
+  const bpmMatch = prompt.match(/\b(\d{2,3})\s?bpm\b/i);
+  const genre = detectGenre(`${fallbackGenre} ${cleaned}`, fallbackGenre || "pop");
+
+  return compressPrompt([
+    "instrumental only",
+    "no vocals",
+    "no singing",
+    `${genre} production`,
+    bpmMatch ? `${bpmMatch[1]} BPM` : "",
+    cleaned,
+    "professional arrangement",
+    "clean modern mix",
+  ].filter(Boolean).join(", "), 320);
+}
+
+function buildVariationPrompt(basePrompt: string, variationIndex: number) {
+  const variation = GENERATOR_VARIATIONS[variationIndex] || GENERATOR_VARIATIONS[0];
+  return compressPrompt(`${basePrompt}, ${variation}`, 400);
+}
+
+function getAudioExtension(url: string, fallback = "wav") {
+  const match = url.match(/\.(mp3|wav|ogg|flac|webm)(?:\?|$)/i);
+  return match?.[1]?.toLowerCase() || fallback;
+}
+
+function getContentType(filename: string) {
+  if (filename.endsWith(".mp3")) return "audio/mpeg";
+  if (filename.endsWith(".ogg")) return "audio/ogg";
+  if (filename.endsWith(".flac")) return "audio/flac";
+  if (filename.endsWith(".webm")) return "audio/webm";
+  return "audio/wav";
+}
 
 async function checkPrediction(predictionId: string) {
   const res = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
@@ -70,7 +129,15 @@ async function startOfficialModelPrediction(modelOwner: string, modelName: strin
   return data;
 }
 
-// ---------- Storage helper ----------
+async function startInstrumentalPrediction(prompt: string) {
+  console.log("Starting instrumental generator with prompt:", prompt.slice(0, 180));
+  return await startOfficialModelPrediction("stability-ai", "stable-audio-2.5", {
+    prompt,
+    duration: 45,
+    steps: 8,
+    cfg_scale: 6,
+  });
+}
 
 async function storeToStorage(url: string, userId: string, projectId: string, filename: string): Promise<string> {
   try {
@@ -78,12 +145,14 @@ async function storeToStorage(url: string, userId: string, projectId: string, fi
     const res = await fetch(url);
     if (!res.ok) return url;
     const arrayBuffer = await res.arrayBuffer();
-    const contentType = filename.endsWith(".mp3") ? "audio/mpeg" : "audio/wav";
     const path = `${userId}/${projectId}/${filename}`;
     const { error } = await supabaseAdmin.storage
       .from("vocal-projects")
-      .upload(path, new Uint8Array(arrayBuffer), { contentType, upsert: true });
-    if (error) { console.error("Upload error:", error); return url; }
+      .upload(path, new Uint8Array(arrayBuffer), { contentType: getContentType(filename), upsert: true });
+    if (error) {
+      console.error("Upload error:", error);
+      return url;
+    }
     const { data: { publicUrl } } = supabaseAdmin.storage.from("vocal-projects").getPublicUrl(path);
     return publicUrl;
   } catch (e) {
@@ -92,21 +161,20 @@ async function storeToStorage(url: string, userId: string, projectId: string, fi
   }
 }
 
-// ---------- URL extraction helper ----------
-
 function extractAudioUrl(output: unknown): string {
   if (typeof output === "string") return output;
-  if (output && typeof output === "object" && "url" in (output as Record<string, unknown>))
-    return (output as Record<string, string>).url;
+  if (output && typeof output === "object" && "url" in (output as Record<string, unknown>)) {
+    return String((output as Record<string, unknown>).url || "");
+  }
   if (Array.isArray(output) && output.length > 0) {
     if (typeof output[0] === "string") return output[0];
-    if (output[0]?.url) return output[0].url;
+    if (output[0] && typeof output[0] === "object" && "url" in output[0]) {
+      return String((output[0] as Record<string, unknown>).url || "");
+    }
   }
   const urlMatch = JSON.stringify(output).match(/https?:\/\/[^\s"\\]+\.(wav|mp3|mp4|ogg|flac|webm)/i);
   return urlMatch ? urlMatch[0] : "";
 }
-
-// ---------- Main handler ----------
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -137,7 +205,6 @@ Deno.serve(async (req) => {
 
     console.log("Poll:", project.status, "pred:", project.current_prediction_id?.slice(0, 12));
 
-    // If done/error, return as-is
     if (project.status === "done" || project.status === "error") {
       return new Response(JSON.stringify({ success: true, project }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -155,16 +222,22 @@ Deno.serve(async (req) => {
 
     if (prediction.status === "processing" || prediction.status === "starting") {
       return new Response(JSON.stringify({
-        success: true, project,
+        success: true,
+        project,
         predictionStatus: prediction.status,
         message: `Step "${project.status}" is ${prediction.status}...`,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     if (prediction.status === "failed" || prediction.status === "canceled") {
-      const errorMsg = prediction.error || `Step "${project.status}" failed`;
+      const rawError = prediction.error || `Step "${project.status}" failed`;
+      const errorMsg = /flagged as sensitive/i.test(rawError)
+        ? "Generation was blocked by the current instrumental model. The pipeline has been updated with a safer generator — please retry this upload."
+        : rawError;
       await supabaseAdmin.from("vocal_projects").update({
-        status: "error", error_message: errorMsg, current_prediction_id: null,
+        status: "error",
+        error_message: errorMsg,
+        current_prediction_id: null,
       }).eq("id", projectId);
       const { data: updated } = await supabaseAdmin.from("vocal_projects").select("*").eq("id", projectId).single();
       return new Response(JSON.stringify({ success: true, project: updated }), {
@@ -172,13 +245,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ========== SUCCEEDED — advance pipeline ==========
     const output = prediction.output;
     console.log("Succeeded, output type:", typeof output, Array.isArray(output) ? `[${output.length}]` : "");
 
     switch (project.status) {
-
-      // ─── STEP 1: Vocal Cleaning (Demucs) → Whisper ───
       case "cleaning": {
         let cleanVocalUrl = "";
         if (typeof output === "object" && output !== null && !Array.isArray(output)) {
@@ -194,18 +264,21 @@ Deno.serve(async (req) => {
         const storedUrl = await storeToStorage(cleanVocalUrl, user.id, projectId, "clean_vocal.wav");
 
         const whisperPred = await startPrediction(MODELS.whisper, {
-          audio: storedUrl, language: "auto", translate: false, transcription: "plain text",
+          audio: storedUrl,
+          language: "auto",
+          translate: false,
+          transcription: "plain text",
         });
 
         await supabaseAdmin.from("vocal_projects").update({
-          status: "analyzing", clean_vocal_url: storedUrl,
+          status: "analyzing",
+          clean_vocal_url: storedUrl,
           current_prediction_id: whisperPred.id,
           analysis_data: { stage: "whisper" },
         }).eq("id", projectId);
         break;
       }
 
-      // ─── STEP 2: Analysis (Whisper → Llama → Lyria) ───
       case "analyzing": {
         const analysisData = (project.analysis_data as Record<string, unknown>) || {};
         const substage = (analysisData.stage as string) || "whisper";
@@ -222,42 +295,25 @@ Deno.serve(async (req) => {
           const userDesc = project.description || "";
           const userGenre = project.genre || "";
 
-          const llmPrompt = `You are a world-class music producer. A singer has recorded raw vocals. Your job is to create a prompt for Google Lyria 3 Pro to generate a PROFESSIONAL INSTRUMENTAL BACKING TRACK — NO VOCALS, NO SINGING, PURELY INSTRUMENTAL.
-
-${transcription ? `LYRICS (for rhythm/mood reference only): "${transcription.slice(0, 1500)}"` : "Vocal recording available but no clear lyrics detected."}
-${userGenre ? `REQUESTED GENRE: ${userGenre}` : "GENRE: Detect the best genre from the vocal style and mood"}
-${userDesc ? `ARTIST'S VISION: ${userDesc}` : ""}
-
-Create an instrumental-only Lyria 3 Pro prompt that specifies:
-- "INSTRUMENTAL ONLY. NO VOCALS. NO SINGING. NO HUMMING."
-- Genre and sub-genre
-- Tempo (BPM) matching the vocal rhythm
-- Key signature if detectable
-- Specific instruments (drums, bass, synths, guitars, etc.)
-- Production style and energy level
-- Song structure (intro, verse groove, chorus build, bridge, outro)
-
-CRITICAL RULES:
-- Do NOT mention any real artist names, band names, or producer names anywhere in the prompt.
-- Do NOT use "REFERENCE ARTISTS" or "REFERENCE PRODUCERS" sections.
-- Instead, describe the sonic style directly (e.g., "dreamy indie synth-pop" instead of naming an artist).
-- Lyria will reject prompts containing real artist/producer names.
-
-Output ONLY the Lyria prompt text. No explanations.`;
+          const llmPrompt = `You are a music producer writing a SAFE text-to-music brief for an instrumental generator.
+VOCAL REFERENCE: Use the uploaded vocal only to infer cadence and energy. Never quote, restate, or paraphrase any lyrics from the vocal transcript.
+${userGenre ? `REQUESTED GENRE: ${userGenre}` : "GENRE: infer a broad safe genre from the vocal cadence and tone"}
+${userDesc ? `USER VISION: ${userDesc}` : "USER VISION: catchy modern arrangement that supports the lead vocal"}
+Return ONLY one short line under 220 characters describing genre/sub-genre, BPM if likely, mood, and 4 to 6 instruments or textures.
+STRICT RULES: instrumental only; no vocals, no lyrics, no humming, no vocal chops; no real artist, producer, band, or song names; no bullets, no markdown, no labels, no sections; no romance, body, violence, politics, religion, or copyrighted lyric references.`;
 
           const llamaPred = await startOfficialModelPrediction("meta", "meta-llama-3-70b-instruct", {
             prompt: llmPrompt,
-            max_tokens: 1200,
-            temperature: 0.7,
-            top_p: 0.95,
-            system_prompt: "You are an expert music producer who creates detailed instrumental production prompts.",
+            max_tokens: 220,
+            temperature: 0.5,
+            top_p: 0.9,
+            system_prompt: "You write short, safe, production-ready instrumental prompts.",
           });
 
           await supabaseAdmin.from("vocal_projects").update({
             current_prediction_id: llamaPred.id,
             analysis_data: { ...analysisData, stage: "llama", transcription },
           }).eq("id", projectId);
-
         } else if (substage === "llama") {
           let generatedPrompt = "";
           if (Array.isArray(output)) {
@@ -270,80 +326,83 @@ Output ONLY the Lyria prompt text. No explanations.`;
           console.log("Llama prompt length:", generatedPrompt.length);
 
           const userGenre = project.genre || "";
-
-          if (!generatedPrompt || generatedPrompt.length < 20) {
-            const g = userGenre || "pop";
-            generatedPrompt = `INSTRUMENTAL ONLY. NO VOCALS. Professional ${g} backing track. 120 BPM. Modern production with drums, bass, synths, and melodic elements. Dynamic arrangement with intro, verse groove, chorus build, bridge breakdown, and outro. Radio-ready quality.`;
+          if (!generatedPrompt || generatedPrompt.length < 12) {
+            generatedPrompt = userGenre
+              ? `${userGenre} instrumental, clean drums, bass, synths, polished arrangement`
+              : "pop instrumental, clean drums, bass, synths, polished arrangement";
           }
 
-          // Strip artist/producer references that Lyria flags as sensitive
-          generatedPrompt = sanitizeLyriaPrompt(generatedPrompt);
-
-          if (!generatedPrompt.toLowerCase().includes("instrumental")) {
-            generatedPrompt = "INSTRUMENTAL ONLY. NO VOCALS. NO SINGING.\n\n" + generatedPrompt;
-          }
-
-          const detectedGenre = userGenre || generatedPrompt.match(/\b(pop|rap|rock|r&b|afro|afrobeats|amapiano|jazz|soul|electronic|trap|hiphop|hip-hop|country|reggae|latin|lofi|indie|folk|punk|metal|gospel|blues|dancehall|kpop|drill)\b/i)?.[1] || "pop";
-
-          // Start Lyria 3 Pro — Beat 1
-          const lyria1 = await startOfficialModelPrediction("google", "lyria-3-pro", {
-            prompt: generatedPrompt,
-          });
+          const detectedGenre = userGenre || detectGenre(generatedPrompt, "pop");
+          const safeBasePrompt = buildBaseInstrumentalPrompt(generatedPrompt, detectedGenre);
+          const variationOnePrompt = buildVariationPrompt(safeBasePrompt, 0);
+          const instrumentalPrediction = await startInstrumentalPrediction(variationOnePrompt);
 
           await supabaseAdmin.from("vocal_projects").update({
             status: "generating",
-            current_prediction_id: lyria1.id,
-            generated_prompt: generatedPrompt,
+            current_prediction_id: instrumentalPrediction.id,
+            generated_prompt: safeBasePrompt,
             genre: detectedGenre,
-            analysis_data: { ...analysisData, stage: "beat_1", prompt: generatedPrompt },
+            analysis_data: {
+              ...analysisData,
+              stage: "beat_1",
+              prompt: safeBasePrompt,
+              variation_prompts: [variationOnePrompt],
+              generator: "stable-audio-2.5",
+            },
           }).eq("id", projectId);
         }
         break;
       }
 
-      // ─── STEP 3: Beat Generation (Lyria 3 Pro × 3) → Done ───
       case "generating": {
         const analysisData = (project.analysis_data as Record<string, unknown>) || {};
         const stage = (analysisData.stage as string) || "beat_1";
         const beatUrls = (project.beat_urls as string[]) || [];
         const prompt = project.generated_prompt || "";
+        const variationPrompts = Array.isArray(analysisData.variation_prompts)
+          ? (analysisData.variation_prompts as string[])
+          : [];
 
         const beatUrl = extractAudioUrl(output);
         if (!beatUrl) {
           await supabaseAdmin.from("vocal_projects").update({
             status: "error",
-            error_message: "Lyria 3 Pro returned no audio. Output: " + JSON.stringify(output).slice(0, 200),
+            error_message: "Instrumental generator returned no audio. Output: " + JSON.stringify(output).slice(0, 200),
             current_prediction_id: null,
           }).eq("id", projectId);
           break;
         }
 
-        const storedBeat = await storeToStorage(beatUrl, user.id, projectId, `beat_${beatUrls.length + 1}.wav`);
+        const extension = getAudioExtension(beatUrl, "mp3");
+        const storedBeat = await storeToStorage(beatUrl, user.id, projectId, `beat_${beatUrls.length + 1}.${extension}`);
         const newBeatUrls = [...beatUrls, storedBeat];
 
         if (stage === "beat_1") {
-          const lyria2 = await startOfficialModelPrediction("google", "lyria-3-pro", {
-            prompt: prompt + "\n\nVariation: More energetic, stronger drums and bass, higher intensity, festival-ready.",
-          });
+          const variationTwoPrompt = buildVariationPrompt(prompt, 1);
+          const instrumentalPrediction = await startInstrumentalPrediction(variationTwoPrompt);
           await supabaseAdmin.from("vocal_projects").update({
             beat_urls: newBeatUrls,
-            current_prediction_id: lyria2.id,
-            analysis_data: { ...analysisData, stage: "beat_2" },
+            current_prediction_id: instrumentalPrediction.id,
+            analysis_data: {
+              ...analysisData,
+              stage: "beat_2",
+              variation_prompts: [...variationPrompts, variationTwoPrompt],
+            },
           }).eq("id", projectId);
         } else if (stage === "beat_2") {
-          const lyria3 = await startOfficialModelPrediction("google", "lyria-3-pro", {
-            prompt: prompt + "\n\nVariation: Softer, intimate, acoustic elements, gentle rhythm, stripped-back.",
-          });
+          const variationThreePrompt = buildVariationPrompt(prompt, 2);
+          const instrumentalPrediction = await startInstrumentalPrediction(variationThreePrompt);
           await supabaseAdmin.from("vocal_projects").update({
             beat_urls: newBeatUrls,
-            current_prediction_id: lyria3.id,
-            analysis_data: { ...analysisData, stage: "beat_3" },
+            current_prediction_id: instrumentalPrediction.id,
+            analysis_data: {
+              ...analysisData,
+              stage: "beat_3",
+              variation_prompts: [...variationPrompts, variationThreePrompt],
+            },
           }).eq("id", projectId);
         } else if (stage === "beat_3") {
-          // All 3 beats done → Pipeline complete!
           console.log("All 3 beats generated. Pipeline complete!");
-
-          // Final URLs = beat URLs (user's clean vocal is played alongside on frontend)
           await supabaseAdmin.from("vocal_projects").update({
             beat_urls: newBeatUrls,
             status: "done",
@@ -364,7 +423,6 @@ Output ONLY the Lyria prompt text. No explanations.`;
       }
     }
 
-    // Return updated project
     const { data: updated } = await supabaseAdmin.from("vocal_projects").select("*").eq("id", projectId).single();
     return new Response(JSON.stringify({ success: true, project: updated }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

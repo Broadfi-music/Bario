@@ -88,6 +88,7 @@ export function useVocalProject() {
   const [isStarting, setIsStarting] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeProjectIdRef = useRef<string | null>(null);
   const { toast } = useToast();
 
   const startProject = useCallback(async (vocalUrl: string, genre?: string, description?: string) => {
@@ -135,15 +136,26 @@ export function useVocalProject() {
   }, [toast]);
 
   const startPolling = useCallback((projectId: string) => {
+    if (pollingRef.current && activeProjectIdRef.current === projectId) {
+      return;
+    }
+
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+
+    activeProjectIdRef.current = projectId;
     setIsPolling(true);
-    pollProject(projectId);
+    void pollProject(projectId);
     pollingRef.current = setInterval(() => {
-      pollProject(projectId);
+      void pollProject(projectId);
     }, 10000);
   }, [pollProject]);
 
   const stopPolling = useCallback(() => {
     setIsPolling(false);
+    activeProjectIdRef.current = null;
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
