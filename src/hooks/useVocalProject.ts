@@ -27,11 +27,11 @@ export interface VocalProject {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'Starting...',
+  pending: 'Preparing project...',
   cleaning: 'Cleaning vocals (Demucs)...',
-  analyzing: 'Analyzing audio & building prompt...',
-  generating: 'Generating instrumental beats (Lyria 3 Pro)...',
-  done: 'Complete!',
+  analyzing: 'Transcribing vocals and building the arrangement...',
+  generating: 'Generating your 3 song options...',
+  done: 'Song options ready!',
   error: 'Error occurred',
 };
 
@@ -42,6 +42,45 @@ const STATUS_PROGRESS: Record<string, number> = {
   generating: 55,
   done: 100,
   error: 0,
+};
+
+const STAGE_LABELS: Record<string, string> = {
+  whisper: 'Transcribing your vocal performance...',
+  llama: 'Designing the instrumental direction...',
+  beat_1: 'Generating song option 1 of 3...',
+  beat_2: 'Generating song option 2 of 3...',
+  beat_3: 'Generating song option 3 of 3...',
+  complete: 'Song options ready!',
+};
+
+const STAGE_PROGRESS: Record<string, number> = {
+  whisper: 25,
+  llama: 40,
+  beat_1: 60,
+  beat_2: 75,
+  beat_3: 90,
+  complete: 100,
+};
+
+const getPipelineStage = (project: VocalProject | null) => {
+  if (!project?.analysis_data || typeof project.analysis_data !== 'object' || Array.isArray(project.analysis_data)) {
+    return '';
+  }
+
+  const stage = (project.analysis_data as Record<string, unknown>).stage;
+  return typeof stage === 'string' ? stage : '';
+};
+
+const getStatusLabel = (project: VocalProject | null) => {
+  if (!project) return '';
+  const stage = getPipelineStage(project);
+  return STAGE_LABELS[stage] || STATUS_LABELS[project.status] || project.status;
+};
+
+const getStatusProgress = (project: VocalProject | null) => {
+  if (!project) return 0;
+  const stage = getPipelineStage(project);
+  return STAGE_PROGRESS[stage] || STATUS_PROGRESS[project.status] || 0;
 };
 
 export function useVocalProject() {
@@ -128,7 +167,7 @@ export function useVocalProject() {
     startProject,
     startPolling,
     stopPolling,
-    statusLabel: project ? STATUS_LABELS[project.status] || project.status : '',
-    progress: project ? STATUS_PROGRESS[project.status] || 0 : 0,
+    statusLabel: getStatusLabel(project),
+    progress: getStatusProgress(project),
   };
 }

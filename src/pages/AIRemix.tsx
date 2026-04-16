@@ -84,27 +84,40 @@ const AIRemix = () => {
       .find((genre) => normalized.includes(genre)) || 'pop';
   };
 
-  const uploadAudioToStorage = async (file: File) => {
+  const uploadAudioToStorage = async (file: File, bucket: 'original-audio' | 'vocal-projects') => {
     if (!user) return null;
 
     setIsUploading(true);
     try {
+      if (file.size > 50 * 1024 * 1024) {
+        throw new Error('Please upload an audio file smaller than 50MB.');
+      }
+
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
-      const { data, error } = await supabase.storage
-        .from('original-audio')
-        .upload(fileName, file);
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const { data, error } = await supabase.storage
+          .from(bucket)
+          .upload(fileName, file, {
+            contentType: file.type || undefined,
+            upsert: attempt > 0,
+          });
 
-      if (error) {
-        throw error;
+        if (!error && data) {
+          const { data: publicData } = supabase.storage
+            .from(bucket)
+            .getPublicUrl(data.path);
+
+          return publicData.publicUrl;
+        }
+
+        if (attempt === 1) {
+          throw error;
+        }
       }
 
-      const { data: publicData } = supabase.storage
-        .from('original-audio')
-        .getPublicUrl(data.path);
-
-      return publicData.publicUrl;
+      return null;
     } catch (error) {
       console.error('Audio upload failed:', error);
       toast({
@@ -116,6 +129,26 @@ const AIRemix = () => {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const startVocalProject = async (vocalUrl: string, genre: string, description: string) => {
+    const { data, error } = await supabase.functions.invoke('vocal-to-song', {
+      body: {
+        vocalUrl,
+        genre: genre || undefined,
+        description: description || undefined,
+      },
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Failed to start song generation');
+    }
+
+    if (!data?.success || !data?.projectId) {
+      throw new Error(data?.error || 'Failed to start song generation');
+    }
+
+    return data.projectId as string;
   };
 
   const starters = [
@@ -187,16 +220,29 @@ const AIRemix = () => {
     const resolvedGenre = selectedGenre || inferGenreFromPrompt(prompt);
     const submittedPrompt = prompt.trim();
 
-    let sourceAudioUrl: string | null = null;
-    let sourceTrackTitle = uploadedName || 'My Remix';
-
     if (uploadedFile) {
-      sourceTrackTitle = uploadedFile.name;
-      sourceAudioUrl = await uploadAudioToStorage(uploadedFile);
-    } else if (audioUrl.trim()) {
-      sourceAudioUrl = audioUrl.trim();
-      sourceTrackTitle = uploadedName || getAudioNameFromUrl(audioUrl.trim());
+      const vocalUrl = await uploadAudioToStorage(uploadedFile, 'vocal-projects');
+      if (!vocalUrl) {
+        return;
+      }
+
+      try {
+        const projectId = await startVocalProject(vocalUrl, resolvedGenre, submittedPrompt);
+        navigate(`/vocal-project?id=${projectId}`);
+      } catch (error) {
+        console.error('Vocal project failed:', error);
+        toast({
+          title: 'Generation failed',
+          description: error instanceof Error ? error.message : 'Could not start song generation.',
+          variant: 'destructive',
+        });
+      }
+
+      return;
     }
+
+    const sourceAudioUrl = audioUrl.trim();
+    const sourceTrackTitle = uploadedName || getAudioNameFromUrl(sourceAudioUrl);
 
     if (!sourceAudioUrl) {
       return;
@@ -213,6 +259,7 @@ const AIRemix = () => {
     if (result) {
       navigate('/music-result', {
         state: {
+          mode: 'remix',
           trackTitle: sourceTrackTitle,
           genre: resolvedGenre,
           era: '2025',

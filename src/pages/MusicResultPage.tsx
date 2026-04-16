@@ -6,6 +6,7 @@ const MusicResultPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const state = location.state as {
+    mode?: 'remix' | 'vocal-project';
     trackTitle?: string;
     genre?: string;
     era?: string;
@@ -14,6 +15,9 @@ const MusicResultPage = () => {
     trackId?: string;
     fxConfig?: FxConfig;
     audioUrl?: string;
+    songOptions?: string[];
+    originalVocalUrl?: string;
+    selectedVariation?: number;
     backTo?: string;
     uploadedMusic?: {
       type: 'file' | 'url';
@@ -25,6 +29,7 @@ const MusicResultPage = () => {
 
   return (
     <MusicResult
+      mode={state?.mode}
       trackTitle={state?.trackTitle || 'My Remix'}
       genre={state?.genre || 'Custom'}
       era={state?.era}
@@ -33,6 +38,9 @@ const MusicResultPage = () => {
       trackId={state?.trackId}
       fxConfig={state?.fxConfig}
       audioUrl={state?.audioUrl}
+      songOptions={state?.songOptions}
+      originalVocalUrl={state?.originalVocalUrl}
+      selectedVariation={state?.selectedVariation}
       onBack={() => navigate(state?.backTo || '/ai-remix')}
     />
   );

@@ -16,6 +16,16 @@ const MODELS = {
   whisper: "8099696689d249cf8b122d833c36ac3f75505c666a395ca40ef26f68e7d3d16e",
 };
 
+function sanitizeLyriaPrompt(prompt: string) {
+  return prompt
+    .replace(/reference\s+(?:artists?|producers?)(?:\/(?:artists?|producers?))?\s*:.*$/gim, "")
+    .replace(/(?:artists?|producers?)\s+reference\s*:.*$/gim, "")
+    .replace(/\b(?:inspired by|in the style of|similar to|like|à la)\b[^.\n]*/gim, "")
+    .replace(/\b(?:The 1975|Billie Eilish|Finneas|Louis Bell)\b/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 // ---------- Replicate helpers ----------
 
 async function checkPrediction(predictionId: string) {
@@ -267,13 +277,7 @@ Output ONLY the Lyria prompt text. No explanations.`;
           }
 
           // Strip artist/producer references that Lyria flags as sensitive
-          generatedPrompt = generatedPrompt
-            .replace(/REFERENCE\s+ARTISTS?\/?PRODUCERS?:?[^\n]*/gi, "")
-            .replace(/REFERENCE\s+ARTISTS?:?[^\n]*/gi, "")
-            .replace(/REFERENCE\s+PRODUCERS?:?[^\n]*/gi, "")
-            .replace(/(?:inspired by|in the style of|similar to|like|à la)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,4}(?:,\s*(?:and\s+)?[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,4})*/gi, "")
-            .replace(/\n{3,}/g, "\n\n")
-            .trim();
+          generatedPrompt = sanitizeLyriaPrompt(generatedPrompt);
 
           if (!generatedPrompt.toLowerCase().includes("instrumental")) {
             generatedPrompt = "INSTRUMENTAL ONLY. NO VOCALS. NO SINGING.\n\n" + generatedPrompt;

@@ -14,10 +14,10 @@ interface Props {
 }
 
 const PIPELINE_STEPS = [
-  { key: 'cleaning', label: 'Vocal Cleaning (Demucs)', icon: Mic },
-  { key: 'analyzing', label: 'Audio Analysis & Prompt', icon: Music },
-  { key: 'generating', label: 'Beat Generation (Lyria 3 Pro ×3)', icon: Disc3 },
-  { key: 'done', label: 'Complete', icon: Check },
+  { key: 'cleaning', label: 'Clean vocal performance', icon: Mic },
+  { key: 'analyzing', label: 'Transcribe + build production prompt', icon: Music },
+  { key: 'generating', label: 'Generate 3 song options', icon: Disc3 },
+  { key: 'done', label: 'Preview final options', icon: Check },
 ];
 
 const STATUS_ORDER = ['pending', 'cleaning', 'analyzing', 'generating', 'done'];
@@ -77,7 +77,7 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl sm:text-2xl font-bold">
-            {isDone ? 'Your Beats Are Ready' : isError ? 'Processing Failed' : 'Creating Your Song'}
+            {isDone ? 'Your Song Options Are Ready' : isError ? 'Processing Failed' : 'Creating Your Song'}
           </h1>
         </div>
 
@@ -121,7 +121,7 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
 
             {isPolling && (
               <p className="text-xs text-white/30 text-center mt-4">
-                Processing takes 5–8 minutes. You can leave this page and come back.
+                Processing takes 5–8 minutes. Keep this page open so all 3 options finish generating.
               </p>
             )}
           </div>
@@ -139,7 +139,7 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
         {isDone && finalUrls.length > 0 && (
           <div className="space-y-6">
             <p className="text-sm text-white/50">
-              3 instrumental variations generated from your vocal. Play your voice synced with each beat or listen to just the beat.
+              3 generated song options built from your voice. Preview the full song or listen to the instrumental by itself.
             </p>
 
             {/* Clean Vocal Preview */}
@@ -182,7 +182,7 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
                       className={`flex-1 border-white/10 text-white text-xs h-9 ${isBeatPlaying ? 'bg-white/10' : 'hover:bg-white/5'}`}
                     >
                       {isBeatPlaying ? <Pause className="h-3.5 w-3.5 mr-1.5" /> : <Play className="h-3.5 w-3.5 mr-1.5" />}
-                      Beat Only
+                       Instrumental Only
                     </Button>
 
                     {/* Play vocal + beat synced */}
@@ -193,7 +193,7 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
                         className={`flex-1 text-xs h-9 ${isBothPlaying ? 'bg-white text-black' : 'bg-white/90 text-black hover:bg-white'}`}
                       >
                         {isBothPlaying ? <Pause className="h-3.5 w-3.5 mr-1.5" /> : <Play className="h-3.5 w-3.5 mr-1.5" />}
-                        Voice + Beat
+                         Generated Song Preview
                       </Button>
                     )}
                   </div>
@@ -207,7 +207,7 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
                       onClick={() => onSelectVariation(i)}
                       className="bg-white text-black hover:bg-white/80 text-xs ml-auto"
                     >
-                      Select This
+                        Open Result
                     </Button>
                   </div>
                 </div>
