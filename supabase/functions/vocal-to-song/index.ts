@@ -11,7 +11,11 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-async function startReplicatePrediction(model: string, version: string, input: Record<string, unknown>) {
+// Correct latest model versions from Replicate
+const DEMUCS_VERSION = "25a173108cff36ef9f80f854c162d01df9e6528be175794b81158fa03836d953";
+
+async function startReplicatePrediction(version: string, input: Record<string, unknown>) {
+  console.log("Starting Replicate prediction:", { version: version.slice(0, 12), input: Object.keys(input) });
   const res = await fetch("https://api.replicate.com/v1/predictions", {
     method: "POST",
     headers: {
@@ -20,11 +24,14 @@ async function startReplicatePrediction(model: string, version: string, input: R
     },
     body: JSON.stringify({ version, input }),
   });
+  const body = await res.text();
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Replicate ${model} failed: ${err}`);
+    console.error("Replicate error:", body);
+    throw new Error(`Replicate failed (${res.status}): ${body}`);
   }
-  return await res.json();
+  const data = JSON.parse(body);
+  console.log("Prediction started:", data.id, data.status);
+  return data;
 }
 
 Deno.serve(async (req) => {
@@ -44,38 +51,38 @@ Deno.serve(async (req) => {
     if (authError || !user) throw new Error("Unauthorized");
 
     const body = await req.json();
-    const { vocalUrl, genre, description } = body;
+    const { vocalUrl, description } = body;
 
     if (!vocalUrl) throw new Error("vocalUrl is required");
-    if (!genre) throw new Error("genre is required");
 
-    // Create project row
+    console.log("Starting vocal-to-song for user:", user.id, "vocal:", vocalUrl.slice(0, 50));
+
+    // Create project row — genre is optional, AI will detect it
     const { data: project, error: insertError } = await supabaseAdmin
       .from("vocal_projects")
       .insert({
         user_id: user.id,
         status: "cleaning",
         original_vocal_url: vocalUrl,
-        genre,
+        genre: body.genre || null,
         description: description || null,
-        is_paid: false, // TODO: check subscription
+        is_paid: false,
       })
       .select("id")
       .single();
 
-    if (insertError) throw new Error(`DB insert failed: ${insertError.message}`);
+    if (insertError) {
+      console.error("DB insert error:", insertError);
+      throw new Error(`DB insert failed: ${insertError.message}`);
+    }
 
     // Step 1: Start vocal cleaning with Demucs
-    // Using cjwbw/demucs htdemucs model
-    const prediction = await startReplicatePrediction(
-      "demucs",
-      "25a173108cff36ef9f80f854c162d01df9e6528be175794b81571f6c6c65f18b",
-      {
-        audio: vocalUrl,
-        model: "htdemucs",
-        stem: "vocals",
-      }
-    );
+    const prediction = await startReplicatePrediction(DEMUCS_VERSION, {
+      audio: vocalUrl,
+      model_name: "htdemucs",
+      stem: "vocals",
+      output_format: "wav",
+    });
 
     // Save prediction ID for polling
     await supabaseAdmin
@@ -85,6 +92,8 @@ Deno.serve(async (req) => {
         status: "cleaning",
       })
       .eq("id", project.id);
+
+    console.log("Project created:", project.id, "Prediction:", prediction.id);
 
     return new Response(
       JSON.stringify({
