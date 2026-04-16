@@ -1,9 +1,12 @@
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Music, Sliders, ArrowRight, Menu, X, Upload, Link as LinkIcon, FileAudio, Plus, User } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Music, Sliders, ArrowRight, X, Upload, FileAudio, Plus, User, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAudioRemix } from '@/hooks/useAudioRemix';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { REMIX_GENRES } from '@/constants/genres';
 import remixStudio from '@/assets/starters/remix-studio.jpg';
 import trendingRemix from '@/assets/starters/trending-remix.jpg';
 import genreRemix from '@/assets/starters/genre-remix.jpg';
@@ -14,6 +17,8 @@ const AIRemix = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { user, loading } = useAuth();
+  const { generateRemix, isProcessing } = useAudioRemix();
+  const { toast } = useToast();
   const [prompt, setPrompt] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
@@ -22,16 +27,10 @@ const AIRemix = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [audioUrl, setAudioUrl] = useState('');
   const [uploadedName, setUploadedName] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const genres = [
-    'pop', 'rap', 'rock', 'r&b', 'classical', 'jazz', 'soul & funk',
-    'afro', 'indie & alternative', 'latin music', 'dance & edm',
-    'reggaeton', 'electronic', 'country', 'metal', 'k-pop',
-    'reggae', 'blues', 'folk', 'lofi', 'acoustic',
-    'caribbean', 'japanese music', 'amapiano', 'gospel', 'instrumental',
-    'trap', 'funk', 'hiphop'
-  ];
+  const genres = [...REMIX_GENRES];
 
   const rotatingTexts = [
     'remix any song to amapiano',
@@ -49,6 +48,75 @@ const AIRemix = () => {
     }, 3000);
     return () => clearInterval(interval);
   }, []);
+
+  const isSubmitting = isProcessing || isUploading;
+
+  const getAudioNameFromUrl = (value: string) => {
+    try {
+      const url = new URL(value);
+      if (url.hostname.includes('spotify')) return 'Spotify Track';
+      if (url.hostname.includes('soundcloud')) return 'SoundCloud Track';
+      if (url.hostname.includes('youtube')) return 'YouTube Audio';
+      if (url.hostname.includes('apple')) return 'Apple Music Track';
+
+      const pathName = url.pathname.split('/').filter(Boolean).pop();
+      return pathName || 'Music Link';
+    } catch {
+      return 'Music Link';
+    }
+  };
+
+  const inferGenreFromPrompt = (value: string) => {
+    const normalized = value.toLowerCase();
+    const aliases: Array<[string, (typeof REMIX_GENRES)[number]]> = [
+      ['lo-fi', 'lofi'],
+      ['lo fi', 'lofi'],
+      ['hip-hop', 'hiphop'],
+      ['hip hop', 'hiphop'],
+      ['rnb', 'r&b'],
+    ];
+
+    const aliasMatch = aliases.find(([alias]) => normalized.includes(alias));
+    if (aliasMatch) return aliasMatch[1];
+
+    return [...REMIX_GENRES]
+      .sort((a, b) => b.length - a.length)
+      .find((genre) => normalized.includes(genre)) || 'pop';
+  };
+
+  const uploadAudioToStorage = async (file: File) => {
+    if (!user) return null;
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from('original-audio')
+        .upload(fileName, file);
+
+      if (error) {
+        throw error;
+      }
+
+      const { data: publicData } = supabase.storage
+        .from('original-audio')
+        .getPublicUrl(data.path);
+
+      return publicData.publicUrl;
+    } catch (error) {
+      console.error('Audio upload failed:', error);
+      toast({
+        title: 'Upload failed',
+        description: error instanceof Error ? error.message : 'Could not upload your song.',
+        variant: 'destructive',
+      });
+      return null;
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const starters = [
     {
@@ -86,34 +154,74 @@ const AIRemix = () => {
       const file = e.target.files[0];
       setUploadedFile(file);
       setUploadedName(file.name);
+      setAudioUrl('');
       setShowUpload(false);
     }
   };
 
   const handleAddUrl = () => {
     if (audioUrl.trim()) {
-      let name = 'Music Link';
-      try {
-        const url = new URL(audioUrl);
-        if (url.hostname.includes('spotify')) name = 'Spotify Track';
-        else if (url.hostname.includes('soundcloud')) name = 'SoundCloud Track';
-        else if (url.hostname.includes('youtube')) name = 'YouTube Audio';
-        else if (url.hostname.includes('apple')) name = 'Apple Music Track';
-      } catch {}
-      setUploadedName(name);
+      setUploadedFile(null);
+      setUploadedName(getAudioNameFromUrl(audioUrl.trim()));
       setShowUpload(false);
     }
   };
 
-  const handleSubmit = () => {
-    if (prompt.trim() || uploadedFile || audioUrl) {
-      navigate('/dashboard/new-remix', {
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+
+    if (!uploadedFile && !audioUrl.trim()) {
+      toast({
+        title: 'Upload a song first',
+        description: 'Add an audio file or music link before generating a remix.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const resolvedGenre = selectedGenre || inferGenreFromPrompt(prompt);
+    const submittedPrompt = prompt.trim();
+
+    let sourceAudioUrl: string | null = null;
+    let sourceTrackTitle = uploadedName || 'My Remix';
+
+    if (uploadedFile) {
+      sourceTrackTitle = uploadedFile.name;
+      sourceAudioUrl = await uploadAudioToStorage(uploadedFile);
+    } else if (audioUrl.trim()) {
+      sourceAudioUrl = audioUrl.trim();
+      sourceTrackTitle = uploadedName || getAudioNameFromUrl(audioUrl.trim());
+    }
+
+    if (!sourceAudioUrl) {
+      return;
+    }
+
+    const result = await generateRemix({
+      genre: resolvedGenre,
+      era: '2025',
+      description: submittedPrompt,
+      audioUrl: sourceAudioUrl,
+      trackTitle: sourceTrackTitle,
+    });
+
+    if (result) {
+      navigate('/music-result', {
         state: {
-          prompt: prompt.trim(),
-          genre: selectedGenre,
-          uploadedFileName: uploadedName,
-          audioUrl: audioUrl || undefined,
-        }
+          trackTitle: sourceTrackTitle,
+          genre: resolvedGenre,
+          era: '2025',
+          prompt: submittedPrompt,
+          trackId: result.trackId,
+          fxConfig: result.fxConfig,
+          audioUrl: sourceAudioUrl,
+          backTo: '/ai-remix',
+        },
       });
     }
   };
@@ -271,9 +379,10 @@ const AIRemix = () => {
                 </div>
                 <button
                   onClick={handleSubmit}
-                  className="w-8 h-8 rounded-full bg-white flex items-center justify-center hover:bg-white/80 transition-colors"
+                  disabled={isSubmitting}
+                  className="w-8 h-8 rounded-full bg-white flex items-center justify-center hover:bg-white/80 transition-colors disabled:cursor-not-allowed disabled:bg-white/30"
                 >
-                  <ArrowRight className="h-4 w-4 text-black" />
+                  {isSubmitting ? <Loader2 className="h-4 w-4 text-black animate-spin" /> : <ArrowRight className="h-4 w-4 text-black" />}
                 </button>
               </div>
 
