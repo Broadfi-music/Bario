@@ -4,22 +4,12 @@ import { ArrowLeft, Upload, Music, Loader2, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVocalProject } from '@/hooks/useVocalProject';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import VocalProjectStatus from '@/components/VocalProjectStatus';
-
-const genres = [
-  'pop', 'rap', 'rock', 'r&b', 'classical', 'jazz', 'soul & funk',
-  'afro', 'indie & alternative', 'latin music', 'dance & edm',
-  'reggaeton', 'electronic', 'country', 'metal', 'k-pop',
-  'reggae', 'blues', 'folk', 'lofi', 'acoustic',
-  'caribbean', 'japanese music', 'amapiano', 'gospel', 'instrumental',
-  'trap', 'funk', 'hiphop'
-];
 
 const VocalProjectPage = () => {
   const navigate = useNavigate();
@@ -29,11 +19,9 @@ const VocalProjectPage = () => {
   const { project, isStarting, isPolling, startProject, startPolling, statusLabel, progress } = useVocalProject();
 
   const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [selectedGenre, setSelectedGenre] = useState('');
   const [description, setDescription] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
-  // If we have a projectId in URL, start polling it
   const existingProjectId = searchParams.get('id');
 
   useEffect(() => {
@@ -51,11 +39,10 @@ const VocalProjectPage = () => {
   };
 
   const handleSubmit = async () => {
-    if (!audioFile || !selectedGenre || !user) return;
+    if (!audioFile || !user) return;
 
     setIsUploading(true);
     try {
-      // Upload to storage
       const ext = audioFile.name.split('.').pop();
       const path = `${user.id}/${Date.now()}.${ext}`;
       const { data, error } = await supabase.storage.from('vocal-projects').upload(path, audioFile);
@@ -63,10 +50,10 @@ const VocalProjectPage = () => {
 
       const { data: { publicUrl } } = supabase.storage.from('vocal-projects').getPublicUrl(data.path);
 
-      const projectId = await startProject(publicUrl, selectedGenre, description);
+      // Genre is optional — AI will auto-detect from the vocal
+      const projectId = await startProject(publicUrl, '', description);
       if (projectId) {
         startPolling(projectId);
-        // Update URL without full navigation
         window.history.replaceState({}, '', `/vocal-project?id=${projectId}`);
       }
     } catch (err) {
@@ -81,15 +68,14 @@ const VocalProjectPage = () => {
     const finalUrls = (project.final_urls || []) as string[];
     navigate('/dashboard/music-result', {
       state: {
-        trackTitle: `Vocal Song - ${project.genre}`,
-        genre: project.genre,
+        trackTitle: `Vocal Song${project.genre ? ' - ' + project.genre : ''}`,
+        genre: project.genre || 'Auto-detected',
         audioUrl: finalUrls[index],
         prompt: project.generated_prompt,
       },
     });
   };
 
-  // Show progress view if we have a project
   if (project) {
     return (
       <VocalProjectStatus
@@ -108,14 +94,13 @@ const VocalProjectPage = () => {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-2xl mx-auto p-4 sm:p-8">
-        {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" size="icon" onClick={() => navigate('/ai-remix')} className="text-white hover:bg-white/10">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold">Create from Vocal</h1>
-            <p className="text-xs text-white/40 mt-0.5">Upload your raw vocal and we'll create a full song</p>
+            <p className="text-xs text-white/40 mt-0.5">Upload your raw vocal — AI handles the rest</p>
           </div>
         </div>
 
@@ -134,13 +119,13 @@ const VocalProjectPage = () => {
                 <>
                   <Music className="h-8 w-8 mx-auto mb-2 text-white/60" />
                   <p className="text-sm text-white font-medium">{audioFile.name}</p>
-                  <p className="text-xs text-white/40 mt-1">Click to change</p>
+                  <p className="text-xs text-white/40 mt-1">Click to change file</p>
                 </>
               ) : (
                 <>
                   <Upload className="h-8 w-8 mx-auto mb-2 text-white/30" />
                   <p className="text-sm text-white/50">Click to upload your raw vocal recording</p>
-                  <p className="text-xs text-white/30 mt-1">MP3, WAV up to 50MB • No beat, just your voice</p>
+                  <p className="text-xs text-white/30 mt-1">MP3, WAV up to 50MB • Just your voice, no beat</p>
                 </>
               )}
             </div>
@@ -148,29 +133,17 @@ const VocalProjectPage = () => {
           </label>
         </Card>
 
-        {/* Genre */}
-        <Card className="bg-white/5 border-white/10 p-6 mb-4">
-          <Label className="text-white text-sm font-medium">Target Genre</Label>
-          <Select value={selectedGenre} onValueChange={setSelectedGenre} disabled={isSubmitting}>
-            <SelectTrigger className="mt-2 bg-white/5 border-white/10 text-white">
-              <SelectValue placeholder="Choose a genre for your song" />
-            </SelectTrigger>
-            <SelectContent>
-              {genres.map((g) => (
-                <SelectItem key={g} value={g}>{g.charAt(0).toUpperCase() + g.slice(1)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Card>
-
-        {/* Description */}
+        {/* Description / prompt */}
         <Card className="bg-white/5 border-white/10 p-6 mb-6">
           <Label className="text-white text-sm font-medium">Describe your vision (optional)</Label>
+          <p className="text-[11px] text-white/30 mt-1 mb-2">
+            AI will auto-detect genre, tempo, and key from your vocal. Add details to guide the style.
+          </p>
           <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="e.g. 'Upbeat summer vibe with tropical instruments and groovy bassline'"
-            className="mt-2 bg-white/5 border-white/10 text-white placeholder:text-white/30 min-h-[80px]"
+            placeholder="e.g. 'Upbeat summer Afrobeats vibe' or 'Dark moody trap with 808s' or leave blank for AI to decide"
+            className="bg-white/5 border-white/10 text-white placeholder:text-white/25 min-h-[80px]"
             disabled={isSubmitting}
           />
         </Card>
@@ -178,13 +151,13 @@ const VocalProjectPage = () => {
         {/* Submit */}
         <Button
           onClick={handleSubmit}
-          disabled={!audioFile || !selectedGenre || isSubmitting}
+          disabled={!audioFile || isSubmitting}
           className="w-full bg-white text-black hover:bg-white/80 h-12 text-base font-semibold"
         >
           {isSubmitting ? (
             <>
               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              {isUploading ? 'Uploading...' : 'Starting pipeline...'}
+              {isUploading ? 'Uploading vocal...' : 'Starting AI pipeline...'}
             </>
           ) : (
             <>
@@ -195,7 +168,7 @@ const VocalProjectPage = () => {
         </Button>
 
         <p className="text-[10px] text-white/20 text-center mt-3">
-          Processing takes 3–8 minutes. Free users get 1 full song + 2 previews.
+          Processing takes 3–8 minutes. You'll get 3 beat variations to choose from.
         </p>
       </div>
     </div>
