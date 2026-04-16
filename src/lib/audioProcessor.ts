@@ -3,6 +3,7 @@ import type { FxConfig } from '@/hooks/useAudioRemix';
 // Web Audio API based audio processor
 export class AudioProcessor {
   private audioContext: AudioContext | null = null;
+  private destroyed = false;
   private sourceNode: AudioBufferSourceNode | null = null;
   private gainNode: GainNode | null = null;
   private convolverNode: ConvolverNode | null = null;
@@ -22,19 +23,26 @@ export class AudioProcessor {
   }
 
   async loadAudioFile(file: File): Promise<AudioBuffer> {
-    if (!this.audioContext) {
+    if (!this.audioContext || this.destroyed) {
       throw new Error('AudioContext not available');
     }
 
+    const audioContext = this.audioContext;
     const arrayBuffer = await file.arrayBuffer();
-    this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+    if (this.destroyed) {
+      throw new Error('Audio processor was destroyed');
+    }
+
+    this.audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
     return this.audioBuffer;
   }
 
   async loadAudioUrl(url: string): Promise<AudioBuffer> {
-    if (!this.audioContext) {
+    if (!this.audioContext || this.destroyed) {
       throw new Error('AudioContext not available');
     }
+
+    const audioContext = this.audioContext;
 
     console.log('Loading audio from URL:', url);
     
@@ -50,8 +58,12 @@ export class AudioProcessor {
       
       const arrayBuffer = await response.arrayBuffer();
       console.log('Audio downloaded, size:', arrayBuffer.byteLength);
+
+      if (this.destroyed) {
+        throw new Error('Audio processor was destroyed');
+      }
       
-      this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+      this.audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
       console.log('Audio decoded successfully, duration:', this.audioBuffer.duration);
       
       return this.audioBuffer;
@@ -148,7 +160,7 @@ export class AudioProcessor {
   }
 
   async processAndExport(fxConfig: FxConfig): Promise<Blob | null> {
-    if (!this.audioContext || !this.audioBuffer) {
+    if (!this.audioContext || !this.audioBuffer || this.destroyed) {
       console.error('No audio loaded for processing');
       return null;
     }
@@ -366,6 +378,7 @@ export class AudioProcessor {
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.stop();
     if (this.audioContext) {
       this.audioContext.close();
