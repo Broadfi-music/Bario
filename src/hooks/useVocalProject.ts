@@ -59,11 +59,11 @@ export function useVocalProject() {
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { toast } = useToast();
 
-  const startProject = useCallback(async (vocalUrl: string, genre: string, description?: string) => {
+  const startProject = useCallback(async (vocalUrl: string, genre?: string, description?: string) => {
     setIsStarting(true);
     try {
       const { data, error } = await supabase.functions.invoke('vocal-to-song', {
-        body: { vocalUrl, genre, description },
+        body: { vocalUrl, genre: genre || undefined, description },
       });
 
       if (error) throw new Error(error.message);
