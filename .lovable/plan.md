@@ -1,138 +1,96 @@
 
 
-# AI Vocal-to-Song Pipeline — Full Implementation Plan
+# Vocal-to-Song Pipeline — Voice-Preserving Redesign
 
-## What this builds
+## Problem
+Current pipeline uses Lyria 3 Pro to generate complete songs (including AI vocals), replacing the user's real voice. Users want their actual singing voice preserved with professional instrumentals behind it.
 
-A complete backend pipeline that takes a user's raw vocal recording (singing with no beat) and produces a professional, release-ready song — preserving the user's real voice. The pipeline runs across 7 Replicate model stages, generates 3 song variations (1x full 3-min + 2x 30-sec previews for free users; all 3 full for paid), and returns downloadable stems.
-
-## Architecture
+## Corrected Architecture
 
 ```text
-User uploads raw vocal (WAV/MP3) via AI Remix page
+User's raw vocal upload
         │
-        ▼
-┌──────────────────────────────────────┐
-│  Edge Function: vocal-to-song        │
-│  (orchestrator — async polling)      │
-├──────────────────────────────────────┤
-│ 1. Upload vocal to Supabase Storage  │
-│ 2. Vocal Cleaning (Demucs)           │ → Replicate: cjwbw/demucs
-│ 3. Audio Analysis + Prompt Build     │ → Replicate: whisper + CLAP + LLM
-│ 4. Beat Generation (3 variations)    │ → Replicate: google/lyria-3-pro
-│ 5. Mixing (vocal + beat)             │ → FFmpeg in edge fn + AI
-│ 6. Mastering                         │ → Replicate: stability-ai/stable-audio-2.5
-│ 7. Harmony/Backup Vocals             │ → Replicate: zsxkib/realistic-voice-cloning
-│ 8. Stem Generation                   │ → Replicate: cjwbw/demucs on final
-│ 9. Trim 2 of 3 to 30s (free users)  │
-└──────────────────────────────────────┘
+  1. Demucs ──────────── Clean vocal (remove noise/reverb)
         │
-        ▼
-  Store all outputs in Supabase Storage (vocal-projects bucket)
-  Frontend polls vocal_projects table for status updates
-  User picks best of 3 variations
+  2. Whisper ─────────── Transcribe lyrics + detect language
+        │
+  3. LLM (Gemini) ────── Build instrumental-only prompt
+        │                 (explicitly: "no vocals, instrumental only")
+  4. Lyria 3 Pro ×3 ──── Generate 3 INSTRUMENTAL-ONLY beats
+        │
+  5. Voice Clone ─────── zsxkib/realistic-voice-cloning
+        │                 Clone user's voice → generate harmonies/backups
+        │
+  6. FFmpeg Mix ──────── Overlay clean vocal + harmonies onto each beat
+        │                 (gain staging, panning, EQ filters)
+        │
+  7. Mastering ───────── stability-ai/stable-audio-open
+        │                 Final polish (loudness, compression, streaming-ready)
+        │
+  8. Stem Split ──────── Demucs on final → downloadable stems
+        │
+  9. Trim Logic ──────── Free: 1×full + 2×30s | Paid: 3×full
 ```
 
-## Implementation steps
+## Key Difference from Current Code
+- Lyria prompt explicitly says **"instrumental only, no vocals"**
+- User's **real clean vocal** is mixed on top via FFmpeg
+- Voice cloning creates **harmonies/backups in the user's own voice**
+- Mastering uses Stable Audio for studio-quality polish
 
-### 1. Store Replicate API token as a secret
-Add `REPLICATE_API_TOKEN` with the provided default token value.
+## Pipeline Statuses
+`cleaning` → `analyzing` → `generating` (beat_1/2/3) → `cloning` → `mixing` (mix_1/2/3) → `mastering` (master_1/2/3) → `stems` → `done`
 
-### 2. Database: Create `vocal_projects` table
+## Implementation
 
-| Column | Type | Purpose |
-|--------|------|---------|
-| id | uuid PK | |
-| user_id | uuid | Owner |
-| status | text | pending → cleaning → analyzing → generating → mixing → mastering → harmonizing → stems → done / error |
-| original_vocal_url | text | Raw upload |
-| clean_vocal_url | text | After demucs |
-| analysis_data | jsonb | Whisper + CLAP output (tempo, key, mood, lyrics) |
-| generated_prompt | text | LLM-built prompt for Lyria |
-| beat_urls | jsonb | Array of 3 instrumental URLs |
-| mixed_urls | jsonb | Array of 3 mixed track URLs |
-| mastered_urls | jsonb | Array of 3 mastered URLs |
-| harmony_urls | jsonb | Backup vocal/harmony URLs |
-| stem_urls | jsonb | Final stems per variation |
-| final_urls | jsonb | 3 final songs (full or trimmed) |
-| selected_variation | int | User's pick (0-2) |
-| is_paid | boolean | Whether user gets full 3-min for all 3 |
-| genre | text | Target genre |
-| error_message | text | |
-| created_at / updated_at | timestamptz | |
+### Edge Function: `vocal-to-song-poll/index.ts` — Full rewrite of pipeline logic
 
-RLS: Users can CRUD their own rows.
+**Steps 1-3** (cleaning → analyzing): Keep existing Demucs + Whisper + LLM logic but change the LLM prompt to generate **instrumental-only** Lyria prompts (e.g. "Create a professional instrumental backing track. NO vocals. Genre: Afrobeats. 120 BPM. Instruments: afro guitar, shaker, 808 bass...")
 
-### 3. Create storage bucket `vocal-projects` (public)
+**Step 4** (generating): Keep Lyria 3 Pro ×3 but with instrumental-only prompts. After all 3 beats done, transition to `cloning` instead of `done`.
 
-### 4. Edge Function: `vocal-to-song` (main orchestrator)
+**Step 5** (cloning): New stage — call `zsxkib/realistic-voice-cloning` with the clean vocal as reference voice. Generate harmony/backup vocal lines. Store as `harmony_urls`.
 
-Since the full pipeline takes 5-10 minutes and exceeds edge function timeouts, the architecture uses a **step-based approach**:
+**Step 6** (mixing): New stage — for each of the 3 beats, use FFmpeg (available in Deno via shell) to:
+- Overlay clean vocal (centered, -1dB)
+- Add harmonies (panned L/R, -6dB)
+- Apply basic EQ and compression filters
+- Output mixed WAV files → store as `mixed_urls`
 
-- **Initial call**: Uploads vocal, creates DB row, kicks off Step 1 (Demucs) via Replicate async prediction, saves prediction ID to DB, returns project ID immediately.
-- **Polling edge function** (`vocal-to-song-poll`): Called by frontend every 10s. Checks current step's Replicate prediction status. If complete, starts next step. Updates DB status at each transition.
+**Step 7** (mastering): New stage — send each mixed track to `stability-ai/stable-audio-open` for final mastering polish. Store as `mastered_urls`.
 
-Each Replicate call follows:
-```typescript
-// Start prediction
-const prediction = await fetch('https://api.replicate.com/v1/predictions', {
-  method: 'POST',
-  headers: { Authorization: `Bearer ${REPLICATE_API_TOKEN}` },
-  body: JSON.stringify({ model: 'cjwbw/demucs', input: { audio: vocalUrl } })
-});
-// Returns prediction ID — store it, poll later
-```
+**Step 8** (stems): Run Demucs on each mastered track → store individual stems.
 
-### 5. Pipeline step details
+**Step 9** (trim + done): Free users get variation 1 full, variations 2-3 trimmed to 30s. Set `final_urls` and status `done`.
 
-**Step 1 — Vocal Cleaning** (`cjwbw/demucs`): Isolate pure vocal, remove noise/reverb/background.
+### Edge Function: `vocal-to-song/index.ts` — Minor update
+Remove genre requirement (already done). No other changes needed.
 
-**Step 2 — Analysis** (3 sequential Replicate calls):
-- `openai/whisper-large-v3`: Transcribe lyrics, detect language
-- `laion/clap`: Tag genre, mood, BPM, key
-- `meta/llama-3.1-8b-instruct`: Combine analysis into a rich Lyria prompt (e.g. "upbeat Afrobeats, 128 BPM, G minor, emotional male vocal with soaring chorus, 3-minute structure with intro-verse-chorus-verse-chorus-bridge-chorus-outro")
+### Frontend: `VocalProjectStatus.tsx` — Update pipeline steps display
+Add the new stages (cloning, mixing, mastering, stems) to the progress UI so users see accurate status.
 
-**Step 3 — Beat Generation** (`google/lyria-3-pro`): Run 3 times with slight prompt variations to produce 3 instrumental options.
+### Frontend: `useVocalProject.ts` — Update status labels
+Add labels for new pipeline statuses.
 
-**Step 4 — Mixing**: Download clean vocal + each beat. Use FFmpeg (available in Deno) to align and blend. Apply gain staging, panning, basic EQ via FFmpeg filters.
+## Models Used
+| Step | Model | Purpose |
+|------|-------|---------|
+| Vocal Clean | cjwbw/demucs | Isolate pure vocal |
+| Transcribe | openai/whisper | Get lyrics + language |
+| Prompt Build | Gemini 2.5 Flash | Create instrumental prompt |
+| Beat Gen | google/lyria-3-pro | 3 instrumental variations |
+| Voice Clone | zsxkib/realistic-voice-cloning | Harmonies in user's voice |
+| Mixing | FFmpeg (in-edge-function) | Blend vocal + beat + harmonies |
+| Mastering | stability-ai/stable-audio-open | Studio-quality polish |
+| Stems | cjwbw/demucs | Downloadable stems |
 
-**Step 5 — Mastering** (`stability-ai/stable-audio-2.5`): Post-process each mix for loudness, EQ, compression, streaming-ready output.
+## Estimated Time
+~12-18 minutes total (7 Replicate calls + FFmpeg processing). Each Lyria call ~2-3min, voice cloning ~1-2min, mastering ~1-2min.
 
-**Step 6 — Harmonies** (`zsxkib/realistic-voice-cloning`): Clone singer's voice from clean vocal, generate harmony/backup layers, mix into final.
-
-**Step 7 — Stems** (`cjwbw/demucs`): Run on each final track to produce vocals, drums, bass, other stems.
-
-**Step 8 — Trim logic**: For free users, only variation 1 is full 3-min. Variations 2 and 3 are trimmed to 30 seconds via FFmpeg.
-
-### 6. Frontend changes
-
-**AI Remix page (`AIRemix.tsx`)**: Add a "Create from Vocal" starter card alongside existing remix starters. When clicked, navigates to NewRemix with a `mode: 'vocal'` flag.
-
-**NewRemix page**: When `mode === 'vocal'`, show simplified UI — just vocal upload + genre selection + optional description. No era/URL fields. Submit calls `vocal-to-song` edge function.
-
-**New component: `VocalProjectStatus.tsx`**: Full-screen progress view showing pipeline stages with animated progress indicators. Polls `vocal-to-song-poll` every 10 seconds. When done, shows 3 playable variations with "Select" buttons.
-
-**Result page**: After user picks a variation, navigate to MusicResultPage with the final audio URL and stems download links.
-
-### 7. Files to create/modify
-
+## Files Changed
 | File | Action |
 |------|--------|
-| `supabase/functions/vocal-to-song/index.ts` | **Create** — orchestrator edge function |
-| `supabase/functions/vocal-to-song-poll/index.ts` | **Create** — polling/step-advancement function |
-| `src/pages/NewRemix.tsx` | **Modify** — add vocal mode |
-| `src/pages/AIRemix.tsx` | **Modify** — add vocal starter card |
-| `src/components/VocalProjectStatus.tsx` | **Create** — progress + result picker UI |
-| `src/hooks/useVocalProject.ts` | **Create** — polling hook |
-| `supabase/config.toml` | **Modify** — add function configs |
-| Database migration | **Create** — `vocal_projects` table + storage bucket |
-
-### 8. Security
-
-- Both edge functions validate JWT in code
-- RLS on `vocal_projects`: users can only access their own rows
-- Replicate token stored as secret, never exposed to client
-
-## Cost estimate
-~$0.30–0.60 per song (7 model calls across pipeline). Processing time: 5–10 minutes total.
+| `supabase/functions/vocal-to-song-poll/index.ts` | Major rewrite — add cloning, mixing, mastering, stems stages |
+| `src/components/VocalProjectStatus.tsx` | Update pipeline steps display |
+| `src/hooks/useVocalProject.ts` | Add new status labels |
 
