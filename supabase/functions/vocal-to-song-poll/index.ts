@@ -226,7 +226,12 @@ Create an instrumental-only Lyria 3 Pro prompt that specifies:
 - Specific instruments (drums, bass, synths, guitars, etc.)
 - Production style and energy level
 - Song structure (intro, verse groove, chorus build, bridge, outro)
-- Reference artists/producers for style
+
+CRITICAL RULES:
+- Do NOT mention any real artist names, band names, or producer names anywhere in the prompt.
+- Do NOT use "REFERENCE ARTISTS" or "REFERENCE PRODUCERS" sections.
+- Instead, describe the sonic style directly (e.g., "dreamy indie synth-pop" instead of naming an artist).
+- Lyria will reject prompts containing real artist/producer names.
 
 Output ONLY the Lyria prompt text. No explanations.`;
 
@@ -260,6 +265,15 @@ Output ONLY the Lyria prompt text. No explanations.`;
             const g = userGenre || "pop";
             generatedPrompt = `INSTRUMENTAL ONLY. NO VOCALS. Professional ${g} backing track. 120 BPM. Modern production with drums, bass, synths, and melodic elements. Dynamic arrangement with intro, verse groove, chorus build, bridge breakdown, and outro. Radio-ready quality.`;
           }
+
+          // Strip artist/producer references that Lyria flags as sensitive
+          generatedPrompt = generatedPrompt
+            .replace(/REFERENCE\s+ARTISTS?\/?PRODUCERS?:?[^\n]*/gi, "")
+            .replace(/REFERENCE\s+ARTISTS?:?[^\n]*/gi, "")
+            .replace(/REFERENCE\s+PRODUCERS?:?[^\n]*/gi, "")
+            .replace(/(?:inspired by|in the style of|similar to|like|à la)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,4}(?:,\s*(?:and\s+)?[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,4})*/gi, "")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim();
 
           if (!generatedPrompt.toLowerCase().includes("instrumental")) {
             generatedPrompt = "INSTRUMENTAL ONLY. NO VOCALS. NO SINGING.\n\n" + generatedPrompt;
