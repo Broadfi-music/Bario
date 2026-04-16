@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AudioProcessor } from '@/lib/audioProcessor';
 import type { FxConfig } from '@/hooks/useAudioRemix';
+import VocalSongResult from '@/components/VocalSongResult';
 
 interface MusicResultProps {
   trackTitle?: string;
@@ -16,6 +17,10 @@ interface MusicResultProps {
   trackId?: string;
   fxConfig?: FxConfig;
   audioUrl?: string;
+  mode?: 'remix' | 'vocal-project';
+  songOptions?: string[];
+  originalVocalUrl?: string;
+  selectedVariation?: number;
 }
 
 const albumGradients = [
@@ -36,6 +41,10 @@ export const MusicResult = ({
   trackId,
   fxConfig,
   audioUrl,
+  mode = 'remix',
+  songOptions,
+  originalVocalUrl,
+  selectedVariation,
 }: MusicResultProps) => {
   const navigate = useNavigate();
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string | null>(null);
@@ -45,6 +54,14 @@ export const MusicResult = ({
   const [albumGradient] = useState(getRandomGradient);
 
   useEffect(() => {
+    if (mode === 'vocal-project') {
+      setGeneratedAudioUrl(null);
+      setGenerationError(null);
+      setIsGenerating(false);
+      setProcessingStatus('');
+      return;
+    }
+
     if (!audioUrl || !fxConfig) {
       setGeneratedAudioUrl(null);
       setGenerationError('No generated remix is available for this request yet.');
@@ -101,7 +118,7 @@ export const MusicResult = ({
       active = false;
       processor.destroy();
     };
-  }, [audioUrl, fxConfig]);
+  }, [audioUrl, fxConfig, mode]);
 
   useEffect(() => {
     return () => {
@@ -135,6 +152,20 @@ export const MusicResult = ({
       console.error('Download failed:', error);
     }
   };
+
+  if (mode === 'vocal-project') {
+    return (
+      <VocalSongResult
+        trackTitle={trackTitle}
+        genre={genre}
+        prompt={prompt}
+        originalVocalUrl={originalVocalUrl}
+        songOptions={songOptions}
+        selectedVariation={selectedVariation}
+        onBack={onBack}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

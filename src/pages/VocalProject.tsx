@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import VocalProjectStatus from '@/components/VocalProjectStatus';
 
 const VocalProjectPage = () => {
+  const MAX_AUDIO_FILE_SIZE = 50 * 1024 * 1024;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
@@ -35,7 +36,16 @@ const VocalProjectPage = () => {
   }, [existingProjectId, startPolling]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) setAudioFile(e.target.files[0]);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_AUDIO_FILE_SIZE) {
+      toast({ title: 'File too large', description: 'Please upload an audio file smaller than 50MB.', variant: 'destructive' });
+      e.target.value = '';
+      return;
+    }
+
+    setAudioFile(file);
   };
 
   const handleSubmit = async () => {
@@ -45,10 +55,25 @@ const VocalProjectPage = () => {
     try {
       const ext = audioFile.name.split('.').pop();
       const path = `${user.id}/${Date.now()}.${ext}`;
-      const { data, error } = await supabase.storage.from('vocal-projects').upload(path, audioFile);
-      if (error) throw error;
+      let uploadedPath: string | null = null;
 
-      const { data: { publicUrl } } = supabase.storage.from('vocal-projects').getPublicUrl(data.path);
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const { data, error } = await supabase.storage.from('vocal-projects').upload(path, audioFile, {
+          contentType: audioFile.type || undefined,
+          upsert: attempt > 0,
+        });
+
+        if (!error && data?.path) {
+          uploadedPath = data.path;
+          break;
+        }
+
+        if (attempt === 1) throw error;
+      }
+
+      if (!uploadedPath) throw new Error('Upload failed');
+
+      const { data: { publicUrl } } = supabase.storage.from('vocal-projects').getPublicUrl(uploadedPath);
 
       // Genre is optional — AI will auto-detect from the vocal
       const projectId = await startProject(publicUrl, '', description);
@@ -66,12 +91,16 @@ const VocalProjectPage = () => {
   const handleSelectVariation = (index: number) => {
     if (!project) return;
     const finalUrls = (project.final_urls || []) as string[];
-    navigate('/dashboard/music-result', {
+    navigate('/music-result', {
       state: {
+        mode: 'vocal-project',
         trackTitle: `Vocal Song${project.genre ? ' - ' + project.genre : ''}`,
         genre: project.genre || 'Auto-detected',
-        audioUrl: finalUrls[index],
         prompt: project.generated_prompt,
+        originalVocalUrl: project.clean_vocal_url || project.original_vocal_url,
+        songOptions: finalUrls,
+        selectedVariation: index,
+        backTo: `/vocal-project?id=${project.id}`,
       },
     });
   };
