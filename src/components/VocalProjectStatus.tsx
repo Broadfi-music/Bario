@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { ArrowLeft, Play, Pause, Check, Download, Music, Loader2, Mic, Headphones, Sliders, Disc3, Layers } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Check, Download, Music, Loader2, Mic, Disc3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import type { VocalProject } from '@/hooks/useVocalProject';
@@ -14,39 +14,59 @@ interface Props {
 }
 
 const PIPELINE_STEPS = [
-  { key: 'cleaning', label: 'Vocal Cleaning', icon: Mic },
+  { key: 'cleaning', label: 'Vocal Cleaning (Demucs)', icon: Mic },
   { key: 'analyzing', label: 'Audio Analysis & Prompt', icon: Music },
-  { key: 'generating', label: 'Beat Generation (Lyria 3 Pro)', icon: Disc3 },
-  { key: 'cloning', label: 'Voice Harmonies', icon: Headphones },
-  { key: 'mixing', label: 'Mixing (FFmpeg)', icon: Sliders },
-  { key: 'mastering', label: 'Mastering', icon: Layers },
-  { key: 'stems', label: 'Stem Generation', icon: Music },
+  { key: 'generating', label: 'Beat Generation (Lyria 3 Pro ×3)', icon: Disc3 },
   { key: 'done', label: 'Complete', icon: Check },
 ];
 
-const STATUS_ORDER = ['pending', 'cleaning', 'analyzing', 'generating', 'cloning', 'mixing', 'mastering', 'stems', 'done'];
+const STATUS_ORDER = ['pending', 'cleaning', 'analyzing', 'generating', 'done'];
 
 export default function VocalProjectStatus({ project, statusLabel, progress, isPolling, onBack, onSelectVariation }: Props) {
-  const [playingIndex, setPlayingIndex] = useState<number | null>(null);
+  const [playingType, setPlayingType] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const vocalAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const currentStepIndex = STATUS_ORDER.indexOf(project.status);
   const isDone = project.status === 'done';
   const isError = project.status === 'error';
   const finalUrls = (project.final_urls || []) as string[];
+  const cleanVocalUrl = project.clean_vocal_url || '';
 
-  const togglePlay = (index: number) => {
-    if (playingIndex === index) {
-      audioRef.current?.pause();
-      setPlayingIndex(null);
-    } else {
-      if (audioRef.current) audioRef.current.pause();
-      const audio = new Audio(finalUrls[index]);
-      audio.play();
-      audio.onended = () => setPlayingIndex(null);
-      audioRef.current = audio;
-      setPlayingIndex(index);
-    }
+  const stopAll = () => {
+    audioRef.current?.pause();
+    vocalAudioRef.current?.pause();
+    setPlayingType(null);
+  };
+
+  const playBeat = (index: number) => {
+    const key = `beat_${index}`;
+    if (playingType === key) { stopAll(); return; }
+    stopAll();
+    const audio = new Audio(finalUrls[index]);
+    audio.play();
+    audio.onended = () => setPlayingType(null);
+    audioRef.current = audio;
+    setPlayingType(key);
+  };
+
+  const playBothSync = (index: number) => {
+    const key = `both_${index}`;
+    if (playingType === key) { stopAll(); return; }
+    stopAll();
+
+    const beat = new Audio(finalUrls[index]);
+    const vocal = new Audio(cleanVocalUrl);
+    beat.volume = 0.7;
+    vocal.volume = 0.9;
+
+    beat.play();
+    vocal.play();
+    beat.onended = () => { vocal.pause(); setPlayingType(null); };
+    vocal.onended = () => { beat.pause(); setPlayingType(null); };
+    audioRef.current = beat;
+    vocalAudioRef.current = vocal;
+    setPlayingType(key);
   };
 
   return (
@@ -57,7 +77,7 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl sm:text-2xl font-bold">
-            {isDone ? 'Your Song is Ready' : isError ? 'Processing Failed' : 'Creating Your Song'}
+            {isDone ? 'Your Beats Are Ready' : isError ? 'Processing Failed' : 'Creating Your Song'}
           </h1>
         </div>
 
@@ -101,7 +121,7 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
 
             {isPolling && (
               <p className="text-xs text-white/30 text-center mt-4">
-                Processing takes 12–18 minutes. You can leave this page and come back.
+                Processing takes 5–8 minutes. You can leave this page and come back.
               </p>
             )}
           </div>
@@ -117,34 +137,64 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
         )}
 
         {isDone && finalUrls.length > 0 && (
-          <div className="space-y-4">
-            <p className="text-sm text-white/50 mb-4">
-              Listen to your {finalUrls.length} variation{finalUrls.length > 1 ? 's' : ''} and pick your favorite. Your real voice is preserved.
+          <div className="space-y-6">
+            <p className="text-sm text-white/50">
+              3 instrumental variations generated from your vocal. Play your voice synced with each beat or listen to just the beat.
             </p>
 
+            {/* Clean Vocal Preview */}
+            {cleanVocalUrl && (
+              <div className="border border-white/10 rounded-xl p-4 bg-white/[0.02]">
+                <div className="flex items-center gap-3 mb-2">
+                  <Mic className="h-4 w-4 text-white/50" />
+                  <span className="text-xs text-white/50 uppercase tracking-wider font-medium">Your Clean Vocal</span>
+                </div>
+                <audio src={cleanVocalUrl} controls className="w-full h-8 opacity-70" style={{ filter: 'invert(1)' }} />
+              </div>
+            )}
+
+            {/* Beat Variations */}
             {finalUrls.map((url, i) => {
-              const isPlaying = playingIndex === i;
-              const isFirst = i === 0;
-              const label = isFirst ? 'Full Version (3 min)' : `Preview ${i + 1} (30s)`;
+              const isBeatPlaying = playingType === `beat_${i}`;
+              const isBothPlaying = playingType === `both_${i}`;
+              const labels = ['Original', 'Energetic', 'Intimate'];
 
               return (
-                <div key={i} className={`border rounded-xl p-4 flex items-center gap-4 transition-colors ${
-                  isFirst ? 'border-white/20 bg-white/5' : 'border-white/10 bg-white/[0.02]'
+                <div key={i} className={`border rounded-xl p-4 transition-colors ${
+                  i === 0 ? 'border-white/20 bg-white/5' : 'border-white/10 bg-white/[0.02]'
                 }`}>
-                  <button
-                    onClick={() => togglePlay(i)}
-                    className="w-12 h-12 rounded-full bg-white flex items-center justify-center shrink-0 hover:bg-white/80 transition-colors"
-                  >
-                    {isPlaying ? <Pause className="h-5 w-5 text-black" /> : <Play className="h-5 w-5 text-black ml-0.5" />}
-                  </button>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-medium text-white">Variation {i + 1} — {labels[i] || 'Beat'}</p>
+                      <p className="text-xs text-white/40">{project.genre || 'Auto-detected'} instrumental</p>
+                    </div>
+                    {i === 0 && (
+                      <span className="text-[10px] bg-white/10 text-white/60 px-2 py-0.5 rounded-full">⭐ Recommended</span>
+                    )}
+                  </div>
 
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white">Variation {i + 1}</p>
-                    <p className="text-xs text-white/40">{label}</p>
-                    {isFirst && (
-                      <span className="inline-block mt-1 text-[10px] bg-white/10 text-white/60 px-2 py-0.5 rounded-full">
-                        ⭐ Recommended
-                      </span>
+                  <div className="flex items-center gap-2 mb-3">
+                    {/* Play beat only */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => playBeat(i)}
+                      className={`flex-1 border-white/10 text-white text-xs h-9 ${isBeatPlaying ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                    >
+                      {isBeatPlaying ? <Pause className="h-3.5 w-3.5 mr-1.5" /> : <Play className="h-3.5 w-3.5 mr-1.5" />}
+                      Beat Only
+                    </Button>
+
+                    {/* Play vocal + beat synced */}
+                    {cleanVocalUrl && (
+                      <Button
+                        size="sm"
+                        onClick={() => playBothSync(i)}
+                        className={`flex-1 text-xs h-9 ${isBothPlaying ? 'bg-white text-black' : 'bg-white/90 text-black hover:bg-white'}`}
+                      >
+                        {isBothPlaying ? <Pause className="h-3.5 w-3.5 mr-1.5" /> : <Play className="h-3.5 w-3.5 mr-1.5" />}
+                        Voice + Beat
+                      </Button>
                     )}
                   </div>
 
@@ -155,19 +205,20 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
                     <Button
                       size="sm"
                       onClick={() => onSelectVariation(i)}
-                      className="bg-white text-black hover:bg-white/80 text-xs"
+                      className="bg-white text-black hover:bg-white/80 text-xs ml-auto"
                     >
-                      Select
+                      Select This
                     </Button>
                   </div>
                 </div>
               );
             })}
 
-            {!project.is_paid && finalUrls.length > 1 && (
-              <p className="text-xs text-white/30 text-center mt-2">
-                Upgrade to Pro to get all variations in full 3-minute length.
-              </p>
+            {project.generated_prompt && (
+              <div className="border border-white/5 rounded-xl p-4 bg-white/[0.01]">
+                <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">AI-Generated Prompt</p>
+                <p className="text-xs text-white/40 leading-relaxed">{project.generated_prompt.slice(0, 300)}...</p>
+              </div>
             )}
           </div>
         )}
