@@ -8,6 +8,7 @@ import remixStudio from '@/assets/starters/remix-studio.jpg';
 import trendingRemix from '@/assets/starters/trending-remix.jpg';
 import genreRemix from '@/assets/starters/genre-remix.jpg';
 import audioEffects from '@/assets/starters/audio-effects.jpg';
+import vocalToSong from '@/assets/starters/vocal-to-song.jpg';
 
 const AIRemix = () => {
   const navigate = useNavigate();
@@ -50,6 +51,13 @@ const AIRemix = () => {
   }, []);
 
   const starters = [
+    {
+      image: vocalToSong,
+      title: 'Create from Vocal',
+      description: 'Upload your raw vocal and AI turns it into a full professional song.',
+      badge: 'NEW',
+      action: 'vocal',
+    },
     {
       image: remixStudio,
       title: 'Build your remix',
@@ -322,7 +330,9 @@ const AIRemix = () => {
               <button
                 key={i}
                 onClick={() => {
-                  if (starter.steps) {
+                  if (starter.action === 'vocal') {
+                    navigate('/vocal-project');
+                  } else if (starter.steps) {
                     setPrompt(starter.steps[0].replace(/^\d\.\s/, ''));
                   } else {
                     navigate('/dashboard/new-remix');
