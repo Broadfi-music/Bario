@@ -14,6 +14,7 @@ const MusicResultPage = () => {
     trackId?: string;
     fxConfig?: FxConfig;
     audioUrl?: string;
+    backTo?: string;
     uploadedMusic?: {
       type: 'file' | 'url';
       name: string;
@@ -32,7 +33,7 @@ const MusicResultPage = () => {
       trackId={state?.trackId}
       fxConfig={state?.fxConfig}
       audioUrl={state?.audioUrl}
-      onBack={() => navigate('/')}
+      onBack={() => navigate(state?.backTo || '/ai-remix')}
     />
   );
 };
