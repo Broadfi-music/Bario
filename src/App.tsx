@@ -47,6 +47,7 @@ import Feed from "@/pages/Feed";
 import Messages from "@/pages/Messages";
 import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
+import VocalProject from "@/pages/VocalProject";
 
 // Rebuild trigger: env re-injection
 const queryClient = new QueryClient();
@@ -90,6 +91,7 @@ const AnimatedRoutes = ({ showSplash }: { showSplash: boolean }) => {
           <Route path="/dashboard/artist/:id" element={<ArtistProfile />} />
           <Route path="/dashboard/music-result" element={<MusicResultPage />} />
           <Route path="/music-result" element={<MusicResultPage />} />
+          <Route path="/vocal-project" element={<VocalProject />} />
           <Route path="/podcasts" element={<Podcasts />} />
           <Route path="/podcast-host/:hostId" element={<PodcastHost />} />
           <Route path="/host/:hostId" element={<HostProfile />} />

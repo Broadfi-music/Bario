@@ -66,3 +66,9 @@ verify_jwt = false
 
 [functions.generate-demo-audio]
 verify_jwt = false
+
+[functions.vocal-to-song]
+verify_jwt = false
+
+[functions.vocal-to-song-poll]
+verify_jwt = false
