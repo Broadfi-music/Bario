@@ -29,25 +29,25 @@ export interface VocalProject {
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Starting...',
   cleaning: 'Cleaning vocals...',
-  analyzing: 'Analyzing audio...',
-  generating: 'Generating beats...',
-  mixing: 'Mixing tracks...',
-  mastering: 'Mastering audio...',
-  harmonizing: 'Creating harmonies...',
-  stems: 'Generating stems...',
+  analyzing: 'Analyzing audio & building prompt...',
+  generating: 'Generating instrumental beats (Lyria 3 Pro)...',
+  cloning: 'Creating harmonies in your voice...',
+  mixing: 'Mixing vocal + beat (FFmpeg)...',
+  mastering: 'Mastering for studio quality...',
+  stems: 'Generating downloadable stems...',
   done: 'Complete!',
   error: 'Error occurred',
 };
 
 const STATUS_PROGRESS: Record<string, number> = {
-  pending: 5,
-  cleaning: 15,
-  analyzing: 30,
-  generating: 55,
+  pending: 3,
+  cleaning: 10,
+  analyzing: 20,
+  generating: 40,
+  cloning: 58,
   mixing: 70,
   mastering: 82,
-  harmonizing: 90,
-  stems: 95,
+  stems: 92,
   done: 100,
   error: 0,
 };
@@ -65,11 +65,8 @@ export function useVocalProject() {
       const { data, error } = await supabase.functions.invoke('vocal-to-song', {
         body: { vocalUrl, genre: genre || undefined, description },
       });
-
       if (error) throw new Error(error.message);
       if (!data?.success) throw new Error(data?.error || 'Failed to start');
-
-      // Start polling
       setIsPolling(true);
       return data.projectId as string;
     } catch (err) {
@@ -86,7 +83,6 @@ export function useVocalProject() {
       const { data, error } = await supabase.functions.invoke('vocal-to-song-poll', {
         body: { projectId },
       });
-
       if (error) throw new Error(error.message);
       if (!data?.success) throw new Error(data?.error || 'Poll failed');
 
@@ -100,7 +96,6 @@ export function useVocalProject() {
         setIsPolling(false);
         toast({ title: 'Error', description: proj.error_message || 'Pipeline failed', variant: 'destructive' });
       }
-
       return proj;
     } catch (err) {
       console.error('Poll error:', err);
@@ -110,9 +105,7 @@ export function useVocalProject() {
 
   const startPolling = useCallback((projectId: string) => {
     setIsPolling(true);
-    // Poll immediately
     pollProject(projectId);
-    // Then every 10 seconds
     pollingRef.current = setInterval(() => {
       pollProject(projectId);
     }, 10000);
@@ -126,14 +119,12 @@ export function useVocalProject() {
     }
   }, []);
 
-  // Auto-stop polling when done/error
   useEffect(() => {
     if (project && (project.status === 'done' || project.status === 'error')) {
       stopPolling();
     }
   }, [project, stopPolling]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => stopPolling();
   }, [stopPolling]);

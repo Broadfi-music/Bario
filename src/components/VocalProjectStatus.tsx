@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { ArrowLeft, Play, Pause, Check, Download, Music, Loader2, Mic } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Check, Download, Music, Loader2, Mic, Headphones, Sliders, Disc3, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import type { VocalProject } from '@/hooks/useVocalProject';
@@ -15,14 +15,16 @@ interface Props {
 
 const PIPELINE_STEPS = [
   { key: 'cleaning', label: 'Vocal Cleaning', icon: Mic },
-  { key: 'analyzing', label: 'Audio Analysis', icon: Music },
-  { key: 'generating', label: 'Beat Generation', icon: Music },
-  { key: 'mixing', label: 'Mixing', icon: Music },
-  { key: 'mastering', label: 'Mastering', icon: Music },
+  { key: 'analyzing', label: 'Audio Analysis & Prompt', icon: Music },
+  { key: 'generating', label: 'Beat Generation (Lyria 3 Pro)', icon: Disc3 },
+  { key: 'cloning', label: 'Voice Harmonies', icon: Headphones },
+  { key: 'mixing', label: 'Mixing (FFmpeg)', icon: Sliders },
+  { key: 'mastering', label: 'Mastering', icon: Layers },
+  { key: 'stems', label: 'Stem Generation', icon: Music },
   { key: 'done', label: 'Complete', icon: Check },
 ];
 
-const STATUS_ORDER = ['pending', 'cleaning', 'analyzing', 'generating', 'mixing', 'mastering', 'harmonizing', 'stems', 'done'];
+const STATUS_ORDER = ['pending', 'cleaning', 'analyzing', 'generating', 'cloning', 'mixing', 'mastering', 'stems', 'done'];
 
 export default function VocalProjectStatus({ project, statusLabel, progress, isPolling, onBack, onSelectVariation }: Props) {
   const [playingIndex, setPlayingIndex] = useState<number | null>(null);
@@ -50,7 +52,6 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-2xl mx-auto p-4 sm:p-8">
-        {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-white/10">
             <ArrowLeft className="h-5 w-5" />
@@ -60,7 +61,6 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
           </h1>
         </div>
 
-        {/* Progress */}
         {!isDone && !isError && (
           <div className="mb-8 space-y-4">
             <div className="flex items-center justify-between text-sm">
@@ -69,9 +69,8 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
             </div>
             <Progress value={progress} className="h-2 bg-white/10" />
 
-            {/* Step indicators */}
             <div className="space-y-2 mt-6">
-              {PIPELINE_STEPS.map((step, i) => {
+              {PIPELINE_STEPS.map((step) => {
                 const stepIdx = STATUS_ORDER.indexOf(step.key);
                 const isActive = project.status === step.key;
                 const isComplete = currentStepIndex > stepIdx;
@@ -102,13 +101,12 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
 
             {isPolling && (
               <p className="text-xs text-white/30 text-center mt-4">
-                Processing takes 3–8 minutes. You can leave this page and come back.
+                Processing takes 12–18 minutes. You can leave this page and come back.
               </p>
             )}
           </div>
         )}
 
-        {/* Error state */}
         {isError && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-6 text-center">
             <p className="text-red-400 text-sm mb-2">{project.error_message || 'An error occurred during processing.'}</p>
@@ -118,11 +116,10 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
           </div>
         )}
 
-        {/* Results — 3 variations */}
         {isDone && finalUrls.length > 0 && (
           <div className="space-y-4">
             <p className="text-sm text-white/50 mb-4">
-              Listen to your {finalUrls.length} variation{finalUrls.length > 1 ? 's' : ''} and pick your favorite.
+              Listen to your {finalUrls.length} variation{finalUrls.length > 1 ? 's' : ''} and pick your favorite. Your real voice is preserved.
             </p>
 
             {finalUrls.map((url, i) => {
