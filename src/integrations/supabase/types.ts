@@ -1630,6 +1630,78 @@ export type Database = {
         }
         Relationships: []
       }
+      vocal_projects: {
+        Row: {
+          analysis_data: Json | null
+          beat_urls: Json | null
+          clean_vocal_url: string | null
+          created_at: string
+          current_prediction_id: string | null
+          description: string | null
+          error_message: string | null
+          final_urls: Json | null
+          generated_prompt: string | null
+          genre: string | null
+          harmony_urls: Json | null
+          id: string
+          is_paid: boolean
+          mastered_urls: Json | null
+          mixed_urls: Json | null
+          original_vocal_url: string | null
+          selected_variation: number | null
+          status: string
+          stem_urls: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          analysis_data?: Json | null
+          beat_urls?: Json | null
+          clean_vocal_url?: string | null
+          created_at?: string
+          current_prediction_id?: string | null
+          description?: string | null
+          error_message?: string | null
+          final_urls?: Json | null
+          generated_prompt?: string | null
+          genre?: string | null
+          harmony_urls?: Json | null
+          id?: string
+          is_paid?: boolean
+          mastered_urls?: Json | null
+          mixed_urls?: Json | null
+          original_vocal_url?: string | null
+          selected_variation?: number | null
+          status?: string
+          stem_urls?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          analysis_data?: Json | null
+          beat_urls?: Json | null
+          clean_vocal_url?: string | null
+          created_at?: string
+          current_prediction_id?: string | null
+          description?: string | null
+          error_message?: string | null
+          final_urls?: Json | null
+          generated_prompt?: string | null
+          genre?: string | null
+          harmony_urls?: Json | null
+          id?: string
+          is_paid?: boolean
+          mastered_urls?: Json | null
+          mixed_urls?: Json | null
+          original_vocal_url?: string | null
+          selected_variation?: number | null
+          status?: string
+          stem_urls?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       withdrawal_requests: {
         Row: {
           account_name: string | null
