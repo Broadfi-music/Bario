@@ -28,13 +28,9 @@ export interface VocalProject {
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Starting...',
-  cleaning: 'Cleaning vocals...',
+  cleaning: 'Cleaning vocals (Demucs)...',
   analyzing: 'Analyzing audio & building prompt...',
   generating: 'Generating instrumental beats (Lyria 3 Pro)...',
-  cloning: 'Creating harmonies in your voice...',
-  mixing: 'Mixing vocal + beat (FFmpeg)...',
-  mastering: 'Mastering for studio quality...',
-  stems: 'Generating downloadable stems...',
   done: 'Complete!',
   error: 'Error occurred',
 };
@@ -42,12 +38,8 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_PROGRESS: Record<string, number> = {
   pending: 3,
   cleaning: 10,
-  analyzing: 20,
-  generating: 40,
-  cloning: 58,
-  mixing: 70,
-  mastering: 82,
-  stems: 92,
+  analyzing: 30,
+  generating: 55,
   done: 100,
   error: 0,
 };
@@ -91,7 +83,7 @@ export function useVocalProject() {
 
       if (proj.status === 'done') {
         setIsPolling(false);
-        toast({ title: '🎵 Song Complete!', description: 'Your song variations are ready to preview.' });
+        toast({ title: '🎵 Song Complete!', description: 'Your instrumental beats are ready. Play your voice over them!' });
       } else if (proj.status === 'error') {
         setIsPolling(false);
         toast({ title: 'Error', description: proj.error_message || 'Pipeline failed', variant: 'destructive' });
