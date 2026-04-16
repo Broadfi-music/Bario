@@ -266,6 +266,15 @@ Output ONLY the Lyria prompt text. No explanations.`;
             generatedPrompt = `INSTRUMENTAL ONLY. NO VOCALS. Professional ${g} backing track. 120 BPM. Modern production with drums, bass, synths, and melodic elements. Dynamic arrangement with intro, verse groove, chorus build, bridge breakdown, and outro. Radio-ready quality.`;
           }
 
+          // Strip artist/producer references that Lyria flags as sensitive
+          generatedPrompt = generatedPrompt
+            .replace(/REFERENCE\s+ARTISTS?\/?PRODUCERS?:?[^\n]*/gi, "")
+            .replace(/REFERENCE\s+ARTISTS?:?[^\n]*/gi, "")
+            .replace(/REFERENCE\s+PRODUCERS?:?[^\n]*/gi, "")
+            .replace(/(?:inspired by|in the style of|similar to|like|à la)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,4}(?:,\s*(?:and\s+)?[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,4})*/gi, "")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim();
+
           if (!generatedPrompt.toLowerCase().includes("instrumental")) {
             generatedPrompt = "INSTRUMENTAL ONLY. NO VOCALS. NO SINGING.\n\n" + generatedPrompt;
           }
