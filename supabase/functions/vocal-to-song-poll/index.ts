@@ -205,24 +205,25 @@ Deno.serve(async (req) => {
         break;
       }
 
-      // ─── STEP 2: Analysis (Whisper) → LLM → Lyria instrumental prompt ───
+      // ─── STEP 2: Analysis (Whisper → Llama → Lyria) ───
       case "analyzing": {
         const analysisData = (project.analysis_data as Record<string, unknown>) || {};
+        const substage = (analysisData.stage as string) || "whisper";
 
-        let transcription = "";
-        if (typeof output === "object" && output !== null) {
-          transcription = (output as Record<string, string>).transcription || (output as Record<string, string>).text || JSON.stringify(output);
-        } else {
-          transcription = String(output || "");
-        }
+        if (substage === "whisper") {
+          // Whisper just completed — extract transcription, start Llama
+          let transcription = "";
+          if (typeof output === "object" && output !== null) {
+            transcription = (output as Record<string, string>).transcription || (output as Record<string, string>).text || JSON.stringify(output);
+          } else {
+            transcription = String(output || "");
+          }
+          console.log("Transcription:", transcription.slice(0, 100));
 
-        console.log("Transcription:", transcription.slice(0, 100));
+          const userDesc = project.description || "";
+          const userGenre = project.genre || "";
 
-        const userDesc = project.description || "";
-        const userGenre = project.genre || "";
-
-        // Build INSTRUMENTAL-ONLY prompt via LLM
-        const llmPrompt = `You are a world-class music producer. A singer has recorded raw vocals. Your job is to create a prompt for Google Lyria 3 Pro to generate a PROFESSIONAL INSTRUMENTAL BACKING TRACK — NO VOCALS, NO SINGING, PURELY INSTRUMENTAL.
+          const llmPrompt = `You are a world-class music producer. A singer has recorded raw vocals. Your job is to create a prompt for Google Lyria 3 Pro to generate a PROFESSIONAL INSTRUMENTAL BACKING TRACK — NO VOCALS, NO SINGING, PURELY INSTRUMENTAL.
 
 ${transcription ? `LYRICS (for rhythm/mood reference only): "${transcription.slice(0, 1500)}"` : "Vocal recording available but no clear lyrics detected."}
 ${userGenre ? `REQUESTED GENRE: ${userGenre}` : "GENRE: Detect the best genre from the vocal style and mood"}
@@ -240,59 +241,58 @@ Create an instrumental-only Lyria 3 Pro prompt that specifies:
 
 Output ONLY the Lyria prompt text. No explanations.`;
 
-        const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-        let generatedPrompt = "";
+          // Start Llama 3 70B on Replicate
+          const llamaPred = await startOfficialModelPrediction("meta", "meta-llama-3-70b-instruct", {
+            prompt: llmPrompt,
+            max_tokens: 1200,
+            temperature: 0.7,
+            top_p: 0.95,
+            system_prompt: "You are an expert music producer who creates detailed instrumental production prompts.",
+          });
 
-        if (LOVABLE_API_KEY) {
-          try {
-            const llmRes = await fetch("https://ai.lovable.dev/api/v1/chat/completions", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${LOVABLE_API_KEY}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                model: "google/gemini-2.5-flash",
-                messages: [{ role: "user", content: llmPrompt }],
-                max_tokens: 1200,
-              }),
-            });
-            if (llmRes.ok) {
-              const llmData = await llmRes.json();
-              generatedPrompt = llmData.choices?.[0]?.message?.content || "";
-              console.log("Generated prompt length:", generatedPrompt.length);
-            } else {
-              console.error("LLM error:", llmRes.status);
-            }
-          } catch (e) {
-            console.error("LLM error:", e);
+          await supabaseAdmin.from("vocal_projects").update({
+            current_prediction_id: llamaPred.id,
+            analysis_data: { ...analysisData, stage: "llama", transcription },
+          }).eq("id", projectId);
+
+        } else if (substage === "llama") {
+          // Llama completed — extract generated prompt, start Lyria
+          let generatedPrompt = "";
+          if (Array.isArray(output)) {
+            generatedPrompt = output.join("");
+          } else if (typeof output === "string") {
+            generatedPrompt = output;
+          } else {
+            generatedPrompt = String(output || "");
           }
+          console.log("Llama prompt length:", generatedPrompt.length);
+
+          const userGenre = project.genre || "";
+
+          if (!generatedPrompt || generatedPrompt.length < 20) {
+            const g = userGenre || "pop";
+            generatedPrompt = `INSTRUMENTAL ONLY. NO VOCALS. Professional ${g} backing track. 120 BPM. Modern production with drums, bass, synths, and melodic elements. Dynamic arrangement with intro, verse groove, chorus build, bridge breakdown, and outro. Radio-ready quality.`;
+          }
+
+          if (!generatedPrompt.toLowerCase().includes("instrumental")) {
+            generatedPrompt = "INSTRUMENTAL ONLY. NO VOCALS. NO SINGING.\n\n" + generatedPrompt;
+          }
+
+          const detectedGenre = userGenre || generatedPrompt.match(/\b(pop|rap|rock|r&b|afro|afrobeats|amapiano|jazz|soul|electronic|trap|hiphop|hip-hop|country|reggae|latin|lofi|indie|folk|punk|metal|gospel|blues|dancehall|kpop|drill)\b/i)?.[1] || "pop";
+
+          // Start Lyria 3 Pro — Beat 1
+          const lyria1 = await startOfficialModelPrediction("google", "lyria-3-pro", {
+            prompt: generatedPrompt,
+          });
+
+          await supabaseAdmin.from("vocal_projects").update({
+            status: "generating",
+            current_prediction_id: lyria1.id,
+            generated_prompt: generatedPrompt,
+            genre: detectedGenre,
+            analysis_data: { ...analysisData, stage: "beat_1", prompt: generatedPrompt },
+          }).eq("id", projectId);
         }
-
-        if (!generatedPrompt) {
-          const g = userGenre || "pop";
-          generatedPrompt = `INSTRUMENTAL ONLY. NO VOCALS. Professional ${g} backing track. 120 BPM. Modern production with drums, bass, synths, and melodic elements. Dynamic arrangement with intro, verse groove, chorus build, bridge breakdown, and outro. Radio-ready quality.`;
-        }
-
-        // Ensure instrumental-only is in the prompt
-        if (!generatedPrompt.toLowerCase().includes("instrumental")) {
-          generatedPrompt = "INSTRUMENTAL ONLY. NO VOCALS. NO SINGING.\n\n" + generatedPrompt;
-        }
-
-        const detectedGenre = userGenre || generatedPrompt.match(/\b(pop|rap|rock|r&b|afro|afrobeats|amapiano|jazz|soul|electronic|trap|hiphop|hip-hop|country|reggae|latin|lofi|indie|folk|punk|metal|gospel|blues|dancehall|kpop|drill)\b/i)?.[1] || "pop";
-
-        // Start Lyria 3 Pro — Beat 1 (main)
-        const lyria1 = await startOfficialModelPrediction("google", "lyria-3-pro", {
-          prompt: generatedPrompt,
-        });
-
-        await supabaseAdmin.from("vocal_projects").update({
-          status: "generating",
-          current_prediction_id: lyria1.id,
-          generated_prompt: generatedPrompt,
-          genre: detectedGenre,
-          analysis_data: { ...analysisData, stage: "beat_1", transcription, prompt: generatedPrompt },
-        }).eq("id", projectId);
         break;
       }
 
