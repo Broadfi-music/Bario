@@ -14,6 +14,7 @@ import { getActiveStandardLiveSessions } from '@/lib/liveSessions';
 import { getPodcastEpisodeDisplayCover } from '@/lib/podcastEpisodeCovers';
 import { usePresence } from '@/hooks/usePresence';
 import OnlineIndicator from '@/components/OnlineIndicator';
+import CommentsSheet from '@/components/CommentsSheet';
 
 interface LiveHost {
   id: string;
@@ -161,6 +162,7 @@ const PodcastFeed = () => {
   const [showDiscoverCreators, setShowDiscoverCreators] = useState(false);
   const [sidebarCreators, setSidebarCreators] = useState<{user_id: string; full_name: string | null; username: string | null; avatar_url: string | null}[]>([]);
   const [creatorPosts, setCreatorPosts] = useState<any[]>([]);
+  const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
 
   const filteredHosts = searchQuery.trim()
     ? liveHosts.filter(h =>
