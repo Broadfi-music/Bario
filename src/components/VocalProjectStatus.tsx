@@ -43,6 +43,7 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
   const masteredUrls = (project.mastered_urls || []) as string[];
   const variationStatuses = (project.variation_statuses || []) as string[];
   const variationEngines = (project.variation_engines || []) as string[];
+  const variationErrors = (project.variation_errors || []) as string[];
   const cleanVocalUrl = project.clean_vocal_url || '';
 
   const stop = () => { audioRef.current?.pause(); setPlayingIndex(null); };
