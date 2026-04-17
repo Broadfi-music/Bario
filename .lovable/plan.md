@@ -1,184 +1,152 @@
 
-## Vocal-to-Song Fix Plan
 
-### What I found
-The app currently has two different flows, and they are being confused:
+## Two questions, one plan
 
-1. `/ai-remix` is not true song generation  
-   - It calls the `remix` backend function.
-   - That function only generates an `fx_config`.
-   - It does not create a new audio file.
-   - Database evidence: recent `tracks` rows have `status = done` but `remix_audio_url = null`.
-   - The result screen then reprocesses the original upload in the browser, so it still sounds like the same song.
+### 1) Google Play closed testing — do they review first?
 
-2. `/vocal-project` is the real vocal-to-song pipeline  
-   - It calls `vocal-to-song` + `vocal-to-song-poll`.
-   - But the current implementation only produces instrumental beat URLs and a “Voice + Beat” synced playback.
-   - The UI literally says “Your Beats Are Ready”, so it is not delivering a final mixed/mastered song yet.
+Yes. For closed testing on a **new app**, Google now requires a **mandatory review** of your first release before testers can install it. Timeline is usually **a few hours up to ~7 days** (first review of a brand new app is the slowest — sometimes 2–3 days). Subsequent updates to the same track are reviewed much faster (often <24h).
 
-3. The core missing piece  
-   - There is no actual backend stage that creates final rendered songs from:
-     - cleaned vocal
-     - generated instrumental
-     - mix/master output
-   - So right now there is no true “generated studio song” file being returned to the frontend.
+Why you can't "Save" right now is almost always one of:
+- A required field on the **Store listing**, **App content**, or **Main store listing** is incomplete (red dot in the left sidebar)
+- Missing **Data safety** form, **Content rating**, **Target audience**, **Privacy policy URL**, or **App access** instructions
+- At least one **APK/AAB** must be uploaded to the closed testing track AND release notes filled in
+- Testers list (email list or Google Group) must be attached to the track
 
-### Root cause
-The current implementation stopped halfway:
-- AI Remix = prompt-to-FX config only
-- Vocal Project = prompt-to-instrumental only
-- Final render/mix/master output = not implemented
+You don't need code from me for this — just complete every section that shows a red exclamation in Play Console, then "Save → Review release → Start rollout to Closed testing." Review begins automatically.
 
-Also, the latest `vocal_projects` record is still stuck at `status = generating` with no `beat_urls` yet, so the live pipeline still needs real end-to-end verification and hardening.
+---
 
-## What I will build
+### 2) Vocal-to-Song — full rebuild plan
 
-### 1) Separate the two product modes clearly
-I will make the product behavior unambiguous:
+You're right. The current pipeline is "text → random Stable Audio beat → browser EQ." That will never sound finished. Here is the new architecture.
 
-- **AI Remix**
-  - stays a remix/effects feature only, or is visually marked as “Remix / not full song generation”
-- **Create from Vocal**
-  - becomes the real “raw vocal to finished song” flow
-  - no fake result page
-  - only shows a result when a real generated output exists
+### Core principle
+**The vocal is the boss.** Everything (BPM, key, energy, arrangement, mix bus) is derived from the user's actual voice. We never generate a beat blind.
 
-If needed, I’ll also route the upload/prompt experience so users don’t get sent into the wrong flow.
-
-### 2) Turn vocal-to-song into a real final-audio pipeline
-I will upgrade the vocal pipeline from:
+### New pipeline
 ```text
-clean vocal + beat preview
-```
-to:
-```text
-raw vocal
-→ vocal cleanup
-→ transcription / prompt build
-→ 3 instrumental generations
-→ vocal/instrument alignment + mix
-→ mastering
-→ store 3 final song URLs
-→ frontend result page
-```
-
-### 3) Replace the fake result logic
-I will remove the current “generated result” behavior that just transforms the original audio locally.
-
-Instead:
-- result page will display:
-  - original upload
-  - generated final song option 1
-  - generated final song option 2
-  - generated final song option 3
-- only real backend-generated URLs will be playable/downloadable
-- no FX settings section
-- no fallback that silently reuses the original upload
-
-### 4) Add proper backend job states
-I will make the backend state machine explicit so polling is reliable:
-
-```text
-pending
-cleaning
-transcribing
-prompting
-generating_variation_1
-generating_variation_2
-generating_variation_3
-mixing
-mastering
-done
-error
+raw vocal upload
+   │
+   ▼
+[1] Vocal cleanup     → Demucs (htdemucs) — already in place
+   │
+   ▼
+[2] Vocal analysis    → Essentia/Librosa edge function
+                        extracts: BPM, key, scale, downbeats,
+                        phrase boundaries, RMS energy curve,
+                        vocal style (rap/sung), language
+   │
+   ▼
+[3] Prompt synthesis  → Lovable AI (gemini-3-flash) builds
+                        a structured prompt from analysis +
+                        user's text prompt ("afrobeats, dark")
+   │
+   ▼
+[4] Conditioned beat generation (3 variations, 3 engines)
+      Variation 1 → MusicGen-Melody (Replicate)
+                    input: cleaned vocal as melody reference
+                           + BPM + key + style prompt
+                    → instrumental that FOLLOWS vocal contour
+      Variation 2 → MiniMax Music API
+                    input: vocal reference + lyrics + style
+                    → "song-like" arrangement
+      Variation 3 → Stable Audio (fallback only)
+                    input: prompt + BPM/key as text
+   │
+   ▼
+[5] Time alignment    → server-side time-stretch each beat
+                        to vocal's exact BPM (sox/rubberband
+                        via Replicate or a small Deno wrapper)
+   │
+   ▼
+[6] Mix               → RoEx Tonn /mixpreviewmaster
+                        upload: vocal stem + instrumental stem
+                        sidechain, ducking, level balance
+                        ALL handled by RoEx
+   │
+   ▼
+[7] Master            → RoEx Tonn /mastering
+                        target loudness -9 LUFS streaming
+                        optional: user-supplied reference track
+   │
+   ▼
+[8] Three finished songs stored in Supabase, shown on result page
 ```
 
-This will make the UI truthful and easier to debug.
+### Why RoEx Tonn solves the mixing/mastering problem
+- Purpose-built mixing + mastering API (not a generator) — exactly what we lack
+- Free tier exists, fits your current "no money" constraint
+- One API call replaces the entire fake browser EQ chain
+- Can master to a reference track ("make it sound like this song") — perfect for the upload field on the result page
+- Production key + dev key both available, will be added as `ROEX_API_KEY_PROD` and `ROEX_API_KEY_DEV` secrets
 
-### 5) Implement real final render storage
-I will ensure the backend stores actual output URLs for:
-- cleaned vocal
-- generated beat variations
-- final mixed song variations
-- mastered output variations
+**Important**: You shared your API keys in chat. **Rotate them on the RoEx dashboard immediately** — anyone who saw this message can use them. I will store the new keys via Lovable Cloud secrets, not in code.
 
-And the frontend will only render results from those stored final URLs.
+### Why MusicGen-Melody is the unlock
+Stable Audio generates a beat from text, ignoring the vocal entirely — that's why it sounds disconnected. MusicGen-Melody **listens to the vocal first** and writes an instrumental that follows the melodic contour. This single change is the biggest quality jump available on Replicate today.
 
-## Mixing / mastering / voice-preserving approach
+### Why three engines, not one
+- Each variation uses a **different model**, so the three options actually sound different (current pipeline runs Stable Audio 3× → near-identical results)
+- If MusicGen times out or fails, MiniMax/Stable still produce something
+- User picks the winner, that one goes through final mastering
 
-### Recommended approach
-To keep the creator’s real voice and avoid the “obvious AI vocal” feel:
+### Edge functions to add/rewrite
+- `vocal-analyze` (new) — Librosa-style BPM/key/phrase detection via Replicate `riffusion/audio-analysis` or a Python-on-Replicate helper
+- `vocal-to-song` (rewrite) — orchestrates analysis → 3 generators in parallel
+- `vocal-to-song-poll` (extend) — track per-variation status (variation_1_status, variation_2_status, variation_3_status) so UI shows "1 of 3 ready" progressively
+- `roex-mix-master` (new) — handles RoEx upload, polling, and download of finished file
+- `time-align` (new, small) — calls a Replicate sox/rubberband model for BPM-locking
 
-- keep the uploaded vocal as the lead voice
-- generate instrumental only
-- do backend mixing/mastering around that lead vocal
-- avoid replacing the lead vocal with a synthetic singer
+### Database changes
+Add to `vocal_projects`:
+- `vocal_bpm`, `vocal_key`, `vocal_energy`, `vocal_phrases` (analysis results)
+- `variation_engines text[]` (which model produced each)
+- `variation_statuses text[]` (per-variation pipeline state)
+- `mastered_urls text[]` (RoEx outputs, separate from raw `mixed_urls`)
+- `reference_track_url` (optional user-supplied master reference)
 
-### About voice clone / chorus / backups
-Possible Replicate options exist, but I would treat them as **optional layered enhancements**, not the main vocal:
-- chorus doubles / background stacks
-- backing vocal texture
-- optional harmony layer
+### Frontend changes
+- `VocalProject.tsx` — show per-variation progress (V1: mixing, V2: ready, V3: generating)
+- `VocalProjectStatus.tsx` — new stage labels matching the 8-step pipeline
+- `MusicResult.tsx` — only play real `mastered_urls`, remove all browser FX/EQ code, add **"Master to sound like this"** reference upload field
+- Retire `src/lib/audioMixer.ts` (browser mix) — replaced by RoEx server-side
 
-That way:
-- the lead remains the creator’s actual voice
-- AI only supports, not replaces
+### Risk + mitigation
+- **MusicGen-Melody can be slow (~60–120s)**: run all 3 engines in parallel, return the first one that finishes so the user hears something fast
+- **RoEx free tier rate limits**: queue mastering jobs, only master the variation the user actually selects (not all 3) — saves quota
+- **Reference-track mastering quality**: optional feature; default Matchering-style preset if no reference uploaded
+- **Replicate cost**: MusicGen-Melody is cheaper than running Stable Audio 3×, so net cost likely drops
 
-### Important constraint
-A real final mix requires actual audio rendering, not just metadata.  
-So I will verify which model/service is best for:
-- instrumental generation
-- optional backing/harmony generation
-- final mastering/render output
+### What I will NOT do
+- Won't add Lyria 3 Pro — it's gated behind Google Vertex AI billing, not viable on free tier right now
+- Won't add pitch correction by default — keeps the user's real voice intact (your stated requirement)
+- Won't keep any browser-side audio generation — all rendering moves server-side
 
-If a model is not reliable enough for production quality, I will keep it out of the default path rather than shipping fake results.
+### Verification plan
+After build I will:
+1. Upload a real vocal via the app
+2. Confirm `vocal-analyze` returns BPM/key in logs
+3. Confirm 3 variations come from 3 different engines (check `variation_engines` column)
+4. Confirm RoEx returns a mastered URL
+5. Play all 3 results in the preview and report back which one sounds best
+6. Share the Supabase row + edge function logs as evidence
 
-## Performance plan
-You asked to keep it fast.
-
-Since you chose **3 song options**, I’ll optimize around that goal:
-- keep polling async
-- avoid blocking request execution
-- generate/store each variation as a tracked job stage
-- prioritize getting variation 1 ready first, then 2 and 3
-- show partial completion in UI when available
-
-Best realistic UX:
-- first playable result appears as early as possible
-- remaining variations continue processing
-- user doesn’t wait for all 3 before hearing something
-
-## Verification I will do after implementation
-I will verify all of this end to end:
-
-1. Upload raw vocal file
-2. Enter prompt
-3. Submit from frontend
-4. Confirm correct backend function is called
-5. Confirm project row updates through each stage
-6. Confirm model outputs are returned
-7. Confirm final generated audio URLs are stored
-8. Confirm frontend result page shows:
-   - original upload
-   - 3 real generated song outputs
-9. Confirm it no longer replays the same original audio as the “generated” result
-10. Confirm error handling and progress states are truthful
-
-## Files I expect to update
-- `src/pages/AIRemix.tsx`
+### Files to touch
+- `supabase/functions/vocal-to-song/index.ts` (rewrite)
+- `supabase/functions/vocal-to-song-poll/index.ts` (extend)
+- `supabase/functions/vocal-analyze/index.ts` (new)
+- `supabase/functions/roex-mix-master/index.ts` (new)
+- `supabase/functions/time-align/index.ts` (new)
+- `src/hooks/useVocalProject.ts`
 - `src/pages/VocalProject.tsx`
+- `src/pages/MusicResultPage.tsx`
 - `src/components/VocalProjectStatus.tsx`
 - `src/components/MusicResult.tsx`
-- `src/pages/MusicResultPage.tsx`
-- `src/hooks/useVocalProject.ts`
-- `src/hooks/useAudioRemix.ts` or retire its fake-generation path
-- `supabase/functions/vocal-to-song/index.ts`
-- `supabase/functions/vocal-to-song-poll/index.ts`
-- possibly database migration(s) for clearer status/output columns if needed
+- New migration for `vocal_projects` columns
+- Delete: `src/lib/audioMixer.ts`
 
-## Expected outcome
-After this fix:
-- uploading a vocal and entering a prompt will produce actual generated song results
-- the frontend will show real outputs, not the same audio again
-- the creator’s original voice remains the lead vocal
-- the UI will accurately reflect what is really happening in the backend
-- you’ll be able to upload again and judge real generated results from the app itself
+### Action items before I start
+1. **Rotate both RoEx keys now** on tonn-portal.roexaudio.com (the ones you pasted are compromised)
+2. After approval, I'll request the new key via the secret tool — paste the rotated production key only
+3. Confirm you want MusicGen-Melody + MiniMax + Stable Audio as the three engines (not a different combo)
+
