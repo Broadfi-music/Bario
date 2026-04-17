@@ -1648,11 +1648,21 @@ export type Database = {
           mastered_urls: Json | null
           mixed_urls: Json | null
           original_vocal_url: string | null
+          reference_track_url: string | null
           selected_variation: number | null
           status: string
           stem_urls: Json | null
           updated_at: string
           user_id: string
+          user_prompt: string | null
+          variation_engines: string[] | null
+          variation_prediction_ids: string[] | null
+          variation_statuses: string[] | null
+          vocal_bpm: number | null
+          vocal_duration_seconds: number | null
+          vocal_energy: number | null
+          vocal_key: string | null
+          vocal_phrases: Json | null
         }
         Insert: {
           analysis_data?: Json | null
@@ -1671,11 +1681,21 @@ export type Database = {
           mastered_urls?: Json | null
           mixed_urls?: Json | null
           original_vocal_url?: string | null
+          reference_track_url?: string | null
           selected_variation?: number | null
           status?: string
           stem_urls?: Json | null
           updated_at?: string
           user_id: string
+          user_prompt?: string | null
+          variation_engines?: string[] | null
+          variation_prediction_ids?: string[] | null
+          variation_statuses?: string[] | null
+          vocal_bpm?: number | null
+          vocal_duration_seconds?: number | null
+          vocal_energy?: number | null
+          vocal_key?: string | null
+          vocal_phrases?: Json | null
         }
         Update: {
           analysis_data?: Json | null
@@ -1694,11 +1714,21 @@ export type Database = {
           mastered_urls?: Json | null
           mixed_urls?: Json | null
           original_vocal_url?: string | null
+          reference_track_url?: string | null
           selected_variation?: number | null
           status?: string
           stem_urls?: Json | null
           updated_at?: string
           user_id?: string
+          user_prompt?: string | null
+          variation_engines?: string[] | null
+          variation_prediction_ids?: string[] | null
+          variation_statuses?: string[] | null
+          vocal_bpm?: number | null
+          vocal_duration_seconds?: number | null
+          vocal_energy?: number | null
+          vocal_key?: string | null
+          vocal_phrases?: Json | null
         }
         Relationships: []
       }
