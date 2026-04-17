@@ -146,6 +146,9 @@ const VocalProjectPage = () => {
                   <Upload className="h-8 w-8 mx-auto mb-2 text-white/30" />
                   <p className="text-sm text-white/50">Click to upload your raw vocal recording</p>
                   <p className="text-xs text-white/30 mt-1">MP3, WAV up to 50MB • Just your voice, no beat</p>
+                  <p className="text-[10px] text-white/25 mt-3 max-w-xs mx-auto leading-relaxed">
+                    Slot 1 generates an instrumental that follows your melody. Slots 2 & 3 are alternate takes.
+                  </p>
                 </>
               )}
             </div>

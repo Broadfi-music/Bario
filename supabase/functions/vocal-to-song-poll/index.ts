@@ -1,11 +1,14 @@
-// Polling orchestrator for the rewritten pipeline.
+// Polling orchestrator — staggered launch + MusicGen-Melody + MiniMax + Stereo fallback.
 //
-// Statuses:
+// Pipeline:
 //   cleaning   → Demucs vocal isolation
-//   analyzing  → vocal-analyze (BPM/key/energy)
-//   generating → 3 parallel engines (MusicGen-Melody, MusicGen-Stereo, Stable Audio)
+//   analyzing  → BPM/key/duration extraction
+//   generating → 3 engines launched 12s apart to dodge Replicate 429s
+//                slot 0: MusicGen-Melody  (vocal as melody reference) ← KEY ENGINE
+//                slot 1: MiniMax music-1.5 (instrumental, lyrics+style prompt)
+//                slot 2: MusicGen-Stereo  (text-only fallback)
 //   mastering  → RoEx mix+master per finished variation
-//   done       → all 3 mastered_urls present (or partial after timeout)
+//   done       → all 3 finalized
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -17,23 +20,31 @@ const corsHeaders = {
 const REPLICATE_API_TOKEN = Deno.env.get("REPLICATE_API_TOKEN")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-const DEMUCS_VERSION = "25a173108cff36ef9f80f854c162d01df9e6528be175794b81158fa03836d953";
+// Pinned versions for stability (avoids 404s on official-model endpoint)
+const MUSICGEN_VERSION = "671ac645ce5e552cc63a54a2bbff63fcf798043055d2dac5fc9e36a837eedcfb"; // meta/musicgen
+const STAGGER_MS = 12_000; // 12s between launches → stays under 6/min free tier limit
 
-// Engines (Replicate model owner/name + version-aware launch)
-const ENGINES = [
-  { name: "musicgen-melody", model: "meta/musicgen", melody: true },
-  { name: "musicgen-stereo", model: "meta/musicgen", melody: false },
-  { name: "stable-audio-2.5", model: "stability-ai/stable-audio-2.5", melody: false },
-] as const;
-
+// ============ Replicate helpers ============
 async function checkPrediction(predictionId: string) {
   const res = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
     headers: { Authorization: `Bearer ${REPLICATE_API_TOKEN}` },
   });
   if (!res.ok) throw new Error(`Check prediction failed: ${await res.text()}`);
   return await res.json();
+}
+
+async function startVersion(version: string, input: Record<string, unknown>) {
+  const res = await fetch("https://api.replicate.com/v1/predictions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${REPLICATE_API_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ version, input }),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Replicate version failed (${res.status}): ${text.slice(0, 240)}`);
+  return JSON.parse(text);
 }
 
 async function startOfficialModel(modelOwner: string, modelName: string, input: Record<string, unknown>) {
@@ -44,17 +55,6 @@ async function startOfficialModel(modelOwner: string, modelName: string, input: 
   });
   const text = await res.text();
   if (!res.ok) throw new Error(`Replicate ${modelOwner}/${modelName} failed (${res.status}): ${text.slice(0, 240)}`);
-  return JSON.parse(text);
-}
-
-async function startVersion(version: string, input: Record<string, unknown>) {
-  const res = await fetch("https://api.replicate.com/v1/predictions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${REPLICATE_API_TOKEN}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ version, input }),
-  });
-  const text = await res.text();
-  if (!res.ok) throw new Error(`Replicate version ${version.slice(0, 12)} failed (${res.status}): ${text.slice(0, 240)}`);
   return JSON.parse(text);
 }
 
@@ -77,7 +77,6 @@ function getContentType(filename: string) {
   if (filename.endsWith(".mp3")) return "audio/mpeg";
   if (filename.endsWith(".ogg")) return "audio/ogg";
   if (filename.endsWith(".flac")) return "audio/flac";
-  if (filename.endsWith(".webm")) return "audio/webm";
   return "audio/wav";
 }
 
@@ -99,14 +98,90 @@ async function storeToStorage(url: string, userId: string, projectId: string, fi
 }
 
 function buildBeatPrompt(userPrompt: string | null, genre: string | null, bpm: number, key: string): string {
-  const parts: string[] = [];
-  parts.push("instrumental only, no vocals");
+  const parts: string[] = ["instrumental only, no vocals, no lyrics, no singing"];
   if (genre) parts.push(`${genre} production`);
-  parts.push(`${bpm} BPM`);
-  parts.push(`key of ${key}`);
+  parts.push(`${bpm} BPM`, `key of ${key}`);
   if (userPrompt) parts.push(userPrompt.replace(/[^\w\s,.\-]/g, "").slice(0, 180));
   parts.push("clean modern mix, professional arrangement");
   return parts.join(", ").slice(0, 320);
+}
+
+// Generate placeholder lyrics for MiniMax (it requires a lyrics field)
+async function generateLyrics(genre: string, durationSeconds: number): Promise<string> {
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content: "You write short song lyrics. Return ONLY the lyrics with [verse] and [chorus] tags. No commentary.",
+          },
+          {
+            role: "user",
+            content: `Write short ${genre || "pop"} lyrics for a ~${Math.round(durationSeconds)}s song. Use [verse] and [chorus] tags. 4-6 lines per section. Keep it simple and singable.`,
+          },
+        ],
+      }),
+    });
+    if (!res.ok) throw new Error(`Lovable AI ${res.status}`);
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content || "";
+    return text.trim() || "[verse]\nFeel the rhythm, hear the sound\n[chorus]\nWe're alive, we're alive";
+  } catch (e) {
+    console.warn("Lyrics generation failed, using fallback:", e);
+    return "[verse]\nFeel the rhythm, hear the sound\nMoving forward, never down\n[chorus]\nWe're alive, we're alive\nFeel the music come to life";
+  }
+}
+
+// ============ Engine launchers ============
+async function launchMusicGenMelody(beatPrompt: string, vocalUrl: string, duration: number) {
+  return await startVersion(MUSICGEN_VERSION, {
+    model_version: "stereo-melody-large",
+    prompt: beatPrompt,
+    input_audio: vocalUrl,
+    duration: Math.min(30, Math.max(8, Math.round(duration))),
+    continuation: false,
+    normalization_strategy: "peak",
+    output_format: "wav",
+  });
+}
+
+async function launchMiniMax(lyrics: string, genre: string, bpm: number) {
+  // minimax/music-1.5 — instrumental song generation
+  return await startOfficialModel("minimax", "music-1.5", {
+    lyrics,
+    song_file: undefined, // skip — we want fresh instrumental
+    voice_id: "Instrumental",
+    instrumental_id: "Instrumental",
+    sample_rate: 44100,
+    bitrate: 256000,
+    format: "mp3",
+    // MiniMax respects general style hints in lyrics, but we add a stylistic header
+  }).catch(async () => {
+    // Some versions of minimax/music-1.5 use a slightly different schema — fallback shape
+    return await startOfficialModel("minimax", "music-1.5", {
+      lyrics: `[style]${genre || "pop"}, ${bpm} BPM, instrumental, no vocals[/style]\n${lyrics}`,
+      sample_rate: 44100,
+      bitrate: 256000,
+      format: "mp3",
+    });
+  });
+}
+
+async function launchMusicGenStereo(beatPrompt: string, duration: number) {
+  return await startVersion(MUSICGEN_VERSION, {
+    model_version: "stereo-large",
+    prompt: beatPrompt + ", different arrangement, alternative vibe",
+    duration: Math.min(30, Math.max(8, Math.round(duration))),
+    normalization_strategy: "peak",
+    output_format: "wav",
+  });
 }
 
 async function invokeEdgeFunction(name: string, body: unknown, authHeader: string) {
@@ -122,6 +197,41 @@ async function invokeEdgeFunction(name: string, body: unknown, authHeader: strin
   const text = await res.text();
   if (!res.ok) throw new Error(`${name} failed: ${text.slice(0, 200)}`);
   try { return JSON.parse(text); } catch { return { raw: text }; }
+}
+
+// Try to launch a single slot, with up to 3 retries on 429
+async function tryLaunchSlot(slotIdx: number, project: Record<string, unknown>): Promise<{ id: string; error: string }> {
+  const beatPrompt = String(project.generated_prompt || "");
+  const cleanVocal = String(project.clean_vocal_url || "");
+  const duration = Number(project.vocal_duration_seconds) || 30;
+  const bpm = Number(project.vocal_bpm) || 100;
+  const genre = String(project.genre || "pop");
+
+  let lastErr = "";
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      let pred;
+      if (slotIdx === 0) {
+        pred = await launchMusicGenMelody(beatPrompt, cleanVocal, duration);
+      } else if (slotIdx === 1) {
+        const lyrics = await generateLyrics(genre, duration);
+        pred = await launchMiniMax(lyrics, genre, bpm);
+      } else {
+        pred = await launchMusicGenStereo(beatPrompt, duration);
+      }
+      console.log(`Slot ${slotIdx} launched:`, pred.id);
+      return { id: pred.id, error: "" };
+    } catch (e) {
+      lastErr = (e as Error).message;
+      console.warn(`Slot ${slotIdx} attempt ${attempt + 1} failed:`, lastErr);
+      if (lastErr.includes("429")) {
+        await new Promise((r) => setTimeout(r, 11_000 * (attempt + 1)));
+        continue;
+      }
+      break; // non-429 errors aren't worth retrying
+    }
+  }
+  return { id: "", error: lastErr || "Unknown error" };
 }
 
 Deno.serve(async (req) => {
@@ -175,7 +285,6 @@ Deno.serve(async (req) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Demucs returns { vocals: url, ... }
       const out = pred.output;
       let cleanUrl = "";
       if (out && typeof out === "object" && !Array.isArray(out)) {
@@ -184,84 +293,48 @@ Deno.serve(async (req) => {
       if (!cleanUrl) cleanUrl = extractAudioUrl(out) || project.original_vocal_url;
       const storedClean = await storeToStorage(cleanUrl, user.id, projectId, "clean_vocal.wav");
 
-      await supabaseAdmin.from("vocal_projects").update({
-        clean_vocal_url: storedClean,
-        status: "analyzing",
-        current_prediction_id: null,
-      }).eq("id", projectId);
-
-      // Kick off analysis right away (synchronous edge call — fast)
+      // Run analysis + set up staggered launch schedule
+      let bpm = 100, key = "C minor", energy = 0.1, duration = 30;
       try {
         const analysis = await invokeEdgeFunction("vocal-analyze", { audioUrl: storedClean }, authHeader);
         const a = analysis.analysis || {};
-        const bpm = Math.max(60, Math.min(180, Number(a.bpm) || 100));
-        const key = String(a.key || "C minor");
-        const energy = Number(a.energy) || 0.1;
-        const duration = Math.max(8, Math.min(60, Number(a.duration) || 30));
-
-        // Launch all 3 generators in parallel
-        const userPrompt = project.user_prompt || project.description || "";
-        const genreHint = project.genre || "";
-        const beatPrompt = buildBeatPrompt(userPrompt, genreHint, bpm, key);
-        console.log("Beat prompt:", beatPrompt);
-
-        const launches = await Promise.allSettled([
-          // V1: MusicGen-Melody (vocal as reference)
-          startOfficialModel("meta", "musicgen", {
-            model_version: "stereo-melody-large",
-            prompt: beatPrompt,
-            input_audio: storedClean,
-            duration: Math.min(30, duration),
-            continuation: false,
-            normalization_strategy: "peak",
-            output_format: "wav",
-          }),
-          // V2: MusicGen-Stereo (no melody ref)
-          startOfficialModel("meta", "musicgen", {
-            model_version: "stereo-large",
-            prompt: beatPrompt + ", different arrangement, alternative vibe",
-            duration: Math.min(30, duration),
-            normalization_strategy: "peak",
-            output_format: "wav",
-          }),
-          // V3: Stable Audio fallback
-          startOfficialModel("stability-ai", "stable-audio-2.5", {
-            prompt: beatPrompt + ", energetic version",
-            duration: Math.min(45, duration + 5),
-            steps: 8,
-            cfg_scale: 6,
-          }),
-        ]);
-
-        const variationIds = launches.map((l, i) => {
-          if (l.status === "fulfilled") {
-            console.log(`Engine ${i} launched:`, l.value.id);
-            return l.value.id;
-          }
-          console.error(`Engine ${i} failed to launch:`, l.reason);
-          return "";
-        });
-        const variationStatuses = launches.map((l) => l.status === "fulfilled" ? "generating" : "failed");
-
-        await supabaseAdmin.from("vocal_projects").update({
-          status: "generating",
-          vocal_bpm: bpm,
-          vocal_key: key,
-          vocal_energy: energy,
-          vocal_duration_seconds: duration,
-          generated_prompt: beatPrompt,
-          variation_prediction_ids: variationIds,
-          variation_statuses: variationStatuses,
-          beat_urls: [],
-          mastered_urls: [],
-        }).eq("id", projectId);
+        bpm = Math.max(60, Math.min(180, Number(a.bpm) || 100));
+        key = String(a.key || "C minor");
+        energy = Number(a.energy) || 0.1;
+        duration = Math.max(8, Math.min(60, Number(a.duration) || 30));
       } catch (e) {
-        console.error("Analysis/launch failed:", e);
-        await supabaseAdmin.from("vocal_projects").update({
-          status: "error",
-          error_message: (e as Error).message,
-        }).eq("id", projectId);
+        console.warn("Analysis failed, using defaults:", e);
       }
+
+      const userPrompt = project.user_prompt || project.description || "";
+      const genreHint = project.genre || "";
+      const beatPrompt = buildBeatPrompt(userPrompt, genreHint, bpm, key);
+
+      // Set up 3 slots with staggered launch times (immediate, +12s, +24s)
+      const now = Date.now();
+      const launchAt = [
+        new Date(now).toISOString(),
+        new Date(now + STAGGER_MS).toISOString(),
+        new Date(now + STAGGER_MS * 2).toISOString(),
+      ];
+
+      await supabaseAdmin.from("vocal_projects").update({
+        clean_vocal_url: storedClean,
+        status: "generating",
+        current_prediction_id: null,
+        vocal_bpm: bpm,
+        vocal_key: key,
+        vocal_energy: energy,
+        vocal_duration_seconds: duration,
+        generated_prompt: beatPrompt,
+        variation_engines: ["musicgen-melody", "minimax-music-1.5", "musicgen-stereo"],
+        variation_statuses: ["queued", "queued", "queued"],
+        variation_prediction_ids: ["", "", ""],
+        variation_errors: ["", "", ""],
+        variation_launch_at: launchAt,
+        beat_urls: [],
+        mastered_urls: [],
+      }).eq("id", projectId);
 
       const { data: updated } = await supabaseAdmin.from("vocal_projects")
         .select("*").eq("id", projectId).single();
@@ -271,23 +344,48 @@ Deno.serve(async (req) => {
 
     // ===== STAGE: generating + mastering (per-variation) =====
     if (project.status === "generating" || project.status === "mastering") {
-      const variationIds: string[] = (project.variation_prediction_ids || []) as string[];
-      const variationStatuses: string[] = (project.variation_statuses || []) as string[];
-      const beatUrls: string[] = (project.beat_urls || []) as string[];
-      const masteredUrls: string[] = (project.mastered_urls || []) as string[];
+      const variationIds: string[] = [...((project.variation_prediction_ids || []) as string[])];
+      const variationStatuses: string[] = [...((project.variation_statuses || []) as string[])];
+      const variationErrors: string[] = [...((project.variation_errors || []) as string[])];
+      const variationLaunchAt: string[] = (project.variation_launch_at || []) as string[];
+      const beatUrls: string[] = [...((project.beat_urls || []) as string[])];
+      // Ensure arrays are sized
+      while (beatUrls.length < 3) beatUrls.push("");
+      while (variationErrors.length < 3) variationErrors.push("");
 
       let mutated = false;
-      for (let i = 0; i < variationIds.length; i += 1) {
+      const now = Date.now();
+
+      for (let i = 0; i < 3; i += 1) {
         const status = variationStatuses[i];
         if (status === "done" || status === "failed") continue;
 
-        // Generation phase
+        // QUEUED → check launch time, then launch
+        if (status === "queued") {
+          const dueAt = variationLaunchAt[i] ? new Date(variationLaunchAt[i]).getTime() : 0;
+          if (now < dueAt) continue; // not yet
+          // Launch this slot now
+          const result = await tryLaunchSlot(i, project);
+          if (result.id) {
+            variationIds[i] = result.id;
+            variationStatuses[i] = "generating";
+            variationErrors[i] = "";
+          } else {
+            variationStatuses[i] = "failed";
+            variationErrors[i] = result.error.slice(0, 240);
+          }
+          mutated = true;
+          continue;
+        }
+
+        // GENERATING → poll prediction
         if (status === "generating" && variationIds[i]) {
           const pred = await checkPrediction(variationIds[i]);
           if (pred.status === "starting" || pred.status === "processing") continue;
           if (pred.status === "failed" || pred.status === "canceled") {
-            console.log(`Variation ${i} failed:`, pred.error);
+            console.log(`Slot ${i} prediction failed:`, pred.error);
             variationStatuses[i] = "failed";
+            variationErrors[i] = (pred.error || "Generation failed").toString().slice(0, 240);
             mutated = true;
             continue;
           }
@@ -295,27 +393,28 @@ Deno.serve(async (req) => {
           const beatUrl = extractAudioUrl(pred.output);
           if (!beatUrl) {
             variationStatuses[i] = "failed";
+            variationErrors[i] = "No audio in output";
             mutated = true;
             continue;
           }
+          const ext = beatUrl.includes(".mp3") ? "mp3" : "wav";
           const storedBeat = await storeToStorage(
-            beatUrl, user.id, projectId, `beat_v${i + 1}.wav`,
+            beatUrl, user.id, projectId, `beat_v${i + 1}.${ext}`,
           );
           beatUrls[i] = storedBeat;
-
-          // Kick off RoEx mix+master synchronously (fire and don't await — slow)
           variationStatuses[i] = "mastering";
           mutated = true;
 
-          // Run mastering in background using EdgeRuntime.waitUntil
+          // Background mastering
           const ctx = (globalThis as unknown as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } }).EdgeRuntime;
+          const slotIdx = i;
           const masterTask = (async () => {
             try {
               const masterRes = await invokeEdgeFunction("roex-mix-master", {
                 vocalUrl: project.clean_vocal_url,
                 instrumentalUrl: storedBeat,
                 projectId,
-                variationIndex: i,
+                variationIndex: slotIdx,
                 referenceUrl: project.reference_track_url || null,
                 musicalStyle: (project.genre || "POP").toUpperCase().replace(/[^A-Z]/g, "_"),
               }, authHeader);
@@ -325,26 +424,26 @@ Deno.serve(async (req) => {
                 .select("variation_statuses, mastered_urls").eq("id", projectId).single();
               const curStatuses = [...((cur?.variation_statuses || []) as string[])];
               const curMastered = [...((cur?.mastered_urls || []) as string[])];
-              while (curMastered.length <= i) curMastered.push("");
-              curStatuses[i] = "done";
-              curMastered[i] = finalMastered;
+              while (curMastered.length <= slotIdx) curMastered.push("");
+              curStatuses[slotIdx] = "done";
+              curMastered[slotIdx] = finalMastered;
               const allDone = curStatuses.every((s) => s === "done" || s === "failed");
               await supabaseAdmin.from("vocal_projects").update({
                 variation_statuses: curStatuses,
                 mastered_urls: curMastered,
                 ...(allDone ? { status: "done", final_urls: curMastered.filter(Boolean) } : {}),
               }).eq("id", projectId);
-              console.log(`Variation ${i} mastered`, finalMastered);
+              console.log(`Slot ${slotIdx} mastered`, finalMastered);
             } catch (e) {
-              console.error(`Mastering ${i} failed, falling back to raw beat:`, e);
+              console.error(`Mastering ${slotIdx} failed, using raw beat:`, e);
               const { data: cur } = await supabaseAdmin.from("vocal_projects")
                 .select("variation_statuses, mastered_urls, beat_urls").eq("id", projectId).single();
               const curStatuses = [...((cur?.variation_statuses || []) as string[])];
               const curMastered = [...((cur?.mastered_urls || []) as string[])];
               const curBeats = [...((cur?.beat_urls || []) as string[])];
-              while (curMastered.length <= i) curMastered.push("");
-              curStatuses[i] = "done";
-              curMastered[i] = curBeats[i] || "";
+              while (curMastered.length <= slotIdx) curMastered.push("");
+              curStatuses[slotIdx] = "done";
+              curMastered[slotIdx] = curBeats[slotIdx] || "";
               const allDone = curStatuses.every((s) => s === "done" || s === "failed");
               await supabaseAdmin.from("vocal_projects").update({
                 variation_statuses: curStatuses,
@@ -360,22 +459,26 @@ Deno.serve(async (req) => {
       if (mutated) {
         await supabaseAdmin.from("vocal_projects").update({
           variation_statuses: variationStatuses,
+          variation_prediction_ids: variationIds,
+          variation_errors: variationErrors,
           beat_urls: beatUrls,
         }).eq("id", projectId);
       }
 
-      // Check if everything is done or failed
+      // Finalize if all terminal
       const { data: cur } = await supabaseAdmin.from("vocal_projects").select("*").eq("id", projectId).single();
       const curStatuses = (cur?.variation_statuses || []) as string[];
       const allTerminal = curStatuses.length > 0 && curStatuses.every((s) => s === "done" || s === "failed");
       if (allTerminal && cur?.status !== "done") {
-        const masteredUrls = ((cur?.mastered_urls || []) as string[]).filter(Boolean);
-        const beatUrls = ((cur?.beat_urls || []) as string[]).filter(Boolean);
-        const finals = masteredUrls.length > 0 ? masteredUrls : beatUrls;
+        const finals = ((cur?.mastered_urls || []) as string[]).filter(Boolean);
+        const beats = ((cur?.beat_urls || []) as string[]).filter(Boolean);
+        const useUrls = finals.length > 0 ? finals : beats;
         await supabaseAdmin.from("vocal_projects").update({
-          status: finals.length > 0 ? "done" : "error",
-          error_message: finals.length === 0 ? "All variations failed to generate." : null,
-          final_urls: finals,
+          status: useUrls.length > 0 ? "done" : "error",
+          error_message: useUrls.length === 0
+            ? "All engines failed. Try again — the melody-matching engine may be at capacity."
+            : null,
+          final_urls: useUrls,
         }).eq("id", projectId);
       }
 
@@ -385,7 +488,6 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Default: return current state
     return new Response(JSON.stringify({ success: true, project }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {

@@ -30,6 +30,8 @@ export interface VocalProject {
   variation_engines: string[];
   variation_statuses: string[];
   variation_prediction_ids: string[];
+  variation_errors: string[];
+  variation_launch_at: string[];
   error_message: string | null;
   created_at: string;
   updated_at: string;
@@ -39,7 +41,7 @@ const STATUS_LABELS: Record<string, string> = {
   pending: 'Preparing project…',
   cleaning: 'Cleaning vocals (Demucs)…',
   analyzing: 'Analyzing BPM, key, and vocal flow…',
-  generating: 'Generating 3 instrumentals matched to your voice…',
+  generating: 'Generating instrumentals — slot 1 follows your melody…',
   mastering: 'Mixing and mastering with RoEx…',
   done: 'Your songs are ready',
   error: 'Something went wrong',
@@ -49,7 +51,7 @@ const STATUS_PROGRESS: Record<string, number> = {
   pending: 4,
   cleaning: 12,
   analyzing: 28,
-  generating: 55,
+  generating: 50,
   mastering: 80,
   done: 100,
   error: 0,
@@ -66,8 +68,10 @@ const getStatusProgress = (project: VocalProject | null) => {
     const statuses = project.variation_statuses || [];
     if (statuses.length > 0) {
       const done = statuses.filter((s) => s === 'done' || s === 'failed').length;
-      const partial = statuses.filter((s) => s === 'mastering').length * 0.6;
-      return Math.min(95, 40 + ((done + partial) / statuses.length) * 55);
+      const mastering = statuses.filter((s) => s === 'mastering').length * 0.7;
+      const generating = statuses.filter((s) => s === 'generating').length * 0.4;
+      const queued = statuses.filter((s) => s === 'queued').length * 0.1;
+      return Math.min(95, 35 + ((done + mastering + generating + queued) / statuses.length) * 60);
     }
   }
   return STATUS_PROGRESS[project.status] || 0;
@@ -139,7 +143,7 @@ export function useVocalProject() {
     activeProjectIdRef.current = projectId;
     setIsPolling(true);
     void pollProject(projectId);
-    pollingRef.current = setInterval(() => { void pollProject(projectId); }, 8000);
+    pollingRef.current = setInterval(() => { void pollProject(projectId); }, 5000);
   }, [pollProject]);
 
   const stopPolling = useCallback(() => {
