@@ -1656,6 +1656,8 @@ export type Database = {
           user_id: string
           user_prompt: string | null
           variation_engines: string[] | null
+          variation_errors: string[] | null
+          variation_launch_at: string[] | null
           variation_prediction_ids: string[] | null
           variation_statuses: string[] | null
           vocal_bpm: number | null
@@ -1689,6 +1691,8 @@ export type Database = {
           user_id: string
           user_prompt?: string | null
           variation_engines?: string[] | null
+          variation_errors?: string[] | null
+          variation_launch_at?: string[] | null
           variation_prediction_ids?: string[] | null
           variation_statuses?: string[] | null
           vocal_bpm?: number | null
@@ -1722,6 +1726,8 @@ export type Database = {
           user_id?: string
           user_prompt?: string | null
           variation_engines?: string[] | null
+          variation_errors?: string[] | null
+          variation_launch_at?: string[] | null
           variation_prediction_ids?: string[] | null
           variation_statuses?: string[] | null
           vocal_bpm?: number | null
