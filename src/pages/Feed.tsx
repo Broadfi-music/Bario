@@ -465,6 +465,12 @@ const Feed = () => {
           </div>
         </aside>
       </div>
+
+      <CommentsSheet
+        postId={expandedCommentsPostId}
+        open={expandedCommentsPostId !== null}
+        onClose={() => setExpandedCommentsPostId(null)}
+      />
     </div>
   );
 };
