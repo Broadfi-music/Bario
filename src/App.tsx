@@ -48,6 +48,7 @@ import Messages from "@/pages/Messages";
 import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
 import VocalProject from "@/pages/VocalProject";
+import AccountDelete from "@/pages/AccountDelete";
 
 // Rebuild trigger: env re-injection
 const queryClient = new QueryClient();
@@ -106,6 +107,7 @@ const AnimatedRoutes = ({ showSplash }: { showSplash: boolean }) => {
           <Route path="/terms" element={<Terms />} />
           <Route path="/install" element={<Install />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/account/delete" element={<AccountDelete />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </PageTransition>
