@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { ArrowLeft, Play, Pause, Check, Download, Music, Loader2, Mic, Disc3 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { ArrowLeft, Play, Pause, Check, Download, Music, Loader2, Mic, Disc3, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import type { VocalProject } from '@/hooks/useVocalProject';
@@ -14,59 +14,49 @@ interface Props {
 }
 
 const PIPELINE_STEPS = [
-  { key: 'cleaning', label: 'Clean vocal performance', icon: Mic },
-  { key: 'analyzing', label: 'Transcribe + build production prompt', icon: Music },
-  { key: 'generating', label: 'Generate 3 song options', icon: Disc3 },
-  { key: 'done', label: 'Preview final options', icon: Check },
+  { key: 'cleaning', label: 'Clean vocal (Demucs)', icon: Mic },
+  { key: 'analyzing', label: 'Detect BPM, key, energy', icon: Music },
+  { key: 'generating', label: 'Generate 3 vocal-matched instrumentals', icon: Disc3 },
+  { key: 'mastering', label: 'Mix & master with RoEx', icon: Sparkles },
+  { key: 'done', label: 'Your finished songs', icon: Check },
 ];
 
-const STATUS_ORDER = ['pending', 'cleaning', 'analyzing', 'generating', 'done'];
+const STATUS_ORDER = ['pending', 'cleaning', 'analyzing', 'generating', 'mastering', 'done'];
+
+const variationLabels = ['MusicGen Melody', 'MusicGen Stereo', 'Stable Audio'];
+const variationStatusLabels: Record<string, string> = {
+  pending: 'Queued',
+  generating: 'Generating instrumental…',
+  mastering: 'Mixing & mastering…',
+  done: 'Ready',
+  failed: 'Failed',
+};
 
 export default function VocalProjectStatus({ project, statusLabel, progress, isPolling, onBack, onSelectVariation }: Props) {
-  const [playingType, setPlayingType] = useState<string | null>(null);
+  const [playingIndex, setPlayingIndex] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const vocalAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const currentStepIndex = STATUS_ORDER.indexOf(project.status);
   const isDone = project.status === 'done';
   const isError = project.status === 'error';
   const finalUrls = (project.final_urls || []) as string[];
+  const masteredUrls = (project.mastered_urls || []) as string[];
+  const variationStatuses = (project.variation_statuses || []) as string[];
+  const variationEngines = (project.variation_engines || []) as string[];
   const cleanVocalUrl = project.clean_vocal_url || '';
 
-  const stopAll = () => {
-    audioRef.current?.pause();
-    vocalAudioRef.current?.pause();
-    setPlayingType(null);
-  };
+  const stop = () => { audioRef.current?.pause(); setPlayingIndex(null); };
 
-  const playBeat = (index: number) => {
-    const key = `beat_${index}`;
-    if (playingType === key) { stopAll(); return; }
-    stopAll();
-    const audio = new Audio(finalUrls[index]);
+  const playSong = (index: number) => {
+    const url = masteredUrls[index] || finalUrls[index];
+    if (!url) return;
+    if (playingIndex === index) { stop(); return; }
+    stop();
+    const audio = new Audio(url);
     audio.play();
-    audio.onended = () => setPlayingType(null);
+    audio.onended = () => setPlayingIndex(null);
     audioRef.current = audio;
-    setPlayingType(key);
-  };
-
-  const playBothSync = (index: number) => {
-    const key = `both_${index}`;
-    if (playingType === key) { stopAll(); return; }
-    stopAll();
-
-    const beat = new Audio(finalUrls[index]);
-    const vocal = new Audio(cleanVocalUrl);
-    beat.volume = 0.7;
-    vocal.volume = 0.9;
-
-    beat.play();
-    vocal.play();
-    beat.onended = () => { vocal.pause(); setPlayingType(null); };
-    vocal.onended = () => { beat.pause(); setPlayingType(null); };
-    audioRef.current = beat;
-    vocalAudioRef.current = vocal;
-    setPlayingType(key);
+    setPlayingIndex(index);
   };
 
   return (
@@ -77,11 +67,11 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <h1 className="text-xl sm:text-2xl font-bold">
-            {isDone ? 'Your Song Options Are Ready' : isError ? 'Processing Failed' : 'Creating Your Song'}
+            {isDone ? 'Your Songs Are Ready' : isError ? 'Processing Failed' : 'Creating Your Songs'}
           </h1>
         </div>
 
-        {!isDone && !isError && (
+        {!isError && (
           <div className="mb-8 space-y-4">
             <div className="flex items-center justify-between text-sm">
               <span className="text-white/60">{statusLabel}</span>
@@ -89,13 +79,22 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
             </div>
             <Progress value={progress} className="h-2 bg-white/10" />
 
+            {project.vocal_bpm ? (
+              <div className="flex flex-wrap gap-2 text-[11px] text-white/40">
+                <span className="rounded-full bg-white/5 px-2 py-0.5">BPM: {Math.round(Number(project.vocal_bpm))}</span>
+                <span className="rounded-full bg-white/5 px-2 py-0.5">Key: {project.vocal_key}</span>
+                {project.vocal_duration_seconds ? (
+                  <span className="rounded-full bg-white/5 px-2 py-0.5">{Math.round(Number(project.vocal_duration_seconds))}s</span>
+                ) : null}
+              </div>
+            ) : null}
+
             <div className="space-y-2 mt-6">
               {PIPELINE_STEPS.map((step) => {
                 const stepIdx = STATUS_ORDER.indexOf(step.key);
                 const isActive = project.status === step.key;
                 const isComplete = currentStepIndex > stepIdx;
                 const Icon = step.icon;
-
                 return (
                   <div key={step.key} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                     isActive ? 'bg-white/10' : isComplete ? 'bg-white/5' : 'opacity-40'
@@ -103,13 +102,9 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
                       isComplete ? 'bg-white text-black' : isActive ? 'bg-white/20' : 'bg-white/5'
                     }`}>
-                      {isComplete ? (
-                        <Check className="h-3.5 w-3.5" />
-                      ) : isActive ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Icon className="h-3.5 w-3.5 text-white/40" />
-                      )}
+                      {isComplete ? <Check className="h-3.5 w-3.5" /> :
+                        isActive ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> :
+                        <Icon className="h-3.5 w-3.5 text-white/40" />}
                     </div>
                     <span className={`text-sm ${isActive ? 'text-white font-medium' : isComplete ? 'text-white/70' : 'text-white/30'}`}>
                       {step.label}
@@ -119,9 +114,38 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
               })}
             </div>
 
-            {isPolling && (
+            {/* Per-variation progress */}
+            {variationStatuses.length > 0 && (project.status === 'generating' || project.status === 'mastering' || isDone) && (
+              <div className="mt-6 space-y-2">
+                <p className="text-[11px] uppercase tracking-wider text-white/30">Variations</p>
+                {variationStatuses.map((status, i) => {
+                  const engine = variationEngines[i] || variationLabels[i] || `V${i + 1}`;
+                  const label = variationStatusLabels[status] || status;
+                  const isReady = status === 'done';
+                  const isFailed = status === 'failed';
+                  return (
+                    <div key={i} className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-xs text-white/50 truncate">{engine}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        {isReady ? (
+                          <span className="text-white/80 inline-flex items-center gap-1"><Check className="h-3 w-3" /> {label}</span>
+                        ) : isFailed ? (
+                          <span className="text-red-400/70 inline-flex items-center gap-1"><X className="h-3 w-3" /> {label}</span>
+                        ) : (
+                          <span className="text-white/50 inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> {label}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {isPolling && !isDone && (
               <p className="text-xs text-white/30 text-center mt-4">
-                Processing takes 5–8 minutes. Keep this page open so all 3 options finish generating.
+                Processing takes 3–6 minutes. First option usually finishes fastest.
               </p>
             )}
           </div>
@@ -136,78 +160,53 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
           </div>
         )}
 
-        {isDone && finalUrls.length > 0 && (
-          <div className="space-y-6">
-            <p className="text-sm text-white/50">
-              3 generated song options built from your voice. Preview the full song or listen to the instrumental by itself.
-            </p>
-
-            {/* Clean Vocal Preview */}
+        {/* Finished mastered songs (rendered as soon as available) */}
+        {(isDone || masteredUrls.some(Boolean)) && (
+          <div className="space-y-4 mt-2">
             {cleanVocalUrl && (
               <div className="border border-white/10 rounded-xl p-4 bg-white/[0.02]">
                 <div className="flex items-center gap-3 mb-2">
                   <Mic className="h-4 w-4 text-white/50" />
-                  <span className="text-xs text-white/50 uppercase tracking-wider font-medium">Your Clean Vocal</span>
+                  <span className="text-xs text-white/50 uppercase tracking-wider font-medium">Cleaned vocal</span>
                 </div>
                 <audio src={cleanVocalUrl} controls className="w-full h-8 opacity-70" style={{ filter: 'invert(1)' }} />
               </div>
             )}
 
-            {/* Beat Variations */}
-            {finalUrls.map((url, i) => {
-              const isBeatPlaying = playingType === `beat_${i}`;
-              const isBothPlaying = playingType === `both_${i}`;
-              const labels = ['Original', 'Energetic', 'Intimate'];
-
+            {variationStatuses.map((status, i) => {
+              const url = masteredUrls[i];
+              if (!url || status !== 'done') return null;
+              const isPlaying = playingIndex === i;
+              const engine = variationEngines[i] || variationLabels[i] || `V${i + 1}`;
               return (
-                <div key={i} className={`border rounded-xl p-4 transition-colors ${
-                  i === 0 ? 'border-white/20 bg-white/5' : 'border-white/10 bg-white/[0.02]'
-                }`}>
+                <div key={i} className="border border-white/10 rounded-xl p-4 bg-white/[0.02]">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <p className="text-sm font-medium text-white">Variation {i + 1} — {labels[i] || 'Beat'}</p>
-                      <p className="text-xs text-white/40">{project.genre || 'Auto-detected'} instrumental</p>
+                      <p className="text-sm font-medium text-white">Variation {i + 1} — {engine}</p>
+                      <p className="text-xs text-white/40">Mastered with RoEx Tonn</p>
                     </div>
                     {i === 0 && (
-                      <span className="text-[10px] bg-white/10 text-white/60 px-2 py-0.5 rounded-full">⭐ Recommended</span>
+                      <span className="text-[10px] bg-white/10 text-white/60 px-2 py-0.5 rounded-full">⭐ Best fit</span>
                     )}
                   </div>
 
                   <div className="flex items-center gap-2 mb-3">
-                    {/* Play beat only */}
                     <Button
                       size="sm"
-                      variant="outline"
-                      onClick={() => playBeat(i)}
-                      className={`flex-1 border-white/10 text-white text-xs h-9 ${isBeatPlaying ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                      onClick={() => playSong(i)}
+                      className={`flex-1 text-xs h-9 ${isPlaying ? 'bg-white text-black' : 'bg-white/90 text-black hover:bg-white'}`}
                     >
-                      {isBeatPlaying ? <Pause className="h-3.5 w-3.5 mr-1.5" /> : <Play className="h-3.5 w-3.5 mr-1.5" />}
-                       Instrumental Only
+                      {isPlaying ? <Pause className="h-3.5 w-3.5 mr-1.5" /> : <Play className="h-3.5 w-3.5 mr-1.5" />}
+                      Play mastered song
                     </Button>
-
-                    {/* Play vocal + beat synced */}
-                    {cleanVocalUrl && (
-                      <Button
-                        size="sm"
-                        onClick={() => playBothSync(i)}
-                        className={`flex-1 text-xs h-9 ${isBothPlaying ? 'bg-white text-black' : 'bg-white/90 text-black hover:bg-white'}`}
-                      >
-                        {isBothPlaying ? <Pause className="h-3.5 w-3.5 mr-1.5" /> : <Play className="h-3.5 w-3.5 mr-1.5" />}
-                         Generated Song Preview
-                      </Button>
-                    )}
                   </div>
 
                   <div className="flex items-center gap-2">
                     <a href={url} download className="p-2 rounded-lg hover:bg-white/10 text-white/40 hover:text-white">
                       <Download className="h-4 w-4" />
                     </a>
-                    <Button
-                      size="sm"
-                      onClick={() => onSelectVariation(i)}
-                      className="bg-white text-black hover:bg-white/80 text-xs ml-auto"
-                    >
-                        Open Result
+                    <Button size="sm" onClick={() => onSelectVariation(i)} className="bg-white text-black hover:bg-white/80 text-xs ml-auto">
+                      Open Result
                     </Button>
                   </div>
                 </div>
@@ -216,8 +215,8 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
 
             {project.generated_prompt && (
               <div className="border border-white/5 rounded-xl p-4 bg-white/[0.01]">
-                <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">AI-Generated Prompt</p>
-                <p className="text-xs text-white/40 leading-relaxed">{project.generated_prompt.slice(0, 300)}...</p>
+                <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">AI prompt used</p>
+                <p className="text-xs text-white/40 leading-relaxed">{project.generated_prompt.slice(0, 300)}</p>
               </div>
             )}
           </div>

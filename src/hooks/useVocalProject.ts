@@ -21,66 +21,56 @@ export interface VocalProject {
   is_paid: boolean;
   genre: string | null;
   description: string | null;
+  user_prompt: string | null;
+  reference_track_url: string | null;
+  vocal_bpm: number | null;
+  vocal_key: string | null;
+  vocal_energy: number | null;
+  vocal_duration_seconds: number | null;
+  variation_engines: string[];
+  variation_statuses: string[];
+  variation_prediction_ids: string[];
   error_message: string | null;
   created_at: string;
   updated_at: string;
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'Preparing project...',
-  cleaning: 'Cleaning vocals (Demucs)...',
-  analyzing: 'Transcribing vocals and building the arrangement...',
-  generating: 'Generating your 3 song options...',
-  done: 'Song options ready!',
-  error: 'Error occurred',
+  pending: 'Preparing project…',
+  cleaning: 'Cleaning vocals (Demucs)…',
+  analyzing: 'Analyzing BPM, key, and vocal flow…',
+  generating: 'Generating 3 instrumentals matched to your voice…',
+  mastering: 'Mixing and mastering with RoEx…',
+  done: 'Your songs are ready',
+  error: 'Something went wrong',
 };
 
 const STATUS_PROGRESS: Record<string, number> = {
-  pending: 3,
-  cleaning: 10,
-  analyzing: 30,
+  pending: 4,
+  cleaning: 12,
+  analyzing: 28,
   generating: 55,
+  mastering: 80,
   done: 100,
   error: 0,
 };
 
-const STAGE_LABELS: Record<string, string> = {
-  whisper: 'Transcribing your vocal performance...',
-  llama: 'Designing the instrumental direction...',
-  beat_1: 'Generating song option 1 of 3...',
-  beat_2: 'Generating song option 2 of 3...',
-  beat_3: 'Generating song option 3 of 3...',
-  complete: 'Song options ready!',
-};
-
-const STAGE_PROGRESS: Record<string, number> = {
-  whisper: 25,
-  llama: 40,
-  beat_1: 60,
-  beat_2: 75,
-  beat_3: 90,
-  complete: 100,
-};
-
-const getPipelineStage = (project: VocalProject | null) => {
-  if (!project?.analysis_data || typeof project.analysis_data !== 'object' || Array.isArray(project.analysis_data)) {
-    return '';
-  }
-
-  const stage = (project.analysis_data as Record<string, unknown>).stage;
-  return typeof stage === 'string' ? stage : '';
-};
-
 const getStatusLabel = (project: VocalProject | null) => {
   if (!project) return '';
-  const stage = getPipelineStage(project);
-  return STAGE_LABELS[stage] || STATUS_LABELS[project.status] || project.status;
+  return STATUS_LABELS[project.status] || project.status;
 };
 
 const getStatusProgress = (project: VocalProject | null) => {
   if (!project) return 0;
-  const stage = getPipelineStage(project);
-  return STAGE_PROGRESS[stage] || STATUS_PROGRESS[project.status] || 0;
+  if (project.status === 'generating' || project.status === 'mastering') {
+    const statuses = project.variation_statuses || [];
+    if (statuses.length > 0) {
+      const done = statuses.filter((s) => s === 'done' || s === 'failed').length;
+      const partial = statuses.filter((s) => s === 'mastering').length * 0.6;
+      return Math.min(95, 40 + ((done + partial) / statuses.length) * 55);
+    }
+  }
+  return STATUS_PROGRESS[project.status] || 0;
 };
 
 export function useVocalProject() {
@@ -91,11 +81,16 @@ export function useVocalProject() {
   const activeProjectIdRef = useRef<string | null>(null);
   const { toast } = useToast();
 
-  const startProject = useCallback(async (vocalUrl: string, genre?: string, description?: string) => {
+  const startProject = useCallback(async (
+    vocalUrl: string,
+    genre?: string,
+    description?: string,
+    referenceUrl?: string,
+  ) => {
     setIsStarting(true);
     try {
       const { data, error } = await supabase.functions.invoke('vocal-to-song', {
-        body: { vocalUrl, genre: genre || undefined, description },
+        body: { vocalUrl, genre: genre || undefined, description, referenceUrl },
       });
       if (error) throw new Error(error.message);
       if (!data?.success) throw new Error(data?.error || 'Failed to start');
@@ -123,7 +118,7 @@ export function useVocalProject() {
 
       if (proj.status === 'done') {
         setIsPolling(false);
-        toast({ title: '🎵 Song Complete!', description: 'Your instrumental beats are ready. Play your voice over them!' });
+        toast({ title: '🎵 Songs ready', description: 'Your 3 mastered songs are ready to play.' });
       } else if (proj.status === 'error') {
         setIsPolling(false);
         toast({ title: 'Error', description: proj.error_message || 'Pipeline failed', variant: 'destructive' });
@@ -136,21 +131,15 @@ export function useVocalProject() {
   }, [toast]);
 
   const startPolling = useCallback((projectId: string) => {
-    if (pollingRef.current && activeProjectIdRef.current === projectId) {
-      return;
-    }
-
+    if (pollingRef.current && activeProjectIdRef.current === projectId) return;
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
     }
-
     activeProjectIdRef.current = projectId;
     setIsPolling(true);
     void pollProject(projectId);
-    pollingRef.current = setInterval(() => {
-      void pollProject(projectId);
-    }, 10000);
+    pollingRef.current = setInterval(() => { void pollProject(projectId); }, 8000);
   }, [pollProject]);
 
   const stopPolling = useCallback(() => {
@@ -163,14 +152,10 @@ export function useVocalProject() {
   }, []);
 
   useEffect(() => {
-    if (project && (project.status === 'done' || project.status === 'error')) {
-      stopPolling();
-    }
+    if (project && (project.status === 'done' || project.status === 'error')) stopPolling();
   }, [project, stopPolling]);
 
-  useEffect(() => {
-    return () => stopPolling();
-  }, [stopPolling]);
+  useEffect(() => () => stopPolling(), [stopPolling]);
 
   return {
     project,
