@@ -23,9 +23,9 @@ const PIPELINE_STEPS = [
 
 const STATUS_ORDER = ['pending', 'cleaning', 'analyzing', 'generating', 'mastering', 'done'];
 
-const variationLabels = ['MusicGen Melody', 'MusicGen Stereo', 'Stable Audio'];
+const variationLabels = ['MusicGen Melody (follows your vocal)', 'MiniMax Music 1.5', 'MusicGen Stereo'];
 const variationStatusLabels: Record<string, string> = {
-  pending: 'Queued',
+  queued: 'Queued (staggered to dodge rate limits)',
   generating: 'Generating instrumental…',
   mastering: 'Mixing & mastering…',
   done: 'Ready',
