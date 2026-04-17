@@ -119,25 +119,37 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
             {variationStatuses.length > 0 && (project.status === 'generating' || project.status === 'mastering' || isDone) && (
               <div className="mt-6 space-y-2">
                 <p className="text-[11px] uppercase tracking-wider text-white/30">Variations</p>
+                <p className="text-[10px] text-white/30 leading-relaxed">
+                  Slot 1 follows your melody (best match). Slots 2 & 3 are alternate takes — launched 12s apart to avoid rate limits.
+                </p>
                 {variationStatuses.map((status, i) => {
                   const engine = variationEngines[i] || variationLabels[i] || `V${i + 1}`;
                   const label = variationStatusLabels[status] || status;
+                  const errMsg = variationErrors[i];
                   const isReady = status === 'done';
                   const isFailed = status === 'failed';
                   return (
-                    <div key={i} className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-xs text-white/50 truncate">{engine}</span>
+                    <div key={i} className="rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-[10px] text-white/30 font-mono">#{i + 1}</span>
+                          <span className="text-xs text-white/60 truncate">{variationLabels[i] || engine}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs whitespace-nowrap">
+                          {isReady ? (
+                            <span className="text-white/80 inline-flex items-center gap-1"><Check className="h-3 w-3" /> {label}</span>
+                          ) : isFailed ? (
+                            <span className="text-red-400/70 inline-flex items-center gap-1"><X className="h-3 w-3" /> Failed</span>
+                          ) : (
+                            <span className="text-white/50 inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> {label}</span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        {isReady ? (
-                          <span className="text-white/80 inline-flex items-center gap-1"><Check className="h-3 w-3" /> {label}</span>
-                        ) : isFailed ? (
-                          <span className="text-red-400/70 inline-flex items-center gap-1"><X className="h-3 w-3" /> {label}</span>
-                        ) : (
-                          <span className="text-white/50 inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> {label}</span>
-                        )}
-                      </div>
+                      {isFailed && errMsg && (
+                        <p className="mt-1 text-[10px] text-red-400/50 leading-snug pl-6">
+                          {errMsg.includes('429') ? 'Rate limited — engine at capacity. Try again in 1 minute.' : errMsg.slice(0, 120)}
+                        </p>
+                      )}
                     </div>
                   );
                 })}
