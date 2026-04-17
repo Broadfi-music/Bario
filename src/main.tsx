@@ -31,6 +31,22 @@ const clearClientCaches = async () => {
   }
 };
 
+const registerPwaServiceWorker = async () => {
+  // Only register in production, on a real top-level window (not in iframes/preview).
+  // This is required for the installed PWA to launch as standalone instead of
+  // routing through the browser shell.
+  if (isPreviewContext) return;
+  if (!("serviceWorker" in navigator)) return;
+
+  try {
+    // vite-plugin-pwa emits sw.js at the site root in production builds.
+    await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  } catch (err) {
+    // Service worker registration is best-effort; continue silently.
+    console.warn("[PWA] Service worker registration failed:", err);
+  }
+};
+
 const mountApp = () => {
   if (!root) return;
   createRoot(root).render(
@@ -64,6 +80,8 @@ const boot = async () => {
   }
 
   mountApp();
+  // Register service worker AFTER React mounts so first paint isn't delayed.
+  void registerPwaServiceWorker();
 };
 
 void boot();

@@ -168,6 +168,21 @@ const DashboardSettings = () => {
             </Card>
           ))}
         </div>
+
+        {/* Danger zone */}
+        <Card className="p-6 mt-8 border-destructive/40 bg-destructive/5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground mb-1">Delete account</h2>
+              <p className="text-sm text-muted-foreground">
+                Permanently delete your Bario account, posts, followers and earnings. This cannot be undone.
+              </p>
+            </div>
+            <Link to="/account/delete">
+              <Button variant="destructive">Delete account</Button>
+            </Link>
+          </div>
+        </Card>
       </div>
     </div>
   );

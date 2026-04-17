@@ -14,6 +14,7 @@ import { getActiveStandardLiveSessions } from '@/lib/liveSessions';
 import { getPodcastEpisodeDisplayCover } from '@/lib/podcastEpisodeCovers';
 import { usePresence } from '@/hooks/usePresence';
 import OnlineIndicator from '@/components/OnlineIndicator';
+import CommentsSheet from '@/components/CommentsSheet';
 
 interface LiveHost {
   id: string;
@@ -161,6 +162,7 @@ const PodcastFeed = () => {
   const [showDiscoverCreators, setShowDiscoverCreators] = useState(false);
   const [sidebarCreators, setSidebarCreators] = useState<{user_id: string; full_name: string | null; username: string | null; avatar_url: string | null}[]>([]);
   const [creatorPosts, setCreatorPosts] = useState<any[]>([]);
+  const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
 
   const filteredHosts = searchQuery.trim()
     ? liveHosts.filter(h =>
@@ -773,29 +775,32 @@ const PodcastFeed = () => {
           const renderPost = (post: any) => (
             <div
               key={post.id}
-              className="border-b border-white/5 py-2.5 hover:bg-white/[0.02] transition-colors cursor-pointer px-1 max-w-lg"
-              onClick={() => navigate(`/host/${post.user_id}`)}
+              className="border-b border-white/5 py-2.5 hover:bg-white/[0.02] transition-colors px-1 max-w-lg"
             >
               <div className="flex gap-2">
                 <div className="relative flex-shrink-0">
-                  <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10" onClick={(e) => { e.stopPropagation(); navigate(`/host/${post.user_id}`); }}>
+                  <button
+                    type="button"
+                    className="w-8 h-8 rounded-full overflow-hidden bg-white/10 block"
+                    onClick={() => navigate(`/host/${post.user_id}`)}
+                  >
                     {post.author_avatar ? <img src={post.author_avatar} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-white/20 flex items-center justify-center"><User className="w-3.5 h-3.5 text-white/40" /></div>}
-                  </div>
+                  </button>
                   <OnlineIndicator isOnline={isOnline(post.user_id)} size="sm" className="-bottom-0.5 -right-0.5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 mb-0.5">
+                  <button type="button" onClick={() => navigate(`/host/${post.user_id}`)} className="flex items-center gap-1.5 mb-0.5 text-left">
                     <span className="text-[11px] font-semibold text-white truncate">{post.author_name}</span>
                     {post.author_username && <span className="text-[10px] text-white/30 truncate">@{post.author_username}</span>}
                     <span className="text-[9px] text-white/20">·</span>
                     <span className="text-[9px] text-white/30 flex-shrink-0">{new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                  </div>
+                  </button>
                   <p className="text-[12px] text-white/80 leading-snug mb-1.5 whitespace-pre-wrap">{post.content}</p>
                   {post.image_url && <div className="rounded-lg overflow-hidden border border-white/10 mb-1.5 max-h-[200px]"><img src={post.image_url} alt="" className="w-full h-full object-cover" loading="lazy" /></div>}
                   <div className="flex items-center gap-5">
-                    <button className="flex items-center gap-1 text-white/30 hover:text-blue-400 transition-colors"><MessageCircle className="h-3 w-3" /><span className="text-[10px]">{post.comment_count || 0}</span></button>
-                    <button className="flex items-center gap-1 text-white/30 hover:text-pink-400 transition-colors"><Heart className="h-3 w-3" /><span className="text-[10px]">{post.like_count || 0}</span></button>
-                    <button className="flex items-center gap-1 text-white/30 hover:text-green-400 transition-colors" onClick={(e) => { e.stopPropagation(); navigator.share?.({ text: post.content, url: window.location.origin + `/host/${post.user_id}` }).catch(() => {}); }}><Share2 className="h-3 w-3" /></button>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); setActiveCommentPostId(post.id); }} className="flex items-center gap-1 text-white/30 hover:text-blue-400 transition-colors"><MessageCircle className="h-3 w-3" /><span className="text-[10px]">{post.comment_count || 0}</span></button>
+                    <button type="button" className="flex items-center gap-1 text-white/30 hover:text-pink-400 transition-colors"><Heart className="h-3 w-3" /><span className="text-[10px]">{post.like_count || 0}</span></button>
+                    <button type="button" className="flex items-center gap-1 text-white/30 hover:text-green-400 transition-colors" onClick={(e) => { e.stopPropagation(); navigator.share?.({ text: post.content, url: window.location.origin + `/host/${post.user_id}` }).catch(() => {}); }}><Share2 className="h-3 w-3" /></button>
                   </div>
                 </div>
               </div>
@@ -986,6 +991,13 @@ const PodcastFeed = () => {
       <DiscoverCreatorsModal
         isOpen={showDiscoverCreators}
         onClose={() => setShowDiscoverCreators(false)}
+      />
+
+      {/* Comments Sheet */}
+      <CommentsSheet
+        postId={activeCommentPostId}
+        open={activeCommentPostId !== null}
+        onClose={() => setActiveCommentPostId(null)}
       />
     </div>
   );

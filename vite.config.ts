@@ -26,6 +26,10 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     VitePWA({
+      // Register the service worker manually in src/main.tsx so we can
+      // gate it on production / non-preview contexts. Without registration
+      // installed PWAs may fall back to the browser shell instead of
+      // launching as standalone.
       injectRegister: null,
       registerType: "autoUpdate",
       devOptions: {
@@ -52,25 +56,33 @@ export default defineConfig(({ mode }) => ({
         importScripts: ["/sw-push.js"],
       },
       manifest: {
+        id: "/?source=pwa",
         name: "Bario - Music Discovery",
         short_name: "Bario",
         description: "Discover trending music, AI remixes & live podcast battles",
         theme_color: "#000000",
         background_color: "#000000",
         display: "standalone",
+        display_override: ["standalone", "minimal-ui"],
         orientation: "portrait",
         scope: "/",
-        start_url: "/",
+        start_url: "/?source=pwa",
+        launch_handler: {
+          client_mode: ["focus-existing", "auto"],
+        },
+        categories: ["music", "social", "entertainment"],
         icons: [
           {
             src: "/pwa-192x192.png",
             sizes: "192x192",
             type: "image/png",
+            purpose: "any",
           },
           {
             src: "/pwa-512x512.png",
             sizes: "512x512",
             type: "image/png",
+            purpose: "any",
           },
           {
             src: "/pwa-512x512.png",
