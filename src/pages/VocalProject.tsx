@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Upload, Music, Loader2, Mic } from 'lucide-react';
+import { ArrowLeft, Upload, Music, Loader2, Mic, Disc3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,6 +20,7 @@ const VocalProjectPage = () => {
   const { project, isStarting, isPolling, startProject, startPolling, statusLabel, progress } = useVocalProject();
 
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [description, setDescription] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
@@ -30,53 +31,42 @@ const VocalProjectPage = () => {
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
-    if (existingProjectId) {
-      startPolling(existingProjectId);
-    }
+    if (existingProjectId) startPolling(existingProjectId);
   }, [existingProjectId, startPolling]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileUpload = (setter: (f: File | null) => void) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (file.size > MAX_AUDIO_FILE_SIZE) {
+        toast({ title: 'File too large', description: 'Please upload an audio file smaller than 50MB.', variant: 'destructive' });
+        e.target.value = '';
+        return;
+      }
+      setter(file);
+    };
 
-    if (file.size > MAX_AUDIO_FILE_SIZE) {
-      toast({ title: 'File too large', description: 'Please upload an audio file smaller than 50MB.', variant: 'destructive' });
-      e.target.value = '';
-      return;
-    }
-
-    setAudioFile(file);
+  const uploadToBucket = async (file: File, suffix: string): Promise<string> => {
+    if (!user) throw new Error('Not authenticated');
+    const ext = file.name.split('.').pop() || 'wav';
+    const path = `${user.id}/${Date.now()}-${suffix}.${ext}`;
+    const { error } = await supabase.storage.from('vocal-projects').upload(path, file, {
+      contentType: file.type || undefined,
+      upsert: true,
+    });
+    if (error) throw error;
+    const { data: { publicUrl } } = supabase.storage.from('vocal-projects').getPublicUrl(path);
+    return publicUrl;
   };
 
   const handleSubmit = async () => {
     if (!audioFile || !user) return;
-
     setIsUploading(true);
     try {
-      const ext = audioFile.name.split('.').pop();
-      const path = `${user.id}/${Date.now()}.${ext}`;
-      let uploadedPath: string | null = null;
+      const vocalUrl = await uploadToBucket(audioFile, 'vocal');
+      const referenceUrl = referenceFile ? await uploadToBucket(referenceFile, 'reference') : undefined;
 
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        const { data, error } = await supabase.storage.from('vocal-projects').upload(path, audioFile, {
-          contentType: audioFile.type || undefined,
-          upsert: attempt > 0,
-        });
-
-        if (!error && data?.path) {
-          uploadedPath = data.path;
-          break;
-        }
-
-        if (attempt === 1) throw error;
-      }
-
-      if (!uploadedPath) throw new Error('Upload failed');
-
-      const { data: { publicUrl } } = supabase.storage.from('vocal-projects').getPublicUrl(uploadedPath);
-
-      // Genre is optional — AI will auto-detect from the vocal
-      const projectId = await startProject(publicUrl, '', description);
+      const projectId = await startProject(vocalUrl, '', description, referenceUrl);
       if (projectId) {
         startPolling(projectId);
         window.history.replaceState({}, '', `/vocal-project?id=${projectId}`);
@@ -90,7 +80,10 @@ const VocalProjectPage = () => {
 
   const handleSelectVariation = (index: number) => {
     if (!project) return;
-    const finalUrls = (project.final_urls || []) as string[];
+    const masteredUrls = (project.mastered_urls || []) as string[];
+    const finalUrls = masteredUrls.filter(Boolean).length > 0
+      ? masteredUrls.filter(Boolean)
+      : (project.final_urls || []) as string[];
     navigate('/music-result', {
       state: {
         mode: 'vocal-project',
@@ -129,17 +122,15 @@ const VocalProjectPage = () => {
           </Button>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold">Create from Vocal</h1>
-            <p className="text-xs text-white/40 mt-0.5">Upload your raw vocal — AI handles the rest</p>
+            <p className="text-xs text-white/40 mt-0.5">Upload your vocal — we analyze, generate, mix & master.</p>
           </div>
         </div>
 
-        {/* Upload */}
         <Card className="bg-white/5 border-white/10 p-6 mb-4">
           <div className="flex items-center gap-2 mb-4">
             <Mic className="h-5 w-5 text-white/60" />
-            <h2 className="text-lg font-semibold text-white">Upload Your Vocal</h2>
+            <h2 className="text-lg font-semibold text-white">Upload your vocal</h2>
           </div>
-
           <label htmlFor="vocal-upload" className="cursor-pointer block">
             <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
               audioFile ? 'border-white/30 bg-white/5' : 'border-white/10 hover:border-white/20'
@@ -158,26 +149,46 @@ const VocalProjectPage = () => {
                 </>
               )}
             </div>
-            <input id="vocal-upload" type="file" accept="audio/*" className="hidden" onChange={handleFileUpload} disabled={isSubmitting} />
+            <input id="vocal-upload" type="file" accept="audio/*" className="hidden" onChange={handleFileUpload(setAudioFile)} disabled={isSubmitting} />
           </label>
         </Card>
 
-        {/* Description / prompt */}
-        <Card className="bg-white/5 border-white/10 p-6 mb-6">
+        <Card className="bg-white/5 border-white/10 p-6 mb-4">
           <Label className="text-white text-sm font-medium">Describe your vision (optional)</Label>
           <p className="text-[11px] text-white/30 mt-1 mb-2">
-            AI will auto-detect genre, tempo, and key from your vocal. Add details to guide the style.
+            We auto-detect BPM, key and energy from your vocal. Add details to guide the style.
           </p>
           <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="e.g. 'Upbeat summer Afrobeats vibe' or 'Dark moody trap with 808s' or leave blank for AI to decide"
+            placeholder="e.g. 'Upbeat summer Afrobeats vibe' or 'Dark moody trap with 808s'"
             className="bg-white/5 border-white/10 text-white placeholder:text-white/25 min-h-[80px]"
             disabled={isSubmitting}
           />
         </Card>
 
-        {/* Submit */}
+        <Card className="bg-white/5 border-white/10 p-6 mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <Disc3 className="h-4 w-4 text-white/60" />
+            <Label className="text-white text-sm font-medium">Master to sound like this (optional)</Label>
+          </div>
+          <p className="text-[11px] text-white/30 mb-3">
+            Upload a finished song — we'll match its loudness, EQ and tone during mastering.
+          </p>
+          <label htmlFor="reference-upload" className="cursor-pointer block">
+            <div className={`border-2 border-dashed rounded-xl p-5 text-center transition-colors ${
+              referenceFile ? 'border-white/30 bg-white/5' : 'border-white/10 hover:border-white/20'
+            }`}>
+              {referenceFile ? (
+                <p className="text-sm text-white/80">{referenceFile.name}</p>
+              ) : (
+                <p className="text-xs text-white/40">Click to upload a reference track (MP3, WAV)</p>
+              )}
+            </div>
+            <input id="reference-upload" type="file" accept="audio/*" className="hidden" onChange={handleFileUpload(setReferenceFile)} disabled={isSubmitting} />
+          </label>
+        </Card>
+
         <Button
           onClick={handleSubmit}
           disabled={!audioFile || isSubmitting}
@@ -186,18 +197,18 @@ const VocalProjectPage = () => {
           {isSubmitting ? (
             <>
               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              {isUploading ? 'Uploading vocal...' : 'Starting AI pipeline...'}
+              {isUploading ? 'Uploading…' : 'Starting pipeline…'}
             </>
           ) : (
             <>
               <Mic className="h-5 w-5 mr-2" />
-              Create Song from Vocal
+              Create song from vocal
             </>
           )}
         </Button>
 
         <p className="text-[10px] text-white/20 text-center mt-3">
-          Processing takes 3–8 minutes. You'll get 3 beat variations to choose from.
+          Processing takes 3–6 minutes. You'll get 3 mastered songs to choose from.
         </p>
       </div>
     </div>
