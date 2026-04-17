@@ -143,7 +143,7 @@ export function useVocalProject() {
     activeProjectIdRef.current = projectId;
     setIsPolling(true);
     void pollProject(projectId);
-    pollingRef.current = setInterval(() => { void pollProject(projectId); }, 8000);
+    pollingRef.current = setInterval(() => { void pollProject(projectId); }, 5000);
   }, [pollProject]);
 
   const stopPolling = useCallback(() => {
