@@ -30,6 +30,8 @@ export interface VocalProject {
   variation_engines: string[];
   variation_statuses: string[];
   variation_prediction_ids: string[];
+  variation_errors: string[];
+  variation_launch_at: string[];
   error_message: string | null;
   created_at: string;
   updated_at: string;
