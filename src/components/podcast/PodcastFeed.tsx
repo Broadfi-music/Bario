@@ -992,6 +992,13 @@ const PodcastFeed = () => {
         isOpen={showDiscoverCreators}
         onClose={() => setShowDiscoverCreators(false)}
       />
+
+      {/* Comments Sheet */}
+      <CommentsSheet
+        postId={activeCommentPostId}
+        open={activeCommentPostId !== null}
+        onClose={() => setActiveCommentPostId(null)}
+      />
     </div>
   );
 
