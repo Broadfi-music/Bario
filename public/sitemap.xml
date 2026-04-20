@@ -1,43 +1,53 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://era-remix-studio.lovable.app/</loc>
+    <loc>https://bario.icu/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://era-remix-studio.lovable.app/global-heatmap</loc>
+    <loc>https://bario.icu/podcasts</loc>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://era-remix-studio.lovable.app/podcasts</loc>
+    <loc>https://bario.icu/global-heatmap</loc>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://era-remix-studio.lovable.app/three-strike</loc>
+    <loc>https://bario.icu/feed</loc>
     <changefreq>hourly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://era-remix-studio.lovable.app/ai-remix</loc>
+    <loc>https://bario.icu/ai-remix</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://era-remix-studio.lovable.app/bario-music</loc>
+    <loc>https://bario.icu/bario-music</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://era-remix-studio.lovable.app/dashboard</loc>
+    <loc>https://bario.icu/dashboard</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://era-remix-studio.lovable.app/rewards</loc>
+    <loc>https://bario.icu/rewards</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://bario.icu/pricing</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://bario.icu/auth</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
 </urlset>
