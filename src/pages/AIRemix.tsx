@@ -440,6 +440,19 @@ const AIRemix = () => {
                 }}
               />
 
+              {/* Lyrics textbox — routes to Lyria 2 text-to-music */}
+              <div className="mt-2 pt-2 border-t border-white/5">
+                <label className="text-[10px] uppercase tracking-wider text-white/40 px-1">Lyrics (optional)</label>
+                <textarea
+                  value={lyrics}
+                  onChange={(e) => setLyrics(e.target.value)}
+                  placeholder="Write lyrics here — leave empty for instrumental..."
+                  className="w-full resize-none border-none outline-none text-xs text-white placeholder:text-white/30 bg-transparent min-h-[60px] mt-1"
+                  rows={3}
+                />
+                <p className="text-[10px] text-white/30 px-1">No upload? Prompt + lyrics generate a fresh track via Lyria 2.</p>
+              </div>
+
               {/* Uploaded file indicator */}
               {uploadedName && (
                 <div className="flex items-center gap-2 mb-2 px-1">
