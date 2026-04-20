@@ -1,5 +1,5 @@
-// Text-to-Music edge function powered by Google Lyria 2 on Replicate.
-// Accepts a text prompt and/or lyrics and returns a generated music URL.
+// Text-to-Music edge function powered by Google Lyria 3 Pro on Replicate.
+// Accepts a text prompt and/or lyrics and returns a generated music URL (MP3, up to ~3 min).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
@@ -13,9 +13,9 @@ const REPLICATE_API_TOKEN = Deno.env.get("REPLICATE_API_TOKEN")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-// Latest Lyria 2 version (verified 2025-11-25)
-const LYRIA_VERSION =
-  "bb621623ee2772c96d300b2a303c9e444b482f6b0fafcc7424923e1429971120";
+// Lyria 3 Pro is an official Replicate model — no version hash needed.
+// We call it via the official-models endpoint: /v1/models/google/lyria-3-pro/predictions
+const LYRIA_MODEL = "google/lyria-3-pro";
 
 async function pollPrediction(id: string, maxAttempts = 90): Promise<string> {
   for (let i = 0; i < maxAttempts; i++) {
@@ -80,20 +80,23 @@ Deno.serve(async (req) => {
 
     console.log("text-to-music prompt:", finalPrompt.slice(0, 200));
 
-    const startRes = await fetch("https://api.replicate.com/v1/predictions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${REPLICATE_API_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        version: LYRIA_VERSION,
-        input: {
-          prompt: finalPrompt,
-          ...(negativePrompt ? { negative_prompt: negativePrompt } : {}),
+    const startRes = await fetch(
+      `https://api.replicate.com/v1/models/${LYRIA_MODEL}/predictions`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${REPLICATE_API_TOKEN}`,
+          "Content-Type": "application/json",
+          Prefer: "wait=5",
         },
-      }),
-    });
+        body: JSON.stringify({
+          input: {
+            prompt: finalPrompt,
+            ...(negativePrompt ? { negative_prompt: negativePrompt } : {}),
+          },
+        }),
+      },
+    );
 
     const startBody = await startRes.text();
     if (!startRes.ok) {
