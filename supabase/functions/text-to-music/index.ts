@@ -1,5 +1,5 @@
-// Text-to-Music edge function powered by Google Lyria 2 on Replicate.
-// Accepts a text prompt and/or lyrics and returns a generated music URL.
+// Text-to-Music edge function powered by Google Lyria 3 Pro on Replicate.
+// Accepts a text prompt and/or lyrics and returns a generated music URL (MP3, up to ~3 min).
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
