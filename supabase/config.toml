@@ -72,3 +72,6 @@ verify_jwt = false
 
 [functions.vocal-to-song-poll]
 verify_jwt = false
+
+[functions.text-to-music]
+verify_jwt = false
