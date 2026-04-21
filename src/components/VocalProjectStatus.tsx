@@ -14,18 +14,18 @@ interface Props {
 }
 
 const PIPELINE_STEPS = [
-  { key: 'cleaning', label: 'Clean vocal (Demucs)', icon: Mic },
+  { key: 'cleaning', label: 'Clean vocal', icon: Mic },
   { key: 'analyzing', label: 'Detect BPM, key, energy', icon: Music },
   { key: 'generating', label: 'Generate 3 vocal-matched instrumentals', icon: Disc3 },
-  { key: 'mastering', label: 'Mix & master with RoEx', icon: Sparkles },
+  { key: 'mastering', label: 'Mix & master', icon: Sparkles },
   { key: 'done', label: 'Your finished songs', icon: Check },
 ];
 
 const STATUS_ORDER = ['pending', 'cleaning', 'analyzing', 'generating', 'mastering', 'done'];
 
-const variationLabels = ['MusicGen Melody (follows your vocal)', 'MiniMax Music 1.5', 'MusicGen Stereo'];
+const variationLabels = ['Vocal-matched (best fit)', 'Polished arrangement', 'Alternate take'];
 const variationStatusLabels: Record<string, string> = {
-  queued: 'Queued (staggered to dodge rate limits)',
+  queued: 'Queued',
   generating: 'Generating instrumental…',
   mastering: 'Mixing & mastering…',
   done: 'Ready',
@@ -123,7 +123,6 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
                   Slot 1 follows your melody (best match). Slots 2 & 3 are alternate takes — launched 12s apart to avoid rate limits.
                 </p>
                 {variationStatuses.map((status, i) => {
-                  const engine = variationEngines[i] || variationLabels[i] || `V${i + 1}`;
                   const label = variationStatusLabels[status] || status;
                   const errMsg = variationErrors[i];
                   const isReady = status === 'done';
@@ -133,7 +132,7 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="text-[10px] text-white/30 font-mono">#{i + 1}</span>
-                          <span className="text-xs text-white/60 truncate">{variationLabels[i] || engine}</span>
+                          <span className="text-xs text-white/60 truncate">{variationLabels[i] || `Take ${i + 1}`}</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs whitespace-nowrap">
                           {isReady ? (
@@ -195,8 +194,8 @@ export default function VocalProjectStatus({ project, statusLabel, progress, isP
                 <div key={i} className="border border-white/10 rounded-xl p-4 bg-white/[0.02]">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <p className="text-sm font-medium text-white">Variation {i + 1} — {engine}</p>
-                      <p className="text-xs text-white/40">Mastered with RoEx Tonn</p>
+                      <p className="text-sm font-medium text-white">Variation {i + 1} — {variationLabels[i] || `Take ${i + 1}`}</p>
+                      <p className="text-xs text-white/40">Mixed & mastered</p>
                     </div>
                     {i === 0 && (
                       <span className="text-[10px] bg-white/10 text-white/60 px-2 py-0.5 rounded-full">⭐ Best fit</span>

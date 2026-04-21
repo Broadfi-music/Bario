@@ -14,9 +14,9 @@ interface VocalSongResultProps {
 }
 
 const variationMeta = [
-  { label: 'Option 1 — MusicGen Melody', description: 'Instrumental that follows your vocal melody and phrasing.' },
-  { label: 'Option 2 — MusicGen Stereo', description: 'Polished stereo arrangement built from your prompt + key/BPM.' },
-  { label: 'Option 3 — Stable Audio', description: 'Alternative energetic take generated from your prompt.' },
+  { label: 'Option 1 — Vocal-matched', description: 'Instrumental that follows your vocal melody and phrasing.' },
+  { label: 'Option 2 — Polished', description: 'Polished arrangement built from your prompt + key/BPM.' },
+  { label: 'Option 3 — Alternate', description: 'Alternative energetic take generated from your prompt.' },
 ];
 
 export default function VocalSongResult({
