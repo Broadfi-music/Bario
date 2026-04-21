@@ -146,17 +146,17 @@ const PodcastFeed = () => {
   const { isOnline } = usePresence();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { currentTrack, isPlaying: isGlobalPlaying, playTrack, pauseTrack } = useAudioPlayer();
   const [liveHosts, setLiveHosts] = useState<LiveHost[]>([]);
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
   const [episodes, setEpisodes] = useState<EpisodeItem[]>([]);
   const [heroIndex, setHeroIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarTab, setSidebarTab] = useState<'recommended' | 'followed'>('recommended');
-  
 
-  const [currentEpisode, setCurrentEpisode] = useState<EpisodeItem | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const currentEpisode: EpisodeItem | null = null;
+  const isPlaying = false;
 
   const [showBattleInviteModal, setShowBattleInviteModal] = useState(false);
   const [activeBattle, setActiveBattle] = useState<any>(null);
@@ -418,33 +418,28 @@ const PodcastFeed = () => {
   }, [heroHosts.length]);
 
   const playEpisode = (episode: EpisodeItem) => {
-    if (!episode.audio_url) return;
-    if (currentEpisode?.id === episode.id && isPlaying) {
-      audioRef.current?.pause();
-      setIsPlaying(false);
-    } else {
-      if (currentEpisode?.id !== episode.id) {
-        setCurrentEpisode(episode);
-        if (audioRef.current) { audioRef.current.src = episode.audio_url; audioRef.current.load(); }
-      }
-      audioRef.current?.play();
-      setIsPlaying(true);
+    if (!episode.audio_url) {
+      toast.error('This episode has no recorded audio yet.');
+      return;
     }
+    const trackId = `episode-${episode.id}`;
+    if (currentTrack?.id === trackId && isGlobalPlaying) {
+      pauseTrack();
+      return;
+    }
+    playTrack({
+      id: trackId,
+      title: episode.title,
+      artist: episode.host_name || 'Podcast Episode',
+      audioUrl: episode.audio_url,
+      coverUrl: episode.cover_image_url,
+      type: 'podcast',
+    });
   };
 
   const stopAudio = () => {
-    audioRef.current?.pause();
-    setIsPlaying(false);
-    setCurrentEpisode(null);
+    pauseTrack();
   };
-
-  useEffect(() => {
-    if (!audioRef.current) audioRef.current = new Audio();
-    const audio = audioRef.current;
-    const handleEnded = () => setIsPlaying(false);
-    audio.addEventListener('ended', handleEnded);
-    return () => { audio.removeEventListener('ended', handleEnded); audio.pause(); };
-  }, []);
 
   const bannerHeight = 'pt-14';
 
@@ -868,7 +863,7 @@ const PodcastFeed = () => {
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                     {episodes.slice(0, 6).map((episode) => (
-                      <div key={episode.id} className="group cursor-pointer" onClick={() => { if (episode.audio_url) playEpisode(episode); else if (episode.isRealUser) navigate(`/host/${episode.host_id}`); }}>
+                      <div key={episode.id} className="group cursor-pointer" onClick={() => playEpisode(episode)}>
                         <div className="relative aspect-square rounded overflow-hidden bg-white/5 mb-1">
                           {episode.cover_image_url ? <img src={episode.cover_image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /> : <div className="w-full h-full bg-white/10" />}
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
