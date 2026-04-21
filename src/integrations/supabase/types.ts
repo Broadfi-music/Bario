@@ -210,6 +210,75 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_packs: {
+        Row: {
+          bonus_credits: number
+          created_at: string
+          credits: number
+          id: string
+          is_active: boolean
+          is_popular: boolean
+          name: string
+          price_usd: number
+          sort_order: number
+        }
+        Insert: {
+          bonus_credits?: number
+          created_at?: string
+          credits: number
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          name: string
+          price_usd: number
+          sort_order?: number
+        }
+        Update: {
+          bonus_credits?: number
+          created_at?: string
+          credits?: number
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          name?: string
+          price_usd?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      credit_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          description: string | null
+          id: string
+          reference_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       direct_messages: {
         Row: {
           content: string
@@ -1471,6 +1540,54 @@ export type Database = {
         }
         Relationships: []
       }
+      user_credits: {
+        Row: {
+          balance: number
+          created_at: string
+          daily_free_credits: number
+          id: string
+          last_daily_grant_at: string | null
+          monthly_allowance: number
+          plan: string
+          plan_renews_at: string | null
+          total_earned: number
+          total_purchased: number
+          total_spent: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          daily_free_credits?: number
+          id?: string
+          last_daily_grant_at?: string | null
+          monthly_allowance?: number
+          plan?: string
+          plan_renews_at?: string | null
+          total_earned?: number
+          total_purchased?: number
+          total_spent?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          daily_free_credits?: number
+          id?: string
+          last_daily_grant_at?: string | null
+          monthly_allowance?: number
+          plan?: string
+          plan_renews_at?: string | null
+          total_earned?: number
+          total_purchased?: number
+          total_spent?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_favorites: {
         Row: {
           artist_name: string
@@ -1782,6 +1899,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_user_credits: {
+        Args: {
+          _amount: number
+          _description?: string
+          _reference_id?: string
+          _type?: string
+          _user_id: string
+        }
+        Returns: Json
+      }
+      deduct_user_credits: {
+        Args: {
+          _amount: number
+          _description?: string
+          _reference_id?: string
+          _user_id: string
+        }
+        Returns: Json
+      }
       increment_battle_score: {
         Args: { battle_uuid: string; increment_by?: number; score_side: string }
         Returns: Json
