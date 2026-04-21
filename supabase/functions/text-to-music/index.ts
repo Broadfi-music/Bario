@@ -143,16 +143,50 @@ Deno.serve(async (req) => {
 
     console.log("text-to-music prompt:", finalPrompt.slice(0, 200));
 
+    // Deduct credits BEFORE generating (atomic). 1 generation = 2 songs = ~2.5 credits.
+    // We charge 3 credits per generation (rounded up) since SQL function takes integers.
+    const CREDIT_COST = 3;
+    const { data: deductResult, error: deductError } = await supabaseAdmin.rpc('deduct_user_credits', {
+      _user_id: userId,
+      _amount: CREDIT_COST,
+      _description: `Text-to-music: ${finalPrompt.slice(0, 80)}`,
+      _reference_id: null,
+    });
+
+    if (deductError || !(deductResult as any)?.success) {
+      const balance = (deductResult as any)?.balance ?? 0;
+      const errMsg = (deductResult as any)?.error === 'insufficient_credits'
+        ? `Not enough credits. You have ${balance}, need ${CREDIT_COST}. Buy a credit pack or upgrade your plan.`
+        : 'Could not deduct credits.';
+      return new Response(
+        JSON.stringify({ success: false, error: errMsg, code: 'INSUFFICIENT_CREDITS', balance }),
+        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     // Generate two music variations + two cover images IN PARALLEL.
     const seedA = Math.floor(Math.random() * 1_000_000);
     const seedB = (seedA + 7919) % 1_000_000;
 
-    const [audioA, audioB, coverA, coverB] = await Promise.all([
-      generateOneTrack(finalPrompt, negativePrompt, seedA),
-      generateOneTrack(`${finalPrompt}, alternate arrangement, different energy`, negativePrompt, seedB),
-      generateCover(finalPrompt, "warm cinematic"),
-      generateCover(finalPrompt, "bold neon stylized"),
-    ]);
+    let audioA: string, audioB: string, coverA: string | null, coverB: string | null;
+    try {
+      [audioA, audioB, coverA, coverB] = await Promise.all([
+        generateOneTrack(finalPrompt, negativePrompt, seedA),
+        generateOneTrack(`${finalPrompt}, alternate arrangement, different energy`, negativePrompt, seedB),
+        generateCover(finalPrompt, "warm cinematic"),
+        generateCover(finalPrompt, "bold neon stylized"),
+      ]);
+    } catch (genErr) {
+      // Refund credits on failure so users aren't charged for our errors.
+      await supabaseAdmin.rpc('add_user_credits', {
+        _user_id: userId,
+        _amount: CREDIT_COST,
+        _type: 'refund',
+        _description: 'Refund: generation failed',
+        _reference_id: null,
+      });
+      throw genErr;
+    }
 
     console.log("Both tracks done:", audioA, audioB);
 
