@@ -12,6 +12,7 @@ import trendingRemix from '@/assets/starters/trending-remix.jpg';
 import genreRemix from '@/assets/starters/genre-remix.jpg';
 import audioEffects from '@/assets/starters/audio-effects.jpg';
 import vocalToSong from '@/assets/starters/vocal-to-song.jpg';
+import UserProjects from '@/components/UserProjects';
 
 const AIRemix = () => {
   const navigate = useNavigate();
@@ -585,6 +586,9 @@ const AIRemix = () => {
             ))}
           </div>
         </section>
+
+        {/* User's generated projects */}
+        <UserProjects />
 
         {/* CTA — centered */}
         <section className="max-w-5xl mx-auto px-4 mt-2">
