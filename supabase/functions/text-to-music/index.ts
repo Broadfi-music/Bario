@@ -168,12 +168,25 @@ Deno.serve(async (req) => {
     const seedA = Math.floor(Math.random() * 1_000_000);
     const seedB = (seedA + 7919) % 1_000_000;
 
-    const [audioA, audioB, coverA, coverB] = await Promise.all([
-      generateOneTrack(finalPrompt, negativePrompt, seedA),
-      generateOneTrack(`${finalPrompt}, alternate arrangement, different energy`, negativePrompt, seedB),
-      generateCover(finalPrompt, "warm cinematic"),
-      generateCover(finalPrompt, "bold neon stylized"),
-    ]);
+    let audioA: string, audioB: string, coverA: string | null, coverB: string | null;
+    try {
+      [audioA, audioB, coverA, coverB] = await Promise.all([
+        generateOneTrack(finalPrompt, negativePrompt, seedA),
+        generateOneTrack(`${finalPrompt}, alternate arrangement, different energy`, negativePrompt, seedB),
+        generateCover(finalPrompt, "warm cinematic"),
+        generateCover(finalPrompt, "bold neon stylized"),
+      ]);
+    } catch (genErr) {
+      // Refund credits on failure so users aren't charged for our errors.
+      await supabaseAdmin.rpc('add_user_credits', {
+        _user_id: userId,
+        _amount: CREDIT_COST,
+        _type: 'refund',
+        _description: 'Refund: generation failed',
+        _reference_id: null,
+      });
+      throw genErr;
+    }
 
     console.log("Both tracks done:", audioA, audioB);
 
