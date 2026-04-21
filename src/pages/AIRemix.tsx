@@ -236,23 +236,33 @@ const AIRemix = () => {
         });
 
         if (error) throw new Error(error.message || 'Generation failed');
-        if (!data?.success || !data?.audioUrl) {
+        if (!data?.success) {
           throw new Error(data?.error || 'Generation failed');
         }
 
+        // New shape: variations[]; legacy shape: audioUrl.
+        const variations = Array.isArray(data.variations) && data.variations.length > 0
+          ? data.variations
+          : data.audioUrl
+            ? [{ audioUrl: data.audioUrl, coverUrl: null, trackId: null }]
+            : [];
+
+        if (variations.length === 0) {
+          throw new Error('No tracks were returned.');
+        }
+
         toast({
-          title: 'Track ready 🎵',
-          description: 'Lyria 2 finished your track.',
+          title: 'Tracks ready 🎵',
+          description: `${variations.length} variation${variations.length > 1 ? 's' : ''} generated.`,
         });
 
         navigate('/music-result', {
           state: {
-            mode: 'remix',
-            trackTitle: (submittedPrompt || 'AI Track').slice(0, 60),
+            mode: 'text-to-music',
+            trackTitle: data.title || (submittedPrompt || 'AI Track').slice(0, 60),
             genre: resolvedGenre,
-            era: '2025',
             prompt: submittedPrompt || submittedLyrics,
-            audioUrl: data.audioUrl,
+            variations,
             backTo: '/ai-remix',
           },
         });
