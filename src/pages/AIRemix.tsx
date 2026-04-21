@@ -450,7 +450,7 @@ const AIRemix = () => {
                   className="w-full resize-none border-none outline-none text-xs text-white placeholder:text-white/30 bg-transparent min-h-[60px] mt-1"
                   rows={3}
                 />
-                <p className="text-[10px] text-white/30 px-1">No upload? Prompt + lyrics generate a fresh track via Lyria 2.</p>
+                <p className="text-[10px] text-white/30 px-1">No upload? Prompt + lyrics generate a fresh track.</p>
               </div>
 
               {/* Uploaded file indicator */}
