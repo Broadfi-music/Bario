@@ -15,6 +15,8 @@ import { getPodcastEpisodeDisplayCover } from '@/lib/podcastEpisodeCovers';
 import { usePresence } from '@/hooks/usePresence';
 import OnlineIndicator from '@/components/OnlineIndicator';
 import CommentsSheet from '@/components/CommentsSheet';
+import { useAudioPlayer } from '@/contexts/AudioPlayerContext';
+import { toast } from 'sonner';
 
 interface LiveHost {
   id: string;
