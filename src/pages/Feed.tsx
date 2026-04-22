@@ -392,6 +392,14 @@ const Feed = () => {
                             <Send className="h-3.5 w-3.5" />
                             DM
                           </button>
+                          <button
+                            onClick={() => setSharePost(post)}
+                            className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                            aria-label="Share post"
+                          >
+                            <Share2 className="h-3.5 w-3.5" />
+                            Share
+                          </button>
                         </div>
                       </div>
                     </div>
