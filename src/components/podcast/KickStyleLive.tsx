@@ -704,6 +704,14 @@ const KickStyleLive = ({
                 <MessageSquare className="h-4 w-4" />
                 Stream Chat
               </h3>
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 text-white/80 hover:text-white transition-colors text-[11px]"
+                aria-label="Share this space"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Share
+              </button>
             </div>
             <div className="flex-1 min-h-0 overflow-hidden">
               <TwitchComments 
