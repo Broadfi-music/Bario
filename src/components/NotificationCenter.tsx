@@ -101,7 +101,7 @@ const NotificationCenter = ({
           </div>
         </SheetHeader>
 
-        <ScrollArea className="h-[calc(100vh-80px)]">
+        <ScrollArea className="h-[calc(100vh-128px)]">
           {loading && notifications.length === 0 ? (
             <div className="flex items-center justify-center py-12">
               <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
