@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Bell, Gift, UserPlus, Radio, Swords, Trophy, Music, CheckCheck, Trash2, Mic, MessageCircle } from 'lucide-react';
+import { Bell, Gift, UserPlus, Radio, Swords, Trophy, Music, CheckCheck, Trash2, Mic, MessageCircle, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
