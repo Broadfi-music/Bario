@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Send, ArrowLeft, Radio, Swords, Sparkles, User, Mic, Users } from 'lucide-react';
+import { Heart, MessageCircle, Send, ArrowLeft, Radio, Swords, Sparkles, User, Mic, Users, Share2 } from 'lucide-react';
+import ShareModal from '@/components/podcast/ShareModal';
 import { useFollowSystem } from '@/hooks/useFollowSystem';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
