@@ -481,6 +481,14 @@ const Feed = () => {
         open={expandedCommentsPostId !== null}
         onClose={() => setExpandedCommentsPostId(null)}
       />
+
+      <ShareModal
+        isOpen={sharePost !== null}
+        onClose={() => setSharePost(null)}
+        title={sharePost ? `${sharePost.author_name}'s post` : undefined}
+        shareUrl={sharePost ? `${window.location.origin}/host/${sharePost.user_id}` : undefined}
+        shareText={sharePost ? `${sharePost.content?.slice(0, 120) || 'Check out this post on Bario!'}` : undefined}
+      />
     </div>
   );
 };
