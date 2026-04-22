@@ -81,6 +81,7 @@ const Feed = () => {
   const [expandedCommentsPostId, setExpandedCommentsPostId] = useState<string | null>(null);
   const [liveSessions, setLiveSessions] = useState<LiveSession[]>([]);
   const [suggestedCreators, setSuggestedCreators] = useState<SuggestedCreator[]>([]);
+  const [sharePost, setSharePost] = useState<CreatorPost | null>(null);
   const { toggleFollow, isFollowing } = useFollowSystem();
 
   const postIds = useMemo(() => posts.map((p) => p.id), [posts]);
