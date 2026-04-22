@@ -39,6 +39,9 @@ export const EditScheduleModal = ({ open, onOpenChange, schedule, userId, onUpda
   );
   const [coHost, setCoHost] = useState('');
   const [saving, setSaving] = useState(false);
+  const [suggestions, setSuggestions] = useState<CreatorSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const cohostDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset form when modal opens/closes or schedule changes
   useEffect(() => {
@@ -51,8 +54,42 @@ export const EditScheduleModal = ({ open, onOpenChange, schedule, userId, onUpda
           : new Date(Date.now() + 86400000).toISOString().slice(0, 16) // Default to tomorrow
       );
       setCoHost('');
+      setSuggestions([]);
+      setShowSuggestions(false);
     }
   }, [open, schedule]);
+
+  // Live creator suggestions when user types name or @handle
+  useEffect(() => {
+    if (cohostDebounceRef.current) clearTimeout(cohostDebounceRef.current);
+    const raw = coHost.trim().replace(/^@/, '');
+    if (!raw) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    cohostDebounceRef.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, username, avatar_url')
+        .or(`username.ilike.%${raw}%,full_name.ilike.%${raw}%`)
+        .neq('user_id', userId)
+        .limit(6);
+      if (data) {
+        setSuggestions(data as CreatorSuggestion[]);
+        setShowSuggestions(true);
+      }
+    }, 200);
+    return () => {
+      if (cohostDebounceRef.current) clearTimeout(cohostDebounceRef.current);
+    };
+  }, [coHost, userId]);
+
+  const pickSuggestion = (s: CreatorSuggestion) => {
+    const handle = s.username || s.full_name || '';
+    setCoHost(`@${handle}`);
+    setShowSuggestions(false);
+  };
 
   const handleSave = async () => {
     if (!title.trim()) {
