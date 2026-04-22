@@ -673,8 +673,17 @@ const KickStyleLive = ({
 
             {/* Mobile: End Session + Chat */}
             <div className="lg:hidden shrink-0 border-t border-white/5">
-              {isCurrentHost && (
-                <div className="flex justify-center py-1.5 bg-[#0e0e10]">
+              <div className="flex items-center justify-center gap-2 py-1.5 bg-[#0e0e10]">
+                <Button
+                  onClick={() => setShowShareModal(true)}
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-3 text-[11px] bg-white/5 hover:bg-white/10 text-white"
+                >
+                  <Share2 className="h-3 w-3 mr-1.5" />
+                  Share
+                </Button>
+                {isCurrentHost && (
                   <Button
                     onClick={handleEndSession}
                     size="sm"
@@ -682,8 +691,8 @@ const KickStyleLive = ({
                   >
                     End Session
                   </Button>
-                </div>
-              )}
+                )}
+              </div>
               <div className="h-[180px]">
                 <TwitchComments 
                   key={`mobile-chat-${currentSession.id}`}
@@ -704,6 +713,14 @@ const KickStyleLive = ({
                 <MessageSquare className="h-4 w-4" />
                 Stream Chat
               </h3>
+              <button
+                onClick={() => setShowShareModal(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 text-white/80 hover:text-white transition-colors text-[11px]"
+                aria-label="Share this space"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Share
+              </button>
             </div>
             <div className="flex-1 min-h-0 overflow-hidden">
               <TwitchComments 

@@ -1,12 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Camera } from 'lucide-react';
+import { Camera, AtSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+type CreatorSuggestion = {
+  user_id: string;
+  full_name: string | null;
+  username: string | null;
+  avatar_url: string | null;
+};
 
 interface Schedule {
   id: string;
@@ -32,6 +39,9 @@ export const EditScheduleModal = ({ open, onOpenChange, schedule, userId, onUpda
   );
   const [coHost, setCoHost] = useState('');
   const [saving, setSaving] = useState(false);
+  const [suggestions, setSuggestions] = useState<CreatorSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const cohostDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset form when modal opens/closes or schedule changes
   useEffect(() => {
@@ -44,8 +54,42 @@ export const EditScheduleModal = ({ open, onOpenChange, schedule, userId, onUpda
           : new Date(Date.now() + 86400000).toISOString().slice(0, 16) // Default to tomorrow
       );
       setCoHost('');
+      setSuggestions([]);
+      setShowSuggestions(false);
     }
   }, [open, schedule]);
+
+  // Live creator suggestions when user types name or @handle
+  useEffect(() => {
+    if (cohostDebounceRef.current) clearTimeout(cohostDebounceRef.current);
+    const raw = coHost.trim().replace(/^@/, '');
+    if (!raw) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    cohostDebounceRef.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, username, avatar_url')
+        .or(`username.ilike.%${raw}%,full_name.ilike.%${raw}%`)
+        .neq('user_id', userId)
+        .limit(6);
+      if (data) {
+        setSuggestions(data as CreatorSuggestion[]);
+        setShowSuggestions(true);
+      }
+    }, 200);
+    return () => {
+      if (cohostDebounceRef.current) clearTimeout(cohostDebounceRef.current);
+    };
+  }, [coHost, userId]);
+
+  const pickSuggestion = (s: CreatorSuggestion) => {
+    const handle = s.username || s.full_name || '';
+    setCoHost(`@${handle}`);
+    setShowSuggestions(false);
+  };
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -135,16 +179,48 @@ export const EditScheduleModal = ({ open, onOpenChange, schedule, userId, onUpda
             />
           </div>
 
-          {/* Co-host */}
-          <div>
+          {/* Co-host with @mention autocomplete */}
+          <div className="relative">
             <Label htmlFor="cohost" className="text-white/70 text-sm">Co-host (optional)</Label>
-            <Input
-              id="cohost"
-              value={coHost}
-              onChange={(e) => setCoHost(e.target.value)}
-              placeholder="@username"
-              className="bg-white/5 border-white/10 text-white mt-1"
-            />
+            <div className="relative mt-1">
+              <AtSign className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/40 pointer-events-none" />
+              <Input
+                id="cohost"
+                value={coHost}
+                onChange={(e) => setCoHost(e.target.value)}
+                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                placeholder="Type @ or a name to find a creator"
+                className="bg-white/5 border-white/10 text-white pl-8"
+                autoComplete="off"
+              />
+            </div>
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-[#0e0e10] border border-white/10 rounded-md shadow-xl overflow-hidden max-h-60 overflow-y-auto">
+                {suggestions.map((s) => (
+                  <button
+                    type="button"
+                    key={s.user_id}
+                    onMouseDown={(e) => { e.preventDefault(); pickSuggestion(s); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-white/5 text-left transition-colors"
+                  >
+                    <div className="w-7 h-7 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
+                      {s.avatar_url ? (
+                        <img src={s.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-purple-500 to-pink-500" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-white truncate">{s.full_name || s.username || 'Creator'}</p>
+                      {s.username && (
+                        <p className="text-[10px] text-white/40 truncate">@{s.username}</p>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Date & Time */}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Send, ArrowLeft, Radio, Swords, Sparkles, User, Mic, Users } from 'lucide-react';
+import { Heart, MessageCircle, Send, ArrowLeft, Radio, Swords, Sparkles, User, Mic, Users, Share2 } from 'lucide-react';
+import ShareModal from '@/components/podcast/ShareModal';
 import { useFollowSystem } from '@/hooks/useFollowSystem';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -80,6 +81,7 @@ const Feed = () => {
   const [expandedCommentsPostId, setExpandedCommentsPostId] = useState<string | null>(null);
   const [liveSessions, setLiveSessions] = useState<LiveSession[]>([]);
   const [suggestedCreators, setSuggestedCreators] = useState<SuggestedCreator[]>([]);
+  const [sharePost, setSharePost] = useState<CreatorPost | null>(null);
   const { toggleFollow, isFollowing } = useFollowSystem();
 
   const postIds = useMemo(() => posts.map((p) => p.id), [posts]);
@@ -390,6 +392,14 @@ const Feed = () => {
                             <Send className="h-3.5 w-3.5" />
                             DM
                           </button>
+                          <button
+                            onClick={() => setSharePost(post)}
+                            className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                            aria-label="Share post"
+                          >
+                            <Share2 className="h-3.5 w-3.5" />
+                            Share
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -470,6 +480,14 @@ const Feed = () => {
         postId={expandedCommentsPostId}
         open={expandedCommentsPostId !== null}
         onClose={() => setExpandedCommentsPostId(null)}
+      />
+
+      <ShareModal
+        isOpen={sharePost !== null}
+        onClose={() => setSharePost(null)}
+        title={sharePost ? `${sharePost.author_name}'s post` : undefined}
+        shareUrl={sharePost ? `${window.location.origin}/host/${sharePost.user_id}` : undefined}
+        shareText={sharePost ? `${sharePost.content?.slice(0, 120) || 'Check out this post on Bario!'}` : undefined}
       />
     </div>
   );

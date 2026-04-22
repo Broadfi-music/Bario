@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Bell, Gift, UserPlus, Radio, Swords, Trophy, Music, CheckCheck, Trash2, Mic, MessageCircle } from 'lucide-react';
+import { Bell, Gift, UserPlus, Radio, Swords, Trophy, Music, CheckCheck, Trash2, Mic, MessageCircle, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -61,37 +61,47 @@ const NotificationCenter = ({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="bg-[#0e0e10] border-white/10 w-[340px] sm:w-[380px] p-0">
-        <SheetHeader className="px-4 pt-4 pb-2 border-b border-white/5">
-          <div className="flex items-center justify-between">
+      <SheetContent
+        side="right"
+        className="bg-[#0e0e10] border-white/10 w-[340px] sm:w-[380px] p-0 [&>button]:hidden"
+      >
+        <SheetHeader className="px-4 pt-4 pb-3 border-b border-white/5">
+          <div className="flex items-center justify-between gap-2">
             <SheetTitle className="text-white text-base flex items-center gap-2">
               <Bell className="w-4 h-4" />
               Notifications
             </SheetTitle>
-            <div className="flex gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onMarkAllAsRead}
-                className="text-white/50 hover:text-white text-[10px] h-7 px-2"
-              >
-                <CheckCheck className="w-3 h-3 mr-1" />
-                Read all
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClearAll}
-                className="text-white/50 hover:text-white text-[10px] h-7 px-2"
-              >
-                <Trash2 className="w-3 h-3 mr-1" />
-                Clear
-              </Button>
-            </div>
+            <button
+              onClick={() => onOpenChange(false)}
+              aria-label="Close notifications"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onMarkAllAsRead}
+              className="flex-1 text-white/70 hover:text-white hover:bg-white/10 text-[11px] h-7 px-2 justify-center"
+            >
+              <CheckCheck className="w-3.5 h-3.5 mr-1.5" />
+              Mark all read
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClearAll}
+              className="flex-1 text-white/70 hover:text-white hover:bg-white/10 text-[11px] h-7 px-2 justify-center"
+            >
+              <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+              Clear all
+            </Button>
           </div>
         </SheetHeader>
 
-        <ScrollArea className="h-[calc(100vh-80px)]">
+        <ScrollArea className="h-[calc(100vh-128px)]">
           {loading && notifications.length === 0 ? (
             <div className="flex items-center justify-center py-12">
               <div className="w-6 h-6 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
