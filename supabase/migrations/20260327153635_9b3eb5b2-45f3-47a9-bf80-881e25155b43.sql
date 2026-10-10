@@ -1,1 +1,0 @@
-UPDATE podcast_battles SET status = 'ended', ended_at = NOW() WHERE status = 'active' AND ended_at IS NULL;
