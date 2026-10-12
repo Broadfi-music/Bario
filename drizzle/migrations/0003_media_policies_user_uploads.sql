@@ -1,0 +1,1 @@
+CREATE POLICY "listing media upload" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id='user-uploads' AND (storage.foldername(name))[1] = auth.uid()::text);

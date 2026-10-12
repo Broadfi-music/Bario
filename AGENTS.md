@@ -1,0 +1,5 @@
+# Bario (PropTech rentals)
+- Roles live in public.user_roles (admin/agent/tenant) assigned by the signup trigger; never trust client-sent roles beyond tenant/agent. Why: prevents privilege escalation.
+- Landlord contact details live only in public.property_contacts (agent-owner/admin RLS); tenants read listings via the property_catalog view. Why: anti-bypass.
+- Payments are created and verified only in the escrow-pay edge function (Paystack, service role); clients never insert payments. Why: amounts can't be tampered with.
+- Listing media is stored in the user-uploads bucket under {userId}/listings/. Why: project blocks new public buckets.

@@ -1,59 +1,49 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 9%;
+    --background: 60 20% 98%;
+    --foreground: 160 30% 8%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
+    --card-foreground: 160 30% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84% 60%;
+    --popover-foreground: 160 30% 8%;
+    --primary: 160 62% 14%;
+    --primary-foreground: 60 30% 97%;
+    --secondary: 80 30% 93%;
+    --secondary-foreground: 160 62% 14%;
+    --muted: 70 15% 94%;
+    --muted-foreground: 160 8% 40%;
+    --accent: 78 85% 62%;
+    --accent-foreground: 160 62% 10%;
+    --destructive: 0 75% 52%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 0 0% 9%;
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 0 0% 9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 15%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 15%;
-    --muted-foreground: 0 0% 64%;
-    --accent: 0 0% 15%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62% 47%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 0 0% 83%;
+    --success: 150 60% 36%;
+    --warning: 38 92% 50%;
+    --border: 70 12% 88%;
+    --input: 70 12% 86%;
+    --ring: 160 62% 14%;
+    --radius: 1rem;
+    --shadow-soft: 0 20px 50px -24px hsl(160 62% 14% / 0.35);
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground antialiased; font-family: "Manrope", system-ui, sans-serif; }
+  h1, h2, h3, h4, .font-display { font-family: "Bricolage Grotesque", system-ui, sans-serif; letter-spacing: -0.02em; }
+}
+
+@layer components {
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition disabled:opacity-50; }
+  .btn-primary { @apply btn bg-primary text-primary-foreground hover:opacity-90; }
+  .btn-accent { @apply btn bg-accent text-accent-foreground hover:brightness-95; }
+  .btn-ghost { @apply btn border bg-card hover:bg-muted; }
+  .input { @apply w-full rounded-xl border bg-card px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring/30; }
+  .label { @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground; }
+  .card { @apply rounded-3xl border bg-card p-6; }
+  .chip { @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold; }
 }

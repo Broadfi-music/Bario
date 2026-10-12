@@ -1,0 +1,123 @@
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
+import { Upload, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth, naira } from "@/lib/auth";
+import { PageTitle } from "./AppShell";
+
+const empty = { title: "", description: "", property_type: "Self-contain", address: "", city: "Lagos", area: "", near_institution: "", bedrooms: 1, bathrooms: 1, rent: 0, agency_fee: 0, agreement_fee: 0, caution_fee: 0, amenities: "", images: [] as string[], videos: [] as string[] };
+
+export default function PropertyForm() {
+  const { user, role } = useAuth();
+  const { id } = useParams();
+  const nav = useNavigate();
+  const [f, setF] = useState<any>(empty);
+  const [c, setC] = useState({ landlord_name: "", landlord_phone: "", landlord_email: "" });
+  const [status, setStatus] = useState("active");
+  const [busy, setBusy] = useState(false);
+  const isAdmin = role === "admin";
+
+  useEffect(() => {
+    if (!id) return;
+    supabase.from("properties").select("*").eq("id", id).single().then(({ data }) => { if (data) { setF({ ...data, amenities: (data.amenities ?? []).join(", ") }); setStatus(data.status); } });
+    supabase.from("property_contacts").select("*").eq("property_id", id).maybeSingle().then(({ data }) => data && setC({ landlord_name: data.landlord_name ?? "", landlord_phone: data.landlord_phone ?? "", landlord_email: data.landlord_email ?? "" }));
+  }, [id]);
+
+  const upload = async (files: FileList | null, kind: "images" | "videos") => {
+    if (!files || !user) return;
+    setBusy(true);
+    const urls: string[] = [];
+    for (const file of Array.from(files)) {
+      const path = `${user.id}/listings/${crypto.randomUUID()}-${file.name.replace(/[^a-z0-9.]/gi, "_")}`;
+      const { error } = await supabase.storage.from("user-uploads").upload(path, file);
+      if (error) { toast.error(error.message); continue; }
+      urls.push(supabase.storage.from("user-uploads").getPublicUrl(path).data.publicUrl);
+    }
+    setF((x: any) => ({ ...x, [kind]: [...x[kind], ...urls] }));
+    setBusy(false);
+  };
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!f.images.length) return toast.error("Add at least one photo");
+    setBusy(true);
+    const row = {
+      title: f.title, description: f.description, property_type: f.property_type, address: f.address, city: f.city, area: f.area, near_institution: f.near_institution,
+      bedrooms: +f.bedrooms, bathrooms: +f.bathrooms, rent: +f.rent, agency_fee: +f.agency_fee, agreement_fee: +f.agreement_fee, caution_fee: +f.caution_fee,
+      amenities: String(f.amenities).split(",").map((s) => s.trim()).filter(Boolean), images: f.images, videos: f.videos,
+      status: isAdmin ? status : "pending",
+    };
+    const res = id
+      ? await supabase.from("properties").update(row).eq("id", id).select().single()
+      : await supabase.from("properties").insert({ ...row, agent_id: user!.id }).select().single();
+    if (res.error) { setBusy(false); return toast.error(res.error.message); }
+    await supabase.from("property_contacts").upsert({ property_id: res.data.id, ...c });
+    setBusy(false);
+    toast.success(isAdmin ? "Listing saved" : "Submitted for verification");
+    nav(isAdmin ? "/app/listings" : "/app");
+  };
+
+  const set = (k: string) => (e: any) => setF({ ...f, [k]: e.target.value });
+  const total = +f.rent + +f.agency_fee + +f.agreement_fee + +f.caution_fee;
+
+  return (
+    <form onSubmit={save}>
+      <PageTitle title={id ? "Edit listing" : isAdmin ? "Create listing" : "Submit a property"} sub={isAdmin ? "Manual listings for landlords who don't use the app." : "Our team verifies every property before it goes live."} />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <section className="card space-y-4">
+            <h2 className="text-lg font-bold">Property details</h2>
+            <div><label className="label">Title</label><input required className="input" value={f.title} onChange={set("title")} placeholder="Clean self-contain near UNILAG" /></div>
+            <div><label className="label">Description</label><textarea rows={4} className="input" value={f.description} onChange={set("description")} /></div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div><label className="label">Type</label><select className="input" value={f.property_type} onChange={set("property_type")}>{["Self-contain", "Room & parlour", "Mini flat", "1-bed flat", "2-bed flat", "3-bed flat", "Shared hostel", "Duplex"].map((t) => <option key={t}>{t}</option>)}</select></div>
+              <div><label className="label">Bedrooms</label><input type="number" min={0} className="input" value={f.bedrooms} onChange={set("bedrooms")} /></div>
+              <div><label className="label">Bathrooms</label><input type="number" min={0} className="input" value={f.bathrooms} onChange={set("bathrooms")} /></div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div><label className="label">Address</label><input required className="input" value={f.address} onChange={set("address")} /></div>
+              <div><label className="label">Area</label><input required className="input" value={f.area} onChange={set("area")} placeholder="Yaba, Akoka" /></div>
+              <div><label className="label">City</label><input required className="input" value={f.city} onChange={set("city")} /></div>
+              <div><label className="label">Nearby school (optional)</label><input className="input" value={f.near_institution} onChange={set("near_institution")} placeholder="UNILAG" /></div>
+            </div>
+            <div><label className="label">Amenities (comma separated)</label><input className="input" value={f.amenities} onChange={set("amenities")} placeholder="Prepaid meter, Borehole, Security, Tiled" /></div>
+          </section>
+          <section className="card space-y-4">
+            <h2 className="text-lg font-bold">Photos & videos</h2>
+            <div className="flex flex-wrap gap-3">
+              {f.images.map((u: string) => (
+                <div key={u} className="relative"><img src={u} className="h-24 w-32 rounded-xl object-cover" alt="" /><button type="button" onClick={() => setF({ ...f, images: f.images.filter((x: string) => x !== u) })} className="absolute -right-2 -top-2 rounded-full bg-card p-1 shadow"><X className="h-3 w-3" /></button></div>
+              ))}
+              {f.videos.map((u: string) => <video key={u} src={u} className="h-24 w-32 rounded-xl bg-muted object-cover" />)}
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <label className="btn-ghost cursor-pointer"><Upload className="h-4 w-4" />Add photos<input hidden type="file" accept="image/*" multiple onChange={(e) => upload(e.target.files, "images")} /></label>
+              <label className="btn-ghost cursor-pointer"><Upload className="h-4 w-4" />Add videos<input hidden type="file" accept="video/*" multiple onChange={(e) => upload(e.target.files, "videos")} /></label>
+              {busy && <span className="self-center text-sm text-muted-foreground">Uploading…</span>}
+            </div>
+          </section>
+          <section className="card space-y-4">
+            <h2 className="text-lg font-bold">Landlord contact <span className="text-sm font-normal text-muted-foreground">(private — never shown to tenants)</span></h2>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div><label className="label">Name</label><input required className="input" value={c.landlord_name} onChange={(e) => setC({ ...c, landlord_name: e.target.value })} /></div>
+              <div><label className="label">Phone</label><input required className="input" value={c.landlord_phone} onChange={(e) => setC({ ...c, landlord_phone: e.target.value })} /></div>
+              <div><label className="label">Email</label><input type="email" className="input" value={c.landlord_email} onChange={(e) => setC({ ...c, landlord_email: e.target.value })} /></div>
+            </div>
+          </section>
+        </div>
+        <aside className="space-y-6">
+          <section className="card space-y-4 lg:sticky lg:top-24">
+            <h2 className="text-lg font-bold">Fee breakdown (₦)</h2>
+            {[["rent", "Annual rent"], ["agency_fee", "Agency fee"], ["agreement_fee", "Agreement fee"], ["caution_fee", "Caution deposit"]].map(([k, l]) => (
+              <div key={k}><label className="label">{l}</label><input required type="number" min={0} className="input" value={f[k]} onChange={set(k)} /></div>
+            ))}
+            <div className="flex justify-between border-t pt-4 font-bold"><span>Tenant pays</span><span>{naira(total)}</span></div>
+            {isAdmin && <div><label className="label">Status</label><select className="input" value={status} onChange={(e) => setStatus(e.target.value)}>{["pending", "active", "rented", "rejected"].map((s) => <option key={s}>{s}</option>)}</select></div>}
+            <button disabled={busy} className="btn-primary w-full">{isAdmin ? "Save & publish" : "Submit for verification"}</button>
+          </section>
+        </aside>
+      </div>
+    </form>
+  );
+}
