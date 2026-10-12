@@ -8,7 +8,7 @@ export default function PropertyCard({ p, to, showStatus }: { p: any; to?: strin
     <div className="group overflow-hidden rounded-3xl border bg-card transition hover:shadow-[var(--shadow-soft)]">
       <div className="relative aspect-[4/3] bg-muted">
         {p.images?.[0] && <img src={p.images[0]} alt={p.title} className="h-full w-full object-cover" />}
-        <span className="chip absolute left-3 top-3 bg-card"><BadgeCheck className="h-3 w-3 text-success" />{showStatus ? "" : "Verified"}{showStatus && <Status s={p.status} />}</span>
+        <div className="absolute left-3 top-3">{showStatus ? <Status s={p.status} /> : <span className="chip bg-card"><BadgeCheck className="h-3 w-3 text-success" />Verified</span>}</div>
       </div>
       <div className="p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{p.property_type}</p>

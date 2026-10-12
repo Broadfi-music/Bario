@@ -120,7 +120,7 @@ export function Payments() {
   const dispute = async (id: string) => {
     const reason = prompt("Describe the problem");
     if (!reason) return;
-    const { error } = await supabase.from("payments").update({ status: "disputed", dispute_reason: reason }).eq("id", id);
+    const { error } = await supabase.rpc("raise_dispute", { _payment_id: id, _reason: reason });
     error ? toast.error("Contact support to raise a dispute") : load();
   };
   return (

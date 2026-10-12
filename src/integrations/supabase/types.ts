@@ -479,6 +479,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      raise_dispute: {
+        Args: { _payment_id: string; _reason: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "agent" | "tenant"
