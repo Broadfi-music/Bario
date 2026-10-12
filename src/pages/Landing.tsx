@@ -50,12 +50,12 @@ export default function Landing() {
               <Link to="/auth?mode=signup&role=agent" className="btn border border-primary-foreground/25 px-7 py-4 text-base hover:bg-primary-foreground/10"><Building2 className="h-4 w-4" /> List a Property</Link>
             </div>
             <div className="mt-10 flex items-center gap-6 text-sm opacity-80">
-              <div className="flex -space-x-2">{[flats, estate, unilag].map((s) => <img key={s} src={s} alt="" className="h-9 w-9 rounded-full border-2 border-primary object-cover" />)}</div>
+              <div className="flex -space-x-2">{[lekki, estate, unilag].map((s) => <img key={s} src={s} alt="" className="h-9 w-9 rounded-full border-2 border-primary object-cover" />)}</div>
               <span>Every listing inspected before it goes live</span>
             </div>
           </div>
           <div className="relative">
-            <img src={lekki} alt="Residential buildings in Lekki, Lagos" className="aspect-[4/5] w-full rounded-[2rem] object-cover lg:aspect-[5/6]" />
+            <img src={flats} alt="Apartment blocks in Victoria Island, Lagos" className="aspect-[4/5] w-full rounded-[2rem] object-cover lg:aspect-[5/6]" />
             <div className="absolute -bottom-6 left-4 w-72 rounded-3xl bg-card p-5 text-card-foreground shadow-[var(--shadow-soft)] sm:-left-8">
               <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground"><span>2-bed flat · Yaba</span><span className="chip bg-secondary text-secondary-foreground"><BadgeCheck className="h-3 w-3" />Verified</span></div>
               <div className="mt-3 space-y-1.5 text-sm">{fees.map(([k, v]) => <div key={k} className="flex justify-between"><span className="text-muted-foreground">{k}</span><span className="font-semibold">{v}</span></div>)}</div>
