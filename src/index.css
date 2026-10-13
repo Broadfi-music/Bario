@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -28,14 +27,59 @@
     --ring: 160 62% 14%;
     --radius: 1rem;
     --shadow-soft: 0 20px 50px -24px hsl(160 62% 14% / 0.35);
+    --welcome-background: 0 0% 100%;
+    --welcome-ink: 160 15% 3%;
+    --welcome-muted: 0 0% 40%;
+    --welcome-track: 0 0% 94%;
+    --illustration-green: 148 91% 30%;
+    --illustration-forest: 164 77% 12%;
+    --illustration-lime: 87 91% 77%;
+    --illustration-skin: 17 42% 48%;
+    --illustration-mist: 142 25% 94%;
   }
 }
 
 @layer base {
   * { @apply border-border; }
   body { @apply bg-background text-foreground antialiased; font-family: "Manrope", system-ui, sans-serif; }
-  h1, h2, h3, h4, .font-display { font-family: "Bricolage Grotesque", system-ui, sans-serif; letter-spacing: -0.02em; }
+  h1, h2, h3, h4, .font-display { font-family: "Bricolage Grotesque", system-ui, sans-serif; letter-spacing: 0; }
 }
+
+.welcome-page { min-height: 100dvh; background: hsl(var(--welcome-background)); color: hsl(var(--welcome-ink)); }
+.welcome-shell { max-width: 540px; min-height: 100dvh; margin: auto; display: flex; flex-direction: column; padding: max(20px, env(safe-area-inset-top)) 24px max(20px, env(safe-area-inset-bottom)); }
+.welcome-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; }
+.welcome-brand { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: hsl(var(--primary)); color: hsl(var(--accent)); font: 800 28px "Bricolage Grotesque", sans-serif; }
+.welcome-back { width: 40px; height: 40px; border-radius: 50%; }
+.welcome-progress { display: flex; flex: 1; max-width: 130px; height: 8px; border-radius: 8px; overflow: hidden; background: hsl(var(--welcome-track)); }
+.welcome-progress span { flex: 1; }
+.welcome-progress .is-complete { background: hsl(var(--illustration-green)); }
+.welcome-skip { height: 44px; border-radius: 28px; padding: 0 16px; background: hsl(var(--welcome-track)); font-size: 15px; }
+.welcome-slide { flex: 1; display: flex; flex-direction: column; }
+.welcome-visual { margin: 18px -24px 0; display: flex; align-items: center; justify-content: center; flex: 1; min-height: 240px; }
+.welcome-art { width: 100%; max-height: 460px; display: block; }
+.art-green { fill: hsl(var(--illustration-green)); }
+.art-forest { fill: hsl(var(--illustration-forest)); }
+.art-lime { fill: hsl(var(--illustration-lime)); }
+.art-skin { fill: hsl(var(--illustration-skin)); }
+.art-paper { fill: hsl(var(--welcome-background)); }
+.art-mist { fill: hsl(var(--illustration-mist)); }
+.art-ink { fill: hsl(var(--welcome-ink)); }
+.art-outline, .art-fine, .art-key { fill: none; stroke: hsl(var(--illustration-forest)); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.art-fine { stroke-width: 1.6; }
+.art-key { stroke-width: 5; }
+.welcome-copy { padding: 16px 0 24px; }
+.welcome-copy h1 { white-space: pre-line; font-size: 38px; font-weight: 800; line-height: 1.12; }
+.welcome-copy p { margin-top: 18px; font-size: 17px; line-height: 1.7; color: hsl(var(--welcome-muted)); }
+.welcome-actions { padding-top: 4px; }
+.welcome-primary { width: 100%; min-height: 60px; border-radius: 16px; background: hsl(var(--welcome-ink)); color: hsl(var(--welcome-background)); font-size: 17px; }
+.welcome-primary:hover { background: hsl(var(--primary)); }
+.welcome-secondary { display: flex; justify-content: space-between; min-height: 44px; margin-top: 12px; font-size: 14px; }
+.welcome-secondary button { padding: 8px 0; }
+.welcome-footer { text-align: center; margin-top: 18px; font-size: 12px; color: hsl(var(--welcome-muted)); }
+.welcome-loading { min-height: 100dvh; display: grid; place-items: center; background: hsl(var(--welcome-background)); }
+.welcome-loading span { display: grid; place-items: center; width: 80px; height: 80px; border-radius: 20px; background: hsl(var(--primary)); color: hsl(var(--accent)); font: 800 56px "Bricolage Grotesque", sans-serif; }
+@media (min-width: 768px) { .welcome-shell { min-height: min(100dvh, 1000px); padding-top: 32px; padding-bottom: 32px; } .welcome-copy h1 { font-size: 48px; } .welcome-copy p { font-size: 19px; } }
+@media (max-height: 740px) and (max-width: 767px) { .welcome-visual { min-height: 180px; margin-top: 8px; } .welcome-art { max-height: 275px; } .welcome-copy { padding-top: 6px; padding-bottom: 16px; } .welcome-copy h1 { font-size: 32px; } .welcome-copy p { margin-top: 10px; font-size: 15px; line-height: 1.55; } .welcome-primary { min-height: 52px; } }
 
 @layer components {
   .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold transition disabled:opacity-50; }
