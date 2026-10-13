@@ -31,5 +31,5 @@ Deno.serve(async () => {
     const k = Deno.env.get("PAYSTACK_SECRET_KEY") ?? "";
     out.paystack = k.startsWith("sk_test") ? "test" : k.startsWith("sk_live") ? "live" : k ? "unknown" : "missing";
     return new Response(JSON.stringify(out));
-  } catch (e) { return new Response(JSON.stringify({ error: String(e) }), { status: 500 }); }
+  } catch (e) { return new Response(JSON.stringify({ error: (e as any)?.message ?? JSON.stringify(e) }), { status: 500 }); }
 });
