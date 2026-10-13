@@ -9,6 +9,17 @@ import { Catalog, PropertyDetail, Bookings, Payments, Agreements } from "./pages
 import { MyListings, Leads } from "./pages/agent";
 import { AccountProfile, Wallet, Wishlist, AdminWithdrawals } from "./pages/account";
 import { Analytics, AdminListings, Finance, Users } from "./pages/admin";
+import Welcome, { hasSeenWelcome, isAppLaunch } from "./pages/Welcome";
+
+function AppEntry() {
+  const { user, loading } = useAuth();
+  const appLaunch = isAppLaunch();
+  const mobile = window.matchMedia("(max-width: 767px)").matches;
+  if (!appLaunch && !mobile) return <Landing />;
+  if (loading) return <div className="welcome-loading" role="status" aria-label="Opening Bario"><span>B</span></div>;
+  if (user) return <Navigate to="/app" replace />;
+  return hasSeenWelcome() ? <Navigate to="/auth" replace /> : <Welcome />;
+}
 
 function DashboardRoutes() {
   const { role } = useAuth();
@@ -56,7 +67,8 @@ export default function App() {
       <BrowserRouter>
         <Toaster position="top-center" richColors />
         <Routes>
-          <Route path="/" element={<Landing />} />
+          <Route path="/" element={<AppEntry />} />
+          <Route path="/welcome" element={<Welcome />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/app" element={<AppShell />}>
             <Route index element={<DashboardRoutes />} />
