@@ -34,7 +34,7 @@ export function WelcomeIllustration({ step }: { step: number }) {
         <circle cx="332" cy="460" r="7" className="art-ink" /><circle cx="451" cy="460" r="7" className="art-ink" />
         <path d="m311 274-90 72-67 70 37 26 88-74 87-41 3 64-79 49 28 26 105-65-2-103Z" className="art-forest" />
         <path d="m152 408-30 13 57 41 21-28m87-1-28 19 40 26 28-26" className="art-ink" />
-        <path d="m322 141-54 26-35-42-31 20 30 83 60 3-10 49h136l-10-69c-7-52-33-76-59- seventy" className="art-green" />
+        <path d="m322 141-54 26-35-42-31 20 30 83 60 3 15-41 27-21Z" className="art-green" />
         <path d="M321 145c-40 8-49 33-39 67l-5 75h145l-18-86c-8-40-37-65-65-57Z" className="art-green" />
         <path d="m323 154-8 79h51l-18-83" className="art-paper" />
         <path d="M323 126v31l24 9 13-20-12-27" className="art-skin" />
