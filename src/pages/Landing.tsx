@@ -10,10 +10,11 @@ import skyline from "@/assets/lagos-skyline.jpg";
 import { Logo } from "@/components/Logo";
 
 const fees = [
-  ["Annual rent", "₦650,000"],
-  ["Agency fee (10%)", "₦65,000"],
-  ["Agreement fee", "₦32,500"],
-  ["Caution deposit (refundable)", "₦50,000"],
+  ["Annual rent (self-contain, Akoka)", "₦450,000"],
+  ["Agency fee (10%)", "₦45,000"],
+  ["Agreement fee", "₦20,000"],
+  ["Caution deposit (refundable)", "₦30,000"],
+  ["Bario service fee (2%)", "₦9,000"],
 ];
 
 export default function Landing() {
@@ -59,7 +60,7 @@ export default function Landing() {
             <div className="absolute -bottom-6 left-4 w-72 rounded-3xl bg-card p-5 text-card-foreground shadow-[var(--shadow-soft)] sm:-left-8">
               <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground"><span>2-bed flat · Yaba</span><span className="chip bg-secondary text-secondary-foreground"><BadgeCheck className="h-3 w-3" />Verified</span></div>
               <div className="mt-3 space-y-1.5 text-sm">{fees.map(([k, v]) => <div key={k} className="flex justify-between"><span className="text-muted-foreground">{k}</span><span className="font-semibold">{v}</span></div>)}</div>
-              <div className="mt-3 flex justify-between border-t pt-3 font-bold"><span>Total</span><span>₦797,500</span></div>
+              <div className="mt-3 flex justify-between border-t pt-3 font-bold"><span>Total</span><span>₦554,000</span></div>
             </div>
             <div className="absolute -top-4 right-4 rounded-2xl bg-accent px-4 py-3 text-accent-foreground shadow-[var(--shadow-soft)]">
               <div className="flex items-center gap-2 text-sm font-bold"><Lock className="h-4 w-4" /> Funds in escrow</div>
