@@ -72,11 +72,37 @@ export type Database = {
           },
         ]
       }
+      bank_accounts: {
+        Row: {
+          account_name: string
+          account_number: string
+          bank_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          bank_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          bank_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bookings: {
         Row: {
           agent_id: string | null
           created_at: string
+          group_id: string | null
           id: string
+          inspection_fee: number
           kind: string
           note: string | null
           property_id: string
@@ -87,7 +113,9 @@ export type Database = {
         Insert: {
           agent_id?: string | null
           created_at?: string
+          group_id?: string | null
           id?: string
+          inspection_fee?: number
           kind?: string
           note?: string | null
           property_id: string
@@ -98,7 +126,9 @@ export type Database = {
         Update: {
           agent_id?: string | null
           created_at?: string
+          group_id?: string | null
           id?: string
+          inspection_fee?: number
           kind?: string
           note?: string | null
           property_id?: string
@@ -161,6 +191,7 @@ export type Database = {
           dispute_reason: string | null
           id: string
           landlord_payout: number
+          other_fees: number
           paid_at: string | null
           platform_fee: number
           property_id: string
@@ -181,6 +212,7 @@ export type Database = {
           dispute_reason?: string | null
           id?: string
           landlord_payout?: number
+          other_fees?: number
           paid_at?: string | null
           platform_fee?: number
           property_id: string
@@ -201,6 +233,7 @@ export type Database = {
           dispute_reason?: string | null
           id?: string
           landlord_payout?: number
+          other_fees?: number
           paid_at?: string | null
           platform_fee?: number
           property_id?: string
@@ -230,10 +263,13 @@ export type Database = {
       }
       profiles: {
         Row: {
+          alt_phone: string | null
+          avatar_url: string | null
           bio: string | null
           created_at: string
           email: string | null
           full_name: string | null
+          home_address: string | null
           id: string
           id_number: string | null
           institution: string | null
@@ -242,10 +278,13 @@ export type Database = {
           phone: string | null
         }
         Insert: {
+          alt_phone?: string | null
+          avatar_url?: string | null
           bio?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
+          home_address?: string | null
           id: string
           id_number?: string | null
           institution?: string | null
@@ -254,10 +293,13 @@ export type Database = {
           phone?: string | null
         }
         Update: {
+          alt_phone?: string | null
+          avatar_url?: string | null
           bio?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
+          home_address?: string | null
           id?: string
           id_number?: string | null
           institution?: string | null
@@ -287,6 +329,7 @@ export type Database = {
           landlord_name: string | null
           landlord_phone: string | null
           near_institution: string | null
+          other_fees: Json
           property_type: string | null
           rent: number
           status: string
@@ -312,6 +355,7 @@ export type Database = {
           landlord_name?: string | null
           landlord_phone?: string | null
           near_institution?: string | null
+          other_fees?: Json
           property_type?: string | null
           rent?: number
           status?: string
@@ -337,6 +381,7 @@ export type Database = {
           landlord_name?: string | null
           landlord_phone?: string | null
           near_institution?: string | null
+          other_fees?: Json
           property_type?: string | null
           rent?: number
           status?: string
@@ -399,6 +444,75 @@ export type Database = {
         }
         Relationships: []
       }
+      wishlist: {
+        Row: {
+          created_at: string
+          property_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          property_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          property_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishlist_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wishlist_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "property_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      withdrawals: {
+        Row: {
+          account_name: string | null
+          account_number: string | null
+          agent_id: string
+          amount: number
+          bank_name: string | null
+          created_at: string
+          id: string
+          processed_at: string | null
+          status: string
+        }
+        Insert: {
+          account_name?: string | null
+          account_number?: string | null
+          agent_id: string
+          amount: number
+          bank_name?: string | null
+          created_at?: string
+          id?: string
+          processed_at?: string | null
+          status?: string
+        }
+        Update: {
+          account_name?: string | null
+          account_number?: string | null
+          agent_id?: string
+          amount?: number
+          bank_name?: string | null
+          created_at?: string
+          id?: string
+          processed_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       property_catalog: {
@@ -418,6 +532,7 @@ export type Database = {
           id: string | null
           images: string[] | null
           near_institution: string | null
+          other_fees: Json | null
           property_type: string | null
           rent: number | null
           status: string | null
@@ -440,6 +555,7 @@ export type Database = {
           id?: string | null
           images?: string[] | null
           near_institution?: string | null
+          other_fees?: Json | null
           property_type?: string | null
           rent?: number | null
           status?: string | null
@@ -462,6 +578,7 @@ export type Database = {
           id?: string | null
           images?: string[] | null
           near_institution?: string | null
+          other_fees?: Json | null
           property_type?: string | null
           rent?: number | null
           status?: string | null
@@ -472,6 +589,11 @@ export type Database = {
       }
     }
     Functions: {
+      agent_available_balance: { Args: { _agent: string }; Returns: number }
+      book_inspections: {
+        Args: { _note?: string; _property_ids: string[]; _scheduled_at: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -483,6 +605,7 @@ export type Database = {
         Args: { _payment_id: string; _reason: string }
         Returns: undefined
       }
+      request_withdrawal: { Args: { _amount: number }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "agent" | "tenant"
