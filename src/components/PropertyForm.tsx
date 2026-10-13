@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, naira } from "@/lib/auth";
 import { PageTitle } from "./AppShell";
 
-const empty = { title: "", description: "", property_type: "Self-contain", address: "", city: "Lagos", area: "", near_institution: "", bedrooms: 1, bathrooms: 1, rent: 0, agency_fee: 0, agreement_fee: 0, caution_fee: 0, amenities: "", images: [] as string[], videos: [] as string[] };
+const empty = { title: "", description: "", property_type: "Self-contain", address: "", city: "Lagos", area: "", near_institution: "", bedrooms: 1, bathrooms: 1, rent: 0, agency_fee: 0, agreement_fee: 0, caution_fee: 0, amenities: "", images: [] as string[], videos: [] as string[], other_fees: [] as { label: string; amount: number }[] };
 
 export default function PropertyForm() {
   const { user, role } = useAuth();
@@ -20,7 +20,7 @@ export default function PropertyForm() {
 
   useEffect(() => {
     if (!id) return;
-    supabase.from("properties").select("*").eq("id", id).single().then(({ data }) => { if (data) { setF({ ...data, amenities: (data.amenities ?? []).join(", ") }); setStatus(data.status); } });
+    supabase.from("properties").select("*").eq("id", id).single().then(({ data }) => { if (data) { setF({ ...data, other_fees: Array.isArray(data.other_fees) ? data.other_fees : [], amenities: (data.amenities ?? []).join(", ") }); setStatus(data.status); } });
     supabase.from("property_contacts").select("*").eq("property_id", id).maybeSingle().then(({ data }) => data && setC({ landlord_name: data.landlord_name ?? "", landlord_phone: data.landlord_phone ?? "", landlord_email: data.landlord_email ?? "" }));
   }, [id]);
 
@@ -46,6 +46,7 @@ export default function PropertyForm() {
       title: f.title, description: f.description, property_type: f.property_type, address: f.address, city: f.city, area: f.area, near_institution: f.near_institution,
       bedrooms: +f.bedrooms, bathrooms: +f.bathrooms, rent: +f.rent, agency_fee: +f.agency_fee, agreement_fee: +f.agreement_fee, caution_fee: +f.caution_fee,
       amenities: String(f.amenities).split(",").map((s) => s.trim()).filter(Boolean), images: f.images, videos: f.videos,
+      other_fees: f.other_fees.filter((x: any) => x.label?.trim()).map((x: any) => ({ label: String(x.label).trim().slice(0, 60), amount: Math.max(0, +x.amount || 0) })),
       status: isAdmin ? status : "pending",
     };
     const res = id
@@ -59,7 +60,8 @@ export default function PropertyForm() {
   };
 
   const set = (k: string) => (e: any) => setF({ ...f, [k]: e.target.value });
-  const total = +f.rent + +f.agency_fee + +f.agreement_fee + +f.caution_fee;
+  const total = +f.rent + +f.agency_fee + +f.agreement_fee + +f.caution_fee + f.other_fees.reduce((a: number, x: any) => a + (+x.amount || 0), 0);
+  const setFee = (i: number, k: string, v: any) => setF({ ...f, other_fees: f.other_fees.map((x: any, j: number) => (j === i ? { ...x, [k]: v } : x)) });
 
   return (
     <form onSubmit={save}>
@@ -109,9 +111,20 @@ export default function PropertyForm() {
         <aside className="space-y-6">
           <section className="card space-y-4 lg:sticky lg:top-24">
             <h2 className="text-lg font-bold">Fee breakdown (₦)</h2>
-            {[["rent", "Annual rent"], ["agency_fee", "Agency fee"], ["agreement_fee", "Agreement fee"], ["caution_fee", "Caution deposit"]].map(([k, l]) => (
+            {[["rent", "Annual rent"], ["agency_fee", "Agent commission (agency fee)"], ["agreement_fee", "Agreement / legal fee"], ["caution_fee", "Caution / damage deposit"]].map(([k, l]) => (
               <div key={k}><label className="label">{l}</label><input required type="number" min={0} className="input" value={f[k]} onChange={set(k)} /></div>
             ))}
+            <div className="space-y-2">
+              <label className="label">Other fees (service charge, etc.)</label>
+              {f.other_fees.map((x: any, i: number) => (
+                <div key={i} className="flex gap-2">
+                  <input className="input" placeholder="e.g. Service charge" value={x.label} onChange={(e) => setFee(i, "label", e.target.value)} />
+                  <input type="number" min={0} className="input w-28" value={x.amount} onChange={(e) => setFee(i, "amount", e.target.value)} />
+                  <button type="button" aria-label="Remove fee" onClick={() => setF({ ...f, other_fees: f.other_fees.filter((_: any, j: number) => j !== i) })}><X className="h-4 w-4" /></button>
+                </div>
+              ))}
+              <button type="button" className="text-sm font-semibold text-primary" onClick={() => setF({ ...f, other_fees: [...f.other_fees, { label: "", amount: 0 }] })}>+ Add another fee</button>
+            </div>
             <div className="flex justify-between border-t pt-4 font-bold"><span>Tenant pays</span><span>{naira(total)}</span></div>
             {isAdmin && <div><label className="label">Status</label><select className="input" value={status} onChange={(e) => setStatus(e.target.value)}>{["pending", "active", "rented", "rejected"].map((s) => <option key={s}>{s}</option>)}</select></div>}
             <button disabled={busy} className="btn-primary w-full">{isAdmin ? "Save & publish" : "Submit for verification"}</button>
