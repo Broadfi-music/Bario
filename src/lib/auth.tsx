@@ -37,5 +37,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export const useAuth = () => useContext(AuthCtx);
 
 export const naira = (n: number | string | null | undefined) => "₦" + Number(n ?? 0).toLocaleString("en-NG");
-export const totalOf = (p: { rent: number; agency_fee: number; agreement_fee: number; caution_fee: number }) =>
-  Number(p.rent) + Number(p.agency_fee) + Number(p.agreement_fee) + Number(p.caution_fee);
+export const otherFeesOf = (p: any): { label: string; amount: number }[] => (Array.isArray(p?.other_fees) ? p.other_fees : []).filter((f: any) => f?.label);
+export const totalOf = (p: any) =>
+  Number(p.rent) + Number(p.agency_fee) + Number(p.agreement_fee) + Number(p.caution_fee) + otherFeesOf(p).reduce((a, f) => a + (Number(f.amount) || 0), 0);

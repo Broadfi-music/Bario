@@ -24,13 +24,14 @@ Deno.serve(async (req) => {
       const { data: p } = await admin.from("properties").select("*").eq("id", body.property_id).single();
       if (!p || p.status !== "active") return json({ error: "This property is not available" }, 400);
       const platform_fee = Math.round(Number(p.rent) * PLATFORM_RATE);
-      const total = Number(p.rent) + Number(p.agency_fee) + Number(p.agreement_fee) + Number(p.caution_fee) + platform_fee;
+      const other_fees = (Array.isArray(p.other_fees) ? p.other_fees : []).reduce((a: number, f: any) => a + Math.max(0, Number(f?.amount) || 0), 0);
+      const total = Number(p.rent) + Number(p.agency_fee) + Number(p.agreement_fee) + Number(p.caution_fee) + other_fees + platform_fee;
       const reference = `BR-${crypto.randomUUID().slice(0, 12)}`;
       const { error } = await admin.from("payments").insert({
         property_id: p.id, tenant_id: user.id, agent_id: p.agent_id,
-        rent: p.rent, agency_fee: p.agency_fee, agreement_fee: p.agreement_fee, caution_fee: p.caution_fee,
+        rent: p.rent, agency_fee: p.agency_fee, agreement_fee: p.agreement_fee, caution_fee: p.caution_fee, other_fees,
         platform_fee, total, agent_commission: p.agency_fee,
-        landlord_payout: Number(p.rent) + Number(p.caution_fee), reference,
+        landlord_payout: Number(p.rent) + Number(p.caution_fee) + other_fees, reference,
       });
       if (error) return json({ error: error.message }, 400);
       const r = await fetch("https://api.paystack.co/transaction/initialize", {
