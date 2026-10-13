@@ -59,6 +59,7 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/app" element={<AppShell />}>
+            <Route index element={<DashboardRoutes />} />
             <Route path="*" element={<DashboardRoutes />} />
           </Route>
           <Route path="*" element={<Navigate to="/" />} />

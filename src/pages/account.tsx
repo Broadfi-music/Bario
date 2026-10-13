@@ -173,8 +173,8 @@ export function Wishlist() {
   return (
     <>
       <PageTitle title="Saved homes" sub="Pick the homes you want to see and book one inspection trip." />
-      {rows.length ? <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-3 lg:col-span-2">{rows.map((p) => (
+      {rows.length ? <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="min-w-0 space-y-3 lg:col-span-2">{rows.map((p) => (
           <div key={p.id} className="card flex items-center gap-3 p-3">
             <input type="checkbox" aria-label={`Select ${p.title}`} className="h-5 w-5 accent-[hsl(var(--primary))]" disabled={p.status !== "active"} checked={pick.includes(p.id)} onChange={(e) => setPick(e.target.checked ? [...pick, p.id] : pick.filter((x) => x !== p.id))} />
             <Link to={`/app/property/${p.id}`} className="flex min-w-0 flex-1 items-center gap-3">
@@ -184,7 +184,7 @@ export function Wishlist() {
             <button aria-label="Remove" onClick={() => remove(p.id)} className="p-2 text-muted-foreground"><Trash2 className="h-4 w-4" /></button>
           </div>))}
         </div>
-        <aside className="card h-fit space-y-4 lg:sticky lg:top-24">
+        <aside className="card h-fit min-w-0 space-y-4 lg:sticky lg:top-24">
           <h2 className="flex items-center gap-2 text-lg font-bold"><CalendarCheck className="h-5 w-5" />Book inspection</h2>
           <input type="datetime-local" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
           <textarea rows={2} maxLength={500} className="input" placeholder="Note for the agent (optional)" value={note} onChange={(e) => setNote(e.target.value)} />

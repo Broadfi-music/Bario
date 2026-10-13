@@ -11,6 +11,8 @@ const navs = {
   admin: [["/app", BarChart3, "Analytics"], ["/app/listings", Building2, "Listings"], ["/app/new", Plus, "New listing"], ["/app/finance", Wallet, "Escrow & finance"], ["/app/withdrawals", ArrowDownToLine, "Withdrawals"], ["/app/users", Users, "Users & disputes"]],
 } as const;
 
+const short: Record<string, string> = { "My listings": "Listings", "Submit property": "Add", "Tenant leads": "Leads", "Document vault": "Docs", "Escrow & finance": "Escrow", "Users & disputes": "Users", "New listing": "New", "Saved homes": "Saved", "Payments & escrow": "Payments", "Find homes": "Find" };
+
 export default function AppShell() {
   const { user, role, loading, signOut } = useAuth();
   const [notes, setNotes] = useState<any[]>([]);
@@ -70,7 +72,7 @@ export default function AppShell() {
       <nav className="fixed inset-x-3 bottom-3 z-30 flex gap-1 overflow-x-auto rounded-3xl border bg-card/95 p-1.5 shadow-[var(--shadow-soft)] backdrop-blur lg:hidden" style={{ paddingBottom: "max(0.375rem, env(safe-area-inset-bottom))" }}>
         {items.map(([to, I, l]) => (
           <NavLink key={to} to={to} end className={({ isActive }) => `flex min-w-[64px] flex-1 flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[10px] font-semibold ${isActive ? "bg-primary text-accent" : "text-muted-foreground"}`}>
-            <I className="h-5 w-5" />{l.split(" ")[0]}
+            <I className="h-5 w-5" />{short[l] ?? l.split(" ")[0]}
           </NavLink>
         ))}
       </nav>
