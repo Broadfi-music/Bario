@@ -24,7 +24,7 @@ Deno.serve(async () => {
         { title: "Mini flat with prepaid meter", property_type: "Mini flat", area: "Surulere", address: "14 Adeniran Ogunsanya", rent: 350000, agency_fee: 35000, agreement_fee: 10000, caution_fee: 20000, images: ["/sample/home2.jpg"], other_fees: [{ label: "Service charge", amount: 15000 }] },
         { title: "Room & parlour in Gbagada", property_type: "Room & parlour", area: "Gbagada", address: "3 Diya St", rent: 250000, agency_fee: 25000, agreement_fee: 7500, caution_fee: 10000, images: ["/sample/home3.jpg"] },
       ];
-      const { data: rows, error } = await a.from("properties").insert(homes.map((h) => ({ ...h, agent_id: agent, city: "Lagos", bedrooms: 1, bathrooms: 1, status: "active", description: "Tiled floors, running water, secure compound. Verified by our team.", amenities: ["Borehole", "Prepaid meter", "Security"] }))).select("id");
+      const { data: rows, error } = await a.from("properties").insert(homes.map((h) => ({ other_fees: [], ...h, agent_id: agent, city: "Lagos", bedrooms: 1, bathrooms: 1, status: "active", description: "Tiled floors, running water, secure compound. Verified by our team.", amenities: ["Borehole", "Prepaid meter", "Security"] }))).select("id");
       if (error) throw error;
       await a.from("property_contacts").insert(rows!.map((r) => ({ property_id: r.id, landlord_name: "Mr. Bello (test)", landlord_phone: "08030000009" })));
     }
