@@ -3,3 +3,4 @@
 - Landlord contact details live only in public.property_contacts (agent-owner/admin RLS); tenants read listings via the property_catalog view. Why: anti-bypass.
 - Payments are created and verified only in the escrow-pay edge function (Paystack, service role); clients never insert payments. Why: amounts can't be tampered with.
 - Listing media is stored in the user-uploads bucket under {userId}/listings/. Why: project blocks new public buckets.
+- Agent withdrawals and multi-home inspection bookings go through security-definer RPCs (request_withdrawal, book_inspections) that compute balances/fees server-side. Why: clients can't fake balances or skip fees.

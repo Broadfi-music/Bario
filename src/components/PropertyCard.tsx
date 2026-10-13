@@ -2,13 +2,15 @@ import { Link } from "react-router-dom";
 import { BadgeCheck, BedDouble, Bath, MapPin } from "lucide-react";
 import { naira, totalOf } from "@/lib/auth";
 import { Status } from "./AppShell";
+import { SaveButton } from "@/pages/account";
 
-export default function PropertyCard({ p, to, showStatus }: { p: any; to?: string; showStatus?: boolean }) {
+export default function PropertyCard({ p, to, showStatus, save }: { p: any; to?: string; showStatus?: boolean; save?: boolean }) {
   const body = (
     <div className="group overflow-hidden rounded-3xl border bg-card transition hover:shadow-[var(--shadow-soft)]">
       <div className="relative aspect-[4/3] bg-muted">
         {p.images?.[0] && <img src={p.images[0]} alt={p.title} className="h-full w-full object-cover" />}
         <div className="absolute left-3 top-3">{showStatus ? <Status s={p.status} /> : <span className="chip bg-card"><BadgeCheck className="h-3 w-3 text-success" />Verified</span>}</div>
+        {save && <div className="absolute right-3 top-3"><SaveButton propertyId={p.id} /></div>}
       </div>
       <div className="p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{p.property_type}</p>
