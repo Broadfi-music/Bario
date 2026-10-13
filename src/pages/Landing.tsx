@@ -10,11 +10,10 @@ import skyline from "@/assets/lagos-skyline.jpg";
 import { Logo } from "@/components/Logo";
 
 const fees = [
-  ["Annual rent (self-contain, Akoka)", "₦450,000"],
-  ["Agency fee (10%)", "₦45,000"],
-  ["Agreement fee", "₦20,000"],
-  ["Caution deposit (refundable)", "₦30,000"],
-  ["Bario service fee (2%)", "₦9,000"],
+  ["Annual rent", "₦150,000"],
+  ["Agent fee", "₦10,000"],
+  ["Agreement fee", "₦5,000"],
+  ["Caution deposit (refundable)", "₦2,000"],
 ];
 
 export default function Landing() {
@@ -58,9 +57,9 @@ export default function Landing() {
           <div className="relative">
             <img src={flats} alt="Apartment blocks in Victoria Island, Lagos" className="aspect-[4/5] w-full rounded-[2rem] object-cover lg:aspect-[5/6]" />
             <div className="absolute -bottom-6 left-4 w-72 rounded-3xl bg-card p-5 text-card-foreground shadow-[var(--shadow-soft)] sm:-left-8">
-              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground"><span>2-bed flat · Yaba</span><span className="chip bg-secondary text-secondary-foreground"><BadgeCheck className="h-3 w-3" />Verified</span></div>
+              <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground"><span>Self-contain</span><span className="chip bg-secondary text-secondary-foreground"><BadgeCheck className="h-3 w-3" />Verified</span></div>
               <div className="mt-3 space-y-1.5 text-sm">{fees.map(([k, v]) => <div key={k} className="flex justify-between"><span className="text-muted-foreground">{k}</span><span className="font-semibold">{v}</span></div>)}</div>
-              <div className="mt-3 flex justify-between border-t pt-3 font-bold"><span>Total</span><span>₦554,000</span></div>
+              <div className="mt-3 flex justify-between border-t pt-3 font-bold"><span>Total</span><span>₦167,000</span></div>
             </div>
             <div className="absolute -top-4 right-4 rounded-2xl bg-accent px-4 py-3 text-accent-foreground shadow-[var(--shadow-soft)]">
               <div className="flex items-center gap-2 text-sm font-bold"><Lock className="h-4 w-4" /> Funds in escrow</div>
@@ -133,9 +132,9 @@ export default function Landing() {
         <img src={unilag} alt="University of Lagos campus" className="aspect-[4/3] w-full rounded-[2rem] object-cover" />
         <div>
           <p className="text-sm font-bold uppercase tracking-widest text-success">For students & tenants</p>
-          <h2 className="mt-3 text-4xl font-extrabold sm:text-5xl">Off-campus housing your parents can trust.</h2>
+          <h2 className="mt-3 text-4xl font-extrabold sm:text-5xl">Housing your family can trust.</h2>
           <ul className="mt-8 space-y-4">
-            {["Homes near UNILAG, LASU, UI, OAU, UNIBEN and more", "Pay once, online — no cash in envelopes", "Caution fee returned through the platform", "Agreement and receipts saved in your dashboard"].map((t) => (
+            {["Homes near where you study, work or want to live", "Pay once, online — no cash in envelopes", "Caution fee returned through the platform", "Agreement and receipts saved in your dashboard"].map((t) => (
               <li key={t} className="flex gap-3"><span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-accent"><Check className="h-3.5 w-3.5 text-accent-foreground" /></span><span>{t}</span></li>
             ))}
           </ul>
