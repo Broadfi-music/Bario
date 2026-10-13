@@ -3,7 +3,8 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { BadgeCheck, CalendarCheck, Lock, MapPin, PhoneOff, Zap, ShieldCheck, KeyRound, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth, naira, totalOf } from "@/lib/auth";
+import { useAuth, naira, totalOf, otherFeesOf } from "@/lib/auth";
+import { SaveButton } from "./account";
 import PropertyCard from "@/components/PropertyCard";
 import { PageTitle, Status, Empty } from "@/components/AppShell";
 
@@ -22,7 +23,7 @@ export function Catalog() {
           <option value="">Any rent</option>{[300000, 500000, 800000, 1500000, 3000000].map((v) => <option key={v} value={v}>Up to {naira(v)}</option>)}
         </select>
       </div>
-      {shown.length ? <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{shown.map((p) => <PropertyCard key={p.id} p={p} to={`/app/property/${p.id}`} />)}</div> : <Empty text="No verified homes match yet. Check back soon — new listings are verified daily." />}
+      {shown.length ? <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{shown.map((p) => <PropertyCard key={p.id} p={p} save to={`/app/property/${p.id}`} />)}</div> : <Empty text="No verified homes match yet. Check back soon — new listings are verified daily." />}
     </>
   );
 }
@@ -58,7 +59,7 @@ export function PropertyDetail() {
         <div className="overflow-hidden rounded-3xl bg-muted">{p.images?.[img] && <img src={p.images[img]} alt={p.title} className="aspect-[4/3] w-full object-cover" />}</div>
         <div className="mt-3 flex gap-2 overflow-x-auto">{p.images?.map((u: string, i: number) => <button key={u} onClick={() => setImg(i)}><img src={u} alt="" className={`h-16 w-24 rounded-xl object-cover ${i === img ? "ring-2 ring-primary" : "opacity-70"}`} /></button>)}</div>
         {p.videos?.length > 0 && <div className="mt-4 grid gap-3 sm:grid-cols-2">{p.videos.map((v: string) => <video key={v} src={v} controls className="w-full rounded-2xl" />)}</div>}
-        <span className="chip mt-6 bg-success/15 text-success"><BadgeCheck className="h-3.5 w-3.5" />Verified by Bario</span>
+        <div className="mt-6 flex items-center justify-between"><span className="chip bg-success/15 text-success"><BadgeCheck className="h-3.5 w-3.5" />Verified by Bario</span><SaveButton propertyId={p.id} /></div>
         <h1 className="mt-3 text-3xl font-extrabold">{p.title}</h1>
         <p className="mt-1 flex items-center gap-1 text-muted-foreground"><MapPin className="h-4 w-4" />{p.address}, {p.area}, {p.city}{p.near_institution && ` · near ${p.near_institution}`}</p>
         <p className="mt-6 whitespace-pre-line leading-relaxed">{p.description}</p>
@@ -69,7 +70,7 @@ export function PropertyDetail() {
         <div className="card space-y-5 lg:sticky lg:top-24">
           <h2 className="text-lg font-bold">Transparent cost breakdown</h2>
           <div className="space-y-2 text-sm">
-            {[["Annual rent", p.rent], ["Agency fee", p.agency_fee], ["Agreement fee", p.agreement_fee], ["Caution deposit (refundable)", p.caution_fee], ["Bario service fee (2%)", service]].map(([k, v]) => <div key={k} className="flex justify-between"><span className="text-muted-foreground">{k}</span><span className="font-semibold">{naira(v)}</span></div>)}
+            {[["Annual rent", p.rent], ["Agency fee", p.agency_fee], ["Agreement fee", p.agreement_fee], ["Caution / damage deposit (refundable)", p.caution_fee], ...otherFeesOf(p).map((x) => [x.label, x.amount]), ["Bario service fee (2%)", service]].map(([k, v]) => <div key={k} className="flex justify-between"><span className="text-muted-foreground">{k}</span><span className="font-semibold">{naira(v)}</span></div>)}
           </div>
           <div className="flex justify-between border-t pt-4 font-display text-2xl font-bold"><span>Total</span><span>{naira(totalOf(p) + service)}</span></div>
           <button disabled={busy} onClick={pay} className="btn-accent w-full py-4"><Zap className="h-4 w-4" />{busy ? "Opening secure checkout…" : "Fast-track: pay into escrow"}</button>
@@ -78,6 +79,7 @@ export function PropertyDetail() {
             <label className="label">Or book an inspection</label>
             <input type="datetime-local" className="input" value={date} onChange={(e) => setDate(e.target.value)} />
             <button onClick={book} className="btn-ghost mt-3 w-full"><CalendarCheck className="h-4 w-4" />Request inspection</button>
+            <p className="mt-3 text-xs text-muted-foreground">Seeing more than one home? Save them and <Link to="/app/saved" className="font-semibold underline">book all at once</Link> (₦2,000 for 2+ homes).</p>
           </div>
         </div>
       </aside>

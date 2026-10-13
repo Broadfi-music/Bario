@@ -1,14 +1,14 @@
 import { NavLink, Outlet, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Bell, LogOut, Search, CalendarCheck, Wallet, FileText, User, Building2, Users, BarChart3, Inbox, Plus, Banknote } from "lucide-react";
+import { Bell, LogOut, Search, CalendarCheck, Wallet, FileText, User, Building2, Users, BarChart3, Inbox, Plus, Banknote, Heart, ArrowDownToLine } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "./Logo";
 
 const navs = {
-  tenant: [["/app", Search, "Find homes"], ["/app/bookings", CalendarCheck, "Inspections"], ["/app/payments", Wallet, "Payments & escrow"], ["/app/agreements", FileText, "Agreements"], ["/app/profile", User, "Tenant profile"]],
-  agent: [["/app", Building2, "My listings"], ["/app/new", Plus, "Submit property"], ["/app/leads", Inbox, "Tenant leads"], ["/app/earnings", Banknote, "Commission"], ["/app/agreements", FileText, "Document vault"]],
-  admin: [["/app", BarChart3, "Analytics"], ["/app/listings", Building2, "Listings"], ["/app/new", Plus, "New listing"], ["/app/finance", Wallet, "Escrow & finance"], ["/app/users", Users, "Users & disputes"]],
+  tenant: [["/app", Search, "Find homes"], ["/app/saved", Heart, "Saved homes"], ["/app/bookings", CalendarCheck, "Inspections"], ["/app/payments", Wallet, "Payments & escrow"], ["/app/agreements", FileText, "Agreements"], ["/app/profile", User, "Profile"]],
+  agent: [["/app", Building2, "My listings"], ["/app/new", Plus, "Submit property"], ["/app/leads", Inbox, "Tenant leads"], ["/app/earnings", Banknote, "Earnings"], ["/app/agreements", FileText, "Document vault"], ["/app/profile", User, "Profile"]],
+  admin: [["/app", BarChart3, "Analytics"], ["/app/listings", Building2, "Listings"], ["/app/new", Plus, "New listing"], ["/app/finance", Wallet, "Escrow & finance"], ["/app/withdrawals", ArrowDownToLine, "Withdrawals"], ["/app/users", Users, "Users & disputes"]],
 } as const;
 
 export default function AppShell() {
@@ -79,7 +79,7 @@ export const PageTitle = ({ title, sub, action }: { title: string; sub?: string;
 const tone: Record<string, string> = {
   pending: "bg-warning/15 text-warning", active: "bg-success/15 text-success", rented: "bg-primary/10 text-primary", rejected: "bg-destructive/10 text-destructive",
   requested: "bg-warning/15 text-warning", confirmed: "bg-success/15 text-success", completed: "bg-primary/10 text-primary", cancelled: "bg-destructive/10 text-destructive",
-  initiated: "bg-muted text-muted-foreground", in_escrow: "bg-warning/15 text-warning", keys_handed: "bg-success/15 text-success", released: "bg-primary/10 text-primary", refunded: "bg-muted text-muted-foreground", disputed: "bg-destructive/10 text-destructive",
+  initiated: "bg-muted text-muted-foreground", in_escrow: "bg-warning/15 text-warning", keys_handed: "bg-success/15 text-success", released: "bg-primary/10 text-primary", paid: "bg-success/15 text-success", refunded: "bg-muted text-muted-foreground", disputed: "bg-destructive/10 text-destructive",
 };
 const label: Record<string, string> = { pending: "Pending verification", in_escrow: "In escrow", keys_handed: "Keys handed", initiated: "Awaiting payment" };
 export const Status = ({ s }: { s: string }) => <span className={`chip capitalize ${tone[s] ?? "bg-muted"}`}>{label[s] ?? s}</span>;
