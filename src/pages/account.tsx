@@ -166,7 +166,6 @@ export function Wishlist() {
   const fee = inspectionFee(pick.length);
   const book = async () => {
     if (!pick.length) return toast.error("Select at least one home");
-    if (pick.length >= 2) return toast.error("Multi-home booking is temporarily unavailable while the new ₦3,500 fee is being activated. You can still book one home.");
     if (!date) return toast.error("Pick a date and time");
     setBusy(true);
     const { error } = await supabase.rpc("book_inspections", { _property_ids: pick, _scheduled_at: new Date(date).toISOString(), _note: note.trim() || undefined });
@@ -198,8 +197,7 @@ export function Wishlist() {
             <div className="flex justify-between"><span className="text-muted-foreground">Inspection fee</span><span className="font-semibold">{fee ? naira(fee) : "Free"}</span></div>
           </div>
           <p className="flex gap-2 rounded-xl bg-muted p-3 text-xs"><Info className="h-4 w-4 shrink-0" />One home is free. Inspecting 2 or more homes costs ₦3,500, paid on the inspection day.</p>
-          {pick.length >= 2 && <p role="status" className="text-sm text-warning">Multi-home booking is temporarily unavailable while the updated fee is activated.</p>}
-          <Button disabled={busy || pick.length >= 2} onClick={book} className="btn-accent w-full">{busy ? "Booking…" : `Book ${pick.length || ""} inspection${pick.length > 1 ? "s" : ""}`}</Button>
+          <Button disabled={busy} onClick={book} className="btn-accent w-full">{busy ? "Booking…" : `Book ${pick.length || ""} inspection${pick.length > 1 ? "s" : ""}`}</Button>
         </aside>
       </div> : <Empty text="No saved homes yet. Tap the heart on any home to save it here." />}
     </>

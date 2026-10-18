@@ -43,6 +43,13 @@
       "when": 1791850323608,
       "tag": "0005_agent_wallet_wishlist_inspections",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792285108868,
+      "tag": "0006_auto_publish_profile_gate_inspection_fee",
+      "breakpoints": true
     }
   ]
 }
