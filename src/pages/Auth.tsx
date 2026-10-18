@@ -71,7 +71,7 @@ export default function Auth() {
                   <>
                     <div className="grid grid-cols-2 gap-3">
                       {([["tenant", Home, "I'm looking for a house"], ["agent", Building2, "I'm an agent / lister"]] as const).map(([r, I, t]) => (
-                        <Button type="button" key={r} onClick={() => setRole(r)} className={`flex-col items-start rounded-lg border p-4 text-left text-sm font-semibold transition ${role === r ? "border-primary bg-secondary ring-2 ring-primary" : "bg-card"}`}>
+                        <Button type="button" key={r} aria-pressed={role === r} onClick={() => setRole(r)} className={`flex-col items-start rounded-lg border p-4 text-left text-sm font-semibold transition ${role === r ? "border-primary bg-secondary ring-2 ring-primary" : "bg-card"}`}>
                           <I className="mb-2 h-5 w-5" />{t}
                         </Button>
                       ))}
