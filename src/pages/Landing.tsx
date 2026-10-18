@@ -108,7 +108,7 @@ export default function Landing() {
               <div className="absolute bottom-0 p-8">
                 <Lock className="h-8 w-8 text-accent" />
                 <h3 className="mt-4 text-3xl font-bold">Secure payment escrow</h3>
-                <p className="mt-2 max-w-md opacity-80">Your rent is held by Bario — not the agent. Landlords get paid only after you confirm key handover.</p>
+                <p className="mt-2 max-w-md opacity-80">Your rent is held by betterhouse — not the agent. Landlords get paid only after you confirm key handover.</p>
               </div>
             </div>
             {[
@@ -179,7 +179,7 @@ export default function Landing() {
             ["Why can't I see listings before signing up?", "Verified accounts keep fake viewers and scammers out, protecting both tenants and landlords."],
             ["When does the landlord get paid?", "Only after you confirm that keys have been handed over. Until then your money sits in escrow."],
             ["What if something goes wrong?", "Raise a dispute from your dashboard. Funds stay frozen while our team resolves it."],
-            ["How much does Bario cost?", "Tenants pay a small 2% service fee on rent, shown clearly before payment."],
+            ["How much does betterhouse cost?", "Tenants pay a small 2% service fee on rent, shown clearly before payment."],
           ].map(([q, a]) => (
             <details key={q} className="group rounded-2xl border bg-card p-5"><summary className="cursor-pointer list-none font-semibold">{q}</summary><p className="mt-3 text-sm text-muted-foreground">{a}</p></details>
           ))}
@@ -201,7 +201,7 @@ export default function Landing() {
       </section>
       <footer className="bg-primary text-primary-foreground">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-5 py-8 text-sm opacity-80 sm:flex-row">
-          <Logo light /><p>© {new Date().getFullYear()} Bario. Safe rentals for Nigeria.</p>
+          <Logo light /><p>© {new Date().getFullYear()} betterhouse. Safe rentals for Nigeria.</p>
         </div>
       </footer>
     </div>

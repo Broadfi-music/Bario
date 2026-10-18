@@ -36,7 +36,7 @@ export function Analytics() {
   const cards = [["Successful rentals", d.rentals], ["Platform gross revenue", naira(d.gross)], ["Total transaction volume", naira(d.volume)], ["Currently in escrow", naira(d.escrow)], ["Listings awaiting review", d.pending], ["Active listings", d.active], ["Tenants", d.tenants], ["Agents", d.agents], ["Open disputes", d.disputes]];
   return (
     <>
-      <PageTitle title="Platform analytics" sub="Live view of Bario's health." />
+      <PageTitle title="Platform analytics" sub="Live view of betterhouse's health." />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map(([l, v], i) => <div key={l as string} className={`card ${i === 1 ? "bg-primary text-primary-foreground" : ""}`}><p className={`text-sm ${i === 1 ? "opacity-80" : "text-muted-foreground"}`}>{l}</p><p className={`mt-1 font-display text-3xl font-bold ${i === 1 ? "text-accent" : ""}`}>{v}</p></div>)}
       </div>
@@ -94,7 +94,7 @@ export function Finance() {
             <div className="rounded-xl bg-muted p-3"><p className="text-xs text-muted-foreground">Landlord (rent + caution)</p><p className="font-semibold">{naira(p.landlord_payout)}</p></div>
             <div className="rounded-xl bg-muted p-3"><p className="text-xs text-muted-foreground">Agent commission</p><p className="font-semibold">{naira(p.agent_commission)}</p></div>
             <div className="rounded-xl bg-muted p-3"><p className="text-xs text-muted-foreground">Agreement fee</p><p className="font-semibold">{naira(p.agreement_fee)}</p></div>
-            <div className="rounded-xl bg-muted p-3"><p className="text-xs text-muted-foreground">Bario fee</p><p className="font-semibold">{naira(p.platform_fee)}</p></div>
+            <div className="rounded-xl bg-muted p-3"><p className="text-xs text-muted-foreground">betterhouse fee</p><p className="font-semibold">{naira(p.platform_fee)}</p></div>
           </div>
           {p.dispute_reason && <p className="mt-3 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">Dispute: {p.dispute_reason}</p>}
           <div className="mt-4 flex flex-wrap gap-2">
