@@ -590,6 +590,7 @@ export type Database = {
     }
     Functions: {
       agent_available_balance: { Args: { _agent: string }; Returns: number }
+      agent_profile_complete: { Args: { _user: string }; Returns: boolean }
       book_inspections: {
         Args: { _note?: string; _property_ids: string[]; _scheduled_at: string }
         Returns: number
