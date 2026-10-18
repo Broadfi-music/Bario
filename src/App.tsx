@@ -9,6 +9,7 @@ import { Catalog, PropertyDetail, Bookings, Payments, Agreements } from "./pages
 import { MyListings, Leads } from "./pages/agent";
 import { AccountProfile, Wallet, Wishlist, AdminWithdrawals } from "./pages/account";
 import { Analytics, AdminListings, Finance, Users } from "./pages/admin";
+import { Activity } from "./pages/AdminActivity";
 import Welcome, { hasSeenWelcome, isAppLaunch } from "./pages/Welcome";
 
 function AppEntry() {
@@ -16,7 +17,7 @@ function AppEntry() {
   const appLaunch = isAppLaunch();
   const mobile = window.matchMedia("(max-width: 767px)").matches;
   if (!appLaunch && !mobile) return <Landing />;
-  if (loading) return <div className="welcome-loading" role="status" aria-label="Opening Bario"><span>B</span></div>;
+  if (loading) return <div className="welcome-loading" role="status" aria-label="Opening betterhouse"><span>⌂</span><p>betterhouse</p></div>;
   if (user) return <Navigate to="/app" replace />;
   return hasSeenWelcome() ? <Navigate to="/auth" replace /> : <Welcome />;
 }
@@ -31,6 +32,7 @@ function DashboardRoutes() {
       <Route path="edit/:id" element={<PropertyForm />} />
       <Route path="finance" element={<Finance />} />
       <Route path="users" element={<Users />} />
+      <Route path="activity" element={<Activity />} />
       <Route path="withdrawals" element={<AdminWithdrawals />} />
       <Route path="*" element={<Navigate to="/app" />} />
     </Routes>

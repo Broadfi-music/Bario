@@ -1,6 +1,6 @@
 import { NavLink, Outlet, Navigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { Bell, LogOut, Search, CalendarCheck, Wallet, FileText, User, Building2, Users, BarChart3, Inbox, Plus, Banknote, Heart, ArrowDownToLine } from "lucide-react";
+import { Bell, LogOut, Search, CalendarCheck, Wallet, FileText, User, Building2, Users, BarChart3, Inbox, Plus, Banknote, Heart, ArrowDownToLine, Activity } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "./Logo";
@@ -8,7 +8,7 @@ import { Logo } from "./Logo";
 const navs = {
   tenant: [["/app", Search, "Find homes"], ["/app/saved", Heart, "Saved homes"], ["/app/bookings", CalendarCheck, "Inspections"], ["/app/payments", Wallet, "Payments & escrow"], ["/app/agreements", FileText, "Agreements"], ["/app/profile", User, "Profile"]],
   agent: [["/app", Building2, "My listings"], ["/app/new", Plus, "Submit property"], ["/app/leads", Inbox, "Tenant leads"], ["/app/earnings", Banknote, "Earnings"], ["/app/agreements", FileText, "Document vault"], ["/app/profile", User, "Profile"]],
-  admin: [["/app", BarChart3, "Analytics"], ["/app/listings", Building2, "Listings"], ["/app/new", Plus, "New listing"], ["/app/finance", Wallet, "Escrow & finance"], ["/app/withdrawals", ArrowDownToLine, "Withdrawals"], ["/app/users", Users, "Users & disputes"]],
+  admin: [["/app", BarChart3, "Analytics"], ["/app/activity", Activity, "Activity"], ["/app/listings", Building2, "Listings"], ["/app/new", Plus, "New listing"], ["/app/finance", Wallet, "Escrow & finance"], ["/app/withdrawals", ArrowDownToLine, "Withdrawals"], ["/app/users", Users, "Users & disputes"]],
 } as const;
 
 const short: Record<string, string> = { "My listings": "Listings", "Submit property": "Add", "Tenant leads": "Leads", "Document vault": "Docs", "Escrow & finance": "Escrow", "Users & disputes": "Users", "New listing": "New", "Saved homes": "Saved", "Payments & escrow": "Payments", "Find homes": "Find" };
