@@ -1,24 +1,24 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.2";
-
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 const json = (b: unknown, s = 200) =>
-  new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
+  new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
 const PLATFORM_RATE = 0.02; // 2% service fee on rent
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const url = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !serviceKey) return json({ error: "Payment service unavailable" }, 503);
+    const admin = createClient(url, serviceKey);
     const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
     const { data: u } = await admin.auth.getUser(token);
     if (!u?.user) return json({ error: "Please sign in" }, 401);
     const user = u.user;
     const body = await req.json();
-    const key = Deno.env.get("PAYSTACK_SECRET_KEY")!;
+    const key = Deno.env.get("PAYSTACK_SECRET_KEY");
+    if (!key) return json({ error: "Payment service unavailable" }, 503);
 
     if (body.action === "init") {
       const { data: p } = await admin.from("properties").select("*").eq("id", body.property_id).single();
@@ -64,17 +64,17 @@ Deno.serve(async (req) => {
       const today = new Date().toDateString();
       const agreement = `TENANCY AGREEMENT
 
-This agreement is made on ${today} between the Landlord of the property known as "${p?.title}", ${p?.address ?? ""}, ${p?.area ?? ""} ${p?.city ?? ""} (through Bario as escrow agent) and ${prof?.full_name ?? user.email} ("the Tenant").
+This agreement is made on ${today} between the Landlord of the property known as "${p?.title}", ${p?.address ?? ""}, ${p?.area ?? ""} ${p?.city ?? ""} (through betterhouse as escrow agent) and ${prof?.full_name ?? user.email} ("the Tenant").
 
 1. TERM: One (1) year commencing on the date keys are handed over.
-2. RENT: ₦${Number(pay.rent).toLocaleString()} per annum, paid in full and held in Bario escrow until key handover.
+2. RENT: ₦${Number(pay.rent).toLocaleString()} per annum, paid in full and held in betterhouse escrow until key handover.
 3. FEES: Agency ₦${Number(pay.agency_fee).toLocaleString()}, Agreement ₦${Number(pay.agreement_fee).toLocaleString()}, Caution (refundable) ₦${Number(pay.caution_fee).toLocaleString()}, Service ₦${Number(pay.platform_fee).toLocaleString()}.
 4. CAUTION DEPOSIT: Refundable at the end of tenancy less the cost of any damage beyond fair wear and tear.
 5. USE: The premises shall be used for residential purposes only. No subletting without written consent.
 6. HOUSE RULES: The Tenant shall keep the premises clean, respect neighbours, and pay utility bills promptly.
 7. REPAIRS: Structural repairs are the Landlord's responsibility; minor repairs are the Tenant's.
 8. TERMINATION: Either party may terminate with three (3) months' written notice.
-9. DISPUTES: Disputes are first resolved through Bario mediation before any legal action.
+9. DISPUTES: Disputes are first resolved through betterhouse mediation before any legal action.
 
 Payment reference: ${pay.reference}`;
       await admin.from("agreements").insert({
