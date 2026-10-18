@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, naira } from "@/lib/auth";
 import { PageTitle } from "./AppShell";
+import { isAgentProfileComplete } from "@/lib/rentalRules";
+import { Button } from "./Button";
 
 const empty = { title: "", description: "", property_type: "Self-contain", address: "", city: "Lagos", area: "", near_institution: "", bedrooms: 1, bathrooms: 1, rent: 0, agency_fee: 0, agreement_fee: 0, caution_fee: 0, amenities: "", images: [] as string[], videos: [] as string[], other_fees: [] as { label: string; amount: number }[] };
 
@@ -17,6 +19,15 @@ export default function PropertyForm() {
   const [status, setStatus] = useState("active");
   const [busy, setBusy] = useState(false);
   const isAdmin = role === "admin";
+  const [profileReady, setProfileReady] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    if (role === "admin") { setProfileReady(true); return; }
+    supabase.from("profiles").select("*").eq("id", user.id).maybeSingle().then(({ data, error }) => {
+      if (error) toast.error("Could not check your profile. Please try again.");
+      setProfileReady(!error && isAgentProfileComplete(data));
+    });
+  }, [user, role]);
 
   useEffect(() => {
     if (!id) return;
@@ -40,6 +51,7 @@ export default function PropertyForm() {
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user || !profileReady) return toast.error("Complete your profile before adding a property");
     if (!f.images.length) return toast.error("Add at least one photo");
     setBusy(true);
     const row = {
@@ -51,9 +63,10 @@ export default function PropertyForm() {
     };
     const res = id
       ? await supabase.from("properties").update(row).eq("id", id).select().single()
-      : await supabase.from("properties").insert({ ...row, agent_id: user!.id }).select().single();
+      : await supabase.from("properties").insert({ ...row, agent_id: user.id }).select().single();
     if (res.error) { setBusy(false); return toast.error(res.error.message); }
-    await supabase.from("property_contacts").upsert({ property_id: res.data.id, ...c });
+    const { error: contactError } = await supabase.from("property_contacts").upsert({ property_id: res.data.id, ...c });
+    if (contactError) { setBusy(false); toast.error("Listing saved, but landlord details could not be saved. Please retry."); nav(`/app/edit/${res.data.id}`); return; }
     setBusy(false);
     toast.success(isAdmin ? "Listing saved" : "Submitted for verification");
     nav(isAdmin ? "/app/listings" : "/app");
@@ -62,6 +75,9 @@ export default function PropertyForm() {
   const set = (k: string) => (e: any) => setF({ ...f, [k]: e.target.value });
   const total = +f.rent + +f.agency_fee + +f.agreement_fee + +f.caution_fee + f.other_fees.reduce((a: number, x: any) => a + (+x.amount || 0), 0);
   const setFee = (i: number, k: string, v: any) => setF({ ...f, other_fees: f.other_fees.map((x: any, j: number) => (j === i ? { ...x, [k]: v } : x)) });
+
+  if (profileReady === null) return <p role="status" className="text-muted-foreground">Checking your profile…</p>;
+  if (!profileReady) return <><PageTitle title="Complete your agent profile" sub="Add your full name, photo, phone number, email and home address before listing a home." /><Link to="/app/profile" className="btn-primary">Complete profile</Link></>;
 
   return (
     <form onSubmit={save}>

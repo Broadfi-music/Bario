@@ -1,10 +1,10 @@
 {
   "id": "/?source=pwa",
-  "name": "Bario — Find your next home",
-  "short_name": "Bario",
+  "name": "betterhouse — Find your next home",
+  "short_name": "betterhouse",
   "description": "Find verified rental homes near your preferred location, book inspections and pay securely with escrow.",
   "theme_color": "#123426",
-  "background_color": "#ffffff",
+  "background_color": "#123426",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "scope": "/",

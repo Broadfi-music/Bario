@@ -6,6 +6,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Logo } from "@/components/Logo";
 import flats from "@/assets/flats-vi.jpg";
+import { Button } from "@/components/Button";
+import { WelcomeIllustration } from "@/components/WelcomeIllustration";
+
+const authSlides = [
+  ["Your next home starts here.", "A place for your plans, in the location you love."],
+  ["Every fee. Upfront.", "Know your rent, agency fees and deposit before you commit."],
+  ["From inspection to move-in.", "Find your place, book a visit and pay with peace of mind."],
+  ["Closer to where you belong.", "Homes near work, school, family and your next chapter."],
+];
 
 export default function Auth() {
   const [params] = useSearchParams();
@@ -14,6 +23,12 @@ export default function Auth() {
   const [f, setF] = useState({ full_name: "", phone: "", email: "", password: "" });
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
+  const [slide, setSlide] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => setSlide(s => (s + 1) % 4), 4500);
+    return () => window.clearInterval(timer);
+  }, []);
   const { user } = useAuth();
   const nav = useNavigate();
   useEffect(() => { if (user) nav("/app"); }, [user, nav]);
@@ -34,10 +49,17 @@ export default function Auth() {
   };
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <div className="flex flex-col px-6 py-8 sm:px-12">
-        <Logo />
-        <div className="mx-auto my-auto w-full max-w-md py-10">
+    <div className="auth-page grid min-h-screen lg:grid-cols-2">
+      <div className="auth-intro lg:hidden">
+        <Logo light />
+        <h2>{authSlides[slide][0]}</h2>
+        <p>{authSlides[slide][1]}</p>
+        <div className="auth-illustration" key={slide}><WelcomeIllustration step={slide} /></div>
+        <div className="auth-dots">{authSlides.map((_, i) => <Button key={i} aria-label={`Show housing illustration ${i + 1}`} aria-pressed={i === slide} onClick={() => setSlide(i)}><span className={i === slide ? "selected" : ""} /></Button>)}</div>
+      </div>
+      <div className="auth-form-panel flex flex-col px-6 py-8 sm:px-12">
+        <div className="hidden lg:block"><Logo /></div>
+        <div className="mx-auto my-auto w-full max-w-md py-4 lg:py-10">
           {sent ? (
             <div className="card text-center"><h1 className="text-2xl font-bold">Check your email</h1><p className="mt-2 text-muted-foreground">We sent a confirmation link to {f.email}. Click it to activate your account.</p></div>
           ) : (
@@ -49,9 +71,9 @@ export default function Auth() {
                   <>
                     <div className="grid grid-cols-2 gap-3">
                       {([["tenant", Home, "I'm looking for a house"], ["agent", Building2, "I'm an agent / lister"]] as const).map(([r, I, t]) => (
-                        <button type="button" key={r} onClick={() => setRole(r)} className={`rounded-2xl border p-4 text-left text-sm font-semibold transition ${role === r ? "border-primary bg-secondary ring-2 ring-primary" : "bg-card"}`}>
+                        <Button type="button" key={r} aria-pressed={role === r} onClick={() => setRole(r)} className={`flex-col items-start rounded-lg border p-4 text-left text-sm font-semibold transition ${role === r ? "border-primary bg-secondary ring-2 ring-primary" : "bg-card"}`}>
                           <I className="mb-2 h-5 w-5" />{t}
-                        </button>
+                        </Button>
                       ))}
                     </div>
                     <div><label className="label">Full name</label><input required className="input" value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></div>
@@ -60,11 +82,11 @@ export default function Auth() {
                 )}
                 <div><label className="label">Email</label><input required type="email" className="input" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
                 <div><label className="label">Password</label><input required minLength={6} type="password" className="input" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></div>
-                <button disabled={busy} className="btn-primary w-full py-3.5">{busy ? "Please wait…" : mode === "signup" ? "Create account" : "Log in"}</button>
+                <Button type="submit" disabled={busy} className="btn-primary w-full py-3.5">{busy ? "Please wait…" : mode === "signup" ? "Create account" : "Log in"}</Button>
               </form>
               <p className="mt-6 text-center text-sm text-muted-foreground">
-                {mode === "signup" ? "Already have an account?" : "New to Bario?"}{" "}
-                <button className="font-semibold text-primary underline" onClick={() => setMode(mode === "signup" ? "login" : "signup")}>{mode === "signup" ? "Log in" : "Sign up"}</button>
+                {mode === "signup" ? "Already have an account?" : "New to betterhouse?"}{" "}
+                <Button className="font-semibold text-primary underline" onClick={() => { setSent(false); setMode(mode === "signup" ? "login" : "signup"); }}>{mode === "signup" ? "Log in" : "Sign up"}</Button>
               </p>
             </>
           )}

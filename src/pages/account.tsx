@@ -6,6 +6,8 @@ import { Camera, Landmark, ArrowDownToLine, Heart, CalendarCheck, Trash2, Info }
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, naira, totalOf } from "@/lib/auth";
 import { PageTitle, Status, Empty } from "@/components/AppShell";
+import { Button } from "@/components/Button";
+import { inspectionFee } from "@/lib/rentalRules";
 
 const profileSchema = z.object({
   full_name: z.string().trim().min(2, "Enter your full name").max(100),
@@ -18,14 +20,14 @@ export function AccountProfile() {
   const { user, role } = useAuth();
   const [f, setF] = useState<any>({});
   const [busy, setBusy] = useState(false);
-  useEffect(() => { supabase.from("profiles").select("*").eq("id", user!.id).maybeSingle().then(({ data }) => setF(data ?? {})); }, [user]);
+  useEffect(() => { if (!user) return; supabase.from("profiles").select("*").eq("id", user.id).maybeSingle().then(({ data, error }) => { if (error) toast.error("Could not load profile"); else setF(data ?? {}); }); }, [user]);
   const set = (k: string) => (e: any) => setF({ ...f, [k]: e.target.value });
 
   const uploadPhoto = async (file?: File) => {
-    if (!file) return;
+    if (!file || !user) return;
     if (file.size > 5 * 1024 * 1024) return toast.error("Photo must be under 5MB");
     setBusy(true);
-    const path = `${user!.id}/avatar-${Date.now()}.${file.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "") || "jpg"}`;
+    const path = `${user.id}/avatar-${Date.now()}.${file.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "") || "jpg"}`;
     const { error } = await supabase.storage.from("user-uploads").upload(path, file, { upsert: true });
     setBusy(false);
     if (error) return toast.error(error.message);
@@ -34,9 +36,11 @@ export function AccountProfile() {
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
+    if (role === "agent" && !f.avatar_url) return toast.error("Add a profile photo to complete your agent profile");
     const r = profileSchema.safeParse({ full_name: f.full_name ?? "", phone: f.phone ?? "", alt_phone: f.alt_phone ?? "", home_address: f.home_address ?? "" });
     if (!r.success) return toast.error(r.error.issues[0].message);
-    const row: any = { id: user!.id, email: user!.email, ...r.data, avatar_url: f.avatar_url ?? null };
+    const row: any = { id: user.id, email: user.email, ...r.data, avatar_url: f.avatar_url ?? null };
     if (role === "tenant") Object.assign(row, { occupation: f.occupation, institution: f.institution, next_of_kin: f.next_of_kin, id_number: f.id_number, bio: f.bio });
     const { error } = await supabase.from("profiles").upsert(row);
     error ? toast.error(error.message) : toast.success("Profile saved");
@@ -44,18 +48,18 @@ export function AccountProfile() {
 
   return (
     <form onSubmit={save}>
-      <PageTitle title="My profile" sub={role === "tenant" ? "Landlords use this to vet you before move-in." : "Your details help us verify you and pay you."} />
+      <PageTitle title="My profile" sub={role === "tenant" ? "Your details help landlords get to know you before move-in." : "Complete your name, photo, phone, email and home address before listing."} />
       <div className="card mb-5 flex items-center gap-4">
         <label className="relative cursor-pointer">
-          {f.avatar_url ? <img src={f.avatar_url} alt="Profile" className="h-20 w-20 rounded-full object-cover" /> : <div className="grid h-20 w-20 place-items-center rounded-full bg-muted font-display text-2xl font-bold">{(f.full_name || user!.email || "?")[0].toUpperCase()}</div>}
+          {f.avatar_url ? <img src={f.avatar_url} alt="Profile" className="h-20 w-20 rounded-full object-cover" /> : <div className="grid h-20 w-20 place-items-center rounded-full bg-muted font-display text-2xl font-bold">{(f.full_name || user?.email || "?")[0].toUpperCase()}</div>}
           <span className="absolute bottom-0 right-0 rounded-full bg-primary p-1.5 text-primary-foreground"><Camera className="h-3.5 w-3.5" /></span>
           <input hidden type="file" accept="image/*" onChange={(e) => uploadPhoto(e.target.files?.[0])} />
         </label>
-        <div className="min-w-0"><p className="truncate font-bold">{f.full_name || "Add your name"}</p><p className="truncate text-sm text-muted-foreground">{user!.email}</p>{busy && <p className="text-xs text-muted-foreground">Uploading photo…</p>}</div>
+        <div className="min-w-0"><p className="truncate font-bold">{f.full_name || "Add your name"}</p><p className="truncate text-sm text-muted-foreground">{user?.email}</p>{busy && <p className="text-xs text-muted-foreground">Uploading photo…</p>}</div>
       </div>
       <div className="card grid gap-4 sm:grid-cols-2">
         <div><label className="label">Full name</label><input className="input" value={f.full_name ?? ""} onChange={set("full_name")} /></div>
-        <div><label className="label">Email</label><input className="input" value={user!.email ?? ""} disabled /></div>
+        <div><label className="label">Email</label><input className="input" value={user?.email ?? ""} disabled /></div>
         <div><label className="label">Phone number</label><input className="input" inputMode="tel" value={f.phone ?? ""} onChange={set("phone")} placeholder="0803 000 0000" /></div>
         <div><label className="label">Other number (optional)</label><input className="input" inputMode="tel" value={f.alt_phone ?? ""} onChange={set("alt_phone")} /></div>
         <div className="sm:col-span-2"><label className="label">Home address</label><input className="input" value={f.home_address ?? ""} onChange={set("home_address")} /></div>
@@ -63,7 +67,7 @@ export function AccountProfile() {
           {[["occupation", "Occupation / status"], ["institution", "School or employer"], ["next_of_kin", "Next of kin (name & phone)"], ["id_number", "NIN or student ID"]].map(([k, l]) => <div key={k}><label className="label">{l}</label><input className="input" value={f[k] ?? ""} onChange={set(k)} /></div>)}
           <div className="sm:col-span-2"><label className="label">About you</label><textarea rows={3} className="input" value={f.bio ?? ""} onChange={set("bio")} /></div>
         </>}
-        <button className="btn-primary w-full sm:w-fit">Save profile</button>
+        <Button type="submit" disabled={busy} className="btn-primary w-full sm:w-fit">Save profile</Button>
       </div>
     </form>
   );
@@ -159,9 +163,10 @@ export function Wishlist() {
   };
   useEffect(() => { load(); }, []);
   const remove = async (id: string) => { await supabase.from("wishlist").delete().eq("tenant_id", user!.id).eq("property_id", id); load(); };
-  const fee = pick.length >= 2 ? 2000 : 0;
+  const fee = inspectionFee(pick.length);
   const book = async () => {
     if (!pick.length) return toast.error("Select at least one home");
+    if (pick.length >= 2) return toast.error("Multi-home booking is temporarily unavailable while the new ₦3,500 fee is being activated. You can still book one home.");
     if (!date) return toast.error("Pick a date and time");
     setBusy(true);
     const { error } = await supabase.rpc("book_inspections", { _property_ids: pick, _scheduled_at: new Date(date).toISOString(), _note: note.trim() || undefined });
@@ -192,8 +197,9 @@ export function Wishlist() {
             <div className="flex justify-between"><span className="text-muted-foreground">Homes selected</span><span className="font-semibold">{pick.length}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Inspection fee</span><span className="font-semibold">{fee ? naira(fee) : "Free"}</span></div>
           </div>
-          <p className="flex gap-2 rounded-xl bg-muted p-3 text-xs"><Info className="h-4 w-4 shrink-0" />One home is free. Inspecting 2 or more homes costs ₦2,000, paid on the inspection day.</p>
-          <button disabled={busy} onClick={book} className="btn-accent w-full">{busy ? "Booking…" : `Book ${pick.length || ""} inspection${pick.length > 1 ? "s" : ""}`}</button>
+          <p className="flex gap-2 rounded-xl bg-muted p-3 text-xs"><Info className="h-4 w-4 shrink-0" />One home is free. Inspecting 2 or more homes costs ₦3,500, paid on the inspection day.</p>
+          {pick.length >= 2 && <p role="status" className="text-sm text-warning">Multi-home booking is temporarily unavailable while the updated fee is activated.</p>}
+          <Button disabled={busy || pick.length >= 2} onClick={book} className="btn-accent w-full">{busy ? "Booking…" : `Book ${pick.length || ""} inspection${pick.length > 1 ? "s" : ""}`}</Button>
         </aside>
       </div> : <Empty text="No saved homes yet. Tap the heart on any home to save it here." />}
     </>

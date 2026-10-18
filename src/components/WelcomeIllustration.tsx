@@ -5,8 +5,21 @@ export function WelcomeIllustration({ step }: { step: number }) {
       "A renter holding the keys to a new home",
       "A property professional checking a verified home",
       "A renter relaxing at home after finding a place",
+      "Homes near your favourite location",
     ][step]}>
       <rect x="0" y="304" width="600" height="108" className="art-green" />
+      {step === 3 && <>
+        <path d="m100 210 105-90 105 90v200H100Z" className="art-mist" />
+        <path d="m85 215 120-105 120 105" className="art-key" />
+        <path d="M180 295h52v115h-52Z" className="art-forest" />
+        <path d="M125 240h40v40h-40ZM245 240h40v40h-40Z" className="art-lime" />
+        <path d="M355 200h140v210H355Z" className="art-lime" />
+        <path d="M373 220h35v40h-35ZM445 220h35v40h-35ZM373 285h35v40h-35ZM445 285h35v40h-35Z" className="art-paper" />
+        <path d="M408 345h40v65h-40Z" className="art-forest" />
+        <path d="M322 55c-47 0-77 33-77 73 0 55 77 118 77 118s77-63 77-118c0-40-30-73-77-73Z" className="art-green" />
+        <circle cx="322" cy="128" r="29" className="art-paper" />
+        <path d="m310 129 9 9 19-22" className="art-outline" />
+      </>}
       {step === 0 && <>
         <path d="M386 142 477 73 566 142v175H386Z" className="art-mist" />
         <path d="m370 146 107-87 108 87" className="art-outline" />
