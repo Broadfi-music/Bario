@@ -1,11 +1,11 @@
 # Tasks
-- [ ] Confirm Cloud wake-up and activate pending changes. Blocked: Cloud remains starting after repeated status checks; no migrations or writes attempted during startup.
+- [x] Confirm Cloud wake-up and activate pending backend changes. Cloud healthy; migration applied and rules read back.
 - [x] Rename frontend branding to betterhouse; green welcome and four-image mobile authentication. Browser navigation and phone/desktop checks passed.
-- [ ] Automatically publish new listings and enforce profile completeness server-side. Blocked: Cloud database unavailable; migration rolled back. Frontend profile gate implemented.
+- [x] Automatically publish new listings and enforce profile completeness server-side. Database trigger and RLS applied; admin photo-upload/create/Activity read-back passed. Agent-specific enforcement end-to-end remains unverified.
 - [x] Add admin property activity and user/agent profile details screens.
-- [ ] Verify admin activity and profile gate signed-in. Blocked: Cloud unavailable; session mint failed.
-- [ ] Activate ₦3,500 multi-home fee server-side. Blocked: Cloud unavailable. UI displays new price; multi-home submission temporarily disabled to prevent old ₦2,000 bookings.
-- [ ] Update agreement branding in deployed payment function. Blocked: Cloud unavailable; payment deployment/verification deferred.
+- [x] Verify admin activity and profile-details dialog signed-in. Passed using the super-admin session; temporary listing removed.
+- [x] Activate ₦3,500 multi-home fee server-side. Function read-back confirmed; frontend submission re-enabled; three rule tests passed. Tenant booking end-to-end remains unverified.
+- [x] Update agreement branding in deployed payment function. Function deployment succeeded; no live payment taken during verification.
 - [x] Update standalone install metadata and clean up the old app-shell worker.
 - [x] Add three reference-inspired rental welcome screens and connect them to sign-in/sign-up.
 - [x] Verify welcome navigation, returning launches and phone layouts. Browser checks passed; actual home-screen launch needs publishing and testing on a phone.
