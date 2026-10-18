@@ -1,4 +1,5 @@
 # Tasks
+- [ ] Confirm Cloud wake-up and activate pending changes. Blocked: Cloud remains starting after repeated status checks; no migrations or writes attempted during startup.
 - [x] Rename frontend branding to betterhouse; green welcome and four-image mobile authentication. Browser navigation and phone/desktop checks passed.
 - [ ] Automatically publish new listings and enforce profile completeness server-side. Blocked: Cloud database unavailable; migration rolled back. Frontend profile gate implemented.
 - [x] Add admin property activity and user/agent profile details screens.
