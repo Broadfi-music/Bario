@@ -59,7 +59,7 @@ export default function PropertyForm() {
       bedrooms: +f.bedrooms, bathrooms: +f.bathrooms, rent: +f.rent, agency_fee: +f.agency_fee, agreement_fee: +f.agreement_fee, caution_fee: +f.caution_fee,
       amenities: String(f.amenities).split(",").map((s) => s.trim()).filter(Boolean), images: f.images, videos: f.videos,
       other_fees: f.other_fees.filter((x: any) => x.label?.trim()).map((x: any) => ({ label: String(x.label).trim().slice(0, 60), amount: Math.max(0, +x.amount || 0) })),
-      status: isAdmin ? status : "pending",
+      status: isAdmin ? status : id ? f.status : "active",
     };
     const res = id
       ? await supabase.from("properties").update(row).eq("id", id).select().single()
@@ -68,7 +68,7 @@ export default function PropertyForm() {
     const { error: contactError } = await supabase.from("property_contacts").upsert({ property_id: res.data.id, ...c });
     if (contactError) { setBusy(false); toast.error("Listing saved, but landlord details could not be saved. Please retry."); nav(`/app/edit/${res.data.id}`); return; }
     setBusy(false);
-    toast.success(isAdmin ? "Listing saved" : "Submitted for verification");
+    toast.success(id ? "Listing saved" : "Property published");
     nav(isAdmin ? "/app/listings" : "/app");
   };
 
@@ -81,7 +81,7 @@ export default function PropertyForm() {
 
   return (
     <form onSubmit={save}>
-      <PageTitle title={id ? "Edit listing" : isAdmin ? "Create listing" : "Submit a property"} sub={isAdmin ? "Manual listings for landlords who don't use the app." : "Our team verifies every property before it goes live."} />
+      <PageTitle title={id ? "Edit listing" : "Create listing"} sub={isAdmin ? "Manual listings for landlords who don't use the app." : "Your new property is published automatically."} />
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <section className="card space-y-4">
@@ -143,7 +143,7 @@ export default function PropertyForm() {
             </div>
             <div className="flex justify-between border-t pt-4 font-bold"><span>Tenant pays</span><span>{naira(total)}</span></div>
             {isAdmin && <div><label className="label">Status</label><select className="input" value={status} onChange={(e) => setStatus(e.target.value)}>{["pending", "active", "rented", "rejected"].map((s) => <option key={s}>{s}</option>)}</select></div>}
-            <button disabled={busy} className="btn-primary w-full">{isAdmin ? "Save & publish" : "Submit for verification"}</button>
+            <Button type="submit" disabled={busy} className="btn-primary w-full">{id ? "Save changes" : "Save & publish"}</Button>
           </section>
         </aside>
       </div>
