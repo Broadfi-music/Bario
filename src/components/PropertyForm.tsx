@@ -5,7 +5,7 @@ import { Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, naira } from "@/lib/auth";
 import { PageTitle } from "./AppShell";
-import { isAgentProfileComplete } from "@/lib/rentalRules";
+import { isAgentProfileComplete, PROPERTY_TYPES } from "@/lib/rentalRules";
 import { Button } from "./Button";
 
 const empty = { title: "", description: "", property_type: "Self-contain", address: "", city: "Lagos", area: "", near_institution: "", bedrooms: 1, bathrooms: 1, rent: 0, agency_fee: 0, agreement_fee: 0, caution_fee: 0, amenities: "", images: [] as string[], videos: [] as string[], other_fees: [] as { label: string; amount: number }[] };
@@ -89,7 +89,7 @@ export default function PropertyForm() {
             <div><label className="label">Title</label><input required className="input" value={f.title} onChange={set("title")} placeholder="Clean self-contain near UNILAG" /></div>
             <div><label className="label">Description</label><textarea rows={4} className="input" value={f.description} onChange={set("description")} /></div>
             <div className="grid gap-4 sm:grid-cols-3">
-              <div><label className="label">Type</label><select className="input" value={f.property_type} onChange={set("property_type")}>{["Self-contain", "Room & parlour", "Mini flat", "1-bed flat", "2-bed flat", "3-bed flat", "Shared hostel", "Duplex"].map((t) => <option key={t}>{t}</option>)}</select></div>
+              <div><label className="label">Type</label><select className="input" value={f.property_type} onChange={set("property_type")}>{PROPERTY_TYPES.map((t) => <option key={t}>{t}</option>)}</select></div>
               <div><label className="label">Bedrooms</label><input type="number" min={0} className="input" value={f.bedrooms} onChange={set("bedrooms")} /></div>
               <div><label className="label">Bathrooms</label><input type="number" min={0} className="input" value={f.bathrooms} onChange={set("bathrooms")} /></div>
             </div>
