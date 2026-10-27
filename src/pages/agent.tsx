@@ -15,12 +15,12 @@ export function MyListings() {
     <>
       <PageTitle title="My listings" sub="Track verification and rental status." action={<Link to="/app/new" className="btn-primary"><Plus className="h-4 w-4" />Submit property</Link>} />
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
-        {[["pending", "Pending verification"], ["active", "Active"], ["rented", "Rented"]].map(([s, l]) => <div key={s} className="card"><p className="text-sm text-muted-foreground">{l}</p><p className="font-display text-4xl font-bold">{count(s)}</p></div>)}
+        {[["active", "Live"], ["rented", "Rented"], ["rejected", "Removed"]].map(([s, l]) => <div key={s} className="card"><p className="text-sm text-muted-foreground">{l}</p><p className="font-display text-4xl font-bold">{count(s)}</p></div>)}
       </div>
       {rows.length ? <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{rows.map((p) => (
         <div key={p.id} className="relative">
           <PropertyCard p={p} showStatus />
-          {p.status === "pending" && <Link to={`/app/edit/${p.id}`} className="btn-ghost absolute right-3 top-3 px-3 py-2"><Pencil className="h-3.5 w-3.5" /></Link>}
+          {["pending", "active"].includes(p.status) && <Link to={`/app/edit/${p.id}`} aria-label="Edit listing" className="btn-ghost absolute right-3 top-3 px-3 py-2"><Pencil className="h-3.5 w-3.5" /></Link>}
         </div>))}</div> : <Empty text="You haven't submitted any property yet." />}
     </>
   );
