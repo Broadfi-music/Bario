@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { buildAgreement } from "./agreement.ts";
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
@@ -60,27 +61,20 @@ Deno.serve(async (req) => {
         return json({ status: "initiated", message: d.data?.gateway_response ?? "Not paid yet" });
       await admin.from("payments").update({ status: "in_escrow", paid_at: new Date().toISOString() }).eq("id", pay.id);
       const { data: p } = await admin.from("properties").update({ status: "rented" }).eq("id", pay.property_id).select().single();
-      const { data: prof } = await admin.from("profiles").select("full_name").eq("id", user.id).single();
-      const today = new Date().toDateString();
-      const agreement = `TENANCY AGREEMENT
-
-This agreement is made on ${today} between the Landlord of the property known as "${p?.title}", ${p?.address ?? ""}, ${p?.area ?? ""} ${p?.city ?? ""} (through betterhouse as escrow agent) and ${prof?.full_name ?? user.email} ("the Tenant").
-
-1. TERM: One (1) year commencing on the date keys are handed over.
-2. RENT: ₦${Number(pay.rent).toLocaleString()} per annum, paid in full and held in betterhouse escrow until key handover.
-3. FEES: Agency ₦${Number(pay.agency_fee).toLocaleString()}, Agreement ₦${Number(pay.agreement_fee).toLocaleString()}, Caution (refundable) ₦${Number(pay.caution_fee).toLocaleString()}, Service ₦${Number(pay.platform_fee).toLocaleString()}.
-4. CAUTION DEPOSIT: Refundable at the end of tenancy less the cost of any damage beyond fair wear and tear.
-5. USE: The premises shall be used for residential purposes only. No subletting without written consent.
-6. HOUSE RULES: The Tenant shall keep the premises clean, respect neighbours, and pay utility bills promptly.
-7. REPAIRS: Structural repairs are the Landlord's responsibility; minor repairs are the Tenant's.
-8. TERMINATION: Either party may terminate with three (3) months' written notice.
-9. DISPUTES: Disputes are first resolved through betterhouse mediation before any legal action.
-
-Payment reference: ${pay.reference}`;
+      const { data: prof } = await admin.from("profiles").select("*").eq("id", user.id).maybeSingle();
+      const { data: lc } = await admin.from("property_contacts").select("*").eq("property_id", pay.property_id).maybeSingle();
+      const rid = "BH-" + String(pay.id).replace(/-/g, "").slice(0, 10).toUpperCase();
+      const agreement = buildAgreement({
+        date: new Date(), receiptId: rid, reference: pay.reference,
+        landlord: { name: lc?.landlord_name, phone: lc?.landlord_phone, email: lc?.landlord_email },
+        tenant: { name: prof?.full_name ?? user.email, email: prof?.email ?? user.email, phone: prof?.phone, address: prof?.home_address, idNumber: prof?.id_number, nextOfKin: prof?.next_of_kin },
+        property: p ?? {},
+        pay: { rent: pay.rent, caution_fee: pay.caution_fee, agency_fee: pay.agency_fee, agreement_fee: pay.agreement_fee, other_fees: pay.other_fees, platform_fee: pay.platform_fee, total: pay.total },
+      });
       await admin.from("agreements").insert({
         payment_id: pay.id, property_id: pay.property_id, tenant_id: user.id, agent_id: pay.agent_id, body: agreement,
       });
-      const notes = [{ user_id: user.id, title: "Payment secured in escrow", body: `Your payment for "${p?.title}" is safe. Sign your tenancy agreement.` }];
+      const notes = [{ user_id: user.id, title: "Payment secured in escrow", body: `Your payment for "${p?.title}" is safe. Your receipt ID is ${rid}. Sign your tenancy agreement.` }];
       if (pay.agent_id) notes.push({ user_id: pay.agent_id, title: "Property rented", body: `"${p?.title}" was paid for. Commission is pending key handover.` });
       await admin.from("notifications").insert(notes);
       return json({ status: "in_escrow" });

@@ -7,6 +7,15 @@ import { useAuth, naira, totalOf, otherFeesOf } from "@/lib/auth";
 import { SaveButton } from "./account";
 import PropertyCard from "@/components/PropertyCard";
 import { PageTitle, Status, Empty } from "@/components/AppShell";
+import { receiptId, inspectionEvent } from "@/lib/rentalRules";
+
+const esc = (t: string) => String(t ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!));
+function printReceipt(pay: any, title: string) {
+  const rows = [["Annual rent", pay.rent], ["Agency fee", pay.agency_fee], ["Agreement fee", pay.agreement_fee], ["Caution deposit (refundable)", pay.caution_fee], ["Other charges", pay.other_fees], ["betterhouse service fee", pay.platform_fee]].filter(([, v]) => Number(v) > 0);
+  const w = window.open("");
+  w?.document.write(`<div style="font-family:sans-serif;max-width:560px;margin:40px auto;padding:32px;border:1px solid #ddd;border-radius:16px"><h1 style="color:#123426;margin:0">betterhouse</h1><p style="color:#666">Payment receipt</p><h2>${esc(receiptId(pay.id))}</h2><p>${esc(title)}<br/>Paid ${pay.paid_at ? new Date(pay.paid_at).toLocaleString() : "—"}<br/>Payment reference ${esc(pay.reference)}</p><table style="width:100%;border-collapse:collapse">${rows.map(([k, v]) => `<tr><td style="padding:6px 0">${k}</td><td style="text-align:right">${naira(v)}</td></tr>`).join("")}<tr><td style="padding:10px 0;border-top:2px solid #123426;font-weight:bold">Total paid</td><td style="text-align:right;border-top:2px solid #123426;font-weight:bold">${naira(pay.total)}</td></tr></table><p style="color:#666;font-size:12px;margin-top:24px">Held in betterhouse escrow until key handover.</p></div>`);
+  w?.print();
+}
 
 export function Catalog() {
   const [items, setItems] = useState<any[]>([]);
@@ -89,7 +98,7 @@ export function PropertyDetail() {
 
 export function Bookings() {
   const [rows, setRows] = useState<any[]>([]);
-  const load = () => supabase.from("bookings").select("*, properties(title, area, city)").order("created_at", { ascending: false }).then(({ data }) => setRows(data ?? []));
+  const load = () => supabase.from("bookings").select("*, properties(title, address, area, city)").order("created_at", { ascending: false }).then(({ data }) => setRows(data ?? []));
   useEffect(() => { load(); }, []);
   const cancel = async (id: string) => { await supabase.from("bookings").update({ status: "cancelled" }).eq("id", id); load(); };
   return (
@@ -99,6 +108,13 @@ export function Bookings() {
         <div key={b.id} className="card flex flex-wrap items-center justify-between gap-3">
           <div><p className="font-bold">{b.properties?.title}</p><p className="text-sm text-muted-foreground">{b.kind === "inspection" ? `Inspection · ${b.scheduled_at ? new Date(b.scheduled_at).toLocaleString() : ""}` : "Fast-track checkout"}</p></div>
           <div className="flex items-center gap-3"><Status s={b.status} />{b.status === "requested" && <button onClick={() => cancel(b.id)} className="text-sm text-destructive">Cancel</button>}</div>
+          {b.kind === "inspection" && b.scheduled_at && b.status !== "cancelled" && (() => {
+            const ev = inspectionEvent(b.properties?.title ?? "Home", [b.properties?.address, b.properties?.area, b.properties?.city].filter(Boolean).join(", "), new Date(b.scheduled_at));
+            return <div className="flex w-full flex-wrap gap-2 border-t pt-3 text-sm"><span className="text-muted-foreground">Add to calendar:</span>
+              <a href={ev.google} target="_blank" rel="noreferrer" className="font-semibold underline">Google</a>
+              <a href={ev.outlook} target="_blank" rel="noreferrer" className="font-semibold underline">Outlook</a>
+              <a href={URL.createObjectURL(new Blob([ev.ics], { type: "text/calendar" }))} download="betterhouse-inspection.ics" className="font-semibold underline">Apple / other (.ics)</a></div>;
+          })()}
         </div>))}</div> : <Empty text="No bookings yet." />}
     </>
   );
@@ -133,7 +149,7 @@ export function Payments() {
         return (
           <div key={p.id} className="card">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div><p className="font-bold">{p.properties?.title}</p><p className="text-sm text-muted-foreground">Ref {p.reference}</p></div>
+              <div><p className="font-bold">{p.properties?.title}</p><p className="text-sm text-muted-foreground">Receipt {receiptId(p.id)} · Ref {p.reference}</p></div>
               <div className="text-right"><p className="font-display text-2xl font-bold">{naira(p.total)}</p><Status s={p.status} /></div>
             </div>
             <div className="mt-6 grid grid-cols-4 gap-2">
@@ -141,6 +157,7 @@ export function Payments() {
                 <div key={l} className="text-center"><div className={`mx-auto h-1.5 rounded-full ${at >= i && at >= 1 ? "bg-success" : "bg-muted"}`} /><I className={`mx-auto mt-3 h-4 w-4 ${at >= i && at >= 1 ? "text-success" : "text-muted-foreground"}`} /><p className="mt-1 text-xs">{l}</p></div>
               ))}
             </div>
+            {p.status !== "initiated" && <button onClick={() => printReceipt(p, p.properties?.title ?? "")} className="mt-5 mr-5 text-sm font-semibold underline">Download receipt</button>}
             {p.status === "in_escrow" && <button onClick={() => dispute(p.id)} className="mt-5 flex items-center gap-2 text-sm text-destructive"><AlertTriangle className="h-4 w-4" />Report a problem</button>}
           </div>);
       })}</div> : <Empty text="No payments yet. Choose a verified home and pay securely into escrow." />}
@@ -152,7 +169,7 @@ export function Agreements() {
   const { user, role } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
   const [sig, setSig] = useState<Record<string, string>>({});
-  const load = () => supabase.from("agreements").select("*, properties(title), payments(total, reference, status)").order("created_at", { ascending: false }).then(({ data }) => setRows(data ?? []));
+  const load = () => supabase.from("agreements").select("*, properties(title), payments(*)").order("created_at", { ascending: false }).then(({ data }) => setRows(data ?? []));
   useEffect(() => { load(); }, []);
   const sign = async (id: string) => {
     if (!sig[id]?.trim()) return toast.error("Type your full name to sign");
@@ -166,11 +183,11 @@ export function Agreements() {
         <div key={a.id} className="card">
           <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-bold">{a.properties?.title}</h2>{a.signed_at ? <span className="chip bg-success/15 text-success">Signed {new Date(a.signed_at).toLocaleDateString()}</span> : <span className="chip bg-warning/15 text-warning">Awaiting signature</span>}</div>
           <pre className="mt-4 max-h-80 overflow-auto whitespace-pre-wrap rounded-2xl bg-muted p-5 font-sans text-sm leading-relaxed">{a.body}</pre>
-          <div className="mt-4 rounded-2xl border p-4 text-sm"><p className="font-semibold">Receipt</p><p className="text-muted-foreground">Ref {a.payments?.reference} · Total paid {naira(a.payments?.total)}</p></div>
+          <div className="mt-4 rounded-2xl border p-4 text-sm"><p className="font-semibold">Receipt</p><p className="text-muted-foreground">betterhouse ID {a.payments && receiptId(a.payments.id)} · Ref {a.payments?.reference} · Total paid {naira(a.payments?.total)}</p>{a.payments && <button onClick={() => printReceipt(a.payments, a.properties?.title ?? "")} className="mt-2 font-semibold underline">Download receipt</button>}</div>
           {a.signed_at ? <p className="mt-4 font-display text-2xl italic">{a.tenant_signature}</p> : a.tenant_id === user?.id && (
             <div className="mt-4 flex flex-wrap gap-3"><input className="input max-w-xs" placeholder="Type full name to sign" value={sig[a.id] ?? ""} onChange={(e) => setSig({ ...sig, [a.id]: e.target.value })} /><button onClick={() => sign(a.id)} className="btn-primary">Sign agreement</button></div>
           )}
-          <button onClick={() => { const w = window.open(""); w?.document.write(`<pre style="font-family:sans-serif;white-space:pre-wrap;padding:40px">${a.body}\n\nSigned: ${a.tenant_signature ?? "—"}</pre>`); w?.print(); }} className="mt-3 text-sm font-semibold underline">Download / print</button>
+          <button onClick={() => { const w = window.open(""); w?.document.write(`<pre style="font-family:sans-serif;white-space:pre-wrap;padding:40px">${esc(a.body)}\n\nTenant signature: ${esc(a.tenant_signature ?? "—")}${a.signed_at ? " · " + new Date(a.signed_at).toLocaleString() : ""}\n\nLandlord signature: ____________________</pre>`); w?.print(); }} className="mt-3 text-sm font-semibold underline">Download / print</button>
         </div>))}</div> : <Empty text="Agreements appear here after a successful payment." />}
     </>
   );
