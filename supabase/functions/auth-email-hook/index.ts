@@ -15,7 +15,7 @@ const corsHeaders = {
 }
 
 // Configuration
-const SITE_NAME = "Bario"
+const SITE_NAME = "betterhouse"
 const SENDER_DOMAIN = "notify.betterhouse.space"
 const ROOT_DOMAIN = "betterhouse.space"
 const FROM_DOMAIN = "notify.betterhouse.space"
